@@ -100,7 +100,8 @@ export class MerchantService {
       data.businessHours = input.businessHours;
     if (input.timezone !== undefined) data.timezone = input.timezone;
     if (input.taxRate !== undefined) data.taxRate = input.taxRate;
-    if (input.settings !== undefined) data.settings = input.settings;
+    if (input.settings !== undefined)
+      data.settings = input.settings as Prisma.InputJsonValue;
 
     return merchantRepository.update(tenantId, data);
   }

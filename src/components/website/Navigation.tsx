@@ -53,12 +53,12 @@ export function Navigation({ logo, restaurantName, tenantSlug }: NavigationProps
             <button className="hidden md:block text-gray-600 hover:text-gray-900 font-medium transition-colors">
               Sign In
             </button>
-            <a
-              href="/menu"
+            <Link
+              href={`/r/${tenantSlug}/menu`}
               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-full font-semibold text-sm md:text-base transition-colors"
             >
               Order Online
-            </a>
+            </Link>
 
             {/* Mobile Menu Button */}
             <button
