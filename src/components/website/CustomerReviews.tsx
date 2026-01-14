@@ -66,7 +66,7 @@ export function CustomerReviews({ reviews }: CustomerReviewsProps) {
           {reviews.map((review) => (
             <div
               key={review.id}
-              className="bg-gray-50 rounded-2xl p-6 md:p-8"
+              className="bg-gray-50 rounded-2xl p-6 md:p-8 flex flex-col h-full"
             >
               {/* Rating */}
               <div className="flex items-center justify-between mb-4">
@@ -75,12 +75,12 @@ export function CustomerReviews({ reviews }: CustomerReviewsProps) {
               </div>
 
               {/* Content */}
-              <blockquote className="text-gray-700 mb-6 leading-relaxed">
+              <blockquote className="text-gray-700 mb-6 leading-relaxed flex-1">
                 &ldquo;{review.content}&rdquo;
               </blockquote>
 
               {/* Author */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 mt-auto">
                 <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
                   <span className="text-red-600 font-semibold">
                     {review.customerName.charAt(0)}
