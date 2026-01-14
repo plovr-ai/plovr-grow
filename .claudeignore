@@ -11,6 +11,15 @@ dist/
 src/generated/
 *.tsbuildinfo
 
+# Prisma
+prisma/migrations/
+
+# Test & Coverage
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
 # Logs
 *.log
 npm-debug.log*
@@ -29,3 +38,23 @@ pnpm-lock.yaml
 # OS
 .DS_Store
 Thumbs.db
+
+# Assets (images, fonts - binary files)
+public/images/
+public/fonts/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# Misc
+.vercel/
+.turbo/
+.cache/
+tmp/
+temp/
