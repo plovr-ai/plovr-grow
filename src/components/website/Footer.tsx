@@ -1,7 +1,9 @@
+import Link from "next/link";
 import type { MerchantInfo, SocialLink } from "@/types/website";
 
 interface FooterProps {
   merchant: MerchantInfo;
+  tenantSlug: string;
 }
 
 function SocialIcon({ platform }: { platform: SocialLink["platform"] }) {
@@ -56,7 +58,7 @@ function formatBusinessHours(hours: MerchantInfo["businessHours"]): { day: strin
   }));
 }
 
-export function Footer({ merchant }: FooterProps) {
+export function Footer({ merchant, tenantSlug }: FooterProps) {
   const fullAddress = `${merchant.address}, ${merchant.city}, ${merchant.state} ${merchant.zipCode}`;
   const businessHours = formatBusinessHours(merchant.businessHours);
 
@@ -138,12 +140,12 @@ export function Footer({ merchant }: FooterProps) {
             <p className="text-gray-400 mb-4">
               Skip the line and order online for pickup or delivery.
             </p>
-            <a
-              href="#order"
+            <Link
+              href={`/r/${tenantSlug}/menu`}
               className="inline-block bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full font-semibold transition-colors"
             >
               Order Online
-            </a>
+            </Link>
           </div>
         </div>
 

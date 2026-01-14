@@ -1,10 +1,12 @@
+import Link from "next/link";
 import type { MerchantInfo } from "@/types/website";
 
 interface HeroBannerProps {
   merchant: MerchantInfo;
+  tenantSlug: string;
 }
 
-export function HeroBanner({ merchant }: HeroBannerProps) {
+export function HeroBanner({ merchant, tenantSlug }: HeroBannerProps) {
   const fullAddress = `${merchant.address}, ${merchant.city}, ${merchant.state} ${merchant.zipCode}`;
 
   return (
@@ -48,12 +50,12 @@ export function HeroBanner({ merchant }: HeroBannerProps) {
           <span className="text-base md:text-lg">{fullAddress}</span>
         </div>
 
-        <a
-          href="#order"
+        <Link
+          href={`/r/${tenantSlug}/menu`}
           className="inline-block bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-semibold text-lg md:text-xl transition-all hover:scale-105 shadow-lg"
         >
           Order Online
-        </a>
+        </Link>
       </div>
 
       {/* Scroll Indicator */}

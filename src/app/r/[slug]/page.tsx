@@ -22,10 +22,10 @@ export default async function RestaurantHomePage({ params }: PageProps) {
         restaurantName={data.merchant.name}
         tenantSlug={slug}
       />
-      <HeroBanner merchant={data.merchant} />
+      <HeroBanner merchant={data.merchant} tenantSlug={slug} />
       <FeaturedItems items={data.featuredItems} />
       <CustomerReviews reviews={data.reviews} />
-      <Footer merchant={data.merchant} />
+      <Footer merchant={data.merchant} tenantSlug={slug} />
     </main>
   );
 }
