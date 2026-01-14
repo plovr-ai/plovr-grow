@@ -54,7 +54,7 @@ export function Navigation({ logo, restaurantName, tenantSlug }: NavigationProps
               Sign In
             </button>
             <a
-              href="#order"
+              href="/menu"
               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-full font-semibold text-sm md:text-base transition-colors"
             >
               Order Online

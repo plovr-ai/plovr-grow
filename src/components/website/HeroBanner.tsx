@@ -49,7 +49,7 @@ export function HeroBanner({ merchant }: HeroBannerProps) {
         </div>
 
         <a
-          href="#order"
+          href="/menu"
           className="inline-block bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-semibold text-lg md:text-xl transition-all hover:scale-105 shadow-lg"
         >
           Order Online

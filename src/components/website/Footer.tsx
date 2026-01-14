@@ -139,7 +139,7 @@ export function Footer({ merchant }: FooterProps) {
               Skip the line and order online for pickup or delivery.
             </p>
             <a
-              href="#order"
+              href="/menu"
               className="inline-block bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full font-semibold transition-colors"
             >
               Order Online
