@@ -1,0 +1,197 @@
+// Prisma schema for Restaurant SaaS Platform
+// Multi-tenant architecture with tenant_id isolation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ==================== Tenant Management ====================
+
+model Tenant {
+  id                 String   @id @default(cuid())
+  name               String
+  slug               String   @unique // URL identifier, e.g., "joes-pizza"
+  subscriptionPlan   String   @default("free") @map("subscription_plan")
+  subscriptionStatus String   @default("active") @map("subscription_status")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  merchant       Merchant?
+  users          User[]
+  menuCategories MenuCategory[]
+  menuItems      MenuItem[]
+  orders         Order[]
+  customers      Customer[]
+
+  @@map("tenants")
+}
+
+// ==================== Merchant (Restaurant Details) ====================
+
+model Merchant {
+  id            String   @id @default(cuid())
+  tenantId      String   @unique @map("tenant_id")
+  name          String
+  description   String?  @db.Text
+  address       String?
+  city          String?
+  state         String?
+  zipCode       String?  @map("zip_code")
+  phone         String?
+  email         String?
+  logoUrl       String?  @map("logo_url")
+  bannerUrl     String?  @map("banner_url")
+  businessHours Json?    @map("business_hours") // { mon: { open: "09:00", close: "22:00" }, ... }
+  timezone      String   @default("America/New_York")
+  currency      String   @default("USD")
+  taxRate       Decimal  @default(0) @map("tax_rate") @db.Decimal(5, 4) // e.g., 0.0825 for 8.25%
+  status        String   @default("active") // active, inactive, suspended
+  settings      Json?    // Additional merchant settings
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("merchants")
+}
+
+// ==================== User (Merchant Staff) ====================
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  email        String
+  passwordHash String   @map("password_hash")
+  name         String
+  role         String   @default("staff") // owner, manager, staff
+  status       String   @default("active") // active, inactive
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+// ==================== Menu ====================
+
+model MenuCategory {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  name        String
+  description String?  @db.Text
+  imageUrl    String?  @map("image_url")
+  sortOrder   Int      @default(0) @map("sort_order")
+  status      String   @default("active") // active, inactive
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  menuItems MenuItem[]
+
+  @@index([tenantId])
+  @@index([tenantId, sortOrder])
+  @@map("menu_categories")
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  categoryId  String   @map("category_id")
+  name        String
+  description String?  @db.Text
+  price       Decimal  @db.Decimal(10, 2)
+  imageUrl    String?  @map("image_url")
+  sortOrder   Int      @default(0) @map("sort_order")
+  status      String   @default("active") // active, inactive, out_of_stock
+  options     Json?    // Modifiers, sizes, add-ons
+  nutrition   Json?    // Nutritional information
+  tags        Json?    // ["vegetarian", "spicy", "gluten-free"]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, categoryId])
+  @@index([tenantId, status])
+  @@map("menu_items")
+}
+
+// ==================== Orders ====================
+
+model Order {
+  id              String    @id @default(cuid())
+  tenantId        String    @map("tenant_id")
+  orderNumber     String    @map("order_number") // Human-readable order number
+  customerId      String?   @map("customer_id")
+  customerName    String    @map("customer_name")
+  customerPhone   String    @map("customer_phone")
+  customerEmail   String?   @map("customer_email")
+  orderType       String    @map("order_type") // pickup, delivery, dine_in
+  status          String    @default("pending") // pending, confirmed, preparing, ready, completed, cancelled
+  items           Json      // Array of order items with details
+  subtotal        Decimal   @db.Decimal(10, 2)
+  taxAmount       Decimal   @map("tax_amount") @db.Decimal(10, 2)
+  tipAmount       Decimal   @default(0) @map("tip_amount") @db.Decimal(10, 2)
+  deliveryFee     Decimal   @default(0) @map("delivery_fee") @db.Decimal(10, 2)
+  discount        Decimal   @default(0) @db.Decimal(10, 2)
+  totalAmount     Decimal   @map("total_amount") @db.Decimal(10, 2)
+  notes           String?   @db.Text
+  deliveryAddress Json?     @map("delivery_address") // For delivery orders
+  scheduledAt     DateTime? @map("scheduled_at") // For scheduled orders
+  confirmedAt     DateTime? @map("confirmed_at")
+  completedAt     DateTime? @map("completed_at")
+  cancelledAt     DateTime? @map("cancelled_at")
+  cancelReason    String?   @map("cancel_reason")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id])
+
+  @@unique([tenantId, orderNumber])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("orders")
+}
+
+// ==================== Customers (for Loyalty) ====================
+
+model Customer {
+  id          String   @id @default(cuid())
+  tenantId    String   @map("tenant_id")
+  phone       String
+  email       String?
+  name        String?
+  points      Int      @default(0) // Loyalty points
+  totalOrders Int      @default(0) @map("total_orders")
+  totalSpent  Decimal  @default(0) @map("total_spent") @db.Decimal(10, 2)
+  lastOrderAt DateTime? @map("last_order_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+  @@map("customers")
+}
