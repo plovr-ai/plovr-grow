@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import { useParams } from "next/navigation";
 import {
   MenuHeader,
@@ -8,22 +8,28 @@ import {
   MenuCategorySection,
 } from "@/components/menu";
 import { getMockMenuPageData } from "@/data/mock/menu";
-import type { MenuPageViewModel } from "@/types/menu-page";
+import { useCartStore } from "@/stores";
+import type { MenuItemViewModel } from "@/types/menu-page";
 
 export default function MenuPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
 
-  const [data, setData] = useState<MenuPageViewModel | null>(null);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const data = useMemo(() => getMockMenuPageData(slug), [slug]);
 
-  useEffect(() => {
-    const menuData = getMockMenuPageData(slug);
-    setData(menuData);
-    if (menuData.categories.length > 0) {
-      setActiveCategory(menuData.categories[0].category.id);
+  const initialCategory = data.categories[0]?.category.id ?? null;
+  const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory);
+
+  const setTenantId = useCartStore((state) => state.setTenantId);
+  const addItem = useCartStore((state) => state.addItem);
+
+  const tenantIdSetRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!tenantIdSetRef.current) {
+      tenantIdSetRef.current = true;
+      setTenantId(slug);
     }
-  }, [slug]);
+  }, [slug, setTenantId]);
 
   const handleCategoryClick = useCallback((categoryId: string) => {
     setActiveCategory(categoryId);
@@ -33,18 +39,27 @@ export default function MenuPage() {
     }
   }, []);
 
-  const handleAddItem = useCallback((itemId: string) => {
-    console.log("Add item:", itemId);
-    // TODO: Open item detail modal or add to cart
-  }, []);
+  const handleAddItem = useCallback(
+    (itemId: string) => {
+      // Find the item in the menu data
+      let menuItem: MenuItemViewModel | undefined;
+      for (const category of data.categories) {
+        menuItem = category.items.find((item) => item.id === itemId);
+        if (menuItem) break;
+      }
 
-  if (!data) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600" />
-      </div>
-    );
-  }
+      if (!menuItem) return;
+
+      addItem({
+        menuItemId: menuItem.id,
+        name: menuItem.name,
+        price: menuItem.price,
+        quantity: 1,
+        selectedOptions: [],
+      });
+    },
+    [data, addItem]
+  );
 
   const categoryViewModels = data.categories.map((c) => c.category);
 
