@@ -68,7 +68,7 @@ export function MenuHeader({
         <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-gradient-to-t from-white via-white to-transparent pb-safe">
           <div className="max-w-3xl mx-auto">
             <Link
-              href={`/r/${tenantSlug}/checkout`}
+              href={`/r/${tenantSlug}/cart`}
               className="w-full bg-red-600 hover:bg-red-700 text-white rounded-xl py-4 px-6 flex items-center justify-between shadow-lg transition-colors"
             >
               <div className="flex items-center gap-3">
