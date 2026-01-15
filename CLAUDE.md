@@ -30,6 +30,12 @@ src/
 │   ├── menu/                  # 菜单组件
 │   └── cart/                  # 购物车组件
 │
+├── contexts/                   # React Context
+│   └── MerchantContext.tsx    # 门店配置 (currency, locale)
+│
+├── hooks/                      # 自定义 Hooks
+│   └── useFormatPrice.ts      # 货币格式化 Hook
+│
 ├── services/                   # 领域服务层 (核心业务逻辑)
 │   ├── menu/                  # 菜单服务
 │   ├── order/                 # 订单服务
@@ -44,6 +50,9 @@ src/
 │   ├── db.ts                  # Prisma 客户端
 │   ├── tenant.ts              # 租户上下文
 │   └── utils.ts               # 通用工具函数
+│
+├── stores/                     # Zustand 状态管理
+│   └── cart.store.ts          # 购物车状态
 │
 ├── data/mock/                  # Mock 数据
 │   └── website.ts
@@ -84,11 +93,56 @@ src/
 | orders | 订单 |
 | customers | 顾客 (Loyalty) |
 
+## 国际化支持
+
+### 货币和地区格式
+每个门店可配置独立的货币和地区格式：
+
+```typescript
+// 门店配置 (MerchantInfo)
+{
+  currency: "USD",    // 货币代码 (ISO 4217)
+  locale: "en-US",    // 地区代码 (BCP 47)
+}
+```
+
+### 支持的格式示例
+| currency | locale | 显示效果 |
+|----------|--------|---------|
+| USD | en-US | $100.00 |
+| EUR | de-DE | 100,00 € |
+| EUR | en-US | €100.00 |
+| CNY | zh-CN | ¥100.00 |
+| JPY | ja-JP | ￥100 |
+
+### 使用方法
+```typescript
+// 在组件中使用 useFormatPrice hook
+import { useFormatPrice } from "@/hooks";
+
+function MyComponent() {
+  const formatPrice = useFormatPrice();
+  return <span>{formatPrice(18.99)}</span>;  // 自动使用门店配置的货币格式
+}
+```
+
+### 架构
+```
+/r/[slug]/layout.tsx (Server)
+  └── 获取门店数据 (currency, locale)
+      └── <MerchantProvider config={{ currency, locale }}>
+          └── 子组件通过 useFormatPrice() 获取格式化函数
+```
+
 ## 常用命令
 
 ```bash
 # 开发
 npm run dev              # 启动开发服务器
+
+# 测试
+npm run test             # 运行测试 (watch 模式)
+npm run test:run         # 运行测试 (单次)
 
 # 数据库
 npm run db:generate      # 生成 Prisma 客户端

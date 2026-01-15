@@ -47,6 +47,7 @@ export interface CartItem {
   selectedOptions: SelectedOption[];
   specialInstructions?: string;
   totalPrice: number; // price * quantity + options
+  imageUrl?: string | null;
 }
 
 export interface SelectedOption {

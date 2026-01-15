@@ -42,5 +42,7 @@ export interface MenuCategoryWithItemsViewModel {
 export interface MenuPageViewModel {
   merchantName: string;
   merchantLogo: string | null;
+  currency: string;
+  locale: string;
   categories: MenuCategoryWithItemsViewModel[];
 }

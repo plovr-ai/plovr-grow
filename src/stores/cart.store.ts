@@ -11,6 +11,7 @@ interface AddToCartInput {
   quantity?: number;
   selectedOptions?: SelectedOption[];
   specialInstructions?: string;
+  imageUrl?: string | null;
 }
 
 interface CartState {
@@ -34,13 +35,21 @@ function generateCartItemId(): string {
   return `cart-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
+/**
+ * Round price to 2 decimal places to avoid floating point precision issues.
+ * Example: 18.99 * 5 = 94.94999999999999, should be 94.95
+ */
+function roundPrice(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 function calculateItemTotalPrice(
   price: number,
   quantity: number,
   selectedOptions: SelectedOption[]
 ): number {
   const optionsTotal = selectedOptions.reduce((sum, opt) => sum + opt.price, 0);
-  return (price + optionsTotal) * quantity;
+  return roundPrice((price + optionsTotal) * quantity);
 }
 
 export const useCartStore = create<CartStore>()(
@@ -67,6 +76,7 @@ export const useCartStore = create<CartStore>()(
           quantity = 1,
           selectedOptions = [],
           specialInstructions,
+          imageUrl,
         } = input;
 
         set((state) => {
@@ -105,6 +115,7 @@ export const useCartStore = create<CartStore>()(
             selectedOptions,
             specialInstructions,
             totalPrice: calculateItemTotalPrice(price, quantity, selectedOptions),
+            imageUrl,
           };
 
           return { items: [...state.items, newItem] };
@@ -154,6 +165,14 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "cart-storage",
+      version: 1,
+      migrate: (persistedState, version) => {
+        if (version === 0) {
+          // Migration from version 0: clear cart to ensure fresh data with imageUrl
+          return { tenantId: null, items: [] };
+        }
+        return persistedState as CartStore;
+      },
     }
   )
 );

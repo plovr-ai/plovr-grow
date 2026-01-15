@@ -4,6 +4,8 @@ export const mockMenuPageData: MenuPageViewModel = {
   merchantName: "Joe's Pizza",
   merchantLogo:
     "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=200&h=200&fit=crop",
+  currency: "USD",
+  locale: "en-US",
   categories: [
     {
       category: {

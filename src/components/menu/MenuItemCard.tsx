@@ -1,5 +1,7 @@
+"use client";
+
 import type { MenuItemViewModel, MenuItemTag } from "@/types/menu-page";
-import { formatPrice } from "@/lib/utils";
+import { useFormatPrice } from "@/hooks";
 
 interface MenuItemCardProps {
   item: MenuItemViewModel;
@@ -16,6 +18,7 @@ const tagConfig: Record<MenuItemTag, { label: string; className: string }> = {
 };
 
 export function MenuItemCard({ item, onAddClick }: MenuItemCardProps) {
+  const formatPrice = useFormatPrice();
   return (
     <div className="flex gap-4 p-4 bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all">
       {item.imageUrl ? (

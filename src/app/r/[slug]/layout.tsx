@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getMockWebsiteData } from "@/data/mock/website";
+import { MerchantProvider } from "@/contexts";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -21,6 +22,18 @@ export async function generateMetadata({ params }: LayoutProps): Promise<Metadat
   };
 }
 
-export default function RestaurantLayout({ children }: LayoutProps) {
-  return <>{children}</>;
+export default async function RestaurantLayout({ children, params }: LayoutProps) {
+  const { slug } = await params;
+  const data = getMockWebsiteData(slug);
+
+  return (
+    <MerchantProvider
+      config={{
+        currency: data.merchant.currency,
+        locale: data.merchant.locale,
+      }}
+    >
+      {children}
+    </MerchantProvider>
+  );
 }

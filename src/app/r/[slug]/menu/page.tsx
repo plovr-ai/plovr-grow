@@ -56,6 +56,7 @@ export default function MenuPage() {
         price: menuItem.price,
         quantity: 1,
         selectedOptions: [],
+        imageUrl: menuItem.imageUrl,
       });
     },
     [data, addItem]
@@ -77,7 +78,7 @@ export default function MenuPage() {
         onCategoryClick={handleCategoryClick}
       />
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-28">
         <div className="space-y-10">
           {data.categories.map((categoryData) => (
             <MenuCategorySection

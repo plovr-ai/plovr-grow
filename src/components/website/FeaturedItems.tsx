@@ -1,17 +1,14 @@
+"use client";
+
 import type { FeaturedItem } from "@/types/website";
+import { useFormatPrice } from "@/hooks";
 
 interface FeaturedItemsProps {
   items: FeaturedItem[];
 }
 
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(price);
-}
-
 export function FeaturedItems({ items }: FeaturedItemsProps) {
+  const formatPrice = useFormatPrice();
   return (
     <section id="menu" className="py-16 md:py-24 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -27,6 +27,8 @@ export const mockWebsiteData: WebsiteData = {
       { platform: "yelp", url: "https://yelp.com/biz/joes-pizza" },
       { platform: "google", url: "https://g.page/joespizza" },
     ],
+    currency: "USD",
+    locale: "en-US",
   },
   featuredItems: [
     {

@@ -13,6 +13,8 @@ export interface MerchantInfo {
   heroImage: string;
   businessHours: BusinessHoursMap;
   socialLinks: SocialLink[];
+  currency: string;
+  locale: string;
 }
 
 export interface BusinessHoursMap {
