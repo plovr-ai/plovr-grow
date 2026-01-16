@@ -144,7 +144,7 @@ describe("MenuHeader", () => {
   });
 
   describe("cart button visibility", () => {
-    it("should not show cart button when cart is empty", () => {
+    it("should hide cart button with CSS when cart is empty", () => {
       render(
         <MenuHeader
           merchantName="Test Restaurant"
@@ -154,7 +154,14 @@ describe("MenuHeader", () => {
         { wrapper: createWrapper("USD", "en-US") }
       );
 
-      expect(screen.queryByText("View Cart")).not.toBeInTheDocument();
+      // Cart button is rendered but hidden via opacity
+      const viewCartButton = screen.getByText("View Cart");
+      expect(viewCartButton).toBeInTheDocument();
+
+      // Parent container should have opacity-0 class
+      const cartContainer = viewCartButton.closest(".fixed");
+      expect(cartContainer).toHaveClass("opacity-0");
+      expect(cartContainer).toHaveClass("pointer-events-none");
     });
 
     it("should show cart button with item count when cart has items", () => {
@@ -182,8 +189,62 @@ describe("MenuHeader", () => {
         { wrapper: createWrapper("USD", "en-US") }
       );
 
-      expect(screen.getByText("View Cart")).toBeInTheDocument();
+      const viewCartButton = screen.getByText("View Cart");
+      expect(viewCartButton).toBeInTheDocument();
       expect(screen.getByText("3")).toBeInTheDocument();
+
+      // Parent container should have opacity-100 class
+      const cartContainer = viewCartButton.closest(".fixed");
+      expect(cartContainer).toHaveClass("opacity-100");
+      expect(cartContainer).not.toHaveClass("pointer-events-none");
+    });
+  });
+
+  describe("fly-to-cart animation target", () => {
+    it("should always render cart-icon-target element for animation", () => {
+      render(
+        <MenuHeader
+          merchantName="Test Restaurant"
+          merchantLogo={null}
+          tenantSlug="test"
+        />,
+        { wrapper: createWrapper("USD", "en-US") }
+      );
+
+      // cart-icon-target should always be present for fly-to-cart animation
+      const cartIconTarget = document.getElementById("cart-icon-target");
+      expect(cartIconTarget).toBeInTheDocument();
+    });
+
+    it("should render cart-icon-target on the cart count badge", () => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: [
+          {
+            id: "1",
+            menuItemId: "item-1",
+            name: "Test Item",
+            price: 10,
+            quantity: 5,
+            selectedOptions: [],
+            totalPrice: 50,
+          },
+        ],
+      });
+
+      render(
+        <MenuHeader
+          merchantName="Test Restaurant"
+          merchantLogo={null}
+          tenantSlug="test"
+        />,
+        { wrapper: createWrapper("USD", "en-US") }
+      );
+
+      const cartIconTarget = document.getElementById("cart-icon-target");
+      expect(cartIconTarget).toBeInTheDocument();
+      // The target should contain the item count
+      expect(cartIconTarget).toHaveTextContent("5");
     });
   });
 });

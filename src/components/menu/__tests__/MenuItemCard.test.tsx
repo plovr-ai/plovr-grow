@@ -143,4 +143,46 @@ describe("MenuItemCard", () => {
       expect(onAddClick).toHaveBeenCalledWith("item-1");
     });
   });
+
+  describe("add button interaction", () => {
+    it("should have active scale effect class on button", () => {
+      const onAddClick = vi.fn();
+
+      render(<MenuItemCard item={mockItem} onAddClick={onAddClick} />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      const button = screen.getByRole("button");
+      expect(button).toHaveClass("active:scale-90");
+    });
+
+    it("should allow multiple clicks to add multiple items", () => {
+      const onAddClick = vi.fn();
+
+      render(<MenuItemCard item={mockItem} onAddClick={onAddClick} />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      const button = screen.getByRole("button");
+      fireEvent.click(button);
+      fireEvent.click(button);
+      fireEvent.click(button);
+
+      expect(onAddClick).toHaveBeenCalledTimes(3);
+    });
+
+    it("should not allow clicks on unavailable items", () => {
+      const onAddClick = vi.fn();
+      const unavailableItem = { ...mockItem, isAvailable: false };
+
+      render(<MenuItemCard item={unavailableItem} onAddClick={onAddClick} />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      const button = screen.getByRole("button");
+      fireEvent.click(button);
+
+      expect(onAddClick).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -352,4 +352,106 @@ describe("CartPage", () => {
       expect(screen.getByText("Large, Extra Cheese")).toBeInTheDocument();
     });
   });
+
+  describe("clear cart functionality", () => {
+    it("should display Clear button in header when cart has items", () => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: [
+          {
+            id: "1",
+            menuItemId: "item-1",
+            name: "Test Item",
+            price: 10,
+            quantity: 1,
+            selectedOptions: [],
+            totalPrice: 10,
+            imageUrl: null,
+          },
+        ],
+      });
+
+      render(<CartPage />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      expect(screen.getByText("Clear")).toBeInTheDocument();
+    });
+
+    it("should clear all items when Clear button is clicked", () => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: [
+          {
+            id: "1",
+            menuItemId: "item-1",
+            name: "Item 1",
+            price: 10,
+            quantity: 2,
+            selectedOptions: [],
+            totalPrice: 20,
+            imageUrl: null,
+          },
+          {
+            id: "2",
+            menuItemId: "item-2",
+            name: "Item 2",
+            price: 15,
+            quantity: 1,
+            selectedOptions: [],
+            totalPrice: 15,
+            imageUrl: null,
+          },
+        ],
+      });
+
+      render(<CartPage />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      // Verify items are in cart
+      expect(screen.getByText("Item 1")).toBeInTheDocument();
+      expect(screen.getByText("Item 2")).toBeInTheDocument();
+      expect(useCartStore.getState().items).toHaveLength(2);
+
+      // Click Clear button
+      const clearButton = screen.getByText("Clear");
+      fireEvent.click(clearButton);
+
+      // Cart should be empty
+      expect(useCartStore.getState().items).toHaveLength(0);
+    });
+
+    it("should show empty cart state after clearing", () => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: [
+          {
+            id: "1",
+            menuItemId: "item-1",
+            name: "Test Item",
+            price: 10,
+            quantity: 1,
+            selectedOptions: [],
+            totalPrice: 10,
+            imageUrl: null,
+          },
+        ],
+      });
+
+      const { rerender } = render(<CartPage />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      // Click Clear button
+      const clearButton = screen.getByText("Clear");
+      fireEvent.click(clearButton);
+
+      // Re-render to see updated state
+      rerender(<CartPage />);
+
+      // Should show empty cart message
+      expect(screen.getByText("Your cart is empty")).toBeInTheDocument();
+    });
+  });
 });

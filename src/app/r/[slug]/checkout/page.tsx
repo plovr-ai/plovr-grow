@@ -253,7 +253,7 @@ export default function CheckoutPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center h-16">
               <Link
                 href={`/r/${slug}/cart`}
@@ -280,7 +280,7 @@ export default function CheckoutPage() {
           </div>
         </header>
 
-        <main className="max-w-3xl mx-auto px-4 sm:px-6 py-16 text-center">
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
           <div className="text-gray-400 mb-4">
             <svg
               className="w-16 h-16 mx-auto"
@@ -320,7 +320,7 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
             <Link
               href={`/r/${slug}/cart`}
@@ -348,7 +348,7 @@ export default function CheckoutPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-72 space-y-4">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-72 space-y-4">
         <OrderTypeSelector
           value={formState.orderType}
           onChange={handleOrderTypeChange}
@@ -410,7 +410,7 @@ export default function CheckoutPage() {
 
       {/* Fixed Footer */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <PriceSummary
             subtotal={calculations.subtotal}
             taxAmount={calculations.taxAmount}

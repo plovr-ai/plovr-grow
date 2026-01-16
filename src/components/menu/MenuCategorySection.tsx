@@ -21,7 +21,7 @@ export function MenuCategorySection({
         )}
       </div>
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {items.map((item) => (
           <MenuItemCard key={item.id} item={item} onAddClick={onAddItem} />
         ))}
