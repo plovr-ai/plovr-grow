@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef, useLayoutEffect } from "react";
+import { useState, useMemo, useCallback, useRef, useLayoutEffect, useEffect } from "react";
 import { useParams } from "next/navigation";
 import {
   MenuHeader,
@@ -31,13 +31,51 @@ export default function MenuPage() {
     }
   }, [slug, setTenantId]);
 
+  const isScrollingRef = useRef(false);
+
   const handleCategoryClick = useCallback((categoryId: string) => {
     setActiveCategory(categoryId);
+    isScrollingRef.current = true;
     const element = document.getElementById(`category-${categoryId}`);
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => {
+        isScrollingRef.current = false;
+      }, 1000);
     }
   }, []);
+
+  // Intersection Observer to update active category on scroll
+  useEffect(() => {
+    const categoryIds = data.categories.map((c) => c.category.id);
+    const observers: IntersectionObserver[] = [];
+
+    categoryIds.forEach((categoryId) => {
+      const element = document.getElementById(`category-${categoryId}`);
+      if (!element) return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && !isScrollingRef.current) {
+              setActiveCategory(categoryId);
+            }
+          });
+        },
+        {
+          rootMargin: "-20% 0px -70% 0px",
+          threshold: 0,
+        }
+      );
+
+      observer.observe(element);
+      observers.push(observer);
+    });
+
+    return () => {
+      observers.forEach((observer) => observer.disconnect());
+    };
+  }, [data.categories]);
 
   const handleAddItem = useCallback(
     (itemId: string) => {
@@ -78,7 +116,7 @@ export default function MenuPage() {
         onCategoryClick={handleCategoryClick}
       />
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-28">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28">
         <div className="space-y-10">
           {data.categories.map((categoryData) => (
             <MenuCategorySection
