@@ -79,7 +79,7 @@ export default function MenuPage() {
 
   const handleAddItem = useCallback(
     (itemId: string) => {
-      // Find the item in the menu data
+      // Find the item in menu categories
       let menuItem: MenuItemViewModel | undefined;
       for (const category of data.categories) {
         menuItem = category.items.find((item) => item.id === itemId);
@@ -97,7 +97,7 @@ export default function MenuPage() {
         imageUrl: menuItem.imageUrl,
       });
     },
-    [data, addItem]
+    [data.categories, addItem]
   );
 
   const categoryViewModels = data.categories.map((c) => c.category);

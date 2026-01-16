@@ -9,6 +9,61 @@ export const mockMenuPageData: MenuPageViewModel = {
   categories: [
     {
       category: {
+        id: "featured",
+        name: "Featured",
+        description: "Our most popular dishes",
+        itemCount: 4,
+      },
+      items: [
+        {
+          id: "item-1",
+          name: "Classic Cheese Pizza",
+          description:
+            "Our signature pizza with fresh mozzarella and house-made tomato sauce",
+          price: 18.99,
+          imageUrl:
+            "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop",
+          tags: ["popular"],
+          hasOptions: true,
+          isAvailable: true,
+        },
+        {
+          id: "item-2",
+          name: "Pepperoni Pizza",
+          description: "Classic pepperoni with premium mozzarella cheese",
+          price: 21.99,
+          imageUrl:
+            "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop",
+          tags: ["popular"],
+          hasOptions: true,
+          isAvailable: true,
+        },
+        {
+          id: "item-3",
+          name: "Margherita Pizza",
+          description: "Fresh tomatoes, mozzarella, basil, and olive oil",
+          price: 19.99,
+          imageUrl:
+            "https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=400&h=300&fit=crop",
+          tags: ["vegetarian"],
+          hasOptions: true,
+          isAvailable: true,
+        },
+        {
+          id: "item-8",
+          name: "Garlic Knots",
+          description: "Fresh baked knots with garlic butter (6 pieces)",
+          price: 5.99,
+          imageUrl:
+            "https://images.unsplash.com/photo-1619531040576-f9416740661b?w=400&h=300&fit=crop",
+          tags: ["vegetarian", "popular"],
+          hasOptions: false,
+          isAvailable: true,
+        },
+      ],
+    },
+    {
+      category: {
         id: "cat-pizza",
         name: "Pizza",
         description: "Our handcrafted New York style pizzas",
