@@ -1,0 +1,387 @@
+import { describe, it, expect } from "vitest";
+import {
+  calculateOrderPricing,
+  calculateTipAmount,
+  type PricingItem,
+  type TipInput,
+} from "../pricing";
+
+describe("calculateOrderPricing", () => {
+  describe("subtotal calculation", () => {
+    it("should calculate subtotal for single item", () => {
+      const items: PricingItem[] = [
+        { itemId: "item-1", unitPrice: 10.0, quantity: 1, tax: null },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      expect(result.subtotal).toBe(10.0);
+    });
+
+    it("should calculate subtotal for multiple items", () => {
+      const items: PricingItem[] = [
+        { itemId: "item-1", unitPrice: 10.0, quantity: 2, tax: null },
+        { itemId: "item-2", unitPrice: 5.0, quantity: 3, tax: null },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      // 10 * 2 + 5 * 3 = 35
+      expect(result.subtotal).toBe(35.0);
+    });
+
+    it("should handle empty items array", () => {
+      const result = calculateOrderPricing([]);
+
+      expect(result.subtotal).toBe(0);
+      expect(result.taxAmount).toBe(0);
+      expect(result.tipAmount).toBe(0);
+      expect(result.totalAmount).toBe(0);
+    });
+  });
+
+  describe("tax calculation with different rounding methods", () => {
+    it("should calculate tax with half_up rounding", () => {
+      const items: PricingItem[] = [
+        {
+          itemId: "item-1",
+          unitPrice: 18.99,
+          quantity: 1,
+          tax: { rate: 0.0825, roundingMethod: "half_up" },
+        },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      // 18.99 * 0.0825 = 1.566675 -> 1.57 (half_up)
+      expect(result.taxAmount).toBe(1.57);
+    });
+
+    it("should calculate tax with always_round_down rounding", () => {
+      const items: PricingItem[] = [
+        {
+          itemId: "item-1",
+          unitPrice: 10.99,
+          quantity: 1,
+          tax: { rate: 0.05, roundingMethod: "always_round_down" },
+        },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      // 10.99 * 0.05 = 0.5495 -> 0.54 (floor)
+      expect(result.taxAmount).toBe(0.54);
+    });
+
+    it("should calculate tax with always_round_up rounding", () => {
+      const items: PricingItem[] = [
+        {
+          itemId: "item-1",
+          unitPrice: 10.01,
+          quantity: 1,
+          tax: { rate: 0.05, roundingMethod: "always_round_up" },
+        },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      // 10.01 * 0.05 = 0.5005 -> 0.51 (ceiling)
+      expect(result.taxAmount).toBe(0.51);
+    });
+
+    it("should calculate tax with half_even (banker's) rounding", () => {
+      const items: PricingItem[] = [
+        {
+          itemId: "item-1",
+          unitPrice: 100.0,
+          quantity: 1,
+          tax: { rate: 0.00125, roundingMethod: "half_even" },
+        },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      // 100 * 0.00125 = 0.125 -> 0.12 (half_even rounds to even)
+      expect(result.taxAmount).toBe(0.12);
+    });
+  });
+
+  describe("per-item tax calculation", () => {
+    it("should calculate tax per-item and sum", () => {
+      const items: PricingItem[] = [
+        {
+          itemId: "item-1",
+          unitPrice: 18.99,
+          quantity: 1,
+          tax: { rate: 0.0825, roundingMethod: "half_up" },
+        },
+        {
+          itemId: "item-2",
+          unitPrice: 21.99,
+          quantity: 2,
+          tax: { rate: 0.0825, roundingMethod: "half_up" },
+        },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      // item-1: 18.99 * 0.0825 = 1.566675 -> 1.57
+      // item-2: 21.99 * 2 * 0.0825 = 3.628350 -> 3.63
+      // total: 1.57 + 3.63 = 5.20
+      expect(result.taxAmount).toBe(5.2);
+    });
+
+    it("should handle mixed tax rates", () => {
+      const items: PricingItem[] = [
+        {
+          itemId: "item-1",
+          unitPrice: 10.0,
+          quantity: 1,
+          tax: { rate: 0.0825, roundingMethod: "half_up" },
+        },
+        {
+          itemId: "item-2",
+          unitPrice: 10.0,
+          quantity: 1,
+          tax: { rate: 0.05, roundingMethod: "always_round_down" },
+        },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      // item-1: 10 * 0.0825 = 0.825 -> 0.83
+      // item-2: 10 * 0.05 = 0.50 -> 0.50
+      // total: 0.83 + 0.50 = 1.33
+      expect(result.taxAmount).toBe(1.33);
+    });
+  });
+
+  describe("tax-free items", () => {
+    it("should return zero tax for items with null tax config", () => {
+      const items: PricingItem[] = [
+        { itemId: "item-1", unitPrice: 10.0, quantity: 1, tax: null },
+        { itemId: "item-2", unitPrice: 20.0, quantity: 1, tax: null },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      expect(result.subtotal).toBe(30.0);
+      expect(result.taxAmount).toBe(0);
+      expect(result.totalAmount).toBe(30.0);
+    });
+
+    it("should handle mix of taxable and tax-free items", () => {
+      const items: PricingItem[] = [
+        {
+          itemId: "item-1",
+          unitPrice: 10.0,
+          quantity: 1,
+          tax: { rate: 0.0825, roundingMethod: "half_up" },
+        },
+        { itemId: "item-2", unitPrice: 10.0, quantity: 1, tax: null },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      // Only item-1 has tax: 10 * 0.0825 = 0.825 -> 0.83
+      expect(result.subtotal).toBe(20.0);
+      expect(result.taxAmount).toBe(0.83);
+      expect(result.totalAmount).toBe(20.83);
+    });
+  });
+
+  describe("tip calculation", () => {
+    it("should include fixed tip in total amount", () => {
+      const items: PricingItem[] = [
+        { itemId: "item-1", unitPrice: 10.0, quantity: 1, tax: null },
+      ];
+
+      const result = calculateOrderPricing(items, { type: "fixed", amount: 5.0 });
+
+      expect(result.subtotal).toBe(10.0);
+      expect(result.tipAmount).toBe(5.0);
+      expect(result.totalAmount).toBe(15.0);
+    });
+
+    it("should calculate percentage tip based on subtotal", () => {
+      const items: PricingItem[] = [
+        { itemId: "item-1", unitPrice: 100.0, quantity: 1, tax: null },
+      ];
+
+      // 15% tip
+      const result = calculateOrderPricing(items, { type: "percentage", percentage: 0.15 });
+
+      expect(result.subtotal).toBe(100.0);
+      expect(result.tipAmount).toBe(15.0); // 100 * 0.15 = 15
+      expect(result.totalAmount).toBe(115.0);
+    });
+
+    it("should calculate percentage tip with proper rounding", () => {
+      const items: PricingItem[] = [
+        { itemId: "item-1", unitPrice: 33.33, quantity: 1, tax: null },
+      ];
+
+      // 18% tip
+      const result = calculateOrderPricing(items, { type: "percentage", percentage: 0.18 });
+
+      expect(result.subtotal).toBe(33.33);
+      // 33.33 * 0.18 = 5.9994 -> 6.00
+      expect(result.tipAmount).toBe(6.0);
+      expect(result.totalAmount).toBe(39.33);
+    });
+
+    it("should handle tip with tax", () => {
+      const items: PricingItem[] = [
+        {
+          itemId: "item-1",
+          unitPrice: 10.0,
+          quantity: 1,
+          tax: { rate: 0.0825, roundingMethod: "half_up" },
+        },
+      ];
+
+      const result = calculateOrderPricing(items, { type: "fixed", amount: 2.0 });
+
+      // subtotal: 10.0
+      // tax: 10 * 0.0825 = 0.825 -> 0.83
+      // tip: 2.0
+      // total: 10 + 0.83 + 2 = 12.83
+      expect(result.subtotal).toBe(10.0);
+      expect(result.taxAmount).toBe(0.83);
+      expect(result.tipAmount).toBe(2.0);
+      expect(result.totalAmount).toBe(12.83);
+    });
+
+    it("should default tip to 0 when not provided", () => {
+      const items: PricingItem[] = [
+        { itemId: "item-1", unitPrice: 10.0, quantity: 1, tax: null },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      expect(result.tipAmount).toBe(0);
+    });
+
+    it("should default tip to 0 when null is provided", () => {
+      const items: PricingItem[] = [
+        { itemId: "item-1", unitPrice: 10.0, quantity: 1, tax: null },
+      ];
+
+      const result = calculateOrderPricing(items, null);
+
+      expect(result.tipAmount).toBe(0);
+    });
+  });
+
+  describe("calculateTipAmount", () => {
+    it("should calculate fixed tip amount", () => {
+      const tip: TipInput = { type: "fixed", amount: 5.0 };
+      expect(calculateTipAmount(100.0, tip)).toBe(5.0);
+    });
+
+    it("should calculate percentage tip based on subtotal", () => {
+      const tip: TipInput = { type: "percentage", percentage: 0.15 };
+      expect(calculateTipAmount(100.0, tip)).toBe(15.0);
+    });
+
+    it("should round percentage tip to 2 decimal places", () => {
+      const tip: TipInput = { type: "percentage", percentage: 0.18 };
+      // 33.33 * 0.18 = 5.9994 -> 6.00
+      expect(calculateTipAmount(33.33, tip)).toBe(6.0);
+    });
+
+    it("should return 0 for null tip", () => {
+      expect(calculateTipAmount(100.0, null)).toBe(0);
+    });
+
+    it("should return 0 for undefined tip", () => {
+      expect(calculateTipAmount(100.0, undefined)).toBe(0);
+    });
+  });
+
+  describe("real-world scenarios", () => {
+    it("should calculate a typical restaurant order with fixed tip", () => {
+      // Simulate a real order:
+      // - 2x Classic Pizza @ $18.99 (standard tax 8.25%)
+      // - 1x Fountain Drink @ $2.99 (reduced tax 5%)
+      // - $5 fixed tip
+      const items: PricingItem[] = [
+        {
+          itemId: "pizza",
+          unitPrice: 18.99,
+          quantity: 2,
+          tax: { rate: 0.0825, roundingMethod: "half_up" },
+        },
+        {
+          itemId: "drink",
+          unitPrice: 2.99,
+          quantity: 1,
+          tax: { rate: 0.05, roundingMethod: "always_round_down" },
+        },
+      ];
+
+      const result = calculateOrderPricing(items, { type: "fixed", amount: 5.0 });
+
+      // subtotal: 18.99 * 2 + 2.99 = 40.97
+      // pizza tax: 18.99 * 2 * 0.0825 = 3.133350 -> 3.13
+      // drink tax: 2.99 * 0.05 = 0.1495 -> 0.14
+      // total tax: 3.13 + 0.14 = 3.27
+      // total: 40.97 + 3.27 + 5.0 = 49.24
+      expect(result.subtotal).toBe(40.97);
+      expect(result.taxAmount).toBe(3.27);
+      expect(result.tipAmount).toBe(5.0);
+      expect(result.totalAmount).toBe(49.24);
+    });
+
+    it("should calculate a typical restaurant order with percentage tip", () => {
+      // Simulate a real order with 18% tip
+      const items: PricingItem[] = [
+        {
+          itemId: "pizza",
+          unitPrice: 18.99,
+          quantity: 2,
+          tax: { rate: 0.0825, roundingMethod: "half_up" },
+        },
+        {
+          itemId: "drink",
+          unitPrice: 2.99,
+          quantity: 1,
+          tax: { rate: 0.05, roundingMethod: "always_round_down" },
+        },
+      ];
+
+      const result = calculateOrderPricing(items, { type: "percentage", percentage: 0.18 });
+
+      // subtotal: 18.99 * 2 + 2.99 = 40.97
+      // pizza tax: 18.99 * 2 * 0.0825 = 3.133350 -> 3.13
+      // drink tax: 2.99 * 0.05 = 0.1495 -> 0.14
+      // total tax: 3.13 + 0.14 = 3.27
+      // tip: 40.97 * 0.18 = 7.3746 -> 7.37
+      // total: 40.97 + 3.27 + 7.37 = 51.61
+      expect(result.subtotal).toBe(40.97);
+      expect(result.taxAmount).toBe(3.27);
+      expect(result.tipAmount).toBe(7.37);
+      expect(result.totalAmount).toBe(51.61);
+    });
+
+    it("should handle floating point precision correctly", () => {
+      // Test case that would cause floating point issues without proper rounding
+      const items: PricingItem[] = [
+        {
+          itemId: "item-1",
+          unitPrice: 18.99,
+          quantity: 5,
+          tax: { rate: 0.0825, roundingMethod: "half_up" },
+        },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      // subtotal: 18.99 * 5 = 94.95 (could be 94.94999999999999 without rounding)
+      // tax: 94.95 * 0.0825 = 7.833375 -> 7.83
+      expect(result.subtotal).toBe(94.95);
+      expect(result.taxAmount).toBe(7.83);
+      expect(result.totalAmount).toBe(102.78);
+    });
+  });
+});

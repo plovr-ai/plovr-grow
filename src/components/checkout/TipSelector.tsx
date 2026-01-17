@@ -1,20 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import { useFormatPrice } from "@/hooks";
+import { useState, useEffect } from "react";
+import { useFormatPrice, useCurrencySymbol } from "@/hooks";
+import { TipOptionButton } from "./TipOptionButton";
+import { TipOptionInput } from "./TipOptionInput";
+import type { TipInput } from "@/lib/pricing";
 
 interface TipSelectorProps {
   subtotal: number;
-  value: number;
-  onChange: (amount: number) => void;
+  value: TipInput | null;
+  onChange: (tip: TipInput | null) => void;
   disabled?: boolean;
 }
 
-const TIP_PERCENTAGES = [
-  { value: 0, label: "None" },
-  { value: 0.15, label: "15%" },
-  { value: 0.18, label: "18%" },
-  { value: 0.2, label: "20%" },
+type TipOptionType = "none" | "percentage" | "custom";
+
+interface TipOption {
+  type: TipOptionType;
+  percentage?: number;
+  label: string;
+}
+
+const TIP_OPTIONS: TipOption[] = [
+  { type: "none", label: "None" },
+  { type: "percentage", percentage: 0.15, label: "15%" },
+  { type: "percentage", percentage: 0.18, label: "18%" },
+  { type: "percentage", percentage: 0.2, label: "20%" },
+  { type: "custom", label: "Custom" },
 ];
 
 export function TipSelector({
@@ -24,90 +36,109 @@ export function TipSelector({
   disabled = false,
 }: TipSelectorProps) {
   const formatPrice = useFormatPrice();
-  const [isCustom, setIsCustom] = useState(false);
+  const currencySymbol = useCurrencySymbol();
+
+  // Unified state management
+  const [activeType, setActiveType] = useState<TipOptionType>("none");
   const [customValue, setCustomValue] = useState("");
 
-  const selectedPercentage = TIP_PERCENTAGES.find(
-    (tip) => Math.abs(subtotal * tip.value - value) < 0.01
-  );
+  // Sync activeType with external value changes
+  useEffect(() => {
+    if (value === null) {
+      // Only reset to "none" if not in custom mode with empty input
+      if (activeType !== "custom") {
+        setActiveType("none");
+      }
+    } else if (value.type === "percentage") {
+      setActiveType("percentage");
+    } else if (value.type === "fixed") {
+      setActiveType("custom");
+      setCustomValue(String(value.amount));
+    }
+  }, [value, activeType]);
 
-  const handlePercentageClick = (percentage: number) => {
-    setIsCustom(false);
-    setCustomValue("");
-    onChange(Math.round(subtotal * percentage * 100) / 100);
+  const handleSelect = (option: TipOption) => {
+    setActiveType(option.type);
+
+    if (option.type === "none") {
+      onChange(null);
+      setCustomValue("");
+    } else if (option.type === "percentage" && option.percentage !== undefined) {
+      onChange({ type: "percentage", percentage: option.percentage });
+      setCustomValue("");
+    }
+    // custom type is handled by input onChange
   };
 
-  const handleCustomClick = () => {
-    setIsCustom(true);
-  };
-
-  const handleCustomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
+  const handleCustomChange = (inputValue: string) => {
     setCustomValue(inputValue);
     const numValue = parseFloat(inputValue);
-    if (!isNaN(numValue) && numValue >= 0) {
-      onChange(Math.round(numValue * 100) / 100);
-    } else if (inputValue === "") {
-      onChange(0);
+
+    if (inputValue === "" || isNaN(numValue) || numValue <= 0) {
+      onChange(null);
+    } else {
+      onChange({ type: "fixed", amount: Math.round(numValue * 100) / 100 });
     }
+  };
+
+  const handleCustomFocus = () => {
+    setActiveType("custom");
+    // Clear percentage selection when focusing on custom
+    if (value?.type === "percentage") {
+      onChange(null);
+    }
+  };
+
+  // Check if an option is selected
+  const isSelected = (option: TipOption): boolean => {
+    if (option.type === "none") {
+      return activeType === "none";
+    }
+    if (option.type === "custom") {
+      return activeType === "custom";
+    }
+    if (option.type === "percentage") {
+      return (
+        activeType === "percentage" &&
+        value?.type === "percentage" &&
+        value.percentage === option.percentage
+      );
+    }
+    return false;
   };
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4">
       <h2 className="text-sm font-medium text-gray-700 mb-3">Add a Tip</h2>
-      <div className="flex flex-wrap gap-2">
-        {TIP_PERCENTAGES.map((tip) => (
-          <button
-            key={tip.value}
-            type="button"
-            onClick={() => handlePercentageClick(tip.value)}
-            disabled={disabled}
-            className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-              !isCustom && selectedPercentage?.value === tip.value
-                ? "border-red-600 bg-red-50 text-red-600"
-                : "border-gray-200 hover:border-gray-300 text-gray-600"
-            } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            {tip.label}
-            {tip.value > 0 && (
-              <span className="ml-1 text-xs text-gray-500">
-                ({formatPrice(subtotal * tip.value)})
-              </span>
-            )}
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={handleCustomClick}
-          disabled={disabled}
-          className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-            isCustom
-              ? "border-red-600 bg-red-50 text-red-600"
-              : "border-gray-200 hover:border-gray-300 text-gray-600"
-          } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-        >
-          Custom
-        </button>
-      </div>
-      {isCustom && (
-        <div className="mt-3">
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
-              $
-            </span>
-            <input
-              type="number"
-              value={customValue}
-              onChange={handleCustomChange}
+      <div className="flex flex-wrap items-center gap-2">
+        {TIP_OPTIONS.map((option) =>
+          option.type === "custom" ? (
+            <TipOptionInput
+              key="custom"
+              selected={isSelected(option)}
               disabled={disabled}
-              placeholder="0.00"
-              min="0"
-              step="0.01"
-              className="w-full pl-8 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+              value={customValue}
+              currencySymbol={currencySymbol}
+              onChange={handleCustomChange}
+              onFocus={handleCustomFocus}
             />
-          </div>
-        </div>
-      )}
+          ) : (
+            <TipOptionButton
+              key={option.label}
+              selected={isSelected(option)}
+              disabled={disabled}
+              onClick={() => handleSelect(option)}
+            >
+              {option.label}
+              {option.percentage && option.percentage > 0 && (
+                <span className="ml-1 text-xs text-gray-500">
+                  ({formatPrice(subtotal * option.percentage)})
+                </span>
+              )}
+            </TipOptionButton>
+          )
+        )}
+      </div>
     </div>
   );
 }

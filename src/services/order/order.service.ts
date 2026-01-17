@@ -1,7 +1,7 @@
 import { orderRepository } from "@/repositories/order.repository";
-import { merchantRepository } from "@/repositories/merchant.repository";
-import { menuService } from "@/services/menu";
-import { generateOrderNumber, calculateTax } from "@/lib/utils";
+import { menuService, taxConfigService } from "@/services/menu";
+import { generateOrderNumber } from "@/lib/utils";
+import { calculateOrderPricing, type PricingItem, type TipInput } from "@/lib/pricing";
 import type {
   CreateOrderInput,
   OrderCalculation,
@@ -56,31 +56,59 @@ export class OrderService {
   }
 
   /**
-   * Calculate order totals
+   * Calculate order totals with per-item tax calculation
+   * Uses unified pricing module for consistency with client-side calculation
    */
   async calculateOrderTotals(
     tenantId: string,
     input: Pick<CreateOrderInput, "items" | "orderType" | "tipAmount">
   ): Promise<OrderCalculation> {
-    // Calculate subtotal from items
-    const subtotal = input.items.reduce((sum, item) => sum + item.totalPrice, 0);
+    // Collect all unique tax config IDs from items
+    const taxConfigIds = input.items
+      .map((item) => item.taxConfigId)
+      .filter((id): id is string => id != null);
 
-    // Get tax rate from merchant
-    const taxRate = await merchantRepository.getTaxRate(tenantId);
-    const taxAmount = calculateTax(subtotal, taxRate);
+    // Get tax configs for calculation
+    const taxConfigMap = await taxConfigService.getTaxConfigsMap(
+      tenantId,
+      taxConfigIds
+    );
 
-    // Calculate delivery fee (if applicable)
-    const deliveryFee = input.orderType === "delivery" ? 3.99 : 0; // TODO: Make configurable
+    // Convert to PricingItem with embedded tax config values
+    const pricingItems: PricingItem[] = input.items.map((item) => {
+      const taxConfig = item.taxConfigId
+        ? taxConfigMap.get(item.taxConfigId)
+        : null;
 
-    const tipAmount = input.tipAmount || 0;
+      return {
+        itemId: item.menuItemId,
+        unitPrice: item.totalPrice / item.quantity,
+        quantity: item.quantity,
+        tax: taxConfig
+          ? { rate: Number(taxConfig.rate), roundingMethod: taxConfig.roundingMethod }
+          : null,
+      };
+    });
+
+    // Convert tipAmount to TipInput (fixed amount)
+    const tip: TipInput | null = input.tipAmount
+      ? { type: "fixed", amount: input.tipAmount }
+      : null;
+
+    // Calculate pricing using unified module
+    const pricing = calculateOrderPricing(pricingItems, tip);
+
+    // Calculate delivery fee separately (not included in pricing module for now)
+    const deliveryFee = input.orderType === "delivery" ? 3.99 : 0;
     const discount = 0; // TODO: Implement discount/coupon system
 
-    const totalAmount = subtotal + taxAmount + tipAmount + deliveryFee - discount;
+    const totalAmount = pricing.totalAmount + deliveryFee - discount;
 
     return {
-      subtotal: Math.round(subtotal * 100) / 100,
-      taxAmount: Math.round(taxAmount * 100) / 100,
-      tipAmount: Math.round(tipAmount * 100) / 100,
+      subtotal: pricing.subtotal,
+      taxAmount: pricing.taxAmount,
+      taxBreakdown: [], // Simplified, no breakdown needed for now
+      tipAmount: pricing.tipAmount,
       deliveryFee: Math.round(deliveryFee * 100) / 100,
       discount: Math.round(discount * 100) / 100,
       totalAmount: Math.round(totalAmount * 100) / 100,

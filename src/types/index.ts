@@ -1,5 +1,8 @@
 import type { Prisma } from "@prisma/client";
 
+// Re-export tax types for convenience
+export type { TaxBreakdownItem } from "@/services/menu/tax-config.types";
+
 // ==================== Menu Types ====================
 
 export interface MenuItemOption {
@@ -34,6 +37,7 @@ export interface MenuItemData {
   status: string;
   options: MenuItemOption[] | null;
   tags: string[] | null;
+  taxConfigId?: string | null;
 }
 
 // ==================== Cart Types ====================
@@ -48,6 +52,7 @@ export interface CartItem {
   specialInstructions?: string;
   totalPrice: number; // price * quantity + options
   imageUrl?: string | null;
+  taxConfigId?: string | null;
 }
 
 export interface SelectedOption {
@@ -85,6 +90,7 @@ export interface OrderItemData {
   selectedOptions: SelectedOption[];
   specialInstructions?: string;
   totalPrice: number;
+  taxConfigId?: string | null;
 }
 
 export interface CreateOrderInput {

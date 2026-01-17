@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCartStore, useCartHydration } from "@/stores";
-import { useFormatPrice } from "@/hooks";
+import { useFormatPrice, usePricing } from "@/hooks";
 import {
   OrderTypeSelector,
   ContactInfoForm,
@@ -18,6 +18,7 @@ import {
   deliveryAddressSchema,
   type OrderType,
 } from "@/lib/validations/checkout";
+import type { TipInput } from "@/lib/pricing";
 
 interface FormState {
   orderType: OrderType;
@@ -32,7 +33,7 @@ interface FormState {
     zipCode: string;
     instructions: string;
   };
-  tipAmount: number;
+  tip: TipInput | null;
   notes: string;
 }
 
@@ -64,7 +65,7 @@ const initialFormState: FormState = {
     zipCode: "",
     instructions: "",
   },
-  tipAmount: 0,
+  tip: null,
   notes: "",
 };
 
@@ -83,18 +84,20 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Calculate totals
+  // Calculate totals using unified pricing module
+  const pricing = usePricing(items, formState.tip);
   const calculations = useMemo(() => {
-    const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
-    const taxRate = 0.0875; // 8.75%
-    const taxAmount = Math.round(subtotal * taxRate * 100) / 100;
     const deliveryFee = formState.orderType === "delivery" ? 3.99 : 0;
-    const tipAmount = formState.tipAmount;
-    const totalAmount =
-      Math.round((subtotal + taxAmount + deliveryFee + tipAmount) * 100) / 100;
+    const totalAmount = Math.round((pricing.totalAmount + deliveryFee) * 100) / 100;
 
-    return { subtotal, taxAmount, deliveryFee, tipAmount, totalAmount };
-  }, [items, formState.orderType, formState.tipAmount]);
+    return {
+      subtotal: pricing.subtotal,
+      taxAmount: pricing.taxAmount,
+      deliveryFee,
+      tipAmount: pricing.tipAmount,
+      totalAmount,
+    };
+  }, [pricing, formState.orderType]);
 
   // Handle form field changes
   const handleContactChange = (
@@ -129,8 +132,8 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleTipChange = (amount: number) => {
-    setFormState((prev) => ({ ...prev, tipAmount: amount }));
+  const handleTipChange = (tip: TipInput | null) => {
+    setFormState((prev) => ({ ...prev, tip }));
   };
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -147,7 +150,7 @@ export default function CheckoutPage() {
       customerName: formState.customerName,
       customerPhone: formState.customerPhone,
       customerEmail: formState.customerEmail || undefined,
-      tipAmount: formState.tipAmount,
+      tipAmount: pricing.tipAmount, // Send calculated tip amount
       notes: formState.notes || undefined,
       deliveryAddress:
         formState.orderType === "delivery"
@@ -217,6 +220,7 @@ export default function CheckoutPage() {
             totalPrice: item.totalPrice,
             selectedOptions: item.selectedOptions,
             specialInstructions: item.specialInstructions,
+            taxConfigId: item.taxConfigId,
           })),
         }),
       });
@@ -381,7 +385,7 @@ export default function CheckoutPage() {
 
         <TipSelector
           subtotal={calculations.subtotal}
-          value={formState.tipAmount}
+          value={formState.tip}
           onChange={handleTipChange}
           disabled={isSubmitting}
         />

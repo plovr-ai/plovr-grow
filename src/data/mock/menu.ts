@@ -26,6 +26,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: ["popular"],
           hasOptions: true,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
         {
           id: "item-2",
@@ -37,6 +38,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: ["popular"],
           hasOptions: true,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
         {
           id: "item-3",
@@ -48,6 +50,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: ["vegetarian"],
           hasOptions: true,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
         {
           id: "item-8",
@@ -59,6 +62,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: ["vegetarian", "popular"],
           hasOptions: false,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
       ],
     },
@@ -81,6 +85,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: ["popular"],
           hasOptions: true,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
         {
           id: "item-2",
@@ -92,6 +97,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: ["popular"],
           hasOptions: true,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
         {
           id: "item-3",
@@ -103,6 +109,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: ["vegetarian"],
           hasOptions: true,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
         {
           id: "item-4",
@@ -114,6 +121,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: [],
           hasOptions: true,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
       ],
     },
@@ -136,6 +144,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: [],
           hasOptions: false,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
         {
           id: "item-6",
@@ -147,6 +156,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: ["vegetarian"],
           hasOptions: true,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
         {
           id: "item-7",
@@ -159,6 +169,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: ["vegetarian"],
           hasOptions: false,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
       ],
     },
@@ -180,6 +191,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: ["vegetarian", "popular"],
           hasOptions: false,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
         {
           id: "item-9",
@@ -192,6 +204,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: ["vegetarian"],
           hasOptions: true,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
         {
           id: "item-10",
@@ -204,6 +217,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: ["vegetarian"],
           hasOptions: false,
           isAvailable: true,
+          taxConfigId: "tax-standard",
         },
       ],
     },
@@ -224,6 +238,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: [],
           hasOptions: true,
           isAvailable: true,
+          taxConfigId: "tax-reduced",
         },
         {
           id: "item-12",
@@ -234,6 +249,7 @@ export const mockMenuPageData: MenuPageViewModel = {
           tags: [],
           hasOptions: true,
           isAvailable: true,
+          taxConfigId: "tax-reduced",
         },
       ],
     },

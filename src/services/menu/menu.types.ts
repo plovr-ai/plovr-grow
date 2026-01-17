@@ -34,6 +34,7 @@ export interface CreateMenuItemInput {
   sortOrder?: number;
   options?: MenuItemOptionInput[];
   tags?: string[];
+  taxConfigId?: string;
 }
 
 export interface UpdateMenuItemInput {
@@ -45,6 +46,7 @@ export interface UpdateMenuItemInput {
   status?: "active" | "inactive" | "out_of_stock";
   options?: MenuItemOptionInput[];
   tags?: string[];
+  taxConfigId?: string | null;
 }
 
 export interface MenuItemOptionInput {

@@ -95,6 +95,7 @@ export default function MenuPage() {
         quantity: 1,
         selectedOptions: [],
         imageUrl: menuItem.imageUrl,
+        taxConfigId: menuItem.taxConfigId,
       });
     },
     [data.categories, addItem]

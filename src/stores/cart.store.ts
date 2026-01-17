@@ -12,6 +12,7 @@ interface AddToCartInput {
   selectedOptions?: SelectedOption[];
   specialInstructions?: string;
   imageUrl?: string | null;
+  taxConfigId?: string | null;
 }
 
 interface CartState {
@@ -77,6 +78,7 @@ export const useCartStore = create<CartStore>()(
           selectedOptions = [],
           specialInstructions,
           imageUrl,
+          taxConfigId,
         } = input;
 
         set((state) => {
@@ -116,6 +118,7 @@ export const useCartStore = create<CartStore>()(
             specialInstructions,
             totalPrice: calculateItemTotalPrice(price, quantity, selectedOptions),
             imageUrl,
+            taxConfigId: taxConfigId ?? null,
           };
 
           return { items: [...state.items, newItem] };

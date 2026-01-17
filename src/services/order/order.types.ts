@@ -1,5 +1,11 @@
 import type { Order } from "@prisma/client";
-import type { OrderType, OrderStatus, OrderItemData, DeliveryAddress } from "@/types";
+import type {
+  OrderType,
+  OrderStatus,
+  OrderItemData,
+  DeliveryAddress,
+  TaxBreakdownItem,
+} from "@/types";
 
 export interface CreateOrderInput {
   customerName: string;
@@ -16,6 +22,7 @@ export interface CreateOrderInput {
 export interface OrderCalculation {
   subtotal: number;
   taxAmount: number;
+  taxBreakdown: TaxBreakdownItem[];
   tipAmount: number;
   deliveryFee: number;
   discount: number;

@@ -30,6 +30,7 @@ export interface MenuItemViewModel {
   tags: MenuItemTag[];
   hasOptions: boolean;
   isAvailable: boolean;
+  taxConfigId: string | null;
 }
 
 // 分类 + 菜品组合

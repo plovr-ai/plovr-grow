@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCartStore, useCartHydration } from "@/stores";
-import { useFormatPrice } from "@/hooks";
+import { useFormatPrice, usePricing } from "@/hooks";
 import {
   ArrowLeftIcon,
   CartIcon,
@@ -24,7 +24,7 @@ export default function CartPage() {
   const clearCart = useCartStore((state) => state.clearCart);
 
   const itemCount = items.reduce((count, item) => count + item.quantity, 0);
-  const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
+  const pricing = usePricing(items);
 
   // Redirect to menu if cart is empty after hydration
   if (hydrated && items.length === 0) {
@@ -190,15 +190,15 @@ export default function CartPage() {
           <div className="space-y-2 mb-4">
             <div className="flex justify-between text-gray-600">
               <span>Subtotal</span>
-              <span>{formatPrice(subtotal)}</span>
+              <span>{formatPrice(pricing.subtotal)}</span>
             </div>
             <div className="flex justify-between text-gray-600">
               <span>Tax</span>
-              <span>Calculated at checkout</span>
+              <span>{formatPrice(pricing.taxAmount)}</span>
             </div>
             <div className="flex justify-between text-lg font-semibold text-gray-900 pt-2 border-t border-gray-100">
               <span>Total</span>
-              <span>{formatPrice(subtotal)}</span>
+              <span>{formatPrice(pricing.totalAmount)}</span>
             </div>
           </div>
 
