@@ -1,4 +1,96 @@
-import type { MenuPageViewModel } from "@/types/menu-page";
+import type { MenuPageViewModel, ModifierGroupViewModel } from "@/types/menu-page";
+
+// Pizza modifier groups (shared across pizza items)
+const pizzaModifierGroups: ModifierGroupViewModel[] = [
+  {
+    id: "size",
+    name: "Size",
+    required: true,
+    minSelections: 1,
+    maxSelections: 1,
+    modifiers: [
+      { id: "size-s", name: "Small (10\")", price: 0, isDefault: true, isAvailable: true },
+      { id: "size-m", name: "Medium (14\")", price: 4, isDefault: false, isAvailable: true },
+      { id: "size-l", name: "Large (18\")", price: 8, isDefault: false, isAvailable: true },
+    ],
+  },
+  {
+    id: "toppings",
+    name: "Extra Toppings",
+    required: false,
+    minSelections: 0,
+    maxSelections: 5,
+    modifiers: [
+      { id: "topping-pepperoni", name: "Pepperoni", price: 2, isDefault: false, isAvailable: true },
+      { id: "topping-mushrooms", name: "Mushrooms", price: 1.5, isDefault: false, isAvailable: true },
+      { id: "topping-olives", name: "Black Olives", price: 1.5, isDefault: false, isAvailable: true },
+      { id: "topping-peppers", name: "Bell Peppers", price: 1.5, isDefault: false, isAvailable: true },
+      { id: "topping-onions", name: "Onions", price: 1, isDefault: false, isAvailable: true },
+      { id: "topping-bacon", name: "Bacon", price: 2.5, isDefault: false, isAvailable: false },
+    ],
+  },
+];
+
+// Pasta modifier groups
+const pastaModifierGroups: ModifierGroupViewModel[] = [
+  {
+    id: "protein",
+    name: "Add Protein",
+    required: false,
+    minSelections: 0,
+    maxSelections: 2,
+    modifiers: [
+      { id: "protein-chicken", name: "Grilled Chicken", price: 4, isDefault: false, isAvailable: true },
+      { id: "protein-shrimp", name: "Shrimp", price: 5, isDefault: false, isAvailable: true },
+      { id: "protein-meatballs", name: "Meatballs (3)", price: 3, isDefault: false, isAvailable: true },
+    ],
+  },
+];
+
+// Salad modifier groups
+const saladModifierGroups: ModifierGroupViewModel[] = [
+  {
+    id: "dressing",
+    name: "Dressing",
+    required: true,
+    minSelections: 1,
+    maxSelections: 1,
+    modifiers: [
+      { id: "dressing-caesar", name: "Caesar", price: 0, isDefault: true, isAvailable: true },
+      { id: "dressing-ranch", name: "Ranch", price: 0, isDefault: false, isAvailable: true },
+      { id: "dressing-italian", name: "Italian", price: 0, isDefault: false, isAvailable: true },
+      { id: "dressing-balsamic", name: "Balsamic Vinaigrette", price: 0, isDefault: false, isAvailable: true },
+    ],
+  },
+  {
+    id: "extras",
+    name: "Add Extras",
+    required: false,
+    minSelections: 0,
+    maxSelections: 3,
+    modifiers: [
+      { id: "extra-chicken", name: "Grilled Chicken", price: 4, isDefault: false, isAvailable: true },
+      { id: "extra-bacon", name: "Bacon Bits", price: 2, isDefault: false, isAvailable: true },
+      { id: "extra-avocado", name: "Avocado", price: 2.5, isDefault: false, isAvailable: true },
+    ],
+  },
+];
+
+// Beverage modifier groups
+const beverageModifierGroups: ModifierGroupViewModel[] = [
+  {
+    id: "size-drink",
+    name: "Size",
+    required: true,
+    minSelections: 1,
+    maxSelections: 1,
+    modifiers: [
+      { id: "drink-small", name: "Small", price: 0, isDefault: true, isAvailable: true },
+      { id: "drink-medium", name: "Medium", price: 0.5, isDefault: false, isAvailable: true },
+      { id: "drink-large", name: "Large", price: 1, isDefault: false, isAvailable: true },
+    ],
+  },
+];
 
 export const mockMenuPageData: MenuPageViewModel = {
   merchantName: "Joe's Pizza",
@@ -24,7 +116,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop",
           tags: ["popular"],
-          hasOptions: true,
+          hasModifiers: true,
+          modifierGroups: pizzaModifierGroups,
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -36,7 +129,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop",
           tags: ["popular"],
-          hasOptions: true,
+          hasModifiers: true,
+          modifierGroups: pizzaModifierGroups,
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -48,7 +142,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=400&h=300&fit=crop",
           tags: ["vegetarian"],
-          hasOptions: true,
+          hasModifiers: true,
+          modifierGroups: pizzaModifierGroups,
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -60,7 +155,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1619531040576-f9416740661b?w=400&h=300&fit=crop",
           tags: ["vegetarian", "popular"],
-          hasOptions: false,
+          hasModifiers: false,
+          modifierGroups: [],
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -83,7 +179,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop",
           tags: ["popular"],
-          hasOptions: true,
+          hasModifiers: true,
+          modifierGroups: pizzaModifierGroups,
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -95,7 +192,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop",
           tags: ["popular"],
-          hasOptions: true,
+          hasModifiers: true,
+          modifierGroups: pizzaModifierGroups,
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -107,7 +205,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=400&h=300&fit=crop",
           tags: ["vegetarian"],
-          hasOptions: true,
+          hasModifiers: true,
+          modifierGroups: pizzaModifierGroups,
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -119,7 +218,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop",
           tags: [],
-          hasOptions: true,
+          hasModifiers: true,
+          modifierGroups: pizzaModifierGroups,
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -142,7 +242,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=300&fit=crop",
           tags: [],
-          hasOptions: false,
+          hasModifiers: false,
+          modifierGroups: [],
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -154,7 +255,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=400&h=300&fit=crop",
           tags: ["vegetarian"],
-          hasOptions: true,
+          hasModifiers: true,
+          modifierGroups: pastaModifierGroups,
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -167,7 +269,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1629115916087-7e8c114a24ed?w=400&h=300&fit=crop",
           tags: ["vegetarian"],
-          hasOptions: false,
+          hasModifiers: false,
+          modifierGroups: [],
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -189,7 +292,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1619531040576-f9416740661b?w=400&h=300&fit=crop",
           tags: ["vegetarian", "popular"],
-          hasOptions: false,
+          hasModifiers: false,
+          modifierGroups: [],
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -202,7 +306,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400&h=300&fit=crop",
           tags: ["vegetarian"],
-          hasOptions: true,
+          hasModifiers: true,
+          modifierGroups: saladModifierGroups,
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -215,7 +320,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           imageUrl:
             "https://images.unsplash.com/photo-1531749668029-2db88e4276c7?w=400&h=300&fit=crop",
           tags: ["vegetarian"],
-          hasOptions: false,
+          hasModifiers: false,
+          modifierGroups: [],
           isAvailable: true,
           taxConfigId: "tax-standard",
         },
@@ -236,7 +342,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           price: 2.99,
           imageUrl: null,
           tags: [],
-          hasOptions: true,
+          hasModifiers: true,
+          modifierGroups: beverageModifierGroups,
           isAvailable: true,
           taxConfigId: "tax-reduced",
         },
@@ -247,7 +354,8 @@ export const mockMenuPageData: MenuPageViewModel = {
           price: 3.99,
           imageUrl: null,
           tags: [],
-          hasOptions: true,
+          hasModifiers: true,
+          modifierGroups: beverageModifierGroups,
           isAvailable: true,
           taxConfigId: "tax-reduced",
         },

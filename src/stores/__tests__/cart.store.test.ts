@@ -21,7 +21,7 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 1,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       expect(useCartStore.getState().items.length).toBe(1);
@@ -40,7 +40,7 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 1,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       // Set same tenant again
@@ -56,7 +56,7 @@ describe("cart.store", () => {
         name: "Classic Cheese Pizza",
         price: 18.99,
         quantity: 1,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       const items = useCartStore.getState().items;
@@ -73,7 +73,7 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 2,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       const item = useCartStore.getState().items[0];
@@ -86,19 +86,19 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 2,
-        selectedOptions: [
+        selectedModifiers: [
           {
-            optionId: "opt-1",
-            optionName: "Size",
-            choiceId: "choice-1",
-            choiceName: "Large",
+            groupId: "opt-1",
+            groupName: "Size",
+            modifierId: "choice-1",
+            modifierName: "Large",
             price: 3.0,
           },
           {
-            optionId: "opt-2",
-            optionName: "Topping",
-            choiceId: "choice-2",
-            choiceName: "Extra Cheese",
+            groupId: "opt-2",
+            groupName: "Topping",
+            modifierId: "choice-2",
+            modifierName: "Extra Cheese",
             price: 1.5,
           },
         ],
@@ -129,7 +129,7 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 1,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       addItem({
@@ -137,7 +137,7 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 2,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       const items = useCartStore.getState().items;
@@ -154,7 +154,7 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 1,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       addItem({
@@ -162,12 +162,12 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 1,
-        selectedOptions: [
+        selectedModifiers: [
           {
-            optionId: "opt-1",
-            optionName: "Size",
-            choiceId: "choice-1",
-            choiceName: "Large",
+            groupId: "opt-1",
+            groupName: "Size",
+            modifierId: "choice-1",
+            modifierName: "Large",
             price: 3.0,
           },
         ],
@@ -185,7 +185,7 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 1,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       const itemId = useCartStore.getState().items[0].id;
@@ -202,7 +202,7 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 1,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       const itemId = useCartStore.getState().items[0].id;
@@ -219,12 +219,12 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 1,
-        selectedOptions: [
+        selectedModifiers: [
           {
-            optionId: "opt-1",
-            optionName: "Size",
-            choiceId: "choice-1",
-            choiceName: "Large",
+            groupId: "opt-1",
+            groupName: "Size",
+            modifierId: "choice-1",
+            modifierName: "Large",
             price: 3.0,
           },
         ],
@@ -245,7 +245,7 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 2,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       const itemId = useCartStore.getState().items[0].id;
@@ -260,7 +260,7 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 2,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       const itemId = useCartStore.getState().items[0].id;
@@ -278,14 +278,14 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 1,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
       addItem({
         menuItemId: "item-2",
         name: "Pasta",
         price: 15.99,
         quantity: 2,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       expect(useCartStore.getState().items.length).toBe(2);
@@ -303,14 +303,14 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 2,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
       addItem({
         menuItemId: "item-2",
         name: "Pasta",
         price: 15.99,
         quantity: 3,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       expect(useCartStore.getState().getItemCount()).toBe(5);
@@ -329,14 +329,14 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 2,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
       addItem({
         menuItemId: "item-2",
         name: "Pasta",
         price: 15.99,
         quantity: 1,
-        selectedOptions: [],
+        selectedModifiers: [],
       });
 
       // 18.99 * 2 + 15.99 * 1 = 37.98 + 15.99 = 53.97
@@ -349,12 +349,12 @@ describe("cart.store", () => {
         name: "Pizza",
         price: 18.99,
         quantity: 2,
-        selectedOptions: [
+        selectedModifiers: [
           {
-            optionId: "opt-1",
-            optionName: "Size",
-            choiceId: "choice-1",
-            choiceName: "Large",
+            groupId: "opt-1",
+            groupName: "Size",
+            modifierId: "choice-1",
+            modifierName: "Large",
             price: 3.0,
           },
         ],

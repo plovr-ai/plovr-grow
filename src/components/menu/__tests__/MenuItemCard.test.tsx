@@ -22,8 +22,10 @@ const mockItem: MenuItemViewModel = {
   price: 18.99,
   imageUrl: "https://example.com/pizza.jpg",
   tags: ["popular"],
-  hasOptions: true,
+  hasModifiers: true,
+  modifierGroups: [],
   isAvailable: true,
+  taxConfigId: null,
 };
 
 describe("MenuItemCard", () => {

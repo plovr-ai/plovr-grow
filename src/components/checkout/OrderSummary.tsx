@@ -39,9 +39,9 @@ export function OrderSummary({ items, tenantSlug }: OrderSummaryProps) {
                     {item.name}
                   </span>
                 </div>
-                {item.selectedOptions.length > 0 && (
+                {item.selectedModifiers?.length > 0 && (
                   <p className="text-sm text-gray-500 mt-0.5 truncate">
-                    {item.selectedOptions.map((opt) => opt.choiceName).join(", ")}
+                    {item.selectedModifiers.map((mod) => mod.modifierName).join(", ")}
                   </p>
                 )}
                 {item.specialInstructions && (

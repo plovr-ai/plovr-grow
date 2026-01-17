@@ -6,10 +6,12 @@ import {
   MenuHeader,
   MenuCategoryNav,
   MenuCategorySection,
+  ModifierModal,
 } from "@/components/menu";
 import { getMockMenuPageData } from "@/data/mock/menu";
 import { useCartStore } from "@/stores";
 import type { MenuItemViewModel } from "@/types/menu-page";
+import type { SelectedModifier } from "@/types";
 
 export default function MenuPage() {
   const params = useParams<{ slug: string }>();
@@ -19,6 +21,10 @@ export default function MenuPage() {
 
   const initialCategory = data.categories[0]?.category.id ?? null;
   const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory);
+
+  // Modal state
+  const [modalItem, setModalItem] = useState<MenuItemViewModel | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const setTenantId = useCartStore((state) => state.setTenantId);
   const addItem = useCartStore((state) => state.addItem);
@@ -88,18 +94,50 @@ export default function MenuPage() {
 
       if (!menuItem) return;
 
-      addItem({
-        menuItemId: menuItem.id,
-        name: menuItem.name,
-        price: menuItem.price,
-        quantity: 1,
-        selectedOptions: [],
-        imageUrl: menuItem.imageUrl,
-        taxConfigId: menuItem.taxConfigId,
-      });
+      // Check if item has modifiers
+      if (menuItem.hasModifiers && menuItem.modifierGroups.length > 0) {
+        // Open modal for items with modifiers
+        setModalItem(menuItem);
+        setIsModalOpen(true);
+      } else {
+        // Add directly to cart for items without modifiers
+        addItem({
+          menuItemId: menuItem.id,
+          name: menuItem.name,
+          price: menuItem.price,
+          quantity: 1,
+          selectedModifiers: [],
+          imageUrl: menuItem.imageUrl,
+          taxConfigId: menuItem.taxConfigId,
+        });
+      }
     },
     [data.categories, addItem]
   );
+
+  // Handle modal confirmation
+  const handleModalConfirm = useCallback(
+    (selectedModifiers: SelectedModifier[], quantity: number) => {
+      if (!modalItem) return;
+
+      addItem({
+        menuItemId: modalItem.id,
+        name: modalItem.name,
+        price: modalItem.price,
+        quantity,
+        selectedModifiers,
+        imageUrl: modalItem.imageUrl,
+        taxConfigId: modalItem.taxConfigId,
+      });
+    },
+    [modalItem, addItem]
+  );
+
+  // Handle modal close
+  const handleModalClose = useCallback(() => {
+    setIsModalOpen(false);
+    setModalItem(null);
+  }, []);
 
   const categoryViewModels = data.categories.map((c) => c.category);
 
@@ -128,6 +166,16 @@ export default function MenuPage() {
           ))}
         </div>
       </main>
+
+      {/* Modifier Modal */}
+      {modalItem && (
+        <ModifierModal
+          item={modalItem}
+          isOpen={isModalOpen}
+          onClose={handleModalClose}
+          onConfirm={handleModalConfirm}
+        />
+      )}
     </>
   );
 }

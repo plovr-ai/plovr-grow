@@ -2,14 +2,14 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { CartItem, SelectedOption } from "@/types";
+import type { CartItem, SelectedModifier } from "@/types";
 
 interface AddToCartInput {
   menuItemId: string;
   name: string;
   price: number;
   quantity?: number;
-  selectedOptions?: SelectedOption[];
+  selectedModifiers?: SelectedModifier[];
   specialInstructions?: string;
   imageUrl?: string | null;
   taxConfigId?: string | null;
@@ -47,10 +47,10 @@ function roundPrice(value: number): number {
 function calculateItemTotalPrice(
   price: number,
   quantity: number,
-  selectedOptions: SelectedOption[]
+  selectedModifiers: SelectedModifier[]
 ): number {
-  const optionsTotal = selectedOptions.reduce((sum, opt) => sum + opt.price, 0);
-  return roundPrice((price + optionsTotal) * quantity);
+  const modifiersTotal = selectedModifiers.reduce((sum, mod) => sum + mod.price, 0);
+  return roundPrice((price + modifiersTotal) * quantity);
 }
 
 export const useCartStore = create<CartStore>()(
@@ -75,19 +75,19 @@ export const useCartStore = create<CartStore>()(
           name,
           price,
           quantity = 1,
-          selectedOptions = [],
+          selectedModifiers = [],
           specialInstructions,
           imageUrl,
           taxConfigId,
         } = input;
 
         set((state) => {
-          // Check if the same item with same options already exists
+          // Check if the same item with same modifiers already exists
           const existingItemIndex = state.items.findIndex(
             (item) =>
               item.menuItemId === menuItemId &&
-              JSON.stringify(item.selectedOptions) ===
-                JSON.stringify(selectedOptions)
+              JSON.stringify(item.selectedModifiers) ===
+                JSON.stringify(selectedModifiers)
           );
 
           if (existingItemIndex !== -1) {
@@ -101,7 +101,7 @@ export const useCartStore = create<CartStore>()(
               totalPrice: calculateItemTotalPrice(
                 existingItem.price,
                 newQuantity,
-                existingItem.selectedOptions
+                existingItem.selectedModifiers
               ),
             };
             return { items: updatedItems };
@@ -114,9 +114,9 @@ export const useCartStore = create<CartStore>()(
             name,
             price,
             quantity,
-            selectedOptions,
+            selectedModifiers,
             specialInstructions,
-            totalPrice: calculateItemTotalPrice(price, quantity, selectedOptions),
+            totalPrice: calculateItemTotalPrice(price, quantity, selectedModifiers),
             imageUrl,
             taxConfigId: taxConfigId ?? null,
           };
@@ -146,7 +146,7 @@ export const useCartStore = create<CartStore>()(
                   totalPrice: calculateItemTotalPrice(
                     item.price,
                     quantity,
-                    item.selectedOptions
+                    item.selectedModifiers
                   ),
                 }
               : item

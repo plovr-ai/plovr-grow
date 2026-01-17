@@ -117,10 +117,10 @@ export default function CartPage() {
                   {/* Item Details */}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-gray-900">{item.name}</h3>
-                    {item.selectedOptions.length > 0 && (
+                    {item.selectedModifiers?.length > 0 && (
                       <p className="text-sm text-gray-500 mt-1">
-                        {item.selectedOptions
-                          .map((opt) => opt.choiceName)
+                        {item.selectedModifiers
+                          .map((mod) => mod.modifierName)
                           .join(", ")}
                       </p>
                     )}

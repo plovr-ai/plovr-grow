@@ -12,6 +12,24 @@ export type MenuItemTag =
   | "popular"
   | "new";
 
+// Modifier ViewModel 类型
+export interface ModifierViewModel {
+  id: string;
+  name: string;
+  price: number;
+  isDefault: boolean;
+  isAvailable: boolean;
+}
+
+export interface ModifierGroupViewModel {
+  id: string;
+  name: string;
+  required: boolean;
+  minSelections: number;
+  maxSelections: number;
+  modifiers: ModifierViewModel[];
+}
+
 // 分类 ViewModel
 export interface MenuCategoryViewModel {
   id: string;
@@ -28,7 +46,8 @@ export interface MenuItemViewModel {
   price: number;
   imageUrl: string | null;
   tags: MenuItemTag[];
-  hasOptions: boolean;
+  hasModifiers: boolean;
+  modifierGroups: ModifierGroupViewModel[];
   isAvailable: boolean;
   taxConfigId: string | null;
 }

@@ -3,21 +3,35 @@ import type { Prisma } from "@prisma/client";
 // Re-export tax types for convenience
 export type { TaxBreakdownItem } from "@/services/menu/tax-config.types";
 
-// ==================== Menu Types ====================
+// ==================== Modifier Types ====================
 
-export interface MenuItemOption {
+export interface Modifier {
   id: string;
   name: string;
-  type: "single" | "multiple"; // single choice or multiple choices
+  price: number;
+  isDefault: boolean;
+  isAvailable: boolean;
+}
+
+export interface ModifierGroup {
+  id: string;
+  name: string;
   required: boolean;
-  choices: MenuItemChoice[];
+  minSelections: number;
+  maxSelections: number;
+  modifiers: Modifier[];
 }
 
-export interface MenuItemChoice {
-  id: string;
-  name: string;
-  price: number; // Additional price for this choice
+// 选中的 Modifier（用于购物车和订单）
+export interface SelectedModifier {
+  groupId: string;
+  groupName: string;
+  modifierId: string;
+  modifierName: string;
+  price: number;
 }
+
+// ==================== Menu Types ====================
 
 export interface MenuCategoryWithItems {
   id: string;
@@ -35,7 +49,7 @@ export interface MenuItemData {
   price: number;
   imageUrl: string | null;
   status: string;
-  options: MenuItemOption[] | null;
+  modifierGroups: ModifierGroup[] | null;
   tags: string[] | null;
   taxConfigId?: string | null;
 }
@@ -48,19 +62,11 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
-  selectedOptions: SelectedOption[];
+  selectedModifiers: SelectedModifier[];
   specialInstructions?: string;
-  totalPrice: number; // price * quantity + options
+  totalPrice: number; // price * quantity + modifiers
   imageUrl?: string | null;
   taxConfigId?: string | null;
-}
-
-export interface SelectedOption {
-  optionId: string;
-  optionName: string;
-  choiceId: string;
-  choiceName: string;
-  price: number;
 }
 
 export interface Cart {
@@ -87,7 +93,7 @@ export interface OrderItemData {
   name: string;
   price: number;
   quantity: number;
-  selectedOptions: SelectedOption[];
+  selectedModifiers: SelectedModifier[];
   specialInstructions?: string;
   totalPrice: number;
   taxConfigId?: string | null;

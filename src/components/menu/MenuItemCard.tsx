@@ -171,7 +171,7 @@ export function MenuItemCard({ item, onAddClick }: MenuItemCardProps) {
         )}
 
         <div className="mt-3 flex items-center justify-between">
-          {item.hasOptions && (
+          {item.hasModifiers && (
             <span className="text-xs text-gray-400">Customizable</span>
           )}
           <button

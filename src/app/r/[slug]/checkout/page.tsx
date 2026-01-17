@@ -218,7 +218,7 @@ export default function CheckoutPage() {
             quantity: item.quantity,
             price: item.price,
             totalPrice: item.totalPrice,
-            selectedOptions: item.selectedOptions,
+            selectedModifiers: item.selectedModifiers,
             specialInstructions: item.specialInstructions,
             taxConfigId: item.taxConfigId,
           })),
