@@ -1,5 +1,4 @@
-import { menuRepository } from "@/repositories/menu.repository";
-import { merchantRepository } from "@/repositories/merchant.repository";
+import { getMockGetMenuResponse } from "@/data/mock/menu-service";
 import type {
   GetMenuResponse,
   CreateCategoryInput,
@@ -8,27 +7,42 @@ import type {
   UpdateMenuItemInput,
 } from "./menu.types";
 
+// Lazy load repositories to avoid Prisma initialization at module load time
+async function getRepositories() {
+  const [{ menuRepository }, { merchantRepository }] = await Promise.all([
+    import("@/repositories/menu.repository"),
+    import("@/repositories/merchant.repository"),
+  ]);
+  return { menuRepository, merchantRepository };
+}
+
 export class MenuService {
   /**
    * Get full menu for customer-facing display
+   * TODO: Replace mock data with database implementation
    */
   async getMenu(tenantId: string): Promise<GetMenuResponse> {
-    const [categories, merchant] = await Promise.all([
-      menuRepository.getCategoriesWithItems(tenantId),
-      merchantRepository.getByTenantId(tenantId),
-    ]);
+    // Temporarily use mock data until database is ready
+    return getMockGetMenuResponse(tenantId);
 
-    return {
-      categories,
-      merchantName: merchant?.name || "",
-      merchantLogo: merchant?.logoUrl || null,
-    };
+    // Database implementation (commented out for now):
+    // const { menuRepository, merchantRepository } = await getRepositories();
+    // const [categories, merchant] = await Promise.all([
+    //   menuRepository.getCategoriesWithItems(tenantId),
+    //   merchantRepository.getByTenantId(tenantId),
+    // ]);
+    // return {
+    //   categories,
+    //   merchantName: merchant?.name || "",
+    //   merchantLogo: merchant?.logoUrl || null,
+    // };
   }
 
   /**
    * Get a single menu item with full details
    */
   async getMenuItem(tenantId: string, itemId: string) {
+    const { menuRepository } = await getRepositories();
     return menuRepository.getItemById(tenantId, itemId);
   }
 
@@ -36,6 +50,7 @@ export class MenuService {
    * Get menu items by IDs (for cart validation)
    */
   async getMenuItemsByIds(tenantId: string, itemIds: string[]) {
+    const { menuRepository } = await getRepositories();
     return menuRepository.getItemsByIds(tenantId, itemIds);
   }
 
@@ -43,6 +58,7 @@ export class MenuService {
    * Create a new category
    */
   async createCategory(tenantId: string, input: CreateCategoryInput) {
+    const { menuRepository } = await getRepositories();
     return menuRepository.createCategory(tenantId, {
       name: input.name,
       description: input.description,
@@ -59,6 +75,7 @@ export class MenuService {
     categoryId: string,
     input: UpdateCategoryInput
   ) {
+    const { menuRepository } = await getRepositories();
     return menuRepository.updateCategory(tenantId, categoryId, input);
   }
 
@@ -66,6 +83,7 @@ export class MenuService {
    * Create a new menu item
    */
   async createMenuItem(tenantId: string, input: CreateMenuItemInput) {
+    const { menuRepository } = await getRepositories();
     return menuRepository.createItem(tenantId, input.categoryId, {
       name: input.name,
       description: input.description,
@@ -85,6 +103,7 @@ export class MenuService {
     itemId: string,
     input: UpdateMenuItemInput
   ) {
+    const { menuRepository } = await getRepositories();
     const data: Record<string, unknown> = {};
 
     if (input.name !== undefined) data.name = input.name;
@@ -105,6 +124,7 @@ export class MenuService {
    * Delete (deactivate) a menu item
    */
   async deleteMenuItem(tenantId: string, itemId: string) {
+    const { menuRepository } = await getRepositories();
     return menuRepository.deleteItem(tenantId, itemId);
   }
 }
