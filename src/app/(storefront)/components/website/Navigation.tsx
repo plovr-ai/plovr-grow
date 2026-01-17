@@ -73,7 +73,7 @@ export function Navigation({
             </button>
             <Link
               href={orderLink}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-full font-semibold text-sm md:text-base transition-colors"
+              className="bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-foreground px-4 py-2 md:px-6 md:py-2.5 rounded-full font-semibold text-sm md:text-base transition-colors"
             >
               Order Online
             </Link>

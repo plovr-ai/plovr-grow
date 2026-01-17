@@ -34,6 +34,7 @@ export const mockWebsiteData: WebsiteData = {
       tiers: [0.15, 0.18, 0.2],
       allowCustom: true,
     },
+    themePreset: "red",
   },
   featuredItems: [
     {

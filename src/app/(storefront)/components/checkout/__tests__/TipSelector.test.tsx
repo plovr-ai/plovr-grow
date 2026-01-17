@@ -224,7 +224,7 @@ describe("TipSelector", () => {
       );
 
       const selectedButton = screen.getByText(/15%/).closest("button");
-      expect(selectedButton).toHaveClass("border-red-600");
+      expect(selectedButton).toHaveClass("border-theme-primary");
     });
 
     it("should highlight None when value is null", () => {
@@ -241,7 +241,7 @@ describe("TipSelector", () => {
       );
 
       const noneButton = screen.getByText("None").closest("button");
-      expect(noneButton).toHaveClass("border-red-600");
+      expect(noneButton).toHaveClass("border-theme-primary");
     });
   });
 

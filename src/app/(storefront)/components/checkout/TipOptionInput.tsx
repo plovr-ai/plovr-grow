@@ -30,10 +30,10 @@ export function TipOptionInput({
         min="0"
         step="0.01"
         className={`w-24 pl-7 pr-2 py-2 rounded-lg border-2 text-sm font-medium transition-colors
-          focus:outline-none focus:border-red-600
+          focus:outline-none focus:border-theme-primary
           disabled:bg-gray-100 disabled:cursor-not-allowed
           [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-          ${selected ? "border-red-600 bg-red-50" : "border-gray-200"}`}
+          ${selected ? "border-theme-primary bg-theme-primary-light" : "border-gray-200"}`}
       />
     </div>
   );

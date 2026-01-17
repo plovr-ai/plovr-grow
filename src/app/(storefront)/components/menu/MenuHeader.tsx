@@ -66,12 +66,12 @@ export function MenuHeader({
         <div className="max-w-6xl mx-auto">
           <Link
             href={`/r/${slug}/cart`}
-            className="w-full bg-red-600 hover:bg-red-700 text-white rounded-xl py-4 px-6 flex items-center justify-between shadow-lg transition-colors"
+            className="w-full bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-foreground rounded-xl py-4 px-6 flex items-center justify-between shadow-lg transition-colors"
           >
             <div className="flex items-center gap-3">
               <span
                 id="cart-icon-target"
-                className="bg-red-500 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center"
+                className="bg-theme-primary-foreground/20 text-theme-primary-foreground text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center"
               >
                 {itemCount > 99 ? "99+" : itemCount}
               </span>

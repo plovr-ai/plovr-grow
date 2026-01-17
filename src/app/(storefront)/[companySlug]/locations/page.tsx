@@ -31,7 +31,7 @@ export default async function LocationsPage({ params }: PageProps) {
   }));
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-white">
       <Navigation
         logo={data.merchant.logo}
         restaurantName={company.name}
@@ -39,7 +39,7 @@ export default async function LocationsPage({ params }: PageProps) {
         menuLink={`/${companySlug}/locations`}
       />
 
-      <div className="pt-20 md:pt-24">
+      <div className="pt-20 md:pt-24 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900">

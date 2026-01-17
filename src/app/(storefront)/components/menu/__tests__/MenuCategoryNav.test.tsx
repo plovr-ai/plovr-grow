@@ -83,7 +83,7 @@ describe("MenuCategoryNav", () => {
   });
 
   describe("active state", () => {
-    it("should highlight active category with red background", () => {
+    it("should highlight active category with theme primary background", () => {
       const onCategoryClick = vi.fn();
 
       render(
@@ -95,7 +95,7 @@ describe("MenuCategoryNav", () => {
       );
 
       const featuredButton = screen.getByRole("button", { name: /Featured/i });
-      expect(featuredButton).toHaveClass("bg-red-600", "text-white");
+      expect(featuredButton).toHaveClass("bg-theme-primary", "text-theme-primary-foreground");
     });
 
     it("should show inactive categories with gray background", () => {
@@ -125,7 +125,7 @@ describe("MenuCategoryNav", () => {
       );
 
       const featuredButton = screen.getByRole("button", { name: /Featured/i });
-      expect(featuredButton).toHaveClass("bg-red-600");
+      expect(featuredButton).toHaveClass("bg-theme-primary");
 
       rerender(
         <MenuCategoryNav
@@ -136,7 +136,7 @@ describe("MenuCategoryNav", () => {
       );
 
       const pizzaButton = screen.getByRole("button", { name: /Pizza/i });
-      expect(pizzaButton).toHaveClass("bg-red-600");
+      expect(pizzaButton).toHaveClass("bg-theme-primary");
       expect(featuredButton).toHaveClass("bg-gray-100");
     });
   });

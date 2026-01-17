@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCompanyBySlug } from "@/lib/tenant";
-import { MerchantProvider } from "@/contexts";
+import { MerchantProvider, ThemeProvider } from "@/contexts";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -51,18 +51,20 @@ export default async function CompanyLayout({ children, params }: LayoutProps) {
   };
 
   return (
-    <MerchantProvider
-      config={
-        firstMerchant
-          ? {
-              currency: "USD",
-              locale: "en-US",
-              tipConfig: defaultConfig.tipConfig,
-            }
-          : defaultConfig
-      }
-    >
-      {children}
-    </MerchantProvider>
+    <ThemeProvider>
+      <MerchantProvider
+        config={
+          firstMerchant
+            ? {
+                currency: "USD",
+                locale: "en-US",
+                tipConfig: defaultConfig.tipConfig,
+              }
+            : defaultConfig
+        }
+      >
+        {children}
+      </MerchantProvider>
+    </ThemeProvider>
   );
 }

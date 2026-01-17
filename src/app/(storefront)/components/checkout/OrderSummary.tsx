@@ -30,7 +30,7 @@ export function OrderSummary({
         </h2>
         <Link
           href={`/r/${slug}/cart`}
-          className="text-sm text-red-600 hover:text-red-700 font-medium"
+          className="text-sm text-theme-primary hover:text-theme-primary-hover font-medium"
         >
           Edit Cart
         </Link>

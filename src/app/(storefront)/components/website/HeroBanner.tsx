@@ -65,7 +65,7 @@ export function HeroBanner({
 
         <Link
           href={orderLink}
-          className="inline-block bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-semibold text-lg md:text-xl transition-all hover:scale-105 shadow-lg"
+          className="inline-block bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-foreground px-8 py-4 rounded-full font-semibold text-lg md:text-xl transition-all hover:scale-105 shadow-lg"
         >
           Order Online
         </Link>

@@ -1,6 +1,7 @@
 // Website Template Types
 
 import type { TipConfig } from "./index";
+import type { ThemePresetName } from "./theme";
 
 export interface MerchantInfo {
   name: string;
@@ -18,6 +19,8 @@ export interface MerchantInfo {
   currency: string;
   locale: string;
   tipConfig?: TipConfig;
+  /** Theme preset name for merchant branding */
+  themePreset?: ThemePresetName;
 }
 
 export interface BusinessHoursMap {

@@ -27,8 +27,8 @@ export function LocationCard({
 
   return (
     <Link
-      href={`/r/${slug}`}
-      className="block border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow bg-white"
+      href={`/r/${slug}/menu`}
+      className="block border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow bg-white"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
@@ -42,7 +42,7 @@ export function LocationCard({
         </div>
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
           {isCurrentLocation && (
-            <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-medium">
+            <span className="bg-theme-primary-light text-theme-primary px-3 py-1 rounded-full text-xs font-medium">
               Current
             </span>
           )}
@@ -53,7 +53,7 @@ export function LocationCard({
           )}
         </div>
       </div>
-      <div className="mt-4 flex items-center text-red-600 text-sm font-medium">
+      <div className="mt-4 flex items-center text-theme-primary text-sm font-medium">
         <span>View Menu</span>
         <svg
           className="w-4 h-4 ml-1"

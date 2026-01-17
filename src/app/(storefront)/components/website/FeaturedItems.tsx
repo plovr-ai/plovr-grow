@@ -55,7 +55,7 @@ export function FeaturedItems({ items }: FeaturedItemsProps) {
                   <span className="text-lg font-bold text-gray-900">
                     {formatPrice(item.price)}
                   </span>
-                  <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors">
+                  <button className="bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-foreground px-4 py-2 rounded-full text-sm font-medium transition-colors">
                     Add
                   </button>
                 </div>
@@ -68,7 +68,7 @@ export function FeaturedItems({ items }: FeaturedItemsProps) {
         <div className="text-center mt-12">
           <a
             href="#menu-full"
-            className="inline-flex items-center gap-2 text-red-600 hover:text-red-700 font-semibold text-lg transition-colors"
+            className="inline-flex items-center gap-2 text-theme-primary hover:text-theme-primary-hover font-semibold text-lg transition-colors"
           >
             View Full Menu
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

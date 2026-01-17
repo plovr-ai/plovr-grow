@@ -279,7 +279,7 @@ export function ModifierModal({
               disabled={!isValid()}
               className={`px-6 py-3 rounded-full font-semibold transition-colors ${
                 isValid()
-                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  ? "bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-foreground"
                   : "bg-gray-200 text-gray-400 cursor-not-allowed"
               }`}
             >
@@ -376,7 +376,7 @@ function ModifierCheckbox({
     <div
       className={`w-full p-3 rounded-lg border transition-all ${
         isSelected
-          ? "border-red-500 bg-red-50"
+          ? "border-theme-primary bg-theme-primary-light"
           : modifier.isAvailable
             ? "border-gray-200 hover:border-gray-300"
             : "border-gray-100 bg-gray-50 opacity-50"
@@ -390,7 +390,7 @@ function ModifierCheckbox({
         <div className="flex items-center gap-3">
           <div
             className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-              isSelected ? "bg-red-600 border-red-600" : "border-gray-300"
+              isSelected ? "bg-theme-primary border-theme-primary" : "border-gray-300"
             }`}
           >
             {isSelected && <CheckIcon className="w-3 h-3 text-white" />}

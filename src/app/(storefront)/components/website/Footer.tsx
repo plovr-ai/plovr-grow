@@ -168,7 +168,7 @@ export function Footer({
             </div>
             <Link
               href={orderLink}
-              className="inline-block mt-4 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full font-semibold transition-colors"
+              className="inline-block mt-4 bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-foreground px-6 py-3 rounded-full font-semibold transition-colors"
             >
               Order Now
             </Link>

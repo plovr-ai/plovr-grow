@@ -110,7 +110,7 @@ export function MenuItemCard({ item, onAddClick }: MenuItemCardProps) {
             disabled={!item.isAvailable}
             className={`ml-auto px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-150 ${
               item.isAvailable
-                ? "bg-red-600 hover:bg-red-700 text-white active:scale-90"
+                ? "bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-foreground active:scale-90"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
           >

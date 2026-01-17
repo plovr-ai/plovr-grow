@@ -64,7 +64,7 @@ describe("ModifierModal", () => {
 
       // Small should be pre-selected (has checkbox checked)
       const smallButton = screen.getByRole("button", { name: /Small/i });
-      expect(smallButton.querySelector('[class*="bg-red-600"]')).toBeTruthy();
+      expect(smallButton.querySelector('[class*="bg-theme-primary"]')).toBeTruthy();
     });
 
     it("should allow deselecting default modifiers", () => {
@@ -100,7 +100,7 @@ describe("ModifierModal", () => {
       fireEvent.click(lettuceButton);
 
       // Lettuce should no longer be selected
-      expect(lettuceButton.querySelector('[class*="bg-red-600"]')).toBeFalsy();
+      expect(lettuceButton.querySelector('[class*="bg-theme-primary"]')).toBeFalsy();
     });
   });
 
@@ -172,7 +172,7 @@ describe("ModifierModal", () => {
       fireEvent.click(avocadoButton);
 
       // Should still not be selected
-      expect(avocadoButton.querySelector('[class*="bg-red-600"]')).toBeFalsy();
+      expect(avocadoButton.querySelector('[class*="bg-theme-primary"]')).toBeFalsy();
     });
   });
 

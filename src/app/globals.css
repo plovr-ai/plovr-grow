@@ -3,6 +3,12 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Theme colors - defaults (red-600 equivalent) */
+  --theme-primary: 0 84% 60%;
+  --theme-primary-hover: 0 84% 54%;
+  --theme-primary-light: 0 86% 97%;
+  --theme-primary-foreground: 0 0% 100%;
 }
 
 @theme inline {
@@ -23,4 +29,51 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ==================== Theme Utility Classes ==================== */
+
+/* Primary color - backgrounds */
+.bg-theme-primary {
+  background-color: hsl(var(--theme-primary));
+}
+
+.bg-theme-primary-light {
+  background-color: hsl(var(--theme-primary-light));
+}
+
+/* Primary color - text */
+.text-theme-primary {
+  color: hsl(var(--theme-primary));
+}
+
+.text-theme-primary-foreground {
+  color: hsl(var(--theme-primary-foreground));
+}
+
+/* Primary color - borders */
+.border-theme-primary {
+  border-color: hsl(var(--theme-primary));
+}
+
+/* Primary color - hover states */
+.hover\:bg-theme-primary-hover:hover {
+  background-color: hsl(var(--theme-primary-hover));
+}
+
+.hover\:text-theme-primary-hover:hover {
+  color: hsl(var(--theme-primary-hover));
+}
+
+/* Ring/outline utilities */
+.ring-theme-primary {
+  --tw-ring-color: hsl(var(--theme-primary));
+}
+
+.focus\:ring-theme-primary:focus {
+  --tw-ring-color: hsl(var(--theme-primary));
+}
+
+.focus\:border-theme-primary:focus {
+  border-color: hsl(var(--theme-primary));
 }

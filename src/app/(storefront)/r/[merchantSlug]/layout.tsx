@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getMockWebsiteData } from "@/data/mock/website";
-import { MerchantProvider } from "@/contexts";
+import { MerchantProvider, ThemeProvider } from "@/contexts";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -27,14 +27,16 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
   const data = getMockWebsiteData(merchantSlug);
 
   return (
-    <MerchantProvider
-      config={{
-        currency: data.merchant.currency,
-        locale: data.merchant.locale,
-        tipConfig: data.merchant.tipConfig,
-      }}
-    >
-      {children}
-    </MerchantProvider>
+    <ThemeProvider preset={data.merchant.themePreset}>
+      <MerchantProvider
+        config={{
+          currency: data.merchant.currency,
+          locale: data.merchant.locale,
+          tipConfig: data.merchant.tipConfig,
+        }}
+      >
+        {children}
+      </MerchantProvider>
+    </ThemeProvider>
   );
 }
