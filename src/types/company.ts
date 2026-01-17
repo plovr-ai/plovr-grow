@@ -1,3 +1,5 @@
+import type { ThemePresetName } from "./theme";
+
 // ==================== Company Types ====================
 
 export type CompanyStatus = "active" | "inactive" | "suspended";
@@ -24,10 +26,8 @@ export interface CompanySettings {
   defaultCurrency?: string;
   defaultLocale?: string;
   defaultTimezone?: string;
-  brandingColors?: {
-    primary: string;
-    secondary: string;
-  };
+  // Theme configuration
+  themePreset?: ThemePresetName;
 }
 
 export interface MerchantSummary {

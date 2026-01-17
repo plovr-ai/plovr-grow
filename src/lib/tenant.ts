@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { cache } from "react";
+import type { CompanySettings } from "@/types/company";
 
 // ==================== Mock Data Types ====================
 
@@ -17,6 +18,7 @@ interface MockMerchant {
     slug: string;
     tenantId: string;
     name: string;
+    settings?: CompanySettings;
     tenant: {
       id: string;
       name: string;
@@ -31,6 +33,7 @@ interface MockCompany {
   name: string;
   description?: string;
   logoUrl?: string;
+  settings?: CompanySettings;
   tenant: {
     id: string;
     name: string;
@@ -41,6 +44,23 @@ interface MockCompany {
 // ==================== Mock Company Data ====================
 // TODO: Replace with real database queries when ready
 
+// Shared company settings for reuse in merchants
+const JOES_PIZZA_SETTINGS: CompanySettings = {
+  themePreset: "red",
+};
+
+const JOES_PIZZA_COMPANY_REF = {
+  id: "company-joes",
+  slug: "joes-pizza",
+  tenantId: "tenant-joes",
+  name: "Joe's Pizza Inc.",
+  settings: JOES_PIZZA_SETTINGS,
+  tenant: {
+    id: "tenant-joes",
+    name: "Joe's Pizza",
+  },
+};
+
 const MOCK_COMPANIES: Record<string, MockCompany> = {
   "joes-pizza": {
     id: "company-joes",
@@ -49,6 +69,7 @@ const MOCK_COMPANIES: Record<string, MockCompany> = {
     name: "Joe's Pizza Inc.",
     description: "Authentic New York Style Pizza since 1975",
     logoUrl: "/images/joes-pizza-logo.png",
+    settings: JOES_PIZZA_SETTINGS,
     tenant: {
       id: "tenant-joes",
       name: "Joe's Pizza",
@@ -63,16 +84,7 @@ const MOCK_COMPANIES: Record<string, MockCompany> = {
         city: "New York",
         state: "NY",
         phone: "(212) 555-0100",
-        company: {
-          id: "company-joes",
-          slug: "joes-pizza",
-          tenantId: "tenant-joes",
-          name: "Joe's Pizza Inc.",
-          tenant: {
-            id: "tenant-joes",
-            name: "Joe's Pizza",
-          },
-        },
+        company: JOES_PIZZA_COMPANY_REF,
       },
       {
         id: "merchant-joes-midtown",
@@ -83,16 +95,7 @@ const MOCK_COMPANIES: Record<string, MockCompany> = {
         city: "New York",
         state: "NY",
         phone: "(212) 555-0200",
-        company: {
-          id: "company-joes",
-          slug: "joes-pizza",
-          tenantId: "tenant-joes",
-          name: "Joe's Pizza Inc.",
-          tenant: {
-            id: "tenant-joes",
-            name: "Joe's Pizza",
-          },
-        },
+        company: JOES_PIZZA_COMPANY_REF,
       },
     ],
   },

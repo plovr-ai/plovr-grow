@@ -51,7 +51,7 @@ export default async function CompanyLayout({ children, params }: LayoutProps) {
   };
 
   return (
-    <ThemeProvider>
+    <ThemeProvider preset={company.settings?.themePreset}>
       <MerchantProvider
         config={
           firstMerchant
