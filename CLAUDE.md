@@ -15,51 +15,102 @@
 
 ```
 src/
-├── app/                        # Next.js App Router
-│   ├── r/[slug]/              # 餐厅官网 (多租户动态路由)
-│   └── api/                   # API Routes
+├── app/                           # Next.js App Router
+│   ├── (storefront)/              # 用户端应用 (Route Group)
+│   │   ├── components/            # Storefront 组件
+│   │   │   ├── website/           # 官网模板组件
+│   │   │   ├── menu/              # 菜单组件
+│   │   │   ├── checkout/          # 结账组件
+│   │   │   └── icons/             # 图标组件
+│   │   └── r/[slug]/              # 餐厅页面路由
+│   │       ├── menu/
+│   │       ├── cart/
+│   │       └── checkout/
+│   │
+│   ├── (dashboard)/               # 商户端应用 (Route Group)
+│   │   └── dashboard/
+│   │       └── [merchantId]/      # 商户管理页面
+│   │           ├── menu/
+│   │           ├── orders/
+│   │           └── settings/
+│   │
+│   ├── (admin)/                   # 内部管理应用 (Route Group)
+│   │   └── admin/
+│   │       ├── tenants/
+│   │       └── merchants/
+│   │
+│   └── api/                       # API Routes
+│       ├── storefront/            # 用户端 API
+│       ├── dashboard/             # 商户端 API
+│       └── admin/                 # 管理端 API
 │
-├── components/                 # React 组件
-│   ├── website/               # 官网模板组件
-│   │   ├── Navigation.tsx
-│   │   ├── HeroBanner.tsx
-│   │   ├── FeaturedItems.tsx
-│   │   ├── CustomerReviews.tsx
-│   │   └── Footer.tsx
-│   ├── ui/                    # 基础 UI 组件
-│   ├── menu/                  # 菜单组件
-│   └── cart/                  # 购物车组件
-│
-├── contexts/                   # React Context
-│   └── MerchantContext.tsx    # 门店配置 (currency, locale)
-│
-├── hooks/                      # 自定义 Hooks
-│   └── useFormatPrice.ts      # 货币格式化 Hook
-│
-├── services/                   # 领域服务层 (核心业务逻辑)
-│   ├── menu/                  # 菜单服务
-│   ├── order/                 # 订单服务
-│   └── merchant/              # 商家服务
-│
-├── repositories/               # 数据访问层 (Prisma 操作封装)
-│   ├── menu.repository.ts
-│   ├── order.repository.ts
-│   └── merchant.repository.ts
-│
-├── lib/                        # 工具库
-│   ├── db.ts                  # Prisma 客户端
-│   ├── tenant.ts              # 租户上下文
-│   └── utils.ts               # 通用工具函数
-│
-├── stores/                     # Zustand 状态管理
-│   └── cart.store.ts          # 购物车状态
-│
-├── data/mock/                  # Mock 数据
-│   └── website.ts
-│
-└── types/                      # TypeScript 类型定义
-    ├── index.ts               # 通用类型
-    └── website.ts             # 官网相关类型
+├── contexts/                      # React Context
+├── hooks/                         # 自定义 Hooks
+├── services/                      # 领域服务层
+├── repositories/                  # 数据访问层
+├── lib/                           # 工具库
+├── stores/                        # Zustand 状态管理
+├── data/mock/                     # Mock 数据
+└── types/                         # TypeScript 类型定义
+```
+
+## App 架构规范
+
+### 多应用架构 (Route Groups)
+
+项目采用 Next.js Route Groups 实现多应用隔离：
+
+| 应用 | Route Group | URL 前缀 | 用途 | 认证体系 |
+|------|-------------|----------|------|----------|
+| Storefront | `(storefront)` | `/r/{slug}` | 用户端 - 官网 + 在线点餐 | 顾客 (可选) |
+| Dashboard | `(dashboard)` | `/dashboard` | 商户端 - 商家后台 | 商户员工 |
+| Admin | `(admin)` | `/admin` | 内部管理 - 平台管理 | 内部员工 |
+
+**Route Groups 语法说明**：
+- 括号内的目录名 (如 `(storefront)`) 不会出现在 URL 中
+- 每个 Route Group 拥有独立的 `layout.tsx`，可实现不同的页面框架和认证逻辑
+- 组件和页面按应用隔离，便于维护
+
+### 路径别名
+
+| 别名 | 路径 | 用途 |
+|------|------|------|
+| `@/*` | `./src/*` | 通用模块 |
+| `@storefront/*` | `./src/app/(storefront)/*` | Storefront 应用内部模块 |
+
+```typescript
+// Storefront 组件引用
+import { MenuPageClient } from "@storefront/components/menu";
+
+// 通用模块引用
+import { useFormatPrice } from "@/hooks";
+```
+
+### 应用内目录结构规范
+
+每个应用 (Route Group) 内部结构：
+
+```
+(app-name)/
+├── components/          # 该应用专属组件
+├── hooks/               # 该应用专属 Hooks (如需要)
+├── [route]/             # 页面路由
+│   ├── layout.tsx
+│   └── page.tsx
+└── layout.tsx           # 应用根 Layout (认证、导航等)
+```
+
+### API 路由规范
+
+API 按应用分组，便于权限控制：
+
+```
+api/
+├── storefront/          # 用户端 API (公开或顾客认证)
+│   └── r/[slug]/
+├── dashboard/           # 商户端 API (商户认证)
+│   └── [merchantId]/
+└── admin/               # 管理端 API (内部认证)
 ```
 
 ## 架构分层
@@ -157,8 +208,14 @@ npm run lint             # 代码检查
 ```
 
 ## 访问路径
-- 餐厅官网: `http://localhost:3000/r/{slug}`
-- 示例: `http://localhost:3000/r/joes-pizza`
+
+| 应用 | URL | 说明 |
+|------|-----|------|
+| Storefront | `http://localhost:3000/r/{slug}` | 餐厅官网 |
+| Storefront | `http://localhost:3000/r/{slug}/menu` | 在线点餐 |
+| Dashboard | `http://localhost:3000/dashboard` | 商户后台首页 |
+| Dashboard | `http://localhost:3000/dashboard/{merchantId}` | 商户管理 |
+| Admin | `http://localhost:3000/admin` | 内部管理 |
 
 ## 开发约定
 
