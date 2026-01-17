@@ -87,7 +87,7 @@ export function CustomerReviews({ reviews }: CustomerReviewsProps) {
               {/* Author */}
               <div className="flex items-center gap-3 mt-auto">
                 <div className="w-10 h-10 bg-theme-primary-light rounded-full flex items-center justify-center">
-                  <span className="text-theme-primary font-semibold">
+                  <span className="text-theme-primary-hover font-semibold">
                     {review.customerName.charAt(0)}
                   </span>
                 </div>

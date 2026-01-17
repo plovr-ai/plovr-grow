@@ -42,7 +42,7 @@ export function LocationCard({
         </div>
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
           {isCurrentLocation && (
-            <span className="bg-theme-primary-light text-theme-primary px-3 py-1 rounded-full text-xs font-medium">
+            <span className="bg-theme-primary-light text-theme-primary-hover px-3 py-1 rounded-full text-xs font-medium">
               Current
             </span>
           )}

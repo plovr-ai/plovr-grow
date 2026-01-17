@@ -31,7 +31,7 @@ export function OrderTypeSelector({
             disabled={disabled}
             className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-colors ${
               value === option.value
-                ? "border-theme-primary bg-theme-primary-light text-theme-primary"
+                ? "border-theme-primary bg-theme-primary-light text-theme-primary-hover"
                 : "border-gray-200 hover:border-gray-300 text-gray-600"
             } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
           >
