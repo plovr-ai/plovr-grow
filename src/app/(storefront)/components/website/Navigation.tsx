@@ -27,8 +27,9 @@ export function Navigation({
   // Support both old (tenantSlug) and new (companySlug) props
   const slug = companySlug ?? tenantSlug ?? "";
   const orderLink = menuLink ?? `/r/${slug}/menu`;
-  const locationsLink = companySlug ? `/${companySlug}/locations` : `/r/${slug}/locations`;
-  const homeLink = companySlug ? `/${companySlug}` : `/r/${slug}`;
+  // Locations and home are always brand-level pages
+  const locationsLink = `/${slug}/locations`;
+  const homeLink = `/${slug}`;
 
   const navLinks: NavigationLink[] = [
     { label: "Menu", href: orderLink },

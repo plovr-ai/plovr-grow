@@ -72,7 +72,8 @@ export function Footer({
   // Support both old (tenantSlug) and new (companySlug) props
   const slug = companySlug ?? tenantSlug ?? "";
   const orderLink = menuLink ?? `/r/${slug}/menu`;
-  const locationsLink = companySlug ? `/${companySlug}/locations` : `/r/${slug}/locations`;
+  // Locations is always a brand-level page
+  const locationsLink = `/${slug}/locations`;
 
   const fullAddress = `${merchant.address}, ${merchant.city}, ${merchant.state} ${merchant.zipCode}`;
   const businessHours = formatBusinessHours(merchant.businessHours);
