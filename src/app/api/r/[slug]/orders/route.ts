@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { orderService } from "@/services/order";
-import { getTenantBySlug } from "@/lib/tenant";
+import { getMerchantBySlug } from "@/lib/tenant";
 import { checkoutFormSchema } from "@/lib/validations/checkout";
 import type { OrderItemData } from "@/types";
 
@@ -29,14 +29,17 @@ export async function POST(
   try {
     const { slug } = await params;
 
-    // Get tenant
-    const tenant = await getTenantBySlug(slug);
-    if (!tenant) {
+    // Get merchant by slug
+    const merchant = await getMerchantBySlug(slug);
+    if (!merchant) {
       return NextResponse.json(
         { success: false, error: "Restaurant not found" },
         { status: 404 }
       );
     }
+
+    // Get tenantId from merchant -> company -> tenant chain
+    const tenantId = merchant.company.tenantId;
 
     // Parse request body
     const body: OrderRequestBody = await request.json();
@@ -72,8 +75,8 @@ export async function POST(
       );
     }
 
-    // Create order
-    const order = await orderService.createOrder(tenant.id, {
+    // Create order (using tenantId for legacy order service)
+    const order = await orderService.createOrder(tenantId, {
       customerName: formValidation.data.customerName,
       customerPhone: formValidation.data.customerPhone,
       customerEmail: formValidation.data.customerEmail || undefined,

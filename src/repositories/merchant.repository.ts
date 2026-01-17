@@ -3,58 +3,122 @@ import type { Prisma } from "@prisma/client";
 
 export class MerchantRepository {
   /**
-   * Get merchant by tenant ID
+   * Get merchant by ID
    */
-  async getByTenantId(tenantId: string) {
+  async getById(merchantId: string) {
     return prisma.merchant.findUnique({
-      where: { tenantId },
+      where: { id: merchantId },
     });
   }
 
   /**
-   * Get merchant with tenant info by slug
+   * @deprecated Use getById instead. This method is kept for backward compatibility.
+   * Get first merchant by company's tenant ID (for legacy code migration)
    */
-  async getBySlug(slug: string) {
-    const tenant = await prisma.tenant.findUnique({
-      where: { slug },
+  async getByTenantId(tenantId: string) {
+    const company = await prisma.company.findUnique({
+      where: { tenantId },
       include: {
-        merchant: true,
+        merchants: {
+          take: 1,
+        },
       },
     });
+    return company?.merchants[0] || null;
+  }
 
-    return tenant?.merchant || null;
+  /**
+   * Get merchant by slug (for public URL routing)
+   */
+  async getBySlug(slug: string) {
+    return prisma.merchant.findUnique({
+      where: { slug },
+    });
+  }
+
+  /**
+   * Get merchant by slug with company info
+   */
+  async getBySlugWithCompany(slug: string) {
+    return prisma.merchant.findUnique({
+      where: { slug },
+      include: {
+        company: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Get all merchants for a company
+   */
+  async getByCompanyId(companyId: string) {
+    return prisma.merchant.findMany({
+      where: { companyId },
+      orderBy: { name: "asc" },
+    });
+  }
+
+  /**
+   * Get active merchants for a company
+   */
+  async getActiveByCompanyId(companyId: string) {
+    return prisma.merchant.findMany({
+      where: {
+        companyId,
+        status: "active",
+      },
+      orderBy: { name: "asc" },
+    });
   }
 
   /**
    * Create a new merchant
    */
   async create(
-    tenantId: string,
-    data: Omit<Prisma.MerchantCreateInput, "tenant">
+    companyId: string,
+    data: Omit<Prisma.MerchantCreateInput, "company">
   ) {
     return prisma.merchant.create({
       data: {
         ...data,
-        tenant: { connect: { id: tenantId } },
+        company: { connect: { id: companyId } },
       },
     });
   }
 
   /**
-   * Update merchant details
+   * Update merchant details by ID
    */
-  async update(tenantId: string, data: Prisma.MerchantUpdateInput) {
+  async update(merchantId: string, data: Prisma.MerchantUpdateInput) {
     return prisma.merchant.update({
-      where: { tenantId },
+      where: { id: merchantId },
       data,
     });
   }
 
   /**
+   * Check if merchant slug is available
+   */
+  async isSlugAvailable(slug: string, excludeMerchantId?: string) {
+    const existing = await prisma.merchant.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+
+    if (!existing) return true;
+    if (excludeMerchantId && existing.id === excludeMerchantId) return true;
+    return false;
+  }
+
+  /**
    * Check if merchant is currently open
    */
-  async isOpen(tenantId: string): Promise<boolean> {
-    const merchant = await this.getByTenantId(tenantId);
+  async isOpen(merchantId: string): Promise<boolean> {
+    const merchant = await this.getById(merchantId);
     if (!merchant?.businessHours) return false;
 
     const hours = merchant.businessHours as Record<
@@ -76,9 +140,18 @@ export class MerchantRepository {
   /**
    * Get merchant tax rate
    */
-  async getTaxRate(tenantId: string): Promise<number> {
-    const merchant = await this.getByTenantId(tenantId);
+  async getTaxRate(merchantId: string): Promise<number> {
+    const merchant = await this.getById(merchantId);
     return merchant?.taxRate ? Number(merchant.taxRate) : 0;
+  }
+
+  /**
+   * Delete merchant
+   */
+  async delete(merchantId: string) {
+    return prisma.merchant.delete({
+      where: { id: merchantId },
+    });
   }
 }
 
