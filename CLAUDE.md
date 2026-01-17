@@ -192,3 +192,22 @@ npm run lint             # 代码检查
   const Status = { Active: 'active', Inactive: 'inactive' } as const;
   type Status = typeof Status[keyof typeof Status];
   ```
+
+## Claude Code Skills
+
+项目自定义的 Claude Code skills，位于 `.claude/commands/` 目录：
+
+| Skill | 命令 | 说明 |
+|-------|------|------|
+| review-i18n | `/review-i18n` | 检查代码中是否有硬编码的货币符号和 locale |
+
+### /review-i18n
+
+检查代码中是否存在：
+- 硬编码的货币符号 (`$`, `€`, `¥`, `£` 等)
+- 硬编码的 locale 字符串 (`en-US`, `zh-CN` 等)
+
+应该使用：
+- `useFormatPrice()` - 格式化价格
+- `useCurrencySymbol()` - 获取货币符号
+- `useMerchantConfig()` - 获取 locale 配置
