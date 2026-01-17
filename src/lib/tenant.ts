@@ -1,116 +1,5 @@
 import { headers } from "next/headers";
 import { cache } from "react";
-import type { CompanySettings } from "@/types/company";
-
-// ==================== Mock Data Types ====================
-
-interface MockMerchant {
-  id: string;
-  slug: string;
-  name: string;
-  companyId: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  phone?: string;
-  company: {
-    id: string;
-    slug: string;
-    tenantId: string;
-    name: string;
-    settings?: CompanySettings;
-    tenant: {
-      id: string;
-      name: string;
-    };
-  };
-}
-
-interface MockCompany {
-  id: string;
-  slug: string;
-  tenantId: string;
-  name: string;
-  description?: string;
-  logoUrl?: string;
-  settings?: CompanySettings;
-  tenant: {
-    id: string;
-    name: string;
-  };
-  merchants: MockMerchant[];
-}
-
-// ==================== Mock Company Data ====================
-// TODO: Replace with real database queries when ready
-
-// Shared company settings for reuse in merchants
-const JOES_PIZZA_SETTINGS: CompanySettings = {
-  themePreset: "red",
-};
-
-const JOES_PIZZA_COMPANY_REF = {
-  id: "company-joes",
-  slug: "joes-pizza",
-  tenantId: "tenant-joes",
-  name: "Joe's Pizza Inc.",
-  settings: JOES_PIZZA_SETTINGS,
-  tenant: {
-    id: "tenant-joes",
-    name: "Joe's Pizza",
-  },
-};
-
-const MOCK_COMPANIES: Record<string, MockCompany> = {
-  "joes-pizza": {
-    id: "company-joes",
-    slug: "joes-pizza",
-    tenantId: "tenant-joes",
-    name: "Joe's Pizza Inc.",
-    description: "Authentic New York Style Pizza since 1975",
-    logoUrl: "/images/joes-pizza-logo.png",
-    settings: JOES_PIZZA_SETTINGS,
-    tenant: {
-      id: "tenant-joes",
-      name: "Joe's Pizza",
-    },
-    merchants: [
-      {
-        id: "merchant-joes-downtown",
-        slug: "joes-pizza-downtown",
-        name: "Joe's Pizza - Downtown",
-        companyId: "company-joes",
-        address: "123 Main St",
-        city: "New York",
-        state: "NY",
-        phone: "(212) 555-0100",
-        company: JOES_PIZZA_COMPANY_REF,
-      },
-      {
-        id: "merchant-joes-midtown",
-        slug: "joes-pizza-midtown",
-        name: "Joe's Pizza - Midtown",
-        companyId: "company-joes",
-        address: "456 Broadway",
-        city: "New York",
-        state: "NY",
-        phone: "(212) 555-0200",
-        company: JOES_PIZZA_COMPANY_REF,
-      },
-    ],
-  },
-};
-
-// ==================== Mock Merchant Data ====================
-// TODO: Replace with real database queries when ready
-
-const MOCK_MERCHANTS: Record<string, MockMerchant> = {
-  // Legacy single-store slug (for backward compatibility)
-  "joes-pizza": MOCK_COMPANIES["joes-pizza"].merchants[0],
-  // Multi-store slugs
-  "joes-pizza-downtown": MOCK_COMPANIES["joes-pizza"].merchants[0],
-  "joes-pizza-midtown": MOCK_COMPANIES["joes-pizza"].merchants[1],
-};
 
 // ==================== Legacy Types (for backward compatibility) ====================
 
@@ -119,7 +8,7 @@ export interface TenantContext {
   tenantSlug: string;
 }
 
-// ==================== New Merchant Context ====================
+// ==================== Merchant Context ====================
 
 export interface MerchantContext {
   merchantId: string;
@@ -166,47 +55,6 @@ export const getMerchantContext = cache(
     return null;
   }
 );
-
-/**
- * Get merchant by slug (mock implementation)
- * TODO: Replace with database query when ready
- */
-export async function getMerchantBySlug(slug: string) {
-  // Return mock data for development
-  return MOCK_MERCHANTS[slug] ?? null;
-}
-
-/**
- * Get company by slug (mock implementation)
- * Used for brand-level pages like website homepage
- * TODO: Replace with database query when ready
- */
-export async function getCompanyBySlug(slug: string) {
-  // Return mock data for development
-  return MOCK_COMPANIES[slug] ?? null;
-}
-
-/**
- * Get tenant by ID (mock implementation)
- * TODO: Replace with database query when ready
- */
-export async function getTenantById(id: string) {
-  // Find merchant by tenant ID
-  const merchant = Object.values(MOCK_MERCHANTS).find(
-    (m) => m.company.tenantId === id
-  );
-  if (!merchant) return null;
-
-  return {
-    id: merchant.company.tenant.id,
-    name: merchant.company.tenant.name,
-    company: {
-      id: merchant.company.id,
-      name: merchant.company.name,
-      merchants: [merchant],
-    },
-  };
-}
 
 /**
  * Require tenant context - throws if not available

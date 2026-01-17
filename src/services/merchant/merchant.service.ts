@@ -1,103 +1,86 @@
-import { merchantRepository } from "@/repositories/merchant.repository";
-import type { Prisma } from "@prisma/client";
-import type { UpdateMerchantInput, MerchantStatus } from "@/types/merchant";
+// ==================== Merchant Service ====================
+// Currently uses mock data. Will be replaced with Repository layer later.
 
-// Re-export types for backward compatibility
-export type { UpdateMerchantInput } from "@/types/merchant";
+import {
+  getMockMerchantBySlug,
+  getMockMerchantById,
+  getMockCompanyBySlug,
+  getMockMerchantsByCompanyId,
+  isMockSlugAvailable,
+} from "./merchant.mock";
+import type { MerchantWithCompany, CompanyWithMerchants } from "./merchant.types";
+
+// Re-export types
+export type { MerchantWithCompany, CompanyWithMerchants } from "./merchant.types";
 
 export class MerchantService {
   /**
    * Get merchant by ID
    */
-  async getMerchant(merchantId: string) {
-    return merchantRepository.getById(merchantId);
+  async getMerchant(merchantId: string): Promise<MerchantWithCompany | null> {
+    // TODO: Replace with merchantRepository.getById(merchantId)
+    return getMockMerchantById(merchantId);
   }
 
   /**
    * Get merchant by slug (for public URL access)
    */
-  async getMerchantBySlug(slug: string) {
-    return merchantRepository.getBySlug(slug);
+  async getMerchantBySlug(slug: string): Promise<MerchantWithCompany | null> {
+    // TODO: Replace with merchantRepository.getBySlug(slug)
+    return getMockMerchantBySlug(slug);
   }
 
   /**
    * Get merchant by slug with company and tenant info
+   * Alias for getMerchantBySlug (mock data already includes company)
    */
-  async getMerchantBySlugWithCompany(slug: string) {
-    return merchantRepository.getBySlugWithCompany(slug);
+  async getMerchantBySlugWithCompany(slug: string): Promise<MerchantWithCompany | null> {
+    // TODO: Replace with merchantRepository.getBySlugWithCompany(slug)
+    return getMockMerchantBySlug(slug);
   }
 
   /**
-   * Update merchant details
+   * Get company by slug with all merchants
    */
-  async updateMerchant(merchantId: string, input: UpdateMerchantInput) {
-    const data: Prisma.MerchantUpdateInput = {};
-
-    if (input.name !== undefined) data.name = input.name;
-    if (input.description !== undefined) data.description = input.description;
-    if (input.address !== undefined) data.address = input.address;
-    if (input.city !== undefined) data.city = input.city;
-    if (input.state !== undefined) data.state = input.state;
-    if (input.zipCode !== undefined) data.zipCode = input.zipCode;
-    if (input.country !== undefined) data.country = input.country;
-    if (input.phone !== undefined) data.phone = input.phone;
-    if (input.email !== undefined) data.email = input.email;
-    if (input.logoUrl !== undefined) data.logoUrl = input.logoUrl;
-    if (input.bannerUrl !== undefined) data.bannerUrl = input.bannerUrl;
-    if (input.businessHours !== undefined)
-      data.businessHours = input.businessHours as unknown as Prisma.InputJsonValue;
-    if (input.timezone !== undefined) data.timezone = input.timezone;
-    if (input.currency !== undefined) data.currency = input.currency;
-    if (input.locale !== undefined) data.locale = input.locale;
-    if (input.taxRate !== undefined) data.taxRate = input.taxRate;
-    if (input.settings !== undefined)
-      data.settings = input.settings as unknown as Prisma.InputJsonValue;
-    if (input.status !== undefined) data.status = input.status;
-
-    return merchantRepository.update(merchantId, data);
+  async getCompanyBySlug(slug: string): Promise<CompanyWithMerchants | null> {
+    // TODO: Replace with companyRepository.getBySlug(slug)
+    return getMockCompanyBySlug(slug);
   }
 
   /**
-   * Update merchant slug
+   * Get all merchants for a company
    */
-  async updateMerchantSlug(merchantId: string, newSlug: string) {
-    const isAvailable = await merchantRepository.isSlugAvailable(
-      newSlug,
-      merchantId
-    );
-    if (!isAvailable) {
-      throw new Error(`Slug "${newSlug}" is already taken`);
-    }
-
-    return merchantRepository.update(merchantId, { slug: newSlug });
+  async getMerchantsByCompanyId(companyId: string): Promise<MerchantWithCompany[]> {
+    // TODO: Replace with merchantRepository.getByCompanyId(companyId)
+    return getMockMerchantsByCompanyId(companyId);
   }
 
   /**
-   * Update merchant status
+   * Check if a slug is available
    */
-  async updateMerchantStatus(merchantId: string, status: MerchantStatus) {
-    return merchantRepository.update(merchantId, { status });
-  }
-
-  /**
-   * Check if merchant is currently open
-   */
-  async isOpen(merchantId: string) {
-    return merchantRepository.isOpen(merchantId);
+  async isSlugAvailable(slug: string, excludeMerchantId?: string): Promise<boolean> {
+    // TODO: Replace with merchantRepository.isSlugAvailable(slug, excludeMerchantId)
+    return isMockSlugAvailable(slug, excludeMerchantId);
   }
 
   /**
    * Get merchant tax rate
    */
-  async getTaxRate(merchantId: string) {
-    return merchantRepository.getTaxRate(merchantId);
+  async getTaxRate(merchantId: string): Promise<number> {
+    // TODO: Replace with merchantRepository.getTaxRate(merchantId)
+    const merchant = getMockMerchantById(merchantId);
+    return merchant?.taxRate ?? 0;
   }
 
   /**
-   * Delete merchant
+   * Check if merchant is currently open
+   * TODO: Implement based on businessHours when available
    */
-  async deleteMerchant(merchantId: string) {
-    return merchantRepository.delete(merchantId);
+  async isOpen(merchantId: string): Promise<boolean> {
+    const merchant = getMockMerchantById(merchantId);
+    if (!merchant) return false;
+    // For now, just check if merchant is active
+    return merchant.status === "active";
   }
 }
 

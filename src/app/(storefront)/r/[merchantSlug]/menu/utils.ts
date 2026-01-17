@@ -15,6 +15,7 @@ import type { Prisma } from "@prisma/client";
 export interface MenuDisplayData {
   merchantName: string;
   merchantLogo: string | null;
+  companySlug: string;
   categories: MenuCategoryWithItemsViewModel[];
 }
 
@@ -85,11 +86,13 @@ export function parseModifierGroups(
  * Convert GetMenuResponse (Prisma model) to MenuDisplayData (UI view model)
  */
 export function convertToMenuDisplayData(
-  response: GetMenuResponse
+  response: GetMenuResponse,
+  companySlug: string
 ): MenuDisplayData {
   return {
     merchantName: response.merchantName,
     merchantLogo: response.merchantLogo,
+    companySlug,
     categories: response.categories.map(
       (category): MenuCategoryWithItemsViewModel => ({
         category: {

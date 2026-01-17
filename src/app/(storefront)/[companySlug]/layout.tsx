@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getCompanyBySlug } from "@/lib/tenant";
+import { merchantService } from "@/services/merchant";
 import { MerchantProvider, ThemeProvider } from "@/contexts";
 
 interface LayoutProps {
@@ -12,7 +12,7 @@ export async function generateMetadata({
   params,
 }: LayoutProps): Promise<Metadata> {
   const { companySlug } = await params;
-  const company = await getCompanyBySlug(companySlug);
+  const company = await merchantService.getCompanyBySlug(companySlug);
 
   if (!company) {
     return {
@@ -32,7 +32,7 @@ export async function generateMetadata({
 
 export default async function CompanyLayout({ children, params }: LayoutProps) {
   const { companySlug } = await params;
-  const company = await getCompanyBySlug(companySlug);
+  const company = await merchantService.getCompanyBySlug(companySlug);
 
   if (!company) {
     notFound();

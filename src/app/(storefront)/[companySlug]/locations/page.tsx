@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Navigation, Footer } from "@storefront/components/website";
 import { LocationList } from "@storefront/components/locations";
 import { getMockWebsiteData } from "@/data/mock/website";
-import { getCompanyBySlug } from "@/lib/tenant";
+import { merchantService } from "@/services/merchant";
 
 interface PageProps {
   params: Promise<{ companySlug: string }>;
@@ -10,7 +10,7 @@ interface PageProps {
 
 export default async function LocationsPage({ params }: PageProps) {
   const { companySlug } = await params;
-  const company = await getCompanyBySlug(companySlug);
+  const company = await merchantService.getCompanyBySlug(companySlug);
 
   if (!company) {
     notFound();

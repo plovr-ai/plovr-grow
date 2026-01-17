@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getMockWebsiteData } from "@/data/mock/website";
-import { getMerchantBySlug } from "@/lib/tenant";
+import { merchantService } from "@/services/merchant";
 import { MerchantProvider, ThemeProvider } from "@/contexts";
 
 interface LayoutProps {
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: LayoutProps): Promise<Metadat
 export default async function MerchantLayout({ children, params }: LayoutProps) {
   const { merchantSlug } = await params;
   const data = getMockWebsiteData(merchantSlug);
-  const merchant = await getMerchantBySlug(merchantSlug);
+  const merchant = await merchantService.getMerchantBySlug(merchantSlug);
 
   // Get theme preset from company settings
   const themePreset = merchant?.company?.settings?.themePreset;

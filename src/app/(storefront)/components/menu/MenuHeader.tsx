@@ -11,6 +11,7 @@ interface MenuHeaderProps {
   /** @deprecated Use merchantSlug instead */
   tenantSlug?: string;
   merchantSlug?: string;
+  companySlug?: string;
 }
 
 export function MenuHeader({
@@ -18,6 +19,7 @@ export function MenuHeader({
   merchantLogo,
   tenantSlug,
   merchantSlug,
+  companySlug,
 }: MenuHeaderProps) {
   // Support both old (tenantSlug) and new (merchantSlug) props
   const slug = merchantSlug ?? tenantSlug ?? "";
@@ -37,7 +39,7 @@ export function MenuHeader({
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <Link
-                href={`/r/${slug}`}
+                href={`/${companySlug}`}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <ArrowLeftIcon className="w-5 h-5" />

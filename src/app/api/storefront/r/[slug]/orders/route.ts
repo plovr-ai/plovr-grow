@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { orderService } from "@/services/order";
-import { getMerchantBySlug } from "@/lib/tenant";
+import { merchantService } from "@/services/merchant";
 import { checkoutFormSchema } from "@/lib/validations/checkout";
 import type { OrderItemData } from "@/types";
 
@@ -30,7 +30,7 @@ export async function POST(
     const { slug } = await params;
 
     // Get merchant by slug
-    const merchant = await getMerchantBySlug(slug);
+    const merchant = await merchantService.getMerchantBySlug(slug);
     if (!merchant) {
       return NextResponse.json(
         { success: false, error: "Restaurant not found" },

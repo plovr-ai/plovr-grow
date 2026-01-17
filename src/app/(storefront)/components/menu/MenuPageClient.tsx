@@ -180,6 +180,7 @@ export function MenuPageClient({
         merchantName={data.merchantName}
         merchantLogo={data.merchantLogo}
         merchantSlug={slug}
+        companySlug={data.companySlug}
       />
 
       <MenuCategoryNav

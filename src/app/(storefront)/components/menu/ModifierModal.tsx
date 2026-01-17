@@ -220,7 +220,7 @@ export function ModifierModal({
       <div className="absolute inset-0 bg-black/50" />
 
       {/* Modal content */}
-      <div className="relative bg-white rounded-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="relative bg-white rounded-2xl max-w-lg md:max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-start gap-4">
@@ -328,7 +328,7 @@ function ModifierGroupSection({
         <h3 className="font-semibold text-gray-900">{group.name}</h3>
         <p className="text-sm text-gray-500">{getSelectionHint()}</p>
       </div>
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {group.modifiers.map((modifier) => {
           const selection = getSelection(modifier.id);
           return (
@@ -428,7 +428,7 @@ function ModifierCheckbox({
           >
             <MinusIcon className="w-3 h-3 text-gray-600" />
           </button>
-          <span className="w-6 text-center text-sm font-medium">{quantity}</span>
+          <span className="w-6 text-center text-sm font-semibold text-theme-primary">{quantity}</span>
           <button
             onClick={(e) => {
               e.stopPropagation();
