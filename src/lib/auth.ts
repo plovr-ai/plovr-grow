@@ -3,8 +3,14 @@ import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { loginSchema } from "@/lib/validations/auth";
 import { mockUserStore } from "@/services/auth/mock-store";
+import { initTestData } from "@/services/auth/init-test-data";
+
+// Initialize test data on first load
+initTestData().catch(console.error);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.NEXTAUTH_SECRET,
+
   providers: [
     Credentials({
       name: "credentials",

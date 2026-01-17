@@ -12,3 +12,4 @@ export type {
   MockCompany,
   MockPasswordResetToken,
 } from "./mock-store";
+export { initTestData } from "./init-test-data";
