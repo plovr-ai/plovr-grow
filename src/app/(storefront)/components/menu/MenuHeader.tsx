@@ -8,14 +8,19 @@ import { ArrowLeftIcon } from "@storefront/components/icons";
 interface MenuHeaderProps {
   merchantName: string;
   merchantLogo: string | null;
-  tenantSlug: string;
+  /** @deprecated Use merchantSlug instead */
+  tenantSlug?: string;
+  merchantSlug?: string;
 }
 
 export function MenuHeader({
   merchantName,
   merchantLogo,
   tenantSlug,
+  merchantSlug,
 }: MenuHeaderProps) {
+  // Support both old (tenantSlug) and new (merchantSlug) props
+  const slug = merchantSlug ?? tenantSlug ?? "";
   const hydrated = useCartHydration();
   const formatPrice = useFormatPrice();
   const itemCount = useCartStore((state) =>
@@ -32,7 +37,7 @@ export function MenuHeader({
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <Link
-                href={`/r/${tenantSlug}`}
+                href={`/r/${slug}`}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <ArrowLeftIcon className="w-5 h-5" />
@@ -60,7 +65,7 @@ export function MenuHeader({
       >
         <div className="max-w-6xl mx-auto">
           <Link
-            href={`/r/${tenantSlug}/cart`}
+            href={`/r/${slug}/cart`}
             className="w-full bg-red-600 hover:bg-red-700 text-white rounded-xl py-4 px-6 flex items-center justify-between shadow-lg transition-colors"
           >
             <div className="flex items-center gap-3">

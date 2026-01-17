@@ -3,7 +3,12 @@ import type { MerchantInfo, SocialLink } from "@/types/website";
 
 interface FooterProps {
   merchant: MerchantInfo;
-  tenantSlug: string;
+  /** @deprecated Use companySlug instead */
+  tenantSlug?: string;
+  /** Company slug for brand-level pages */
+  companySlug?: string;
+  /** Custom menu link (for single vs multi-store logic) */
+  menuLink?: string;
 }
 
 function SocialIcon({ platform }: { platform: SocialLink["platform"] }) {
@@ -58,7 +63,17 @@ function formatBusinessHours(hours: MerchantInfo["businessHours"]): { day: strin
   }));
 }
 
-export function Footer({ merchant, tenantSlug }: FooterProps) {
+export function Footer({
+  merchant,
+  tenantSlug,
+  companySlug,
+  menuLink,
+}: FooterProps) {
+  // Support both old (tenantSlug) and new (companySlug) props
+  const slug = companySlug ?? tenantSlug ?? "";
+  const orderLink = menuLink ?? `/r/${slug}/menu`;
+  const locationsLink = companySlug ? `/${companySlug}/locations` : `/r/${slug}/locations`;
+
   const fullAddress = `${merchant.address}, ${merchant.city}, ${merchant.state} ${merchant.zipCode}`;
   const businessHours = formatBusinessHours(merchant.businessHours);
 
@@ -139,20 +154,20 @@ export function Footer({ merchant, tenantSlug }: FooterProps) {
             <h3 className="font-semibold text-lg mb-4">Quick Links</h3>
             <div className="space-y-3">
               <Link
-                href={`/r/${tenantSlug}/menu`}
+                href={orderLink}
                 className="block text-gray-400 hover:text-white transition-colors"
               >
                 Order Online
               </Link>
               <Link
-                href={`/r/${tenantSlug}/locations`}
+                href={locationsLink}
                 className="block text-gray-400 hover:text-white transition-colors"
               >
                 View All Locations
               </Link>
             </div>
             <Link
-              href={`/r/${tenantSlug}/menu`}
+              href={orderLink}
               className="inline-block mt-4 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full font-semibold transition-colors"
             >
               Order Now

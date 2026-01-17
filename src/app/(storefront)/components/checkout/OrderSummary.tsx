@@ -6,12 +6,21 @@ import type { CartItem } from "@/types";
 
 interface OrderSummaryProps {
   items: CartItem[];
-  tenantSlug: string;
+  /** @deprecated Use merchantSlug instead */
+  tenantSlug?: string;
+  merchantSlug?: string;
 }
 
-export function OrderSummary({ items, tenantSlug }: OrderSummaryProps) {
+export function OrderSummary({
+  items,
+  tenantSlug,
+  merchantSlug,
+}: OrderSummaryProps) {
   const formatPrice = useFormatPrice();
   const itemCount = items.reduce((count, item) => count + item.quantity, 0);
+
+  // Support both old (tenantSlug) and new (merchantSlug) props
+  const slug = merchantSlug ?? tenantSlug ?? "";
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -20,7 +29,7 @@ export function OrderSummary({ items, tenantSlug }: OrderSummaryProps) {
           Your Order ({itemCount} {itemCount === 1 ? "item" : "items"})
         </h2>
         <Link
-          href={`/r/${tenantSlug}/cart`}
+          href={`/r/${slug}/cart`}
           className="text-sm text-red-600 hover:text-red-700 font-medium"
         >
           Edit Cart

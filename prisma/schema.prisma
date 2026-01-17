@@ -36,6 +36,7 @@ model Tenant {
 model Company {
   id           String   @id @default(cuid())
   tenantId     String   @unique @map("tenant_id")
+  slug         String   @unique              // Global unique, for URL routing e.g., "joes-pizza"
   name         String                          // Brand name, e.g., "Joe's Pizza"
   legalName    String?  @map("legal_name")     // Legal entity name
   description  String?  @db.Text
@@ -55,6 +56,7 @@ model Company {
   users     User[]
 
   @@index([tenantId])
+  @@index([slug])
   @@map("companies")
 }
 

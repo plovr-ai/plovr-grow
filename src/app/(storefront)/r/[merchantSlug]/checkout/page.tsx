@@ -70,9 +70,9 @@ const initialFormState: FormState = {
 };
 
 export default function CheckoutPage() {
-  const params = useParams<{ slug: string }>();
+  const params = useParams<{ merchantSlug: string }>();
   const router = useRouter();
-  const slug = params.slug;
+  const merchantSlug = params.merchantSlug;
 
   const hydrated = useCartHydration();
   const formatPrice = useFormatPrice();
@@ -207,7 +207,7 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/r/${slug}/orders`, {
+      const response = await fetch(`/api/r/${merchantSlug}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -233,7 +233,7 @@ export default function CheckoutPage() {
 
       // Success - clear cart and redirect
       clearCart();
-      router.push(`/r/${slug}/menu?orderSuccess=${data.data.orderNumber}`);
+      router.push(`/r/${merchantSlug}/menu?orderSuccess=${data.data.orderNumber}`);
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : "Failed to place order"
@@ -260,7 +260,7 @@ export default function CheckoutPage() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center h-16">
               <Link
-                href={`/r/${slug}/cart`}
+                href={`/r/${merchantSlug}/cart`}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <svg
@@ -307,7 +307,7 @@ export default function CheckoutPage() {
             Add some items before checking out
           </p>
           <Link
-            href={`/r/${slug}/menu`}
+            href={`/r/${merchantSlug}/menu`}
             className="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
           >
             Browse Menu
@@ -327,7 +327,7 @@ export default function CheckoutPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
             <Link
-              href={`/r/${slug}/cart`}
+              href={`/r/${merchantSlug}/cart`}
               className="text-gray-500 hover:text-gray-700"
             >
               <svg
@@ -409,7 +409,7 @@ export default function CheckoutPage() {
           />
         </div>
 
-        <OrderSummary items={items} tenantSlug={slug} />
+        <OrderSummary items={items} merchantSlug={merchantSlug} />
       </main>
 
       {/* Fixed Footer */}

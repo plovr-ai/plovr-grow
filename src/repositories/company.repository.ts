@@ -21,6 +21,31 @@ export class CompanyRepository {
   }
 
   /**
+   * Get company by slug (for public URL routing)
+   */
+  async getBySlug(slug: string) {
+    return prisma.company.findUnique({
+      where: { slug },
+    });
+  }
+
+  /**
+   * Get company by slug with merchants and tenant info
+   */
+  async getBySlugWithMerchants(slug: string) {
+    return prisma.company.findUnique({
+      where: { slug },
+      include: {
+        tenant: true,
+        merchants: {
+          where: { status: "active" },
+          orderBy: { name: "asc" },
+        },
+      },
+    });
+  }
+
+  /**
    * Get company with all merchants
    */
   async getWithMerchants(companyId: string) {

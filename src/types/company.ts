@@ -5,6 +5,7 @@ export type CompanyStatus = "active" | "inactive" | "suspended";
 export interface CompanyInfo {
   id: string;
   tenantId: string;
+  slug: string;
   name: string;
   legalName: string | null;
   description: string | null;
@@ -45,6 +46,7 @@ export interface CompanyWithMerchants extends CompanyInfo {
 // ==================== Company Input Types ====================
 
 export interface CreateCompanyInput {
+  slug: string;
   name: string;
   legalName?: string;
   description?: string;

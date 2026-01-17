@@ -3,14 +3,14 @@ import { getMockMenuPageData } from "@/data/mock/menu";
 
 interface LayoutProps {
   children: React.ReactNode;
-  params: Promise<{ slug: string }>;
+  params: Promise<{ merchantSlug: string }>;
 }
 
 export async function generateMetadata({
   params,
 }: LayoutProps): Promise<Metadata> {
-  const { slug } = await params;
-  const data = getMockMenuPageData(slug);
+  const { merchantSlug } = await params;
+  const data = getMockMenuPageData(merchantSlug);
 
   return {
     title: `Menu | ${data.merchantName}`,

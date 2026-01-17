@@ -17,6 +17,7 @@ export type {
 // Service-specific types
 export interface CreateTenantWithCompanyInput {
   tenantName: string;
+  companySlug: string;
   companyName: string;
   companyLegalName?: string;
   companyDescription?: string;

@@ -1,41 +1,112 @@
 import { headers } from "next/headers";
 import { cache } from "react";
 
-// Mock merchant data for development
-// TODO: Replace with real database queries when ready
-const MOCK_MERCHANTS: Record<
-  string,
-  {
+// ==================== Mock Data Types ====================
+
+interface MockMerchant {
+  id: string;
+  slug: string;
+  name: string;
+  companyId: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  phone?: string;
+  company: {
     id: string;
     slug: string;
+    tenantId: string;
     name: string;
-    companyId: string;
-    company: {
+    tenant: {
       id: string;
-      tenantId: string;
       name: string;
-      tenant: {
-        id: string;
-        name: string;
-      };
     };
-  }
-> = {
+  };
+}
+
+interface MockCompany {
+  id: string;
+  slug: string;
+  tenantId: string;
+  name: string;
+  description?: string;
+  logoUrl?: string;
+  tenant: {
+    id: string;
+    name: string;
+  };
+  merchants: MockMerchant[];
+}
+
+// ==================== Mock Company Data ====================
+// TODO: Replace with real database queries when ready
+
+const MOCK_COMPANIES: Record<string, MockCompany> = {
   "joes-pizza": {
-    id: "merchant-joes-pizza",
+    id: "company-joes",
     slug: "joes-pizza",
-    name: "Joe's Pizza",
-    companyId: "company-joes",
-    company: {
-      id: "company-joes",
-      tenantId: "tenant-joes",
-      name: "Joe's Pizza Inc.",
-      tenant: {
-        id: "tenant-joes",
-        name: "Joe's Pizza",
-      },
+    tenantId: "tenant-joes",
+    name: "Joe's Pizza Inc.",
+    description: "Authentic New York Style Pizza since 1975",
+    logoUrl: "/images/joes-pizza-logo.png",
+    tenant: {
+      id: "tenant-joes",
+      name: "Joe's Pizza",
     },
+    merchants: [
+      {
+        id: "merchant-joes-downtown",
+        slug: "joes-pizza-downtown",
+        name: "Joe's Pizza - Downtown",
+        companyId: "company-joes",
+        address: "123 Main St",
+        city: "New York",
+        state: "NY",
+        phone: "(212) 555-0100",
+        company: {
+          id: "company-joes",
+          slug: "joes-pizza",
+          tenantId: "tenant-joes",
+          name: "Joe's Pizza Inc.",
+          tenant: {
+            id: "tenant-joes",
+            name: "Joe's Pizza",
+          },
+        },
+      },
+      {
+        id: "merchant-joes-midtown",
+        slug: "joes-pizza-midtown",
+        name: "Joe's Pizza - Midtown",
+        companyId: "company-joes",
+        address: "456 Broadway",
+        city: "New York",
+        state: "NY",
+        phone: "(212) 555-0200",
+        company: {
+          id: "company-joes",
+          slug: "joes-pizza",
+          tenantId: "tenant-joes",
+          name: "Joe's Pizza Inc.",
+          tenant: {
+            id: "tenant-joes",
+            name: "Joe's Pizza",
+          },
+        },
+      },
+    ],
   },
+};
+
+// ==================== Mock Merchant Data ====================
+// TODO: Replace with real database queries when ready
+
+const MOCK_MERCHANTS: Record<string, MockMerchant> = {
+  // Legacy single-store slug (for backward compatibility)
+  "joes-pizza": MOCK_COMPANIES["joes-pizza"].merchants[0],
+  // Multi-store slugs
+  "joes-pizza-downtown": MOCK_COMPANIES["joes-pizza"].merchants[0],
+  "joes-pizza-midtown": MOCK_COMPANIES["joes-pizza"].merchants[1],
 };
 
 // ==================== Legacy Types (for backward compatibility) ====================
@@ -103,6 +174,16 @@ export async function getMerchantBySlug(slug: string) {
 }
 
 /**
+ * Get company by slug (mock implementation)
+ * Used for brand-level pages like website homepage
+ * TODO: Replace with database query when ready
+ */
+export async function getCompanyBySlug(slug: string) {
+  // Return mock data for development
+  return MOCK_COMPANIES[slug] ?? null;
+}
+
+/**
  * Get tenant by ID (mock implementation)
  * TODO: Replace with database query when ready
  */
@@ -161,4 +242,27 @@ export function extractMerchantSlugFromPath(pathname: string): string | null {
  */
 export function extractTenantSlugFromPath(pathname: string): string | null {
   return extractMerchantSlugFromPath(pathname);
+}
+
+/**
+ * Extract company slug from pathname
+ * Supports pattern: /{company-slug}/...
+ * Excludes reserved paths: dashboard, admin, api, r, _next
+ */
+export function extractCompanySlugFromPath(pathname: string): string | null {
+  const RESERVED_SLUGS = [
+    "dashboard",
+    "admin",
+    "api",
+    "r",
+    "_next",
+    "favicon.ico",
+  ];
+  const match = pathname.match(/^\/([^/]+)/);
+  if (!match) return null;
+
+  const slug = match[1];
+  if (RESERVED_SLUGS.includes(slug)) return null;
+
+  return slug;
 }

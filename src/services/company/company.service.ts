@@ -26,6 +26,7 @@ export class CompanyService {
       const company = await tx.company.create({
         data: {
           tenantId: tenant.id,
+          slug: input.companySlug,
           name: input.companyName,
           legalName: input.companyLegalName,
           description: input.companyDescription,
@@ -52,6 +53,7 @@ export class CompanyService {
     }
 
     return companyRepository.create(tenantId, {
+      slug: input.slug,
       name: input.name,
       legalName: input.legalName,
       description: input.description,

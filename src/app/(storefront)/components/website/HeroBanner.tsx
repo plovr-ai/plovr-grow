@@ -3,10 +3,23 @@ import type { MerchantInfo } from "@/types/website";
 
 interface HeroBannerProps {
   merchant: MerchantInfo;
-  tenantSlug: string;
+  /** @deprecated Use companySlug instead */
+  tenantSlug?: string;
+  /** Company slug for brand-level pages */
+  companySlug?: string;
+  /** Custom menu link (for single vs multi-store logic) */
+  menuLink?: string;
 }
 
-export function HeroBanner({ merchant, tenantSlug }: HeroBannerProps) {
+export function HeroBanner({
+  merchant,
+  tenantSlug,
+  companySlug,
+  menuLink,
+}: HeroBannerProps) {
+  // Support both old (tenantSlug) and new (companySlug) props
+  const slug = companySlug ?? tenantSlug ?? "";
+  const orderLink = menuLink ?? `/r/${slug}/menu`;
   const fullAddress = `${merchant.address}, ${merchant.city}, ${merchant.state} ${merchant.zipCode}`;
 
   return (
@@ -51,7 +64,7 @@ export function HeroBanner({ merchant, tenantSlug }: HeroBannerProps) {
         </div>
 
         <Link
-          href={`/r/${tenantSlug}/menu`}
+          href={orderLink}
           className="inline-block bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-semibold text-lg md:text-xl transition-all hover:scale-105 shadow-lg"
         >
           Order Online

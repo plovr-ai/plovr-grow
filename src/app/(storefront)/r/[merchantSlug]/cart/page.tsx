@@ -14,8 +14,8 @@ import {
 } from "@storefront/components/icons";
 
 export default function CartPage() {
-  const params = useParams<{ slug: string }>();
-  const slug = params.slug;
+  const params = useParams<{ merchantSlug: string }>();
+  const merchantSlug = params.merchantSlug;
 
   const hydrated = useCartHydration();
   const formatPrice = useFormatPrice();
@@ -34,7 +34,7 @@ export default function CartPage() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center h-16">
               <Link
-                href={`/r/${slug}/menu`}
+                href={`/r/${merchantSlug}/menu`}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <ArrowLeftIcon className="w-5 h-5" />
@@ -57,7 +57,7 @@ export default function CartPage() {
             Add some delicious items from our menu
           </p>
           <Link
-            href={`/r/${slug}/menu`}
+            href={`/r/${merchantSlug}/menu`}
             className="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
           >
             Browse Menu
@@ -75,7 +75,7 @@ export default function CartPage() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <Link
-                href={`/r/${slug}/menu`}
+                href={`/r/${merchantSlug}/menu`}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <ArrowLeftIcon className="w-5 h-5" />
@@ -175,7 +175,7 @@ export default function CartPage() {
 
         {/* Add More Items */}
         <Link
-          href={`/r/${slug}/menu`}
+          href={`/r/${merchantSlug}/menu`}
           className="mt-4 flex items-center justify-center gap-2 py-3 text-red-600 hover:text-red-700 font-medium transition-colors"
         >
           <PlusIcon className="w-5 h-5" />
@@ -204,7 +204,7 @@ export default function CartPage() {
 
           {/* Checkout Button */}
           <Link
-            href={`/r/${slug}/checkout`}
+            href={`/r/${merchantSlug}/checkout`}
             className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-4 rounded-xl transition-colors block text-center"
           >
             Continue to Checkout

@@ -7,15 +7,32 @@ import type { NavigationLink } from "@/types/website";
 interface NavigationProps {
   logo: string;
   restaurantName: string;
-  tenantSlug: string;
+  /** @deprecated Use companySlug instead */
+  tenantSlug?: string;
+  /** Company slug for brand-level pages */
+  companySlug?: string;
+  /** Custom menu link (for single vs multi-store logic) */
+  menuLink?: string;
 }
 
-export function Navigation({ logo, restaurantName, tenantSlug }: NavigationProps) {
+export function Navigation({
+  logo,
+  restaurantName,
+  tenantSlug,
+  companySlug,
+  menuLink,
+}: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Support both old (tenantSlug) and new (companySlug) props
+  const slug = companySlug ?? tenantSlug ?? "";
+  const orderLink = menuLink ?? `/r/${slug}/menu`;
+  const locationsLink = companySlug ? `/${companySlug}/locations` : `/r/${slug}/locations`;
+  const homeLink = companySlug ? `/${companySlug}` : `/r/${slug}`;
+
   const navLinks: NavigationLink[] = [
-    { label: "Menu", href: `/r/${tenantSlug}/menu` },
-    { label: "Locations", href: `/r/${tenantSlug}/locations` },
+    { label: "Menu", href: orderLink },
+    { label: "Locations", href: locationsLink },
     { label: "Our Story", href: "#story" },
     { label: "Contact", href: "#location" },
   ];
@@ -25,7 +42,7 @@ export function Navigation({ logo, restaurantName, tenantSlug }: NavigationProps
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <Link href={`/r/${tenantSlug}`} className="flex items-center gap-3">
+          <Link href={homeLink} className="flex items-center gap-3">
             <img
               src={logo}
               alt={restaurantName}
@@ -55,7 +72,7 @@ export function Navigation({ logo, restaurantName, tenantSlug }: NavigationProps
               Sign In
             </button>
             <Link
-              href={`/r/${tenantSlug}/menu`}
+              href={orderLink}
               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-full font-semibold text-sm md:text-base transition-colors"
             >
               Order Online

@@ -4,12 +4,12 @@ import { MerchantProvider } from "@/contexts";
 
 interface LayoutProps {
   children: React.ReactNode;
-  params: Promise<{ slug: string }>;
+  params: Promise<{ merchantSlug: string }>;
 }
 
 export async function generateMetadata({ params }: LayoutProps): Promise<Metadata> {
-  const { slug } = await params;
-  const data = getMockWebsiteData(slug);
+  const { merchantSlug } = await params;
+  const data = getMockWebsiteData(merchantSlug);
 
   return {
     title: `${data.merchant.name} | Order Online`,
@@ -22,9 +22,9 @@ export async function generateMetadata({ params }: LayoutProps): Promise<Metadat
   };
 }
 
-export default async function RestaurantLayout({ children, params }: LayoutProps) {
-  const { slug } = await params;
-  const data = getMockWebsiteData(slug);
+export default async function MerchantLayout({ children, params }: LayoutProps) {
+  const { merchantSlug } = await params;
+  const data = getMockWebsiteData(merchantSlug);
 
   return (
     <MerchantProvider

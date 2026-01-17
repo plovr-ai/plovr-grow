@@ -26,6 +26,7 @@ async function main() {
     create: {
       id: "company-joes-pizza",
       tenantId: tenant.id,
+      slug: "joes-pizza",
       name: "Joe's Pizza",
       description: "Authentic New York style pizza since 1985",
       supportEmail: "support@joespizza.com",

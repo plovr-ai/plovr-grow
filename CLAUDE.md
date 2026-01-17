@@ -21,8 +21,12 @@ src/
 │   │   │   ├── website/           # 官网模板组件
 │   │   │   ├── menu/              # 菜单组件
 │   │   │   ├── checkout/          # 结账组件
+│   │   │   ├── locations/         # 门店列表组件
 │   │   │   └── icons/             # 图标组件
-│   │   └── r/[slug]/              # 餐厅页面路由
+│   │   ├── [companySlug]/         # 品牌级路由 (官网)
+│   │   │   ├── page.tsx           # 品牌官网首页
+│   │   │   └── locations/         # 门店列表
+│   │   └── r/[merchantSlug]/      # 门店级路由 (点餐)
 │   │       ├── menu/
 │   │       ├── cart/
 │   │       └── checkout/
@@ -62,9 +66,15 @@ src/
 
 | 应用 | Route Group | URL 前缀 | 用途 | 认证体系 |
 |------|-------------|----------|------|----------|
-| Storefront | `(storefront)` | `/r/{slug}` | 用户端 - 官网 + 在线点餐 | 顾客 (可选) |
+| Storefront (官网) | `(storefront)` | `/{companySlug}` | 品牌官网 + 门店列表 | 无 |
+| Storefront (点餐) | `(storefront)` | `/r/{merchantSlug}` | 在线点餐 (菜单/购物车/结账) | 顾客 (可选) |
 | Dashboard | `(dashboard)` | `/dashboard` | 商户端 - 商家后台 | 商户员工 |
 | Admin | `(admin)` | `/admin` | 内部管理 - 平台管理 | 内部员工 |
+
+**Storefront 双层路由说明**：
+- `/{companySlug}` - 品牌级页面（Company），展示品牌官网和门店列表
+- `/r/{merchantSlug}` - 门店级页面（Merchant），处理具体门店的点餐流程
+- 一个品牌（Company）可以有多个门店（Merchant）
 
 **Route Groups 语法说明**：
 - 括号内的目录名 (如 `(storefront)`) 不会出现在 URL 中
@@ -128,16 +138,30 @@ api/
 ```
 
 ## 多租户设计
+
+### 数据模型层次
+```
+Tenant (租户/SaaS账户)
+  ↓ 1:1
+Company (品牌/连锁店) - 有 slug 字段
+  ↓ 1:N
+Merchant (门店/位置) - 有 slug 字段
+```
+
+### 隔离策略
 - 采用单数据库 + tenant_id 隔离模式
 - 所有业务表包含 `tenant_id` 字段
-- 通过 URL 路径 `/r/{slug}` 识别租户
+- Company 和 Merchant 各有独立的 `slug` 字段（全局唯一）
+- 品牌页面通过 `/{companySlug}` 识别
+- 门店页面通过 `/r/{merchantSlug}` 识别
 - Repository 层自动注入 tenant 过滤条件
 
 ## 数据库表
 | 表 | 说明 |
 |---|---|
 | tenants | 租户 (SaaS 账户) |
-| merchants | 商家详情 |
+| companies | 品牌/连锁店 (含 slug) |
+| merchants | 门店详情 (含 slug) |
 | users | 商家员工 |
 | menu_categories | 菜单分类 |
 | menu_items | 菜品 |
@@ -179,7 +203,7 @@ function MyComponent() {
 
 ### 架构
 ```
-/r/[slug]/layout.tsx (Server)
+/r/[merchantSlug]/layout.tsx (Server)
   └── 获取门店数据 (currency, locale)
       └── <MerchantProvider config={{ currency, locale }}>
           └── 子组件通过 useFormatPrice() 获取格式化函数
@@ -211,11 +235,26 @@ npm run lint             # 代码检查
 
 | 应用 | URL | 说明 |
 |------|-----|------|
-| Storefront | `http://localhost:3000/r/{slug}` | 餐厅官网 |
-| Storefront | `http://localhost:3000/r/{slug}/menu` | 在线点餐 |
+| Storefront | `http://localhost:3000/{companySlug}` | 品牌官网首页 |
+| Storefront | `http://localhost:3000/{companySlug}/locations` | 门店列表 |
+| Storefront | `http://localhost:3000/r/{merchantSlug}/menu` | 在线点餐 |
+| Storefront | `http://localhost:3000/r/{merchantSlug}/cart` | 购物车 |
+| Storefront | `http://localhost:3000/r/{merchantSlug}/checkout` | 结账 |
 | Dashboard | `http://localhost:3000/dashboard` | 商户后台首页 |
 | Dashboard | `http://localhost:3000/dashboard/{merchantId}` | 商户管理 |
 | Admin | `http://localhost:3000/admin` | 内部管理 |
+
+### 用户流程示例
+```
+访问 /joes-pizza (品牌官网)
+  ↓
+点击 "Order Online"
+  ↓
+单门店 → 直接跳转 /r/joes-pizza-downtown/menu
+多门店 → 跳转 /joes-pizza/locations 选择门店
+  ↓
+浏览菜单 → 添加到购物车 → 结账
+```
 
 ## 开发约定
 

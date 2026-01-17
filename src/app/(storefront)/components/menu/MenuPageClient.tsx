@@ -14,7 +14,7 @@ import {
   ModifierModal,
 } from "@storefront/components/menu";
 import { useCartStore } from "@/stores";
-import type { MenuDisplayData } from "@storefront/r/[slug]/menu/utils";
+import type { MenuDisplayData } from "@storefront/r/[merchantSlug]/menu/utils";
 import type { MenuItemViewModel } from "@/types/menu-page";
 import type { SelectedModifier } from "@/types";
 import type { AddClickParams } from "./MenuItemCard";
@@ -22,10 +22,18 @@ import { animateFlyToCart, type FlyToCartParams } from "@/lib/cartAnimation";
 
 interface MenuPageClientProps {
   data: MenuDisplayData;
-  tenantSlug: string;
+  /** @deprecated Use merchantSlug instead */
+  tenantSlug?: string;
+  merchantSlug?: string;
 }
 
-export function MenuPageClient({ data, tenantSlug }: MenuPageClientProps) {
+export function MenuPageClient({
+  data,
+  tenantSlug,
+  merchantSlug,
+}: MenuPageClientProps) {
+  // Support both old (tenantSlug) and new (merchantSlug) props
+  const slug = merchantSlug ?? tenantSlug ?? "";
   const initialCategory = data.categories[0]?.category.id ?? null;
   const [activeCategory, setActiveCategory] = useState<string | null>(
     initialCategory
@@ -44,9 +52,9 @@ export function MenuPageClient({ data, tenantSlug }: MenuPageClientProps) {
   useLayoutEffect(() => {
     if (!tenantIdSetRef.current) {
       tenantIdSetRef.current = true;
-      setTenantId(tenantSlug);
+      setTenantId(slug);
     }
-  }, [tenantSlug, setTenantId]);
+  }, [slug, setTenantId]);
 
   const isScrollingRef = useRef(false);
 
@@ -171,7 +179,7 @@ export function MenuPageClient({ data, tenantSlug }: MenuPageClientProps) {
       <MenuHeader
         merchantName={data.merchantName}
         merchantLogo={data.merchantLogo}
-        tenantSlug={tenantSlug}
+        merchantSlug={slug}
       />
 
       <MenuCategoryNav
