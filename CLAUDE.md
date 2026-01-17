@@ -256,6 +256,39 @@ npm run lint             # 代码检查
 浏览菜单 → 添加到购物车 → 结账
 ```
 
+### URL 路由规范
+
+Storefront 应用采用双层路由结构，**必须严格区分品牌级别和门店级别的路由**：
+
+| 级别 | URL 模式 | Slug 类型 | 页面 |
+|------|----------|-----------|------|
+| 品牌级 | `/{companySlug}` | `companySlug` | 官网首页 |
+| 品牌级 | `/{companySlug}/locations` | `companySlug` | 门店列表 |
+| 门店级 | `/r/{merchantSlug}/menu` | `merchantSlug` | 菜单页 |
+| 门店级 | `/r/{merchantSlug}/cart` | `merchantSlug` | 购物车 |
+| 门店级 | `/r/{merchantSlug}/checkout` | `merchantSlug` | 结账页 |
+
+**组件中构建链接的规范**：
+
+```typescript
+// ✅ 正确 - 品牌级页面使用 companySlug
+const homeLink = `/${companySlug}`;
+const locationsLink = `/${companySlug}/locations`;
+
+// ✅ 正确 - 门店级页面使用 merchantSlug
+const menuLink = `/r/${merchantSlug}/menu`;
+const cartLink = `/r/${merchantSlug}/cart`;
+const checkoutLink = `/r/${merchantSlug}/checkout`;
+
+// ❌ 错误 - 混淆 slug 类型
+const locationsLink = `/r/${merchantSlug}/locations`;  // locations 是品牌级页面！
+const menuLink = `/${companySlug}/menu`;               // menu 是门店级页面！
+```
+
+**跨级别导航**：
+- 从门店页面返回品牌官网：需要获取 `companySlug`（通过 merchant.company.slug）
+- 从品牌官网进入门店页面：需要获取 `merchantSlug`（通过 company.merchants[].slug）
+
 ## 开发约定
 
 ### 命名规范
