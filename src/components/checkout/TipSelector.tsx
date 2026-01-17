@@ -21,23 +21,30 @@ interface TipOption {
   type: TipOptionType;
   value?: number; // percentage (0.15) or fixed amount (1)
   label: string;
+  displayAmount?: string; // calculated amount for display
 }
 
-function buildTipOptions(config: TipConfig): TipOption[] {
+function buildTipOptions(
+  config: TipConfig,
+  subtotal: number,
+  formatPrice: (price: number) => string
+): TipOption[] {
   const options: TipOption[] = [{ type: "none", label: "None" }];
 
   config.tiers.forEach((tier) => {
     if (config.mode === "percentage") {
+      const amount = Math.round(subtotal * tier * 100) / 100;
       options.push({
         type: "percentage",
         value: tier,
         label: `${Math.round(tier * 100)}%`,
+        displayAmount: formatPrice(amount),
       });
     } else {
       options.push({
         type: "fixed",
         value: tier,
-        label: `$${tier.toFixed(2)}`,
+        label: formatPrice(tier),
       });
     }
   });
@@ -55,7 +62,10 @@ export function TipSelector({
   const currencySymbol = useCurrencySymbol();
   const tipConfig = useTipConfig();
 
-  const tipOptions = useMemo(() => buildTipOptions(tipConfig), [tipConfig]);
+  const tipOptions = useMemo(
+    () => buildTipOptions(tipConfig, subtotal, formatPrice),
+    [tipConfig, subtotal, formatPrice]
+  );
 
   const [activeType, setActiveType] = useState<TipOptionType>("none");
   const [customValue, setCustomValue] = useState("");
@@ -70,8 +80,8 @@ export function TipSelector({
       setActiveType("percentage");
     } else if (value.type === "fixed") {
       // Check if this is a custom value or a preset fixed value
-      const isPresetFixed = tipConfig.mode === "fixed" &&
-        tipConfig.tiers.includes(value.amount);
+      const isPresetFixed =
+        tipConfig.mode === "fixed" && tipConfig.tiers.includes(value.amount);
       setActiveType(isPresetFixed ? "fixed" : "custom");
       if (!isPresetFixed) {
         setCustomValue(String(value.amount));
@@ -147,9 +157,9 @@ export function TipSelector({
             onClick={() => handleSelect(option)}
           >
             {option.label}
-            {option.type === "percentage" && option.value && option.value > 0 && (
+            {option.displayAmount && (
               <span className="ml-1 text-xs text-gray-500">
-                ({formatPrice(subtotal * option.value)})
+                ({option.displayAmount})
               </span>
             )}
           </TipOptionButton>
