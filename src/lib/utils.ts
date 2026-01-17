@@ -51,7 +51,10 @@ export function sleep(ms: number): Promise<void> {
 /**
  * Safely parse JSON with a fallback
  */
-export function safeJsonParse<T>(json: string | null | undefined, fallback: T): T {
+export function safeJsonParse<T>(
+  json: string | null | undefined,
+  fallback: T
+): T {
   if (!json) return fallback;
   try {
     return JSON.parse(json) as T;

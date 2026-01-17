@@ -14,7 +14,7 @@ import {
   ModifierModal,
 } from "@/components/menu";
 import { useCartStore } from "@/stores";
-import type { MenuDisplayData } from "@/app/r/[slug]/menu/utils";
+import type { MenuDisplayData } from "@/app/(storefront)/r/[slug]/menu/utils";
 import type { MenuItemViewModel } from "@/types/menu-page";
 import type { SelectedModifier } from "@/types";
 
