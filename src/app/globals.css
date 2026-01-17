@@ -51,6 +51,10 @@ body {
   color: hsl(var(--theme-primary-foreground));
 }
 
+.text-theme-primary-hover {
+  color: hsl(var(--theme-primary-hover));
+}
+
 /* Primary color - borders */
 .border-theme-primary {
   border-color: hsl(var(--theme-primary));

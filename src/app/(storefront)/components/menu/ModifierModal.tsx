@@ -428,7 +428,7 @@ function ModifierCheckbox({
           >
             <MinusIcon className="w-3 h-3 text-gray-600" />
           </button>
-          <span className="w-6 text-center text-sm font-semibold text-theme-primary">{quantity}</span>
+          <span className="w-6 text-center text-sm font-semibold text-theme-primary-hover">{quantity}</span>
           <button
             onClick={(e) => {
               e.stopPropagation();
