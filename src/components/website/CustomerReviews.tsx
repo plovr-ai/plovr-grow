@@ -1,3 +1,6 @@
+"use client";
+
+import { useMerchantConfig } from "@/contexts/MerchantContext";
 import type { CustomerReview } from "@/types/website";
 
 interface CustomerReviewsProps {
@@ -48,6 +51,8 @@ function SourceIcon({ source }: { source: string }) {
 }
 
 export function CustomerReviews({ reviews }: CustomerReviewsProps) {
+  const { locale } = useMerchantConfig();
+
   return (
     <section className="py-16 md:py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -89,7 +94,7 @@ export function CustomerReviews({ reviews }: CustomerReviewsProps) {
                 <div>
                   <p className="font-semibold text-gray-900">{review.customerName}</p>
                   <p className="text-sm text-gray-500">
-                    {new Date(review.date).toLocaleDateString("en-US", {
+                    {new Date(review.date).toLocaleDateString(locale, {
                       month: "short",
                       year: "numeric",
                     })}
