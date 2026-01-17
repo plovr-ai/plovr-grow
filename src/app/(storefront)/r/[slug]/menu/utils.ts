@@ -19,46 +19,66 @@ export interface MenuDisplayData {
 }
 
 /**
- * Options stored in database JSON field
+ * Modifier stored in database JSON field
  */
-interface StoredOptionGroup {
+interface StoredModifier {
+  id: string;
+  name: string;
+  price: number;
+  isDefault?: boolean;
+  isAvailable?: boolean;
+  availabilityNote?: string;
+}
+
+/**
+ * ModifierGroup stored in database JSON field
+ */
+interface StoredModifierGroup {
   id: string;
   name: string;
   type: "single" | "multiple";
   required: boolean;
-  choices: {
-    id: string;
-    name: string;
-    price: number;
-  }[];
+  allowQuantity?: boolean;
+  maxQuantityPerModifier?: number;
+  modifiers: StoredModifier[];
+  /** @deprecated Use modifiers instead */
+  choices?: StoredModifier[];
 }
 
 /**
  * Parse modifier groups from database JSON options
  */
-function parseModifierGroups(
+export function parseModifierGroups(
   options: Prisma.JsonValue | null
 ): ModifierGroupViewModel[] {
   if (!options || !Array.isArray(options)) {
     return [];
   }
 
-  return (options as unknown as StoredOptionGroup[]).map((group) => ({
-    id: group.id,
-    name: group.name,
-    required: group.required,
-    minSelections: group.required ? 1 : 0,
-    maxSelections: group.type === "single" ? 1 : group.choices.length,
-    modifiers: group.choices.map(
-      (choice, index): ModifierViewModel => ({
-        id: choice.id,
-        name: choice.name,
-        price: choice.price,
-        isDefault: index === 0 && group.required,
-        isAvailable: true,
-      })
-    ),
-  }));
+  return (options as unknown as StoredModifierGroup[]).map((group) => {
+    // 兼容旧数据：优先使用 modifiers，回退到 choices
+    const modifiers = group.modifiers || group.choices || [];
+
+    return {
+      id: group.id,
+      name: group.name,
+      required: group.required,
+      minSelections: group.required ? 1 : 0,
+      maxSelections: group.type === "single" ? 1 : modifiers.length,
+      allowQuantity: group.allowQuantity ?? false,
+      maxQuantityPerModifier: group.maxQuantityPerModifier ?? 1,
+      modifiers: modifiers.map(
+        (modifier, index): ModifierViewModel => ({
+          id: modifier.id,
+          name: modifier.name,
+          price: modifier.price,
+          isDefault: modifier.isDefault ?? (index === 0 && group.required),
+          isAvailable: modifier.isAvailable ?? true,
+          availabilityNote: modifier.availabilityNote,
+        })
+      ),
+    };
+  });
 }
 
 /**

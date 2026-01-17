@@ -49,7 +49,10 @@ function calculateItemTotalPrice(
   quantity: number,
   selectedModifiers: SelectedModifier[]
 ): number {
-  const modifiersTotal = selectedModifiers.reduce((sum, mod) => sum + mod.price, 0);
+  const modifiersTotal = selectedModifiers.reduce(
+    (sum, mod) => sum + mod.price * mod.quantity,
+    0
+  );
   return roundPrice((price + modifiersTotal) * quantity);
 }
 

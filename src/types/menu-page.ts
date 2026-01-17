@@ -19,6 +19,7 @@ export interface ModifierViewModel {
   price: number;
   isDefault: boolean;
   isAvailable: boolean;
+  availabilityNote?: string; // 不可用原因 (如 "Sold out")
 }
 
 export interface ModifierGroupViewModel {
@@ -27,6 +28,8 @@ export interface ModifierGroupViewModel {
   required: boolean;
   minSelections: number;
   maxSelections: number;
+  allowQuantity: boolean;         // 是否允许选择数量 (1x, 2x, 3x)
+  maxQuantityPerModifier: number; // 单个 modifier 最大数量
   modifiers: ModifierViewModel[];
 }
 

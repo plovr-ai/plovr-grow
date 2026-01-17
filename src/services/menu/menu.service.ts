@@ -93,7 +93,7 @@ export class MenuService {
       price: input.price,
       imageUrl: input.imageUrl,
       sortOrder: input.sortOrder ?? 0,
-      options: input.options ? JSON.parse(JSON.stringify(input.options)) : null,
+      options: input.modifierGroups ? JSON.parse(JSON.stringify(input.modifierGroups)) : null,
       tags: input.tags ? JSON.parse(JSON.stringify(input.tags)) : null,
     });
   }
@@ -115,8 +115,8 @@ export class MenuService {
     if (input.imageUrl !== undefined) data.imageUrl = input.imageUrl;
     if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder;
     if (input.status !== undefined) data.status = input.status;
-    if (input.options !== undefined)
-      data.options = JSON.parse(JSON.stringify(input.options));
+    if (input.modifierGroups !== undefined)
+      data.options = JSON.parse(JSON.stringify(input.modifierGroups));
     if (input.tags !== undefined)
       data.tags = JSON.parse(JSON.stringify(input.tags));
 

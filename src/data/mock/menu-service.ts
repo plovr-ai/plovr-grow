@@ -3,15 +3,16 @@ import type { GetMenuResponse } from "@/services/menu/menu.types";
 
 /**
  * Mock modifier groups data (stored as JSON in database)
+ * Using Prisma.JsonValue for compatibility with MenuItem.options field
  */
-const pizzaOptions = [
+const pizzaModifierGroups: Prisma.JsonValue = [
   {
     id: "size",
     name: "Size",
     type: "single",
     required: true,
-    choices: [
-      { id: "size-s", name: "Small (10\")", price: 0 },
+    modifiers: [
+      { id: "size-s", name: "Small (10\")", price: 0, isDefault: true },
       { id: "size-m", name: "Medium (14\")", price: 4 },
       { id: "size-l", name: "Large (18\")", price: 8 },
     ],
@@ -21,23 +22,26 @@ const pizzaOptions = [
     name: "Extra Toppings",
     type: "multiple",
     required: false,
-    choices: [
+    allowQuantity: true,
+    maxQuantityPerModifier: 3,
+    modifiers: [
       { id: "topping-pepperoni", name: "Pepperoni", price: 2 },
       { id: "topping-mushrooms", name: "Mushrooms", price: 1.5 },
       { id: "topping-olives", name: "Black Olives", price: 1.5 },
       { id: "topping-peppers", name: "Bell Peppers", price: 1.5 },
       { id: "topping-onions", name: "Onions", price: 1 },
+      { id: "topping-jalapenos", name: "Jalapenos", price: 1.5, isAvailable: false, availabilityNote: "Sold out" },
     ],
   },
 ];
 
-const pastaOptions = [
+const pastaModifierGroups: Prisma.JsonValue = [
   {
     id: "protein",
     name: "Add Protein",
     type: "multiple",
     required: false,
-    choices: [
+    modifiers: [
       { id: "protein-chicken", name: "Grilled Chicken", price: 4 },
       { id: "protein-shrimp", name: "Shrimp", price: 5 },
       { id: "protein-meatballs", name: "Meatballs (3)", price: 3 },
@@ -45,14 +49,14 @@ const pastaOptions = [
   },
 ];
 
-const saladOptions = [
+const saladModifierGroups: Prisma.JsonValue = [
   {
     id: "dressing",
     name: "Dressing",
     type: "single",
     required: true,
-    choices: [
-      { id: "dressing-caesar", name: "Caesar", price: 0 },
+    modifiers: [
+      { id: "dressing-caesar", name: "Caesar", price: 0, isDefault: true },
       { id: "dressing-ranch", name: "Ranch", price: 0 },
       { id: "dressing-italian", name: "Italian", price: 0 },
       { id: "dressing-balsamic", name: "Balsamic Vinaigrette", price: 0 },
@@ -63,22 +67,24 @@ const saladOptions = [
     name: "Add Extras",
     type: "multiple",
     required: false,
-    choices: [
+    allowQuantity: true,
+    maxQuantityPerModifier: 2,
+    modifiers: [
       { id: "extra-chicken", name: "Grilled Chicken", price: 4 },
       { id: "extra-bacon", name: "Bacon Bits", price: 2 },
-      { id: "extra-avocado", name: "Avocado", price: 2.5 },
+      { id: "extra-avocado", name: "Avocado", price: 2.5, isAvailable: false, availabilityNote: "Sold out" },
     ],
   },
 ];
 
-const beverageOptions = [
+const beverageModifierGroups: Prisma.JsonValue = [
   {
     id: "size-drink",
     name: "Size",
     type: "single",
     required: true,
-    choices: [
-      { id: "drink-small", name: "Small", price: 0 },
+    modifiers: [
+      { id: "drink-small", name: "Small", price: 0, isDefault: true },
       { id: "drink-medium", name: "Medium", price: 0.5 },
       { id: "drink-large", name: "Large", price: 1 },
     ],
@@ -120,7 +126,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
           imageUrl: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop",
           sortOrder: 0,
           status: "active",
-          options: pizzaOptions,
+          options: pizzaModifierGroups,
           nutrition: null,
           tags: ["popular"],
           createdAt: now,
@@ -137,7 +143,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
           imageUrl: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop",
           sortOrder: 1,
           status: "active",
-          options: pizzaOptions,
+          options: pizzaModifierGroups,
           nutrition: null,
           tags: ["popular"],
           createdAt: now,
@@ -185,7 +191,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
           imageUrl: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop",
           sortOrder: 0,
           status: "active",
-          options: pizzaOptions,
+          options: pizzaModifierGroups,
           nutrition: null,
           tags: ["popular"],
           createdAt: now,
@@ -202,7 +208,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
           imageUrl: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop",
           sortOrder: 1,
           status: "active",
-          options: pizzaOptions,
+          options: pizzaModifierGroups,
           nutrition: null,
           tags: ["popular"],
           createdAt: now,
@@ -219,7 +225,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
           imageUrl: "https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=400&h=300&fit=crop",
           sortOrder: 2,
           status: "active",
-          options: pizzaOptions,
+          options: pizzaModifierGroups,
           nutrition: null,
           tags: ["vegetarian"],
           createdAt: now,
@@ -236,7 +242,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
           imageUrl: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop",
           sortOrder: 3,
           status: "active",
-          options: pizzaOptions,
+          options: pizzaModifierGroups,
           nutrition: null,
           tags: [],
           createdAt: now,
@@ -284,7 +290,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
           imageUrl: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=400&h=300&fit=crop",
           sortOrder: 1,
           status: "active",
-          options: pastaOptions,
+          options: pastaModifierGroups,
           nutrition: null,
           tags: ["vegetarian"],
           createdAt: now,
@@ -349,7 +355,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
           imageUrl: "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400&h=300&fit=crop",
           sortOrder: 1,
           status: "active",
-          options: saladOptions,
+          options: saladModifierGroups,
           nutrition: null,
           tags: ["vegetarian"],
           createdAt: now,
@@ -397,7 +403,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
           imageUrl: null,
           sortOrder: 0,
           status: "active",
-          options: beverageOptions,
+          options: beverageModifierGroups,
           nutrition: null,
           tags: [],
           createdAt: now,
@@ -414,7 +420,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
           imageUrl: null,
           sortOrder: 1,
           status: "active",
-          options: beverageOptions,
+          options: beverageModifierGroups,
           nutrition: null,
           tags: [],
           createdAt: now,

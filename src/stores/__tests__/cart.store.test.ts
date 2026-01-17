@@ -93,6 +93,7 @@ describe("cart.store", () => {
             modifierId: "choice-1",
             modifierName: "Large",
             price: 3.0,
+            quantity: 1,
           },
           {
             groupId: "opt-2",
@@ -100,13 +101,76 @@ describe("cart.store", () => {
             modifierId: "choice-2",
             modifierName: "Extra Cheese",
             price: 1.5,
+            quantity: 1,
           },
         ],
       });
 
       const item = useCartStore.getState().items[0];
-      // (18.99 + 3.0 + 1.5) * 2 = 23.49 * 2 = 46.98
+      // (18.99 + 3.0 * 1 + 1.5 * 1) * 2 = 23.49 * 2 = 46.98
       expect(item.totalPrice).toBe(46.98);
+    });
+
+    it("should calculate totalPrice correctly for modifier with quantity > 1", () => {
+      useCartStore.getState().addItem({
+        menuItemId: "item-1",
+        name: "Pizza",
+        price: 18.99,
+        quantity: 1,
+        selectedModifiers: [
+          {
+            groupId: "toppings",
+            groupName: "Extra Toppings",
+            modifierId: "topping-cheese",
+            modifierName: "Extra Cheese",
+            price: 1.5,
+            quantity: 2, // Double cheese
+          },
+          {
+            groupId: "toppings",
+            groupName: "Extra Toppings",
+            modifierId: "topping-pepperoni",
+            modifierName: "Pepperoni",
+            price: 2.0,
+            quantity: 3, // Triple pepperoni
+          },
+        ],
+      });
+
+      const item = useCartStore.getState().items[0];
+      // 18.99 + (1.5 * 2) + (2.0 * 3) = 18.99 + 3.0 + 6.0 = 27.99
+      expect(item.totalPrice).toBe(27.99);
+    });
+
+    it("should calculate totalPrice correctly for mixed modifier quantities", () => {
+      useCartStore.getState().addItem({
+        menuItemId: "item-1",
+        name: "Pizza",
+        price: 18.99,
+        quantity: 2, // 2 pizzas
+        selectedModifiers: [
+          {
+            groupId: "size",
+            groupName: "Size",
+            modifierId: "size-l",
+            modifierName: "Large",
+            price: 4.0,
+            quantity: 1,
+          },
+          {
+            groupId: "toppings",
+            groupName: "Extra Toppings",
+            modifierId: "topping-cheese",
+            modifierName: "Extra Cheese",
+            price: 1.5,
+            quantity: 2, // Double cheese
+          },
+        ],
+      });
+
+      const item = useCartStore.getState().items[0];
+      // (18.99 + 4.0 * 1 + 1.5 * 2) * 2 = (18.99 + 4.0 + 3.0) * 2 = 25.99 * 2 = 51.98
+      expect(item.totalPrice).toBe(51.98);
     });
 
     it("should use default quantity of 1 when not provided", () => {
@@ -169,6 +233,7 @@ describe("cart.store", () => {
             modifierId: "choice-1",
             modifierName: "Large",
             price: 3.0,
+            quantity: 1,
           },
         ],
       });
@@ -226,6 +291,7 @@ describe("cart.store", () => {
             modifierId: "choice-1",
             modifierName: "Large",
             price: 3.0,
+            quantity: 1,
           },
         ],
       });
@@ -235,7 +301,34 @@ describe("cart.store", () => {
 
       const item = useCartStore.getState().items[0];
       expect(item.quantity).toBe(3);
-      // (18.99 + 3.0) * 3 = 21.99 * 3 = 65.97
+      // (18.99 + 3.0 * 1) * 3 = 21.99 * 3 = 65.97
+      expect(item.totalPrice).toBe(65.97);
+    });
+
+    it("should update totalPrice correctly with modifier quantity when item quantity changes", () => {
+      useCartStore.getState().addItem({
+        menuItemId: "item-1",
+        name: "Pizza",
+        price: 18.99,
+        quantity: 1,
+        selectedModifiers: [
+          {
+            groupId: "toppings",
+            groupName: "Extra Toppings",
+            modifierId: "topping-cheese",
+            modifierName: "Extra Cheese",
+            price: 1.5,
+            quantity: 2, // Double cheese
+          },
+        ],
+      });
+
+      const itemId = useCartStore.getState().items[0].id;
+      useCartStore.getState().updateQuantity(itemId, 3);
+
+      const item = useCartStore.getState().items[0];
+      expect(item.quantity).toBe(3);
+      // (18.99 + 1.5 * 2) * 3 = 21.99 * 3 = 65.97
       expect(item.totalPrice).toBe(65.97);
     });
 
@@ -356,12 +449,35 @@ describe("cart.store", () => {
             modifierId: "choice-1",
             modifierName: "Large",
             price: 3.0,
+            quantity: 1,
           },
         ],
       });
 
-      // (18.99 + 3.0) * 2 = 43.98
+      // (18.99 + 3.0 * 1) * 2 = 43.98
       expect(useCartStore.getState().getSubtotal()).toBe(43.98);
+    });
+
+    it("should include modifier quantity in subtotal calculation", () => {
+      useCartStore.getState().addItem({
+        menuItemId: "item-1",
+        name: "Pizza",
+        price: 18.99,
+        quantity: 2,
+        selectedModifiers: [
+          {
+            groupId: "toppings",
+            groupName: "Extra Toppings",
+            modifierId: "topping-cheese",
+            modifierName: "Extra Cheese",
+            price: 1.5,
+            quantity: 3, // Triple cheese
+          },
+        ],
+      });
+
+      // (18.99 + 1.5 * 3) * 2 = (18.99 + 4.5) * 2 = 23.49 * 2 = 46.98
+      expect(useCartStore.getState().getSubtotal()).toBe(46.98);
     });
 
     it("should return 0 for empty cart", () => {

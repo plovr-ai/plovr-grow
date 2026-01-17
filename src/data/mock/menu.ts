@@ -8,6 +8,8 @@ const pizzaModifierGroups: ModifierGroupViewModel[] = [
     required: true,
     minSelections: 1,
     maxSelections: 1,
+    allowQuantity: false,
+    maxQuantityPerModifier: 1,
     modifiers: [
       { id: "size-s", name: "Small (10\")", price: 0, isDefault: true, isAvailable: true },
       { id: "size-m", name: "Medium (14\")", price: 4, isDefault: false, isAvailable: true },
@@ -20,13 +22,15 @@ const pizzaModifierGroups: ModifierGroupViewModel[] = [
     required: false,
     minSelections: 0,
     maxSelections: 5,
+    allowQuantity: true,
+    maxQuantityPerModifier: 3,
     modifiers: [
       { id: "topping-pepperoni", name: "Pepperoni", price: 2, isDefault: false, isAvailable: true },
       { id: "topping-mushrooms", name: "Mushrooms", price: 1.5, isDefault: false, isAvailable: true },
       { id: "topping-olives", name: "Black Olives", price: 1.5, isDefault: false, isAvailable: true },
       { id: "topping-peppers", name: "Bell Peppers", price: 1.5, isDefault: false, isAvailable: true },
       { id: "topping-onions", name: "Onions", price: 1, isDefault: false, isAvailable: true },
-      { id: "topping-bacon", name: "Bacon", price: 2.5, isDefault: false, isAvailable: false },
+      { id: "topping-bacon", name: "Bacon", price: 2.5, isDefault: false, isAvailable: false, availabilityNote: "Sold out" },
     ],
   },
 ];
@@ -39,6 +43,8 @@ const pastaModifierGroups: ModifierGroupViewModel[] = [
     required: false,
     minSelections: 0,
     maxSelections: 2,
+    allowQuantity: false,
+    maxQuantityPerModifier: 1,
     modifiers: [
       { id: "protein-chicken", name: "Grilled Chicken", price: 4, isDefault: false, isAvailable: true },
       { id: "protein-shrimp", name: "Shrimp", price: 5, isDefault: false, isAvailable: true },
@@ -55,6 +61,8 @@ const saladModifierGroups: ModifierGroupViewModel[] = [
     required: true,
     minSelections: 1,
     maxSelections: 1,
+    allowQuantity: false,
+    maxQuantityPerModifier: 1,
     modifiers: [
       { id: "dressing-caesar", name: "Caesar", price: 0, isDefault: true, isAvailable: true },
       { id: "dressing-ranch", name: "Ranch", price: 0, isDefault: false, isAvailable: true },
@@ -68,10 +76,12 @@ const saladModifierGroups: ModifierGroupViewModel[] = [
     required: false,
     minSelections: 0,
     maxSelections: 3,
+    allowQuantity: true,
+    maxQuantityPerModifier: 2,
     modifiers: [
       { id: "extra-chicken", name: "Grilled Chicken", price: 4, isDefault: false, isAvailable: true },
       { id: "extra-bacon", name: "Bacon Bits", price: 2, isDefault: false, isAvailable: true },
-      { id: "extra-avocado", name: "Avocado", price: 2.5, isDefault: false, isAvailable: true },
+      { id: "extra-avocado", name: "Avocado", price: 2.5, isDefault: false, isAvailable: false, availabilityNote: "Sold out" },
     ],
   },
 ];
@@ -84,6 +94,8 @@ const beverageModifierGroups: ModifierGroupViewModel[] = [
     required: true,
     minSelections: 1,
     maxSelections: 1,
+    allowQuantity: false,
+    maxQuantityPerModifier: 1,
     modifiers: [
       { id: "drink-small", name: "Small", price: 0, isDefault: true, isAvailable: true },
       { id: "drink-medium", name: "Medium", price: 0.5, isDefault: false, isAvailable: true },

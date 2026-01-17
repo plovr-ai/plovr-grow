@@ -33,6 +33,7 @@ export interface SelectedModifier {
   modifierId: string;
   modifierName: string;
   price: number;
+  quantity: number; // 选择数量 (默认 1)
 }
 
 // ==================== Menu Types ====================

@@ -16,8 +16,13 @@ interface ModifierModalProps {
   onConfirm: (selectedModifiers: SelectedModifier[], quantity: number) => void;
 }
 
+interface ModifierSelection {
+  modifierId: string;
+  quantity: number;
+}
+
 interface SelectionState {
-  [groupId: string]: Set<string>; // Set of modifier IDs selected in each group
+  [groupId: string]: ModifierSelection[];
 }
 
 export function ModifierModal({
@@ -39,8 +44,8 @@ export function ModifierModal({
       item.modifierGroups.forEach((group) => {
         const defaultModifiers = group.modifiers
           .filter((m) => m.isDefault && m.isAvailable)
-          .map((m) => m.id);
-        initialSelections[group.id] = new Set(defaultModifiers);
+          .map((m): ModifierSelection => ({ modifierId: m.id, quantity: 1 }));
+        initialSelections[group.id] = defaultModifiers;
       });
       setSelections(initialSelections);
       setQuantity(1);
@@ -51,19 +56,78 @@ export function ModifierModal({
   const handleToggleModifier = useCallback(
     (groupId: string, modifierId: string, group: ModifierGroupViewModel) => {
       setSelections((prev) => {
-        const currentSet = new Set(prev[groupId] || []);
+        const currentSelections = prev[groupId] || [];
+        const existingIndex = currentSelections.findIndex(
+          (s) => s.modifierId === modifierId
+        );
 
-        if (currentSet.has(modifierId)) {
+        if (existingIndex !== -1) {
           // Remove if already selected
-          currentSet.delete(modifierId);
+          return {
+            ...prev,
+            [groupId]: currentSelections.filter((_, i) => i !== existingIndex),
+          };
         } else {
           // Add if not at max selections
-          if (currentSet.size < group.maxSelections) {
-            currentSet.add(modifierId);
+          const totalQuantity = currentSelections.reduce(
+            (sum, s) => sum + s.quantity,
+            0
+          );
+          if (totalQuantity < group.maxSelections) {
+            return {
+              ...prev,
+              [groupId]: [
+                ...currentSelections,
+                { modifierId, quantity: 1 },
+              ],
+            };
           }
         }
 
-        return { ...prev, [groupId]: currentSet };
+        return prev;
+      });
+    },
+    []
+  );
+
+  // Update modifier quantity (for allowQuantity groups)
+  const handleUpdateQuantity = useCallback(
+    (
+      groupId: string,
+      modifierId: string,
+      newQuantity: number,
+      group: ModifierGroupViewModel
+    ) => {
+      setSelections((prev) => {
+        const currentSelections = prev[groupId] || [];
+        const existingIndex = currentSelections.findIndex(
+          (s) => s.modifierId === modifierId
+        );
+
+        if (existingIndex === -1) return prev;
+
+        // Clamp quantity between 0 and maxQuantityPerModifier
+        const clampedQuantity = Math.max(
+          0,
+          Math.min(newQuantity, group.maxQuantityPerModifier)
+        );
+
+        if (clampedQuantity === 0) {
+          // Remove if quantity is 0
+          return {
+            ...prev,
+            [groupId]: currentSelections.filter((_, i) => i !== existingIndex),
+          };
+        }
+
+        // Update quantity
+        const updatedSelections = [...currentSelections];
+        updatedSelections[existingIndex] = {
+          ...updatedSelections[existingIndex],
+          quantity: clampedQuantity,
+        };
+
+        return { ...prev, [groupId]: updatedSelections };
       });
     },
     []
@@ -73,7 +137,7 @@ export function ModifierModal({
   const isValid = useCallback(() => {
     return item.modifierGroups.every((group) => {
       if (!group.required) return true;
-      const selectedCount = selections[group.id]?.size || 0;
+      const selectedCount = (selections[group.id] || []).length;
       return selectedCount >= group.minSelections;
     });
   }, [item.modifierGroups, selections]);
@@ -83,9 +147,11 @@ export function ModifierModal({
     const result: SelectedModifier[] = [];
 
     item.modifierGroups.forEach((group) => {
-      const selectedIds = selections[group.id] || new Set();
-      selectedIds.forEach((modifierId) => {
-        const modifier = group.modifiers.find((m) => m.id === modifierId);
+      const groupSelections = selections[group.id] || [];
+      groupSelections.forEach((selection) => {
+        const modifier = group.modifiers.find(
+          (m) => m.id === selection.modifierId
+        );
         if (modifier) {
           result.push({
             groupId: group.id,
@@ -93,6 +159,7 @@ export function ModifierModal({
             modifierId: modifier.id,
             modifierName: modifier.name,
             price: modifier.price,
+            quantity: selection.quantity,
           });
         }
       });
@@ -191,9 +258,12 @@ export function ModifierModal({
             <ModifierGroupSection
               key={group.id}
               group={group}
-              selectedIds={selections[group.id] || new Set()}
+              selections={selections[group.id] || []}
               onToggle={(modifierId) =>
                 handleToggleModifier(group.id, modifierId, group)
+              }
+              onUpdateQuantity={(modifierId, newQuantity) =>
+                handleUpdateQuantity(group.id, modifierId, newQuantity, group)
               }
               formatPrice={formatPrice}
             />
@@ -225,13 +295,15 @@ export function ModifierModal({
 // Sub-component for each modifier group
 function ModifierGroupSection({
   group,
-  selectedIds,
+  selections,
   onToggle,
+  onUpdateQuantity,
   formatPrice,
 }: {
   group: ModifierGroupViewModel;
-  selectedIds: Set<string>;
+  selections: ModifierSelection[];
   onToggle: (modifierId: string) => void;
+  onUpdateQuantity: (modifierId: string, newQuantity: number) => void;
   formatPrice: (price: number) => string;
 }) {
   const getSelectionHint = () => {
@@ -247,6 +319,9 @@ function ModifierGroupSection({
     return `Optional - Select up to ${group.maxSelections}`;
   };
 
+  const getSelection = (modifierId: string) =>
+    selections.find((s) => s.modifierId === modifierId);
+
   return (
     <div>
       <div className="mb-3">
@@ -254,15 +329,24 @@ function ModifierGroupSection({
         <p className="text-sm text-gray-500">{getSelectionHint()}</p>
       </div>
       <div className="space-y-2">
-        {group.modifiers.map((modifier) => (
-          <ModifierCheckbox
-            key={modifier.id}
-            modifier={modifier}
-            isSelected={selectedIds.has(modifier.id)}
-            onToggle={() => onToggle(modifier.id)}
-            formatPrice={formatPrice}
-          />
-        ))}
+        {group.modifiers.map((modifier) => {
+          const selection = getSelection(modifier.id);
+          return (
+            <ModifierCheckbox
+              key={modifier.id}
+              modifier={modifier}
+              isSelected={!!selection}
+              quantity={selection?.quantity || 1}
+              allowQuantity={group.allowQuantity}
+              maxQuantity={group.maxQuantityPerModifier}
+              onToggle={() => onToggle(modifier.id)}
+              onUpdateQuantity={(newQuantity) =>
+                onUpdateQuantity(modifier.id, newQuantity)
+              }
+              formatPrice={formatPrice}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -272,44 +356,97 @@ function ModifierGroupSection({
 function ModifierCheckbox({
   modifier,
   isSelected,
+  quantity,
+  allowQuantity,
+  maxQuantity,
   onToggle,
+  onUpdateQuantity,
   formatPrice,
 }: {
   modifier: ModifierViewModel;
   isSelected: boolean;
+  quantity: number;
+  allowQuantity: boolean;
+  maxQuantity: number;
   onToggle: () => void;
+  onUpdateQuantity: (newQuantity: number) => void;
   formatPrice: (price: number) => string;
 }) {
   return (
-    <button
-      onClick={onToggle}
-      disabled={!modifier.isAvailable}
-      className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${
+    <div
+      className={`w-full p-3 rounded-lg border transition-all ${
         isSelected
           ? "border-red-500 bg-red-50"
           : modifier.isAvailable
             ? "border-gray-200 hover:border-gray-300"
-            : "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
+            : "border-gray-100 bg-gray-50 opacity-50"
       }`}
     >
-      <div className="flex items-center gap-3">
-        <div
-          className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-            isSelected ? "bg-red-600 border-red-600" : "border-gray-300"
-          }`}
-        >
-          {isSelected && <CheckIcon className="w-3 h-3 text-white" />}
+      <button
+        onClick={onToggle}
+        disabled={!modifier.isAvailable}
+        className="w-full flex items-center justify-between"
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+              isSelected ? "bg-red-600 border-red-600" : "border-gray-300"
+            }`}
+          >
+            {isSelected && <CheckIcon className="w-3 h-3 text-white" />}
+          </div>
+          <div className="text-left">
+            <span
+              className={
+                modifier.isAvailable ? "text-gray-900" : "text-gray-400"
+              }
+            >
+              {modifier.name}
+            </span>
+            {!modifier.isAvailable && modifier.availabilityNote && (
+              <span className="text-gray-400 text-sm ml-2">
+                ({modifier.availabilityNote})
+              </span>
+            )}
+          </div>
         </div>
-        <span
-          className={modifier.isAvailable ? "text-gray-900" : "text-gray-400"}
-        >
-          {modifier.name}
-        </span>
-      </div>
-      {modifier.price > 0 && (
-        <span className="text-gray-500">+{formatPrice(modifier.price)}</span>
+        {modifier.price > 0 && (
+          <span className="text-gray-500">+{formatPrice(modifier.price)}</span>
+        )}
+      </button>
+
+      {/* Quantity selector for allowQuantity groups */}
+      {isSelected && allowQuantity && (
+        <div className="mt-2 ml-8 flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdateQuantity(quantity - 1);
+            }}
+            className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors"
+            aria-label="Decrease quantity"
+          >
+            <MinusIcon className="w-3 h-3 text-gray-600" />
+          </button>
+          <span className="w-6 text-center text-sm font-medium">{quantity}</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdateQuantity(quantity + 1);
+            }}
+            disabled={quantity >= maxQuantity}
+            className={`w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center transition-colors ${
+              quantity >= maxQuantity
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-gray-100"
+            }`}
+            aria-label="Increase quantity"
+          >
+            <PlusIcon className="w-3 h-3 text-gray-600" />
+          </button>
+        </div>
       )}
-    </button>
+    </div>
   );
 }
 
