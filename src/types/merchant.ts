@@ -1,6 +1,6 @@
 // ==================== Merchant Types ====================
 
-import type { TipConfig } from "./index";
+import type { TipConfig, FeeConfig } from "./index";
 
 export type MerchantStatus = "active" | "inactive" | "temporarily_closed";
 
@@ -19,6 +19,7 @@ export interface MerchantSettings {
   minimumOrderAmount?: number;
   estimatedPrepTime?: number; // minutes
   tipConfig?: TipConfig;
+  feeConfig?: FeeConfig;
 }
 
 export interface MerchantInfo {
@@ -66,7 +67,7 @@ export interface PublicMerchantInfo {
   locale: string;
   settings: Pick<
     MerchantSettings,
-    "acceptsPickup" | "acceptsDelivery" | "tipConfig"
+    "acceptsPickup" | "acceptsDelivery" | "tipConfig" | "feeConfig"
   > | null;
 }
 

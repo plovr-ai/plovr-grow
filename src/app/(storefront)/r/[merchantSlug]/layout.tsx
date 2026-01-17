@@ -38,6 +38,7 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
           currency: data.merchant.currency,
           locale: data.merchant.locale,
           tipConfig: data.merchant.tipConfig,
+          feeConfig: data.merchant.feeConfig,
         }}
       >
         {children}

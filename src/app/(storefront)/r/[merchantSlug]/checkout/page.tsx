@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCartStore, useCartHydration } from "@/stores";
 import { useFormatPrice, usePricing } from "@/hooks";
+import { useFeeConfig } from "@/contexts";
+import type { FeeInput } from "@/lib/pricing";
 import {
   OrderTypeSelector,
   ContactInfoForm,
@@ -84,8 +86,33 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Get fee config from merchant context
+  const { fees: configFees } = useFeeConfig();
+
+  // Convert Fee[] to FeeInput[] for calculation
+  const feeInputs = useMemo<FeeInput[]>(() => {
+    return configFees.map((fee) => ({
+      id: fee.id,
+      type: fee.type,
+      value: fee.value,
+    }));
+  }, [configFees]);
+
   // Calculate totals using unified pricing module
-  const pricing = usePricing(items, formState.tip);
+  const pricing = usePricing(items, formState.tip, feeInputs);
+
+  // Prepare fees for display
+  const displayFees = useMemo(() => {
+    return configFees.map((fee) => {
+      const breakdown = pricing.feesBreakdown.find((b) => b.id === fee.id);
+      return {
+        id: fee.id,
+        displayName: fee.displayName || fee.name,
+        amount: breakdown?.amount || 0,
+      };
+    });
+  }, [configFees, pricing.feesBreakdown]);
+
   const calculations = useMemo(() => {
     const deliveryFee = formState.orderType === "delivery" ? 3.99 : 0;
     const totalAmount = Math.round((pricing.totalAmount + deliveryFee) * 100) / 100;
@@ -93,11 +120,12 @@ export default function CheckoutPage() {
     return {
       subtotal: pricing.subtotal,
       taxAmount: pricing.taxAmount,
+      fees: displayFees,
       deliveryFee,
       tipAmount: pricing.tipAmount,
       totalAmount,
     };
-  }, [pricing, formState.orderType]);
+  }, [pricing, formState.orderType, displayFees]);
 
   // Handle form field changes
   const handleContactChange = (
@@ -418,6 +446,7 @@ export default function CheckoutPage() {
           <PriceSummary
             subtotal={calculations.subtotal}
             taxAmount={calculations.taxAmount}
+            fees={calculations.fees}
             deliveryFee={calculations.deliveryFee}
             tipAmount={calculations.tipAmount}
             totalAmount={calculations.totalAmount}

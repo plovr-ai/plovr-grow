@@ -2,9 +2,16 @@
 
 import { useFormatPrice } from "@/hooks";
 
+export interface FeeDisplayItem {
+  id: string;
+  displayName: string;
+  amount: number;
+}
+
 interface PriceSummaryProps {
   subtotal: number;
   taxAmount: number;
+  fees?: FeeDisplayItem[];
   deliveryFee: number;
   tipAmount: number;
   totalAmount: number;
@@ -13,6 +20,7 @@ interface PriceSummaryProps {
 export function PriceSummary({
   subtotal,
   taxAmount,
+  fees,
   deliveryFee,
   tipAmount,
   totalAmount,
@@ -29,6 +37,12 @@ export function PriceSummary({
         <span>Tax</span>
         <span>{formatPrice(taxAmount)}</span>
       </div>
+      {fees?.map((fee) => (
+        <div key={fee.id} className="flex justify-between text-gray-600">
+          <span>{fee.displayName}</span>
+          <span>{formatPrice(fee.amount)}</span>
+        </div>
+      ))}
       {deliveryFee > 0 && (
         <div className="flex justify-between text-gray-600">
           <span>Delivery Fee</span>

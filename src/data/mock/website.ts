@@ -34,6 +34,17 @@ export const mockWebsiteData: WebsiteData = {
       tiers: [0.15, 0.18, 0.2],
       allowCustom: true,
     },
+    feeConfig: {
+      fees: [
+        {
+          id: "service-fee",
+          name: "service_fee",
+          displayName: "Service Fee",
+          type: "percentage",
+          value: 0.03, // 3%
+        },
+      ],
+    },
   },
   featuredItems: [
     {

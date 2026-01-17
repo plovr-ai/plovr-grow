@@ -2,6 +2,7 @@ export {
   MerchantProvider,
   useMerchantConfig,
   useTipConfig,
+  useFeeConfig,
 } from "./MerchantContext";
 export type { MerchantConfig } from "./MerchantContext";
 

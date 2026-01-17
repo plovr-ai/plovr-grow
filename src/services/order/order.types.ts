@@ -6,6 +6,7 @@ import type {
   DeliveryAddress,
   TaxBreakdownItem,
 } from "@/types";
+import type { FeeBreakdownItem } from "@/lib/pricing";
 
 export interface CreateOrderInput {
   customerName: string;
@@ -23,6 +24,8 @@ export interface OrderCalculation {
   subtotal: number;
   taxAmount: number;
   taxBreakdown: TaxBreakdownItem[];
+  feesAmount: number;
+  feesBreakdown: FeeBreakdownItem[];
   tipAmount: number;
   deliveryFee: number;
   discount: number;

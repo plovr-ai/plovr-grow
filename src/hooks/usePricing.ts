@@ -4,6 +4,7 @@ import {
   type PricingItem,
   type PricingResult,
   type TipInput,
+  type FeeInput,
 } from "@/lib/pricing";
 import { getMockTaxConfigById } from "@/data/mock/tax-config";
 import type { CartItem } from "@/types";
@@ -14,10 +15,12 @@ import type { CartItem } from "@/types";
  *
  * @param items - 购物车商品列表
  * @param tip - Tip 输入，支持百分比或固定金额
+ * @param fees - Fees 输入，支持百分比或固定金额
  */
 export function usePricing(
   items: CartItem[],
-  tip?: TipInput | null
+  tip?: TipInput | null,
+  fees?: FeeInput[] | null
 ): PricingResult {
   return useMemo(() => {
     // 转换为 PricingItem，嵌入税率配置
@@ -36,6 +39,6 @@ export function usePricing(
       };
     });
 
-    return calculateOrderPricing(pricingItems, tip);
-  }, [items, tip]);
+    return calculateOrderPricing(pricingItems, tip, fees);
+  }, [items, tip, fees]);
 }

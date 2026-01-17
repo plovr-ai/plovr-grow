@@ -141,6 +141,26 @@ export const DEFAULT_TIP_CONFIG: TipConfig = {
   allowCustom: true,
 };
 
+// ==================== Fee Configuration Types ====================
+
+export type FeeType = "fixed" | "percentage";
+
+export interface Fee {
+  id: string;
+  name: string;
+  displayName?: string;
+  type: FeeType;
+  value: number; // fixed: 金额, percentage: 小数 (0.05 = 5%)
+}
+
+export interface FeeConfig {
+  fees: Fee[];
+}
+
+export const DEFAULT_FEE_CONFIG: FeeConfig = {
+  fees: [],
+};
+
 // Note: BusinessHours and MerchantSettings are now defined in ./merchant.ts
 
 // ==================== API Response Types ====================

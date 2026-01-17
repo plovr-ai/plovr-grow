@@ -108,6 +108,8 @@ export class OrderService {
       subtotal: pricing.subtotal,
       taxAmount: pricing.taxAmount,
       taxBreakdown: [], // Simplified, no breakdown needed for now
+      feesAmount: pricing.feesAmount,
+      feesBreakdown: pricing.feesBreakdown,
       tipAmount: pricing.tipAmount,
       deliveryFee: Math.round(deliveryFee * 100) / 100,
       discount: Math.round(discount * 100) / 100,

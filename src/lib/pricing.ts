@@ -32,11 +32,30 @@ export type TipInput =
   | { type: "fixed"; amount: number };
 
 /**
+ * Fee 输入类型
+ */
+export interface FeeInput {
+  id: string;
+  type: "fixed" | "percentage";
+  value: number; // fixed: 金额, percentage: 小数 (0.05 = 5%)
+}
+
+/**
+ * Fee 明细项
+ */
+export interface FeeBreakdownItem {
+  id: string;
+  amount: number;
+}
+
+/**
  * 价格计算结果
  */
 export interface PricingResult {
   subtotal: number;
   taxAmount: number;
+  feesAmount: number;
+  feesBreakdown: FeeBreakdownItem[];
   tipAmount: number;
   totalAmount: number;
 }
@@ -58,15 +77,51 @@ export function calculateTipAmount(
 }
 
 /**
+ * 根据 subtotal 计算 fees 金额
+ * percentage 类型基于 subtotal 计算
+ */
+export function calculateFeesAmount(
+  subtotal: number,
+  fees: FeeInput[] | null | undefined
+): { feesAmount: number; feesBreakdown: FeeBreakdownItem[] } {
+  if (!fees || fees.length === 0) {
+    return { feesAmount: 0, feesBreakdown: [] };
+  }
+
+  const breakdown: FeeBreakdownItem[] = [];
+  let totalFees = 0;
+
+  for (const fee of fees) {
+    let amount: number;
+    if (fee.type === "percentage") {
+      amount = roundPrice(subtotal * fee.value);
+    } else {
+      amount = roundPrice(fee.value);
+    }
+    breakdown.push({ id: fee.id, amount });
+    totalFees += amount;
+  }
+
+  return {
+    feesAmount: roundPrice(totalFees),
+    feesBreakdown: breakdown,
+  };
+}
+
+/**
  * 计算订单价格
  * 可复用于 Checkout Page 和 Order Service
  *
+ * 计算顺序: Subtotal → Tax → Fees → Tip → Total
+ *
  * @param items - 商品列表
  * @param tip - Tip 输入，支持百分比或固定金额
+ * @param fees - Fees 输入，支持百分比或固定金额
  */
 export function calculateOrderPricing(
   items: PricingItem[],
-  tip?: TipInput | null
+  tip?: TipInput | null,
+  fees?: FeeInput[] | null
 ): PricingResult {
   // 1. 计算商品小计
   const subtotal = items.reduce(
@@ -86,15 +141,25 @@ export function calculateOrderPricing(
   }
   totalTaxAmount = roundPrice(totalTaxAmount);
 
-  // 3. 计算 tip（基于 subtotal）
+  // 3. 计算 fees（基于 subtotal，fees 不计税）
+  const { feesAmount, feesBreakdown } = calculateFeesAmount(
+    roundedSubtotal,
+    fees
+  );
+
+  // 4. 计算 tip（基于 subtotal）
   const tipAmount = calculateTipAmount(roundedSubtotal, tip);
 
-  // 4. 计算总额
-  const totalAmount = roundPrice(roundedSubtotal + totalTaxAmount + tipAmount);
+  // 5. 计算总额: Subtotal + Tax + Fees + Tip
+  const totalAmount = roundPrice(
+    roundedSubtotal + totalTaxAmount + feesAmount + tipAmount
+  );
 
   return {
     subtotal: roundedSubtotal,
     taxAmount: totalTaxAmount,
+    feesAmount,
+    feesBreakdown,
     tipAmount,
     totalAmount,
   };
