@@ -114,6 +114,22 @@ export interface DeliveryAddress {
   instructions?: string;
 }
 
+// ==================== Tip Configuration Types ====================
+
+export type TipMode = "fixed" | "percentage";
+
+export interface TipConfig {
+  mode: TipMode;
+  tiers: number[]; // 固定金额 [1, 2, 3] 或 百分比 [0.15, 0.18, 0.20]
+  allowCustom: boolean;
+}
+
+export const DEFAULT_TIP_CONFIG: TipConfig = {
+  mode: "percentage",
+  tiers: [0.15, 0.18, 0.2],
+  allowCustom: true,
+};
+
 // ==================== Merchant Types ====================
 
 export interface BusinessHours {
@@ -130,6 +146,7 @@ export interface MerchantSettings {
   deliveryRadius?: number;
   minimumOrderAmount?: number;
   estimatedPrepTime?: number; // minutes
+  tipConfig?: TipConfig;
 }
 
 // ==================== API Response Types ====================

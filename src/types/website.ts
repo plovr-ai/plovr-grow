@@ -1,5 +1,7 @@
 // Website Template Types
 
+import type { TipConfig } from "./index";
+
 export interface MerchantInfo {
   name: string;
   tagline: string;
@@ -15,6 +17,7 @@ export interface MerchantInfo {
   socialLinks: SocialLink[];
   currency: string;
   locale: string;
+  tipConfig?: TipConfig;
 }
 
 export interface BusinessHoursMap {
