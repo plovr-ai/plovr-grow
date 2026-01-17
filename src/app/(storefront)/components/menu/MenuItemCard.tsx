@@ -75,7 +75,7 @@ export function MenuItemCard({ item, onAddClick }: MenuItemCardProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h3 className="font-semibold text-gray-900">{item.name}</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
             {item.tags.length > 0 && (
               <div className="flex gap-1 mt-1">
                 {item.tags.map((tag) => (
@@ -89,7 +89,7 @@ export function MenuItemCard({ item, onAddClick }: MenuItemCardProps) {
               </div>
             )}
           </div>
-          <span className="font-semibold text-gray-900 whitespace-nowrap">
+          <span className="text-lg font-semibold text-gray-900 whitespace-nowrap">
             {formatPrice(item.price)}
           </span>
         </div>
