@@ -29,6 +29,11 @@ export const mockWebsiteData: WebsiteData = {
     ],
     currency: "USD",
     locale: "en-US",
+    tipConfig: {
+      mode: "percentage",
+      tiers: [0.15, 0.18, 0.2],
+      allowCustom: true,
+    },
   },
   featuredItems: [
     {

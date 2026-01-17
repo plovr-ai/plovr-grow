@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useFormatPrice } from "@/hooks";
+import { useTipConfig } from "@/contexts";
+import type { TipConfig } from "@/types";
 
 interface TipSelectorProps {
   subtotal: number;
@@ -10,12 +12,37 @@ interface TipSelectorProps {
   disabled?: boolean;
 }
 
-const TIP_PERCENTAGES = [
-  { value: 0, label: "None" },
-  { value: 0.15, label: "15%" },
-  { value: 0.18, label: "18%" },
-  { value: 0.2, label: "20%" },
-];
+interface TipOption {
+  value: number;
+  label: string;
+  displayAmount?: string;
+}
+
+function buildTipOptions(
+  config: TipConfig,
+  subtotal: number,
+  formatPrice: (price: number) => string
+): TipOption[] {
+  const options: TipOption[] = [{ value: 0, label: "None" }];
+
+  config.tiers.forEach((tier) => {
+    if (config.mode === "percentage") {
+      const amount = Math.round(subtotal * tier * 100) / 100;
+      options.push({
+        value: amount,
+        label: `${Math.round(tier * 100)}%`,
+        displayAmount: formatPrice(amount),
+      });
+    } else {
+      options.push({
+        value: tier,
+        label: formatPrice(tier),
+      });
+    }
+  });
+
+  return options;
+}
 
 export function TipSelector({
   subtotal,
@@ -24,17 +51,24 @@ export function TipSelector({
   disabled = false,
 }: TipSelectorProps) {
   const formatPrice = useFormatPrice();
+  const tipConfig = useTipConfig();
+
   const [isCustom, setIsCustom] = useState(false);
   const [customValue, setCustomValue] = useState("");
 
-  const selectedPercentage = TIP_PERCENTAGES.find(
-    (tip) => Math.abs(subtotal * tip.value - value) < 0.01
+  const tipOptions = useMemo(
+    () => buildTipOptions(tipConfig, subtotal, formatPrice),
+    [tipConfig, subtotal, formatPrice]
   );
 
-  const handlePercentageClick = (percentage: number) => {
+  const selectedOption = tipOptions.find(
+    (opt) => Math.abs(opt.value - value) < 0.01
+  );
+
+  const handleOptionClick = (amount: number) => {
     setIsCustom(false);
     setCustomValue("");
-    onChange(Math.round(subtotal * percentage * 100) / 100);
+    onChange(amount);
   };
 
   const handleCustomClick = () => {
@@ -56,39 +90,43 @@ export function TipSelector({
     <div className="bg-white rounded-xl border border-gray-100 p-4">
       <h2 className="text-sm font-medium text-gray-700 mb-3">Add a Tip</h2>
       <div className="flex flex-wrap gap-2">
-        {TIP_PERCENTAGES.map((tip) => (
+        {tipOptions.map((option, index) => (
           <button
-            key={tip.value}
+            key={index}
             type="button"
-            onClick={() => handlePercentageClick(tip.value)}
+            onClick={() => handleOptionClick(option.value)}
             disabled={disabled}
             className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-              !isCustom && selectedPercentage?.value === tip.value
+              !isCustom && selectedOption?.value === option.value
                 ? "border-red-600 bg-red-50 text-red-600"
                 : "border-gray-200 hover:border-gray-300 text-gray-600"
             } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
           >
-            {tip.label}
-            {tip.value > 0 && (
+            {option.label}
+            {option.displayAmount && (
               <span className="ml-1 text-xs text-gray-500">
-                ({formatPrice(subtotal * tip.value)})
+                ({option.displayAmount})
               </span>
             )}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={handleCustomClick}
-          disabled={disabled}
-          className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-            isCustom
-              ? "border-red-600 bg-red-50 text-red-600"
-              : "border-gray-200 hover:border-gray-300 text-gray-600"
-          } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-        >
-          Custom
-        </button>
+
+        {tipConfig.allowCustom && (
+          <button
+            type="button"
+            onClick={handleCustomClick}
+            disabled={disabled}
+            className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+              isCustom
+                ? "border-red-600 bg-red-50 text-red-600"
+                : "border-gray-200 hover:border-gray-300 text-gray-600"
+            } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            Custom
+          </button>
+        )}
       </div>
+
       {isCustom && (
         <div className="mt-3">
           <div className="relative">

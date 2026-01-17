@@ -31,6 +31,7 @@ export default async function RestaurantLayout({ children, params }: LayoutProps
       config={{
         currency: data.merchant.currency,
         locale: data.merchant.locale,
+        tipConfig: data.merchant.tipConfig,
       }}
     >
       {children}
