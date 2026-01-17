@@ -3,11 +3,18 @@
 import { useCallback, useRef } from "react";
 import type { MenuItemViewModel, MenuItemTag } from "@/types/menu-page";
 import { useFormatPrice } from "@/hooks";
-import { ImagePlaceholderIcon } from "@/components/icons";
+import { ImagePlaceholderIcon } from "@storefront/components/icons";
+import type { AnimationPosition } from "@/lib/cartAnimation";
+
+export interface AddClickParams {
+  itemId: string;
+  startPosition: AnimationPosition;
+  imageUrl: string | null;
+}
 
 interface MenuItemCardProps {
   item: MenuItemViewModel;
-  onAddClick: (itemId: string) => void;
+  onAddClick: (params: AddClickParams) => void;
 }
 
 const tagConfig: Record<MenuItemTag, { label: string; className: string }> = {
@@ -19,105 +26,28 @@ const tagConfig: Record<MenuItemTag, { label: string; className: string }> = {
   new: { label: "New", className: "bg-blue-100 text-blue-700" },
 };
 
-function animateFlyToCart(
-  startX: number,
-  startY: number,
-  endX: number,
-  endY: number,
-  imageUrl: string | null
-): void {
-  const el = document.createElement("div");
-  el.style.cssText = `
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    z-index: 9999;
-    pointer-events: none;
-    background: ${imageUrl ? `url(${imageUrl}) center/cover` : "#ef4444"};
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    will-change: transform, opacity;
-  `;
-  document.body.appendChild(el);
-
-  const duration = 500;
-  const startTime = performance.now();
-
-  // Parabola parameters
-  const deltaX = endX - startX;
-  const deltaY = endY - startY;
-  const peakHeight = Math.min(150, Math.abs(deltaY) * 0.4 + 50);
-
-  function easeOutQuad(t: number): number {
-    return 1 - (1 - t) * (1 - t);
-  }
-
-  function animate(currentTime: number) {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-
-    // X moves linearly (or with slight ease)
-    const easedProgress = easeOutQuad(progress);
-    const x = startX + deltaX * easedProgress;
-
-    // Y follows parabola: starts up, then curves down
-    // Using quadratic bezier-like path
-    const t = easedProgress;
-    const y = startY + deltaY * t + peakHeight * 4 * t * (t - 1);
-
-    // Scale shrinks from 1 to 0.3
-    const scale = 1 - 0.7 * easedProgress;
-
-    // Opacity stays 1 until near end
-    const opacity = progress > 0.8 ? 1 - (progress - 0.8) * 2.5 : 1;
-
-    el.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
-    el.style.opacity = String(opacity);
-
-    if (progress < 1) {
-      requestAnimationFrame(animate);
-    } else {
-      el.remove();
-    }
-  }
-
-  requestAnimationFrame(animate);
-}
-
 export function MenuItemCard({ item, onAddClick }: MenuItemCardProps) {
   const formatPrice = useFormatPrice();
   const imageRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const handleAddClick = useCallback(() => {
-    onAddClick(item.id);
-
     // Get start position (from image or button)
     const sourceEl = imageRef.current || buttonRef.current;
     if (!sourceEl) return;
 
     const sourceRect = sourceEl.getBoundingClientRect();
-    const startX = sourceRect.left + sourceRect.width / 2 - 20;
-    const startY = sourceRect.top + sourceRect.height / 2 - 20;
+    const startPosition: AnimationPosition = {
+      x: sourceRect.left + sourceRect.width / 2 - 20,
+      y: sourceRect.top + sourceRect.height / 2 - 20,
+    };
 
-    // Get end position (cart icon)
-    const cartIcon = document.getElementById("cart-icon-target");
-    let endX: number, endY: number;
-
-    if (cartIcon) {
-      const cartRect = cartIcon.getBoundingClientRect();
-      endX = cartRect.left + cartRect.width / 2 - 20;
-      endY = cartRect.top + cartRect.height / 2 - 20;
-    } else {
-      // Fallback: fly to bottom center of screen
-      endX = window.innerWidth / 2 - 20;
-      endY = window.innerHeight - 60;
-    }
-
-    // Animate flying element to cart
-    animateFlyToCart(startX, startY, endX, endY, item.imageUrl);
+    // Pass position info to parent - parent decides when to animate
+    onAddClick({
+      itemId: item.id,
+      startPosition,
+      imageUrl: item.imageUrl,
+    });
   }, [item.id, item.imageUrl, onAddClick]);
 
   return (

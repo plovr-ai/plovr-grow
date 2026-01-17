@@ -11,7 +11,7 @@ import {
   TrashIcon,
   MinusIcon,
   PlusIcon,
-} from "@/components/icons";
+} from "@storefront/components/icons";
 
 export default function CartPage() {
   const params = useParams<{ slug: string }>();

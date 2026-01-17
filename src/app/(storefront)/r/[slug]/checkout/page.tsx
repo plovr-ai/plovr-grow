@@ -12,7 +12,7 @@ import {
   TipSelector,
   OrderSummary,
   PriceSummary,
-} from "@/components/checkout";
+} from "@storefront/components/checkout";
 import {
   checkoutFormSchema,
   deliveryAddressSchema,

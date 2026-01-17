@@ -142,7 +142,12 @@ describe("MenuItemCard", () => {
       });
 
       fireEvent.click(screen.getByText("Add"));
-      expect(onAddClick).toHaveBeenCalledWith("item-1");
+      expect(onAddClick).toHaveBeenCalledWith(
+        expect.objectContaining({
+          itemId: "item-1",
+          imageUrl: "https://example.com/pizza.jpg",
+        })
+      );
     });
   });
 

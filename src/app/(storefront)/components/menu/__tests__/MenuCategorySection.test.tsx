@@ -178,7 +178,9 @@ describe("MenuCategorySection", () => {
       const addButtons = screen.getAllByText("Add");
       fireEvent.click(addButtons[0]);
 
-      expect(onAddItem).toHaveBeenCalledWith("item-1");
+      expect(onAddItem).toHaveBeenCalledWith(
+        expect.objectContaining({ itemId: "item-1" })
+      );
     });
 
     it("should call onAddItem with correct item id for each item", () => {
@@ -191,10 +193,14 @@ describe("MenuCategorySection", () => {
       const addButtons = screen.getAllByText("Add");
 
       fireEvent.click(addButtons[0]);
-      expect(onAddItem).toHaveBeenCalledWith("item-1");
+      expect(onAddItem).toHaveBeenCalledWith(
+        expect.objectContaining({ itemId: "item-1" })
+      );
 
       fireEvent.click(addButtons[1]);
-      expect(onAddItem).toHaveBeenCalledWith("item-2");
+      expect(onAddItem).toHaveBeenCalledWith(
+        expect.objectContaining({ itemId: "item-2" })
+      );
     });
   });
 

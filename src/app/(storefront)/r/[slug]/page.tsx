@@ -4,7 +4,7 @@ import {
   FeaturedItems,
   CustomerReviews,
   Footer,
-} from "@/components/website";
+} from "@storefront/components/website";
 import { getMockWebsiteData } from "@/data/mock/website";
 
 interface PageProps {

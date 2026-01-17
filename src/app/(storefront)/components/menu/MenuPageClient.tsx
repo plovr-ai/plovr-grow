@@ -12,11 +12,13 @@ import {
   MenuCategoryNav,
   MenuCategorySection,
   ModifierModal,
-} from "@/components/menu";
+} from "@storefront/components/menu";
 import { useCartStore } from "@/stores";
 import type { MenuDisplayData } from "@/app/r/[slug]/menu/utils";
 import type { MenuItemViewModel } from "@/types/menu-page";
 import type { SelectedModifier } from "@/types";
+import type { AddClickParams } from "./MenuItemCard";
+import { animateFlyToCart, type FlyToCartParams } from "@/lib/cartAnimation";
 
 interface MenuPageClientProps {
   data: MenuDisplayData;
@@ -32,6 +34,8 @@ export function MenuPageClient({ data, tenantSlug }: MenuPageClientProps) {
   // Modal state
   const [modalItem, setModalItem] = useState<MenuItemViewModel | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Store animation params for modal items - triggered when modal confirms
+  const pendingAnimationRef = useRef<FlyToCartParams | null>(null);
 
   const setTenantId = useCartStore((state) => state.setTenantId);
   const addItem = useCartStore((state) => state.addItem);
@@ -91,7 +95,7 @@ export function MenuPageClient({ data, tenantSlug }: MenuPageClientProps) {
   }, [data.categories]);
 
   const handleAddItem = useCallback(
-    (itemId: string) => {
+    ({ itemId, startPosition, imageUrl }: AddClickParams) => {
       // Find the item in menu categories
       let menuItem: MenuItemViewModel | undefined;
       for (const category of data.categories) {
@@ -101,12 +105,18 @@ export function MenuPageClient({ data, tenantSlug }: MenuPageClientProps) {
 
       if (!menuItem) return;
 
+      const animationParams: FlyToCartParams = { startPosition, imageUrl };
+
       // Check if item has modifiers
       if (menuItem.hasModifiers && menuItem.modifierGroups.length > 0) {
+        // Store animation params for later - will be triggered when modal confirms
+        pendingAnimationRef.current = animationParams;
         // Open modal for items with modifiers
         setModalItem(menuItem);
         setIsModalOpen(true);
       } else {
+        // Trigger animation immediately for items without modifiers
+        animateFlyToCart(animationParams);
         // Add directly to cart for items without modifiers
         addItem({
           menuItemId: menuItem.id,
@@ -127,6 +137,12 @@ export function MenuPageClient({ data, tenantSlug }: MenuPageClientProps) {
     (selectedModifiers: SelectedModifier[], quantity: number) => {
       if (!modalItem) return;
 
+      // Trigger pending animation when modal confirms
+      if (pendingAnimationRef.current) {
+        animateFlyToCart(pendingAnimationRef.current);
+        pendingAnimationRef.current = null;
+      }
+
       addItem({
         menuItemId: modalItem.id,
         name: modalItem.name,
@@ -144,6 +160,8 @@ export function MenuPageClient({ data, tenantSlug }: MenuPageClientProps) {
   const handleModalClose = useCallback(() => {
     setIsModalOpen(false);
     setModalItem(null);
+    // Clear pending animation if modal is closed without confirming
+    pendingAnimationRef.current = null;
   }, []);
 
   const categoryViewModels = data.categories.map((c) => c.category);

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCartStore, useCartHydration } from "@/stores";
 import { useFormatPrice } from "@/hooks";
-import { ArrowLeftIcon } from "@/components/icons";
+import { ArrowLeftIcon } from "@storefront/components/icons";
 
 interface MenuHeaderProps {
   merchantName: string;

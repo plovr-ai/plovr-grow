@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { menuService } from "@/services/menu";
 import { getMerchantBySlug } from "@/lib/tenant";
-import { MenuPageClient } from "@/components/menu";
+import { MenuPageClient } from "@storefront/components/menu";
 import { convertToMenuDisplayData } from "./utils";
 
 interface MenuPageProps {

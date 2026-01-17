@@ -1,9 +1,10 @@
 import type { MenuCategoryWithItemsViewModel } from "@/types/menu-page";
 import { MenuItemCard } from "./MenuItemCard";
+import type { AddClickParams } from "./MenuItemCard";
 
 interface MenuCategorySectionProps {
   data: MenuCategoryWithItemsViewModel;
-  onAddItem: (itemId: string) => void;
+  onAddItem: (params: AddClickParams) => void;
 }
 
 export function MenuCategorySection({
