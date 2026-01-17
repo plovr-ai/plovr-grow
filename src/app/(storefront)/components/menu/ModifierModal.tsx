@@ -467,7 +467,7 @@ function QuantitySelector({
       >
         <MinusIcon className="w-4 h-4 text-gray-600" />
       </button>
-      <span className="w-8 text-center font-semibold">{value}</span>
+      <span className="w-8 text-center font-semibold text-gray-900">{value}</span>
       <button
         onClick={() => onChange(value + 1)}
         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors"
