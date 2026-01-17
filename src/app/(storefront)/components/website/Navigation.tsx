@@ -15,8 +15,9 @@ export function Navigation({ logo, restaurantName, tenantSlug }: NavigationProps
 
   const navLinks: NavigationLink[] = [
     { label: "Menu", href: `/r/${tenantSlug}/menu` },
+    { label: "Locations", href: `/r/${tenantSlug}/locations` },
     { label: "Our Story", href: "#story" },
-    { label: "Location", href: "#location" },
+    { label: "Contact", href: "#location" },
   ];
 
   return (

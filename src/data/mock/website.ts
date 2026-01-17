@@ -103,3 +103,58 @@ export function getMockWebsiteData(slug: string): WebsiteData {
   // For now, return the same mock data
   return mockWebsiteData;
 }
+
+// Mock locations data for multi-location support
+export interface MockLocation {
+  id: string;
+  slug: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  status: "active" | "inactive" | "temporarily_closed";
+}
+
+const mockLocations: MockLocation[] = [
+  {
+    id: "loc-1",
+    slug: "joes-pizza-nyc",
+    name: "Joe's Pizza - Downtown NYC",
+    address: "123 Main Street",
+    city: "New York",
+    state: "NY",
+    status: "active",
+  },
+  {
+    id: "loc-2",
+    slug: "joes-pizza-brooklyn",
+    name: "Joe's Pizza - Brooklyn",
+    address: "456 Atlantic Ave",
+    city: "Brooklyn",
+    state: "NY",
+    status: "active",
+  },
+  {
+    id: "loc-3",
+    slug: "joes-pizza-queens",
+    name: "Joe's Pizza - Queens",
+    address: "789 Queens Blvd",
+    city: "Queens",
+    state: "NY",
+    status: "temporarily_closed",
+  },
+];
+
+// Helper function to get mock locations by tenant slug
+export function getMockLocations(slug: string): {
+  currentMerchantId: string;
+  locations: MockLocation[];
+} {
+  // Find the current location by slug, default to first if not found
+  const currentLocation = mockLocations.find((loc) => loc.slug === slug) || mockLocations[0];
+
+  return {
+    currentMerchantId: currentLocation.id,
+    locations: mockLocations,
+  };
+}

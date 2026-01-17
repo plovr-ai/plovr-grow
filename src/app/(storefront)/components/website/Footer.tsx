@@ -134,17 +134,28 @@ export function Footer({ merchant, tenantSlug }: FooterProps) {
             </div>
           </div>
 
-          {/* Order CTA */}
+          {/* Quick Links */}
           <div>
-            <h3 className="font-semibold text-lg mb-4">Order Now</h3>
-            <p className="text-gray-400 mb-4">
-              Skip the line and order online for pickup or delivery.
-            </p>
+            <h3 className="font-semibold text-lg mb-4">Quick Links</h3>
+            <div className="space-y-3">
+              <Link
+                href={`/r/${tenantSlug}/menu`}
+                className="block text-gray-400 hover:text-white transition-colors"
+              >
+                Order Online
+              </Link>
+              <Link
+                href={`/r/${tenantSlug}/locations`}
+                className="block text-gray-400 hover:text-white transition-colors"
+              >
+                View All Locations
+              </Link>
+            </div>
             <Link
               href={`/r/${tenantSlug}/menu`}
-              className="inline-block bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full font-semibold transition-colors"
+              className="inline-block mt-4 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full font-semibold transition-colors"
             >
-              Order Online
+              Order Now
             </Link>
           </div>
         </div>
