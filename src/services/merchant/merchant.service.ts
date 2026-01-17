@@ -1,89 +1,36 @@
 import { merchantRepository } from "@/repositories/merchant.repository";
-import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import type { UpdateMerchantInput, MerchantStatus } from "@/types/merchant";
 
-export interface CreateTenantInput {
-  name: string;
-  slug: string;
-  merchantName: string;
-  merchantAddress?: string;
-  merchantCity?: string;
-  merchantState?: string;
-  merchantZipCode?: string;
-  merchantPhone?: string;
-  merchantEmail?: string;
-}
-
-export interface UpdateMerchantInput {
-  name?: string;
-  description?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  phone?: string;
-  email?: string;
-  logoUrl?: string;
-  bannerUrl?: string;
-  businessHours?: Record<
-    string,
-    { open: string; close: string; closed?: boolean }
-  >;
-  timezone?: string;
-  taxRate?: number;
-  settings?: Record<string, unknown>;
-}
+// Re-export types for backward compatibility
+export type { UpdateMerchantInput } from "@/types/merchant";
 
 export class MerchantService {
   /**
-   * Create a new tenant with merchant
+   * Get merchant by ID
    */
-  async createTenant(input: CreateTenantInput) {
-    return prisma.$transaction(async (tx) => {
-      // Create tenant
-      const tenant = await tx.tenant.create({
-        data: {
-          name: input.name,
-          slug: input.slug,
-        },
-      });
-
-      // Create merchant
-      const merchant = await tx.merchant.create({
-        data: {
-          tenantId: tenant.id,
-          name: input.merchantName,
-          address: input.merchantAddress,
-          city: input.merchantCity,
-          state: input.merchantState,
-          zipCode: input.merchantZipCode,
-          phone: input.merchantPhone,
-          email: input.merchantEmail,
-        },
-      });
-
-      return { tenant, merchant };
-    });
+  async getMerchant(merchantId: string) {
+    return merchantRepository.getById(merchantId);
   }
 
   /**
-   * Get merchant by tenant ID
-   */
-  async getMerchant(tenantId: string) {
-    return merchantRepository.getByTenantId(tenantId);
-  }
-
-  /**
-   * Get merchant by slug (for public access)
+   * Get merchant by slug (for public URL access)
    */
   async getMerchantBySlug(slug: string) {
     return merchantRepository.getBySlug(slug);
   }
 
   /**
+   * Get merchant by slug with company and tenant info
+   */
+  async getMerchantBySlugWithCompany(slug: string) {
+    return merchantRepository.getBySlugWithCompany(slug);
+  }
+
+  /**
    * Update merchant details
    */
-  async updateMerchant(tenantId: string, input: UpdateMerchantInput) {
+  async updateMerchant(merchantId: string, input: UpdateMerchantInput) {
     const data: Prisma.MerchantUpdateInput = {};
 
     if (input.name !== undefined) data.name = input.name;
@@ -92,37 +39,65 @@ export class MerchantService {
     if (input.city !== undefined) data.city = input.city;
     if (input.state !== undefined) data.state = input.state;
     if (input.zipCode !== undefined) data.zipCode = input.zipCode;
+    if (input.country !== undefined) data.country = input.country;
     if (input.phone !== undefined) data.phone = input.phone;
     if (input.email !== undefined) data.email = input.email;
     if (input.logoUrl !== undefined) data.logoUrl = input.logoUrl;
     if (input.bannerUrl !== undefined) data.bannerUrl = input.bannerUrl;
     if (input.businessHours !== undefined)
-      data.businessHours = input.businessHours;
+      data.businessHours = input.businessHours as unknown as Prisma.InputJsonValue;
     if (input.timezone !== undefined) data.timezone = input.timezone;
+    if (input.currency !== undefined) data.currency = input.currency;
+    if (input.locale !== undefined) data.locale = input.locale;
     if (input.taxRate !== undefined) data.taxRate = input.taxRate;
     if (input.settings !== undefined)
-      data.settings = input.settings as Prisma.InputJsonValue;
+      data.settings = input.settings as unknown as Prisma.InputJsonValue;
+    if (input.status !== undefined) data.status = input.status;
 
-    return merchantRepository.update(tenantId, data);
+    return merchantRepository.update(merchantId, data);
+  }
+
+  /**
+   * Update merchant slug
+   */
+  async updateMerchantSlug(merchantId: string, newSlug: string) {
+    const isAvailable = await merchantRepository.isSlugAvailable(
+      newSlug,
+      merchantId
+    );
+    if (!isAvailable) {
+      throw new Error(`Slug "${newSlug}" is already taken`);
+    }
+
+    return merchantRepository.update(merchantId, { slug: newSlug });
+  }
+
+  /**
+   * Update merchant status
+   */
+  async updateMerchantStatus(merchantId: string, status: MerchantStatus) {
+    return merchantRepository.update(merchantId, { status });
   }
 
   /**
    * Check if merchant is currently open
    */
-  async isOpen(tenantId: string) {
-    return merchantRepository.isOpen(tenantId);
+  async isOpen(merchantId: string) {
+    return merchantRepository.isOpen(merchantId);
   }
 
   /**
-   * Get tenant by slug
+   * Get merchant tax rate
    */
-  async getTenantBySlug(slug: string) {
-    return prisma.tenant.findUnique({
-      where: { slug },
-      include: {
-        merchant: true,
-      },
-    });
+  async getTaxRate(merchantId: string) {
+    return merchantRepository.getTaxRate(merchantId);
+  }
+
+  /**
+   * Delete merchant
+   */
+  async deleteMerchant(merchantId: string) {
+    return merchantRepository.delete(merchantId);
   }
 }
 

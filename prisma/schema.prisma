@@ -14,14 +14,14 @@ datasource db {
 model Tenant {
   id                 String   @id @default(cuid())
   name               String
-  slug               String   @unique // URL identifier, e.g., "joes-pizza"
   subscriptionPlan   String   @default("free") @map("subscription_plan")
   subscriptionStatus String   @default("active") @map("subscription_status")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   // Relations
-  merchant       Merchant?
+  company        Company?
+  // Legacy relations (will be migrated to merchantId)
   users          User[]
   menuCategories MenuCategory[]
   menuItems      MenuItem[]
@@ -31,56 +31,95 @@ model Tenant {
   @@map("tenants")
 }
 
-// ==================== Merchant (Restaurant Details) ====================
+// ==================== Company (Brand/Chain) ====================
+
+model Company {
+  id           String   @id @default(cuid())
+  tenantId     String   @unique @map("tenant_id")
+  name         String                          // Brand name, e.g., "Joe's Pizza"
+  legalName    String?  @map("legal_name")     // Legal entity name
+  description  String?  @db.Text
+  logoUrl      String?  @map("logo_url")
+  websiteUrl   String?  @map("website_url")
+  supportEmail String?  @map("support_email")
+  supportPhone String?  @map("support_phone")
+  taxId        String?  @map("tax_id")         // EIN/Tax ID
+  settings     Json?                           // Brand-level settings
+  status       String   @default("active")     // active, inactive, suspended
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  merchants Merchant[]
+  users     User[]
+
+  @@index([tenantId])
+  @@map("companies")
+}
+
+// ==================== Merchant (Store/Location) ====================
 
 model Merchant {
   id            String   @id @default(cuid())
-  tenantId      String   @unique @map("tenant_id")
-  name          String
+  companyId     String   @map("company_id")
+  slug          String   @unique              // Global unique, for URL routing e.g., "joes-pizza-times-square"
+  name          String                        // Store name, e.g., "Joe's Pizza - Times Square"
   description   String?  @db.Text
   address       String?
   city          String?
   state         String?
   zipCode       String?  @map("zip_code")
+  country       String   @default("US")
   phone         String?
   email         String?
-  logoUrl       String?  @map("logo_url")
+  logoUrl       String?  @map("logo_url")     // Store logo (can override company logo)
   bannerUrl     String?  @map("banner_url")
   businessHours Json?    @map("business_hours") // { mon: { open: "09:00", close: "22:00" }, ... }
   timezone      String   @default("America/New_York")
   currency      String   @default("USD")
+  locale        String   @default("en-US")
   taxRate       Decimal  @default(0) @map("tax_rate") @db.Decimal(5, 4) // e.g., 0.0825 for 8.25%
-  status        String   @default("active") // active, inactive, suspended
-  settings      Json?    // Additional merchant settings
+  status        String   @default("active") // active, inactive, temporarily_closed
+  settings      Json?    // Store-level settings (tipConfig, etc.)
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  menuCategories MenuCategory[]
+  menuItems      MenuItem[]
+  orders         Order[]
+  customers      Customer[]
 
-  @@index([tenantId])
+  @@index([companyId])
+  @@index([slug])
+  @@index([status])
   @@map("merchants")
 }
 
-// ==================== User (Merchant Staff) ====================
+// ==================== User (Company Staff) ====================
 
 model User {
-  id           String   @id @default(cuid())
-  tenantId     String   @map("tenant_id")
+  id           String    @id @default(cuid())
+  tenantId     String    @map("tenant_id")           // Legacy, will be removed
+  companyId    String?   @map("company_id")          // New: company-level staff
   email        String
-  passwordHash String   @map("password_hash")
+  passwordHash String    @map("password_hash")
   name         String
-  role         String   @default("staff") // owner, manager, staff
-  status       String   @default("active") // active, inactive
+  role         String    @default("staff") // owner, manager, staff
+  status       String    @default("active") // active, inactive
   lastLoginAt  DateTime? @map("last_login_at")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, email])
   @@index([tenantId])
+  @@index([companyId])
   @@map("users")
 }
 
@@ -88,7 +127,8 @@ model User {
 
 model MenuCategory {
   id          String   @id @default(cuid())
-  tenantId    String   @map("tenant_id")
+  tenantId    String   @map("tenant_id")           // Legacy, will be migrated to merchantId
+  merchantId  String?  @map("merchant_id")         // New: store-level category
   name        String
   description String?  @db.Text
   imageUrl    String?  @map("image_url")
@@ -99,16 +139,19 @@ model MenuCategory {
 
   // Relations
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  merchant  Merchant?  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   menuItems MenuItem[]
 
   @@index([tenantId])
   @@index([tenantId, sortOrder])
+  @@index([merchantId])
   @@map("menu_categories")
 }
 
 model MenuItem {
   id          String   @id @default(cuid())
-  tenantId    String   @map("tenant_id")
+  tenantId    String   @map("tenant_id")           // Legacy, will be migrated to merchantId
+  merchantId  String?  @map("merchant_id")         // New: store-level item
   categoryId  String   @map("category_id")
   name        String
   description String?  @db.Text
@@ -124,11 +167,13 @@ model MenuItem {
 
   // Relations
   tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  merchant Merchant?    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   category MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([tenantId, categoryId])
   @@index([tenantId, status])
+  @@index([merchantId])
   @@map("menu_items")
 }
 
@@ -136,7 +181,8 @@ model MenuItem {
 
 model Order {
   id              String    @id @default(cuid())
-  tenantId        String    @map("tenant_id")
+  tenantId        String    @map("tenant_id")           // Legacy, will be migrated to merchantId
+  merchantId      String?   @map("merchant_id")         // New: store-level order
   orderNumber     String    @map("order_number") // Human-readable order number
   customerId      String?   @map("customer_id")
   customerName    String    @map("customer_name")
@@ -163,35 +209,40 @@ model Order {
 
   // Relations
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  merchant Merchant? @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   customer Customer? @relation(fields: [customerId], references: [id])
 
   @@unique([tenantId, orderNumber])
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
+  @@index([merchantId])
   @@map("orders")
 }
 
 // ==================== Customers (for Loyalty) ====================
 
 model Customer {
-  id          String   @id @default(cuid())
-  tenantId    String   @map("tenant_id")
+  id          String    @id @default(cuid())
+  tenantId    String    @map("tenant_id")           // Legacy, will be migrated to merchantId
+  merchantId  String?   @map("merchant_id")         // New: store-level customer
   phone       String
   email       String?
   name        String?
-  points      Int      @default(0) // Loyalty points
-  totalOrders Int      @default(0) @map("total_orders")
-  totalSpent  Decimal  @default(0) @map("total_spent") @db.Decimal(10, 2)
+  points      Int       @default(0) // Loyalty points
+  totalOrders Int       @default(0) @map("total_orders")
+  totalSpent  Decimal   @default(0) @map("total_spent") @db.Decimal(10, 2)
   lastOrderAt DateTime? @map("last_order_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  orders Order[]
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  merchant Merchant? @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  orders   Order[]
 
   @@unique([tenantId, phone])
   @@index([tenantId])
+  @@index([merchantId])
   @@map("customers")
 }

@@ -3,6 +3,10 @@ import type { Prisma } from "@prisma/client";
 // Re-export tax types for convenience
 export type { TaxBreakdownItem } from "@/services/menu/tax-config.types";
 
+// Re-export company and merchant types
+export * from "./company";
+export * from "./merchant";
+
 // ==================== Modifier Types ====================
 
 export interface Modifier {
@@ -136,24 +140,7 @@ export const DEFAULT_TIP_CONFIG: TipConfig = {
   allowCustom: true,
 };
 
-// ==================== Merchant Types ====================
-
-export interface BusinessHours {
-  [key: string]: {
-    open: string;
-    close: string;
-    closed?: boolean;
-  };
-}
-
-export interface MerchantSettings {
-  acceptsPickup: boolean;
-  acceptsDelivery: boolean;
-  deliveryRadius?: number;
-  minimumOrderAmount?: number;
-  estimatedPrepTime?: number; // minutes
-  tipConfig?: TipConfig;
-}
+// Note: BusinessHours and MerchantSettings are now defined in ./merchant.ts
 
 // ==================== API Response Types ====================
 
