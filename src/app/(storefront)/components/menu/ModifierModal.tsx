@@ -61,6 +61,18 @@ export function ModifierModal({
           (s) => s.modifierId === modifierId
         );
 
+        // Single-select mode: directly replace selection
+        if (group.maxSelections === 1) {
+          if (existingIndex !== -1) {
+            // Clicking selected item → deselect
+            return { ...prev, [groupId]: [] };
+          } else {
+            // Clicking unselected item → replace with new selection
+            return { ...prev, [groupId]: [{ modifierId, quantity: 1 }] };
+          }
+        }
+
+        // Multi-select mode: toggle behavior
         if (existingIndex !== -1) {
           // Remove if already selected
           return {

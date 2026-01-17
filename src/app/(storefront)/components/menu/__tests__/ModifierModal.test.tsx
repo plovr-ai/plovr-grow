@@ -32,6 +32,10 @@ describe("ModifierModal", () => {
     ...overrides,
   });
 
+  // Helper to get modifier container element
+  const getModifierLabel = (name: string) =>
+    screen.getByText(name).closest("div[class*='rounded-lg']");
+
   describe("default selections", () => {
     it("should pre-select modifiers with isDefault=true", () => {
       const item = createMenuItem({
@@ -62,9 +66,9 @@ describe("ModifierModal", () => {
         />
       );
 
-      // Small should be pre-selected (has checkbox checked)
-      const smallButton = screen.getByRole("button", { name: /Small/i });
-      expect(smallButton.querySelector('[class*="bg-theme-primary"]')).toBeTruthy();
+      // Small should be pre-selected
+      const smallLabel = getModifierLabel("Small");
+      expect(smallLabel?.className).toContain("bg-theme-primary-light");
     });
 
     it("should allow deselecting default modifiers", () => {
@@ -96,16 +100,16 @@ describe("ModifierModal", () => {
       );
 
       // Click to deselect Lettuce
-      const lettuceButton = screen.getByRole("button", { name: /Lettuce/i });
-      fireEvent.click(lettuceButton);
+      const lettuceLabel = getModifierLabel("Lettuce");
+      fireEvent.click(lettuceLabel!);
 
       // Lettuce should no longer be selected
-      expect(lettuceButton.querySelector('[class*="bg-theme-primary"]')).toBeFalsy();
+      expect(lettuceLabel?.className).not.toContain("bg-theme-primary-light");
     });
   });
 
   describe("availability status", () => {
-    it("should disable unavailable modifiers", () => {
+    it("should show unavailable modifiers with reduced opacity", () => {
       const item = createMenuItem({
         modifierGroups: [
           {
@@ -136,9 +140,9 @@ describe("ModifierModal", () => {
       // Avocado should show "Sold out"
       expect(screen.getByText(/Sold out/i)).toBeInTheDocument();
 
-      // Avocado button should be disabled
-      const avocadoButton = screen.getByRole("button", { name: /Avocado/i });
-      expect(avocadoButton).toBeDisabled();
+      // Avocado should have reduced opacity
+      const avocadoLabel = getModifierLabel("Avocado");
+      expect(avocadoLabel?.className).toContain("opacity-50");
     });
 
     it("should not allow selecting unavailable modifiers", () => {
@@ -168,11 +172,11 @@ describe("ModifierModal", () => {
         />
       );
 
-      const avocadoButton = screen.getByRole("button", { name: /Avocado/i });
-      fireEvent.click(avocadoButton);
+      const avocadoLabel = getModifierLabel("Avocado");
+      fireEvent.click(avocadoLabel!);
 
       // Should still not be selected
-      expect(avocadoButton.querySelector('[class*="bg-theme-primary"]')).toBeFalsy();
+      expect(avocadoLabel?.className).not.toContain("bg-theme-primary-light");
     });
   });
 
@@ -218,8 +222,8 @@ describe("ModifierModal", () => {
       );
 
       // Select the modifier
-      const cheeseButton = screen.getByRole("button", { name: /Extra Cheese/i });
-      fireEvent.click(cheeseButton);
+      const cheeseLabel = getModifierLabel("Extra Cheese");
+      fireEvent.click(cheeseLabel!);
 
       // Modifier quantity selector should appear (2 decrease buttons: 1 for modifier, 1 for item)
       const allDecreaseButtons = screen.getAllByLabelText(/Decrease quantity/i);
@@ -286,7 +290,8 @@ describe("ModifierModal", () => {
       );
 
       // Select the modifier
-      fireEvent.click(screen.getByRole("button", { name: /Extra Cheese/i }));
+      const cheeseLabel = getModifierLabel("Extra Cheese");
+      fireEvent.click(cheeseLabel!);
 
       const { modifierIncrease } = getModifierQuantityControls();
 
@@ -329,7 +334,8 @@ describe("ModifierModal", () => {
       );
 
       // Select the modifier
-      fireEvent.click(screen.getByRole("button", { name: /Extra Cheese/i }));
+      const cheeseLabel = getModifierLabel("Extra Cheese");
+      fireEvent.click(cheeseLabel!);
 
       const { modifierIncrease } = getModifierQuantityControls();
 
@@ -369,7 +375,8 @@ describe("ModifierModal", () => {
       );
 
       // Select the modifier
-      fireEvent.click(screen.getByRole("button", { name: /Extra Cheese/i }));
+      const cheeseLabel = getModifierLabel("Extra Cheese");
+      fireEvent.click(cheeseLabel!);
 
       // Before decrease: 2 decrease buttons (modifier + item)
       expect(screen.getAllByLabelText(/Decrease quantity/i).length).toBe(2);
@@ -418,7 +425,8 @@ describe("ModifierModal", () => {
       );
 
       // Select the modifier
-      fireEvent.click(screen.getByRole("button", { name: /Extra Cheese/i }));
+      const cheeseLabel = getModifierLabel("Extra Cheese");
+      fireEvent.click(cheeseLabel!);
 
       // Increase quantity to 2
       const { modifierIncrease } = getModifierQuantityControls();
@@ -479,6 +487,234 @@ describe("ModifierModal", () => {
         ],
         1
       );
+    });
+  });
+
+  describe("single-select mode (maxSelections=1)", () => {
+    it("should directly switch selection when clicking another modifier", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "size",
+            name: "Size",
+            required: true,
+            minSelections: 1,
+            maxSelections: 1,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "size-s", name: "Small", price: 0, isDefault: true, isAvailable: true },
+              { id: "size-m", name: "Medium", price: 4, isDefault: false, isAvailable: true },
+              { id: "size-l", name: "Large", price: 8, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal
+          item={item}
+          isOpen={true}
+          onClose={mockOnClose}
+          onConfirm={mockOnConfirm}
+        />
+      );
+
+      // Small is pre-selected (default)
+      const smallLabel = screen.getByText("Small").closest("div[class*='rounded-lg']");
+      const mediumLabel = screen.getByText("Medium").closest("div[class*='rounded-lg']");
+
+      expect(smallLabel?.className).toContain("bg-theme-primary-light");
+      expect(mediumLabel?.className).not.toContain("bg-theme-primary-light");
+
+      // Click Medium - should directly switch without needing to deselect Small first
+      fireEvent.click(mediumLabel!);
+
+      // Medium should now be selected, Small should be deselected
+      expect(smallLabel?.className).not.toContain("bg-theme-primary-light");
+      expect(mediumLabel?.className).toContain("bg-theme-primary-light");
+    });
+
+    it("should deselect when clicking the selected modifier", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "sauce",
+            name: "Sauce",
+            required: false,
+            minSelections: 0,
+            maxSelections: 1,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "sauce-1", name: "Ketchup", price: 0, isDefault: false, isAvailable: true },
+              { id: "sauce-2", name: "Mayo", price: 0, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal
+          item={item}
+          isOpen={true}
+          onClose={mockOnClose}
+          onConfirm={mockOnConfirm}
+        />
+      );
+
+      const ketchupLabel = screen.getByText("Ketchup").closest("div[class*='rounded-lg']");
+
+      // Select Ketchup
+      fireEvent.click(ketchupLabel!);
+      expect(ketchupLabel?.className).toContain("bg-theme-primary-light");
+
+      // Click Ketchup again to deselect
+      fireEvent.click(ketchupLabel!);
+      expect(ketchupLabel?.className).not.toContain("bg-theme-primary-light");
+    });
+
+    it("should pass the new selection to onConfirm after switching", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "size",
+            name: "Size",
+            required: true,
+            minSelections: 1,
+            maxSelections: 1,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "size-s", name: "Small", price: 0, isDefault: true, isAvailable: true },
+              { id: "size-m", name: "Medium", price: 4, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal
+          item={item}
+          isOpen={true}
+          onClose={mockOnClose}
+          onConfirm={mockOnConfirm}
+        />
+      );
+
+      // Switch from Small to Medium
+      const mediumLabel = screen.getByText("Medium").closest("div[class*='rounded-lg']");
+      fireEvent.click(mediumLabel!);
+
+      // Click Add to Cart
+      fireEvent.click(screen.getByRole("button", { name: /Add to Cart/i }));
+
+      expect(mockOnConfirm).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            modifierId: "size-m",
+            modifierName: "Medium",
+            price: 4,
+            quantity: 1,
+          }),
+        ],
+        1
+      );
+    });
+  });
+
+  describe("multi-select mode (maxSelections>1)", () => {
+    it("should toggle selection individually", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "toppings",
+            name: "Toppings",
+            required: false,
+            minSelections: 0,
+            maxSelections: 3,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "t1", name: "Cheese", price: 1, isDefault: false, isAvailable: true },
+              { id: "t2", name: "Bacon", price: 2, isDefault: false, isAvailable: true },
+              { id: "t3", name: "Onion", price: 0.5, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal
+          item={item}
+          isOpen={true}
+          onClose={mockOnClose}
+          onConfirm={mockOnConfirm}
+        />
+      );
+
+      const cheeseLabel = screen.getByText("Cheese").closest("div[class*='rounded-lg']");
+      const baconLabel = screen.getByText("Bacon").closest("div[class*='rounded-lg']");
+
+      // Select Cheese
+      fireEvent.click(cheeseLabel!);
+      expect(cheeseLabel?.className).toContain("bg-theme-primary-light");
+
+      // Select Bacon - should add to selection, not replace
+      fireEvent.click(baconLabel!);
+      expect(cheeseLabel?.className).toContain("bg-theme-primary-light");
+      expect(baconLabel?.className).toContain("bg-theme-primary-light");
+
+      // Deselect Cheese
+      fireEvent.click(cheeseLabel!);
+      expect(cheeseLabel?.className).not.toContain("bg-theme-primary-light");
+      expect(baconLabel?.className).toContain("bg-theme-primary-light");
+    });
+
+    it("should not add more when at max selections", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "toppings",
+            name: "Toppings",
+            required: false,
+            minSelections: 0,
+            maxSelections: 2,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "t1", name: "Cheese", price: 1, isDefault: false, isAvailable: true },
+              { id: "t2", name: "Bacon", price: 2, isDefault: false, isAvailable: true },
+              { id: "t3", name: "Onion", price: 0.5, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal
+          item={item}
+          isOpen={true}
+          onClose={mockOnClose}
+          onConfirm={mockOnConfirm}
+        />
+      );
+
+      const cheeseLabel = screen.getByText("Cheese").closest("div[class*='rounded-lg']");
+      const baconLabel = screen.getByText("Bacon").closest("div[class*='rounded-lg']");
+      const onionLabel = screen.getByText("Onion").closest("div[class*='rounded-lg']");
+
+      // Select Cheese and Bacon (max 2)
+      fireEvent.click(cheeseLabel!);
+      fireEvent.click(baconLabel!);
+
+      // Try to select Onion - should not be added
+      fireEvent.click(onionLabel!);
+      expect(onionLabel?.className).not.toContain("bg-theme-primary-light");
+
+      // Cheese and Bacon should still be selected
+      expect(cheeseLabel?.className).toContain("bg-theme-primary-light");
+      expect(baconLabel?.className).toContain("bg-theme-primary-light");
     });
   });
 
@@ -544,7 +780,8 @@ describe("ModifierModal", () => {
       );
 
       // Select a size
-      fireEvent.click(screen.getByRole("button", { name: /Small/i }));
+      const smallLabel = getModifierLabel("Small");
+      fireEvent.click(smallLabel!);
 
       // Add to Cart should be enabled
       const addButton = screen.getByRole("button", { name: /Add to Cart/i });
