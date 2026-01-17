@@ -4,7 +4,7 @@ import { useCallback, useRef } from "react";
 import type { MenuItemViewModel, MenuItemTag } from "@/types/menu-page";
 import { useFormatPrice } from "@/hooks";
 import { ImagePlaceholderIcon } from "@storefront/components/icons";
-import type { AnimationPosition } from "@/lib/cartAnimation";
+import type { AnimationPosition } from "@storefront/lib/cartAnimation";
 
 export interface AddClickParams {
   itemId: string;

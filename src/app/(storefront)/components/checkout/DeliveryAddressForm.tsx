@@ -1,6 +1,6 @@
 "use client";
 
-import { US_STATES } from "@/lib/validations/checkout";
+import { US_STATES } from "@storefront/lib/validations/checkout";
 
 interface DeliveryAddress {
   street: string;

@@ -88,11 +88,12 @@ describe("Navigation", () => {
       expect(orderButton).toHaveAttribute("href", "/r/joes-pizza/menu");
     });
 
-    it("should use /r/{slug} paths with tenantSlug", () => {
+    it("should use brand-level paths with tenantSlug", () => {
       render(<Navigation {...defaultProps} tenantSlug="joes-pizza" />);
 
+      // Home and locations links should always use brand-level paths
       const logoLink = screen.getByRole("link", { name: /Joe's Pizza/ });
-      expect(logoLink).toHaveAttribute("href", "/r/joes-pizza");
+      expect(logoLink).toHaveAttribute("href", "/joes-pizza");
     });
 
     it("should prefer companySlug over tenantSlug when both provided", () => {

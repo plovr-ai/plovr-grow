@@ -185,13 +185,14 @@ describe("Footer", () => {
       });
     });
 
-    it("should use /r/{slug}/locations with tenantSlug", () => {
+    it("should use brand-level locations path with tenantSlug", () => {
       render(<Footer merchant={mockMerchant} tenantSlug="joes-pizza" />);
 
+      // Locations link should always use brand-level path
       const locationsLink = screen.getByRole("link", {
         name: "View All Locations",
       });
-      expect(locationsLink).toHaveAttribute("href", "/r/joes-pizza/locations");
+      expect(locationsLink).toHaveAttribute("href", "/joes-pizza/locations");
     });
 
     it("should prefer companySlug over tenantSlug when both provided", () => {

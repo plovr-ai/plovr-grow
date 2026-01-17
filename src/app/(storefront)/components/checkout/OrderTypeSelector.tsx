@@ -1,6 +1,6 @@
 "use client";
 
-import type { OrderType } from "@/lib/validations/checkout";
+import type { OrderType } from "@storefront/lib/validations/checkout";
 
 interface OrderTypeSelectorProps {
   value: OrderType;

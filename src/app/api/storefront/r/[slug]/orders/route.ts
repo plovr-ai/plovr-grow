@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { orderService } from "@/services/order";
 import { merchantService } from "@/services/merchant";
-import { checkoutFormSchema } from "@/lib/validations/checkout";
+import { checkoutFormSchema } from "@storefront/lib/validations/checkout";
 import type { OrderItemData } from "@/types";
 
 interface OrderRequestBody {

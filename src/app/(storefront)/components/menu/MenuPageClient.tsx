@@ -18,7 +18,7 @@ import type { MenuDisplayData } from "@storefront/r/[merchantSlug]/menu/utils";
 import type { MenuItemViewModel } from "@/types/menu-page";
 import type { SelectedModifier } from "@/types";
 import type { AddClickParams } from "./MenuItemCard";
-import { animateFlyToCart, type FlyToCartParams } from "@/lib/cartAnimation";
+import { animateFlyToCart, type FlyToCartParams } from "@storefront/lib/cartAnimation";
 
 interface MenuPageClientProps {
   data: MenuDisplayData;

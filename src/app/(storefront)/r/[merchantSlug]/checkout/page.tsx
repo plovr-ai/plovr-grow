@@ -17,7 +17,7 @@ import {
   checkoutFormSchema,
   deliveryAddressSchema,
   type OrderType,
-} from "@/lib/validations/checkout";
+} from "@storefront/lib/validations/checkout";
 import type { TipInput } from "@/lib/pricing";
 
 interface FormState {
