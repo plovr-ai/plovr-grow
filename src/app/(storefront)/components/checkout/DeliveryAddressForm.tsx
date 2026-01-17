@@ -44,7 +44,7 @@ export function DeliveryAddressForm({
             onChange={(e) => onChange("street", e.target.value)}
             disabled={disabled}
             placeholder="123 Main St"
-            className={`w-full px-4 py-3 rounded-lg border ${
+            className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
               errors.street
                 ? "border-red-500 focus:ring-red-500"
                 : "border-gray-300 focus:ring-red-600"
@@ -69,7 +69,7 @@ export function DeliveryAddressForm({
             onChange={(e) => onChange("apt", e.target.value)}
             disabled={disabled}
             placeholder="Apt 4B"
-            className={`w-full px-4 py-3 rounded-lg border ${
+            className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
               errors.apt
                 ? "border-red-500 focus:ring-red-500"
                 : "border-gray-300 focus:ring-red-600"
@@ -95,7 +95,7 @@ export function DeliveryAddressForm({
               onChange={(e) => onChange("city", e.target.value)}
               disabled={disabled}
               placeholder="New York"
-              className={`w-full px-4 py-3 rounded-lg border ${
+              className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
                 errors.city
                   ? "border-red-500 focus:ring-red-500"
                   : "border-gray-300 focus:ring-red-600"
@@ -151,7 +151,7 @@ export function DeliveryAddressForm({
             onChange={(e) => onChange("zipCode", e.target.value)}
             disabled={disabled}
             placeholder="10001"
-            className={`w-full px-4 py-3 rounded-lg border ${
+            className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
               errors.zipCode
                 ? "border-red-500 focus:ring-red-500"
                 : "border-gray-300 focus:ring-red-600"
@@ -177,7 +177,7 @@ export function DeliveryAddressForm({
             disabled={disabled}
             placeholder="Gate code, building entrance, etc."
             rows={2}
-            className={`w-full px-4 py-3 rounded-lg border ${
+            className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
               errors.instructions
                 ? "border-red-500 focus:ring-red-500"
                 : "border-gray-300 focus:ring-red-600"

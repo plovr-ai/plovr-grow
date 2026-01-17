@@ -39,7 +39,7 @@ export function ContactInfoForm({
             onChange={(e) => onChange("customerName", e.target.value)}
             disabled={disabled}
             placeholder="Your full name"
-            className={`w-full px-4 py-3 rounded-lg border ${
+            className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
               errors.customerName
                 ? "border-red-500 focus:ring-red-500"
                 : "border-gray-300 focus:ring-red-600"
@@ -64,7 +64,7 @@ export function ContactInfoForm({
             onChange={(e) => onChange("customerPhone", e.target.value)}
             disabled={disabled}
             placeholder="(555) 123-4567"
-            className={`w-full px-4 py-3 rounded-lg border ${
+            className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
               errors.customerPhone
                 ? "border-red-500 focus:ring-red-500"
                 : "border-gray-300 focus:ring-red-600"
@@ -89,7 +89,7 @@ export function ContactInfoForm({
             onChange={(e) => onChange("customerEmail", e.target.value)}
             disabled={disabled}
             placeholder="your@email.com"
-            className={`w-full px-4 py-3 rounded-lg border ${
+            className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
               errors.customerEmail
                 ? "border-red-500 focus:ring-red-500"
                 : "border-gray-300 focus:ring-red-600"
