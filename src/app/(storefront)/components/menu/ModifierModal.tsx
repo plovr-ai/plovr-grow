@@ -374,19 +374,16 @@ function ModifierCheckbox({
 }) {
   return (
     <div
+      onClick={modifier.isAvailable ? onToggle : undefined}
       className={`w-full p-3 rounded-lg border transition-all ${
         isSelected
-          ? "border-theme-primary bg-theme-primary-light"
+          ? "border-theme-primary bg-theme-primary-light cursor-pointer"
           : modifier.isAvailable
-            ? "border-gray-200 hover:border-gray-300"
+            ? "border-gray-200 hover:border-gray-300 cursor-pointer"
             : "border-gray-100 bg-gray-50 opacity-50"
       }`}
     >
-      <button
-        onClick={onToggle}
-        disabled={!modifier.isAvailable}
-        className="w-full flex items-center justify-between"
-      >
+      <div className="w-full flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
             className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
@@ -413,7 +410,7 @@ function ModifierCheckbox({
         {modifier.price > 0 && (
           <span className="text-gray-500">+{formatPrice(modifier.price)}</span>
         )}
-      </button>
+      </div>
 
       {/* Quantity selector for allowQuantity groups */}
       {isSelected && allowQuantity && (
