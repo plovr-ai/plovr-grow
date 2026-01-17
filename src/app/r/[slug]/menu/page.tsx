@@ -1,4 +1,6 @@
+import { notFound } from "next/navigation";
 import { menuService } from "@/services/menu";
+import { getMerchantBySlug } from "@/lib/tenant";
 import { MenuPageClient } from "@/components/menu";
 import { convertToMenuDisplayData } from "./utils";
 
@@ -8,7 +10,15 @@ interface MenuPageProps {
 
 export default async function MenuPage({ params }: MenuPageProps) {
   const { slug } = await params;
-  const response = await menuService.getMenu(slug);
+
+  // Resolve slug to merchant with tenant info
+  const merchant = await getMerchantBySlug(slug);
+  if (!merchant) {
+    notFound();
+  }
+
+  const tenantId = merchant.company.tenantId;
+  const response = await menuService.getMenu(tenantId, merchant.id);
   const data = convertToMenuDisplayData(response);
 
   return <MenuPageClient data={data} tenantSlug={slug} />;

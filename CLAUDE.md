@@ -178,6 +178,19 @@ npm run lint             # 代码检查
 - 服务层使用 class 便于后续拆分微服务
 - Repository 封装所有数据库操作，自动处理 tenant 隔离
 
+### Service 层参数规范
+- **所有 Service 方法的第一个参数必须是 `tenantId`**（租户隔离）
+- 需要门店上下文的方法，第二个参数为 `merchantId`
+- 示例：
+  ```typescript
+  // ✅ 正确
+  async getMenu(tenantId: string, merchantId: string): Promise<GetMenuResponse>
+  async createCategory(tenantId: string, input: CreateCategoryInput)
+
+  // ❌ 错误 - 缺少 tenantId
+  async getMenu(merchantId: string): Promise<GetMenuResponse>
+  ```
+
 ### TypeScript 规范
 - **禁止使用 `any`**: 使用 `unknown` 或具体类型代替，必要时使用类型断言
 - **禁止使用 `enum`**: 使用 `const` 对象 + `as const` 或联合类型代替

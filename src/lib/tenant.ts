@@ -1,6 +1,42 @@
 import { headers } from "next/headers";
 import { cache } from "react";
-import prisma from "./db";
+
+// Mock merchant data for development
+// TODO: Replace with real database queries when ready
+const MOCK_MERCHANTS: Record<
+  string,
+  {
+    id: string;
+    slug: string;
+    name: string;
+    companyId: string;
+    company: {
+      id: string;
+      tenantId: string;
+      name: string;
+      tenant: {
+        id: string;
+        name: string;
+      };
+    };
+  }
+> = {
+  "joes-pizza": {
+    id: "merchant-joes-pizza",
+    slug: "joes-pizza",
+    name: "Joe's Pizza",
+    companyId: "company-joes",
+    company: {
+      id: "company-joes",
+      tenantId: "tenant-joes",
+      name: "Joe's Pizza Inc.",
+      tenant: {
+        id: "tenant-joes",
+        name: "Joe's Pizza",
+      },
+    },
+  },
+};
 
 // ==================== Legacy Types (for backward compatibility) ====================
 
@@ -58,35 +94,34 @@ export const getMerchantContext = cache(
 );
 
 /**
- * Get merchant by slug from database (for public URL routing)
+ * Get merchant by slug (mock implementation)
+ * TODO: Replace with database query when ready
  */
 export async function getMerchantBySlug(slug: string) {
-  return prisma.merchant.findUnique({
-    where: { slug },
-    include: {
-      company: {
-        include: {
-          tenant: true,
-        },
-      },
-    },
-  });
+  // Return mock data for development
+  return MOCK_MERCHANTS[slug] ?? null;
 }
 
 /**
- * Get tenant by ID from database
+ * Get tenant by ID (mock implementation)
+ * TODO: Replace with database query when ready
  */
 export async function getTenantById(id: string) {
-  return prisma.tenant.findUnique({
-    where: { id },
-    include: {
-      company: {
-        include: {
-          merchants: true,
-        },
-      },
+  // Find merchant by tenant ID
+  const merchant = Object.values(MOCK_MERCHANTS).find(
+    (m) => m.company.tenantId === id
+  );
+  if (!merchant) return null;
+
+  return {
+    id: merchant.company.tenant.id,
+    name: merchant.company.tenant.name,
+    company: {
+      id: merchant.company.id,
+      name: merchant.company.name,
+      merchants: [merchant],
     },
-  });
+  };
 }
 
 /**

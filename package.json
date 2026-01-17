@@ -17,9 +17,11 @@
     "db:reset": "prisma migrate reset"
   },
   "dependencies": {
+    "@prisma/adapter-mariadb": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
+    "mariadb": "^3.4.5",
     "next": "16.1.1",
     "prisma": "^7.2.0",
     "react": "19.2.3",

@@ -86,18 +86,21 @@ const beverageOptions = [
 ];
 
 const TENANT_ID = "mock-tenant-id";
+const MERCHANT_ID = "mock-merchant-id";
 const now = new Date();
 
 /**
  * Mock data in Prisma model format (GetMenuResponse)
  */
 export const mockGetMenuResponse: GetMenuResponse = {
+  merchantId: MERCHANT_ID,
   merchantName: "Joe's Pizza",
   merchantLogo: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=200&h=200&fit=crop",
   categories: [
     {
       id: "featured",
       tenantId: TENANT_ID,
+      merchantId: MERCHANT_ID,
       name: "Featured",
       description: "Our most popular dishes",
       imageUrl: null,
@@ -109,6 +112,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-1",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "featured",
           name: "Classic Cheese Pizza",
           description: "Our signature pizza with fresh mozzarella and house-made tomato sauce",
@@ -125,6 +129,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-2",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "featured",
           name: "Pepperoni Pizza",
           description: "Classic pepperoni with premium mozzarella cheese",
@@ -141,6 +146,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-8",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "featured",
           name: "Garlic Knots",
           description: "Fresh baked knots with garlic butter (6 pieces)",
@@ -159,6 +165,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
     {
       id: "cat-pizza",
       tenantId: TENANT_ID,
+      merchantId: MERCHANT_ID,
       name: "Pizza",
       description: "Our handcrafted New York style pizzas",
       imageUrl: null,
@@ -170,6 +177,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-1",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "cat-pizza",
           name: "Classic Cheese Pizza",
           description: "Our signature pizza with fresh mozzarella and house-made tomato sauce",
@@ -186,6 +194,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-2",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "cat-pizza",
           name: "Pepperoni Pizza",
           description: "Classic pepperoni with premium mozzarella cheese",
@@ -202,6 +211,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-3",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "cat-pizza",
           name: "Margherita Pizza",
           description: "Fresh tomatoes, mozzarella, basil, and olive oil",
@@ -218,6 +228,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-4",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "cat-pizza",
           name: "Supreme Pizza",
           description: "Pepperoni, sausage, peppers, onions, and mushrooms",
@@ -236,6 +247,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
     {
       id: "cat-pasta",
       tenantId: TENANT_ID,
+      merchantId: MERCHANT_ID,
       name: "Pasta",
       description: "Homemade pasta dishes",
       imageUrl: null,
@@ -247,6 +259,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-5",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "cat-pasta",
           name: "Spaghetti & Meatballs",
           description: "Classic spaghetti with house-made meatballs and marinara sauce",
@@ -263,6 +276,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-6",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "cat-pasta",
           name: "Fettuccine Alfredo",
           description: "Creamy parmesan alfredo sauce over fettuccine",
@@ -279,6 +293,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-7",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "cat-pasta",
           name: "Baked Ziti",
           description: "Ziti pasta baked with ricotta, mozzarella, and marinara",
@@ -297,6 +312,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
     {
       id: "cat-sides",
       tenantId: TENANT_ID,
+      merchantId: MERCHANT_ID,
       name: "Sides",
       description: "Perfect additions to your meal",
       imageUrl: null,
@@ -308,6 +324,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-8",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "cat-sides",
           name: "Garlic Knots",
           description: "Fresh baked knots with garlic butter (6 pieces)",
@@ -324,6 +341,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-9",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "cat-sides",
           name: "Caesar Salad",
           description: "Crisp romaine, parmesan, croutons, and caesar dressing",
@@ -340,6 +358,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-10",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "cat-sides",
           name: "Mozzarella Sticks",
           description: "Crispy fried mozzarella served with marinara (6 pieces)",
@@ -358,6 +377,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
     {
       id: "cat-beverages",
       tenantId: TENANT_ID,
+      merchantId: MERCHANT_ID,
       name: "Beverages",
       description: "Refreshing drinks",
       imageUrl: null,
@@ -369,6 +389,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-11",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "cat-beverages",
           name: "Fountain Drink",
           description: "Coca-Cola, Sprite, Fanta, or Lemonade",
@@ -385,6 +406,7 @@ export const mockGetMenuResponse: GetMenuResponse = {
         {
           id: "item-12",
           tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
           categoryId: "cat-beverages",
           name: "Italian Soda",
           description: "Sparkling water with your choice of flavor",
@@ -405,7 +427,15 @@ export const mockGetMenuResponse: GetMenuResponse = {
 
 /**
  * Get mock menu data in GetMenuResponse format (Prisma model structure)
+ * @param _tenantId - Tenant ID (unused in mock)
+ * @param merchantId - Merchant ID
  */
-export function getMockGetMenuResponse(_tenantId: string): GetMenuResponse {
-  return mockGetMenuResponse;
+export function getMockGetMenuResponse(
+  _tenantId: string,
+  merchantId: string
+): GetMenuResponse {
+  return {
+    ...mockGetMenuResponse,
+    merchantId,
+  };
 }

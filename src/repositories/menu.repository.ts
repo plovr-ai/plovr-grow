@@ -157,6 +157,73 @@ export class MenuRepository {
       },
     });
   }
+
+  // ==================== Merchant-scoped methods ====================
+
+  /**
+   * Get all active categories with their items for a specific merchant
+   */
+  async getCategoriesWithItemsByMerchant(tenantId: string, merchantId: string) {
+    return prisma.menuCategory.findMany({
+      where: {
+        tenantId,
+        merchantId,
+        status: "active",
+      },
+      include: {
+        menuItems: {
+          where: {
+            status: "active",
+            merchantId,
+          },
+          orderBy: {
+            sortOrder: "asc",
+          },
+        },
+      },
+      orderBy: {
+        sortOrder: "asc",
+      },
+    });
+  }
+
+  /**
+   * Get a single menu item by ID (scoped to merchant)
+   */
+  async getItemByMerchant(
+    tenantId: string,
+    merchantId: string,
+    itemId: string
+  ) {
+    return prisma.menuItem.findFirst({
+      where: {
+        id: itemId,
+        tenantId,
+        merchantId,
+      },
+      include: {
+        category: true,
+      },
+    });
+  }
+
+  /**
+   * Get multiple menu items by IDs (scoped to merchant)
+   */
+  async getItemsByIdsByMerchant(
+    tenantId: string,
+    merchantId: string,
+    itemIds: string[]
+  ) {
+    return prisma.menuItem.findMany({
+      where: {
+        id: { in: itemIds },
+        tenantId,
+        merchantId,
+        status: "active",
+      },
+    });
+  }
 }
 
 export const menuRepository = new MenuRepository();

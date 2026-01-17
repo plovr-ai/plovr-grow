@@ -6,6 +6,7 @@ export interface MenuCategoryWithItems extends MenuCategory {
 
 export interface GetMenuResponse {
   categories: MenuCategoryWithItems[];
+  merchantId: string;
   merchantName: string;
   merchantLogo: string | null;
 }

@@ -19,20 +19,23 @@ async function getRepositories() {
 export class MenuService {
   /**
    * Get full menu for customer-facing display
+   * @param tenantId - Tenant ID for isolation
+   * @param merchantId - Merchant ID for store-specific menu
    * TODO: Replace mock data with database implementation
    */
-  async getMenu(tenantId: string): Promise<GetMenuResponse> {
+  async getMenu(tenantId: string, merchantId: string): Promise<GetMenuResponse> {
     // Temporarily use mock data until database is ready
-    return getMockGetMenuResponse(tenantId);
+    return getMockGetMenuResponse(tenantId, merchantId);
 
     // Database implementation (commented out for now):
     // const { menuRepository, merchantRepository } = await getRepositories();
     // const [categories, merchant] = await Promise.all([
-    //   menuRepository.getCategoriesWithItems(tenantId),
-    //   merchantRepository.getByTenantId(tenantId),
+    //   menuRepository.getCategoriesWithItemsByMerchant(tenantId, merchantId),
+    //   merchantRepository.getById(merchantId),
     // ]);
     // return {
     //   categories,
+    //   merchantId,
     //   merchantName: merchant?.name || "",
     //   merchantLogo: merchant?.logoUrl || null,
     // };
