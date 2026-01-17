@@ -10,14 +10,14 @@ interface NavigationProps {
   tenantSlug: string;
 }
 
-const navLinks: NavigationLink[] = [
-  { label: "Menu", href: "#menu" },
-  { label: "Our Story", href: "#story" },
-  { label: "Location", href: "#location" },
-];
-
 export function Navigation({ logo, restaurantName, tenantSlug }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const navLinks: NavigationLink[] = [
+    { label: "Menu", href: `/r/${tenantSlug}/menu` },
+    { label: "Our Story", href: "#story" },
+    { label: "Location", href: "#location" },
+  ];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
