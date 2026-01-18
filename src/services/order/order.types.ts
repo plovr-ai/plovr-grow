@@ -40,6 +40,10 @@ export interface UpdateOrderStatusInput {
 
 export interface OrderListOptions {
   status?: OrderStatus;
+  merchantId?: string;
+  orderType?: OrderType;
+  dateFrom?: Date;
+  dateTo?: Date;
   page?: number;
   pageSize?: number;
   orderBy?: "createdAt" | "updatedAt";

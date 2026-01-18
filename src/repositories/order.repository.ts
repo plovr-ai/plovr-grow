@@ -1,6 +1,6 @@
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import type { OrderStatus } from "@/types";
+import type { OrderStatus, OrderType } from "@/types";
 
 export class OrderRepository {
   /**
@@ -55,6 +55,10 @@ export class OrderRepository {
     tenantId: string,
     options: {
       status?: OrderStatus;
+      merchantId?: string;
+      orderType?: OrderType;
+      dateFrom?: Date;
+      dateTo?: Date;
       page?: number;
       pageSize?: number;
       orderBy?: "createdAt" | "updatedAt";
@@ -63,6 +67,10 @@ export class OrderRepository {
   ) {
     const {
       status,
+      merchantId,
+      orderType,
+      dateFrom,
+      dateTo,
       page = 1,
       pageSize = 20,
       orderBy = "createdAt",
@@ -72,6 +80,14 @@ export class OrderRepository {
     const where: Prisma.OrderWhereInput = {
       tenantId,
       ...(status && { status }),
+      ...(merchantId && { merchantId }),
+      ...(orderType && { orderType }),
+      ...(dateFrom && dateTo && {
+        createdAt: {
+          gte: dateFrom,
+          lte: dateTo,
+        },
+      }),
     };
 
     const [items, total] = await Promise.all([
