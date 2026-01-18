@@ -34,21 +34,27 @@ model Tenant {
 // ==================== Company (Brand/Chain) ====================
 
 model Company {
-  id           String   @id @default(cuid())
-  tenantId     String   @unique @map("tenant_id")
-  slug         String   @unique              // Global unique, for URL routing e.g., "joes-pizza"
-  name         String                          // Brand name, e.g., "Joe's Pizza"
-  legalName    String?  @map("legal_name")     // Legal entity name
-  description  String?  @db.Text
-  logoUrl      String?  @map("logo_url")
-  websiteUrl   String?  @map("website_url")
-  supportEmail String?  @map("support_email")
-  supportPhone String?  @map("support_phone")
-  taxId        String?  @map("tax_id")         // EIN/Tax ID
-  settings     Json?                           // Brand-level settings
-  status       String   @default("active")     // active, inactive, suspended
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id                    String    @id @default(cuid())
+  tenantId              String    @unique @map("tenant_id")
+  slug                  String    @unique              // Global unique, for URL routing e.g., "joes-pizza"
+  name                  String                          // Brand name, e.g., "Joe's Pizza"
+  legalName             String?   @map("legal_name")     // Legal entity name
+  description           String?   @db.Text
+  logoUrl               String?   @map("logo_url")
+  websiteUrl            String?   @map("website_url")
+  supportEmail          String?   @map("support_email")
+  supportPhone          String?   @map("support_phone")
+  taxId                 String?   @map("tax_id")         // EIN/Tax ID
+  settings              Json?                            // Brand-level settings
+  status                String    @default("active")     // active, inactive, suspended
+
+  // Onboarding fields
+  onboardingStatus      String    @default("not_started") @map("onboarding_status") // not_started, in_progress, completed
+  onboardingData        Json?     @map("onboarding_data")  // Step-by-step progress tracking
+  onboardingCompletedAt DateTime? @map("onboarding_completed_at")
+
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   // Relations
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -220,6 +226,20 @@ model Order {
   @@index([tenantId, createdAt])
   @@index([merchantId])
   @@map("orders")
+}
+
+// ==================== Password Reset Tokens ====================
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([token])
+  @@map("password_reset_tokens")
 }
 
 // ==================== Customers (for Loyalty) ====================

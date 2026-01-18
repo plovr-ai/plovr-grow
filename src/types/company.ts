@@ -2,6 +2,8 @@ import type { ThemePresetName } from "./theme";
 
 // ==================== Company Types ====================
 
+import type { OnboardingStatus, OnboardingData } from './onboarding';
+
 export type CompanyStatus = "active" | "inactive" | "suspended";
 
 export interface CompanyInfo {
@@ -17,6 +19,12 @@ export interface CompanyInfo {
   supportPhone: string | null;
   taxId: string | null;
   status: CompanyStatus;
+
+  // Onboarding fields
+  onboardingStatus: OnboardingStatus;
+  onboardingData: OnboardingData | null;
+  onboardingCompletedAt: Date | null;
+
   createdAt: Date;
   updatedAt: Date;
 }

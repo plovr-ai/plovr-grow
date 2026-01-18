@@ -14,6 +14,14 @@ export type {
   UpdateMerchantInput,
 } from "@/types/merchant";
 
+export type {
+  OnboardingStatus,
+  OnboardingStepId,
+  OnboardingStepStatus,
+  OnboardingData,
+  OnboardingStepConfig,
+} from "@/types/onboarding";
+
 // Service-specific types
 export interface CreateTenantWithCompanyInput {
   tenantName: string;

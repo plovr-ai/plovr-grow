@@ -33,3 +33,32 @@ export function generateOrderNumber(sequence: number): string {
   const seqStr = sequence.toString().padStart(4, "0");
   return `${dateStr}-${seqStr}`;
 }
+
+/**
+ * Calculate tax amount
+ */
+export function calculateTax(subtotal: number, taxRate: number): number {
+  return Math.round(subtotal * taxRate * 100) / 100;
+}
+
+/**
+ * Sleep utility for async operations
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Safely parse JSON with a fallback
+ */
+export function safeJsonParse<T>(
+  json: string | null | undefined,
+  fallback: T
+): T {
+  if (!json) return fallback;
+  try {
+    return JSON.parse(json) as T;
+  } catch {
+    return fallback;
+  }
+}

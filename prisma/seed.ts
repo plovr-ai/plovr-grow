@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -343,6 +344,101 @@ async function main() {
   }
 
   console.log(`Created ${menuItems.length} menu items`);
+
+  // ==================== Onboarding Test Account ====================
+  console.log("\nCreating onboarding test account...");
+
+  // Create onboarding test tenant
+  const onboardingTenant = await prisma.tenant.upsert({
+    where: { id: "tenant-onboarding-test" },
+    update: {},
+    create: {
+      id: "tenant-onboarding-test",
+      name: "Onboarding Test Restaurant",
+      subscriptionPlan: "free",
+      subscriptionStatus: "active",
+    },
+  });
+
+  console.log(`Created onboarding tenant: ${onboardingTenant.name}`);
+
+  // Create company with onboarding NOT completed
+  const onboardingCompany = await prisma.company.upsert({
+    where: { tenantId: onboardingTenant.id },
+    update: {},
+    create: {
+      id: "company-onboarding-test",
+      tenantId: onboardingTenant.id,
+      name: "New Restaurant",
+      description: "Testing onboarding flow",
+      supportEmail: "test@example.com",
+      supportPhone: "(555) 555-5555",
+      // Key: onboardingStatus is "not_started" by default
+      onboardingStatus: "not_started",
+      onboardingData: null,
+      onboardingCompletedAt: null,
+    },
+  });
+
+  console.log(`Created onboarding company: ${onboardingCompany.name} (status: ${onboardingCompany.onboardingStatus})`);
+
+  // Create a merchant for the onboarding test (needed for dashboard route)
+  const onboardingMerchant = await prisma.merchant.upsert({
+    where: { slug: "test-restaurant" },
+    update: {},
+    create: {
+      id: "merchant-onboarding-test",
+      companyId: onboardingCompany.id,
+      slug: "test-restaurant",
+      name: "Test Restaurant - Main Location",
+      description: "Onboarding test location",
+      address: "123 Test Street",
+      city: "Test City",
+      state: "CA",
+      zipCode: "90001",
+      country: "US",
+      phone: "(555) 555-5555",
+      email: "test@example.com",
+      timezone: "America/Los_Angeles",
+      currency: "USD",
+      locale: "en-US",
+      taxRate: 0.0875,
+    },
+  });
+
+  console.log(`Created onboarding merchant: ${onboardingMerchant.name}`);
+
+  // Create test user for login (password: "test123")
+  // Password hash for "test123" using bcrypt
+  const passwordHash = await bcrypt.hash("test123", 10);
+
+  const onboardingUser = await prisma.user.upsert({
+    where: {
+      tenantId_email: {
+        tenantId: onboardingTenant.id,
+        email: "test@example.com",
+      },
+    },
+    update: {},
+    create: {
+      id: "user-onboarding-test",
+      tenantId: onboardingTenant.id,
+      companyId: onboardingCompany.id,
+      email: "test@example.com",
+      passwordHash: passwordHash,
+      name: "Onboarding Test User",
+      role: "owner",
+      status: "active",
+    },
+  });
+
+  console.log(`Created onboarding test user: ${onboardingUser.email}`);
+  console.log("\n✅ Onboarding test account ready!");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("📧 Email: test@example.com");
+  console.log("🔑 Password: test123");
+  console.log("🏪 Merchant URL: /dashboard/merchant-onboarding-test");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   console.log("Seeding completed!");
 }
