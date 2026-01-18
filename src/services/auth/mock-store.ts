@@ -32,6 +32,9 @@ export interface MockCompany {
   name: string;
   legalName: string | null;
   status: string;
+  onboardingStatus: string;
+  onboardingData: unknown | null;
+  onboardingCompletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -127,7 +130,8 @@ export const mockCompanyStore = {
   create(
     tenantId: string,
     name: string,
-    legalName?: string | null
+    legalName?: string | null,
+    onboardingStatus: string = "completed"
   ): MockCompany {
     const now = new Date();
     const company: MockCompany = {
@@ -136,6 +140,9 @@ export const mockCompanyStore = {
       name,
       legalName: legalName ?? null,
       status: "active",
+      onboardingStatus,
+      onboardingData: null,
+      onboardingCompletedAt: onboardingStatus === "completed" ? now : null,
       createdAt: now,
       updatedAt: now,
     };

@@ -67,19 +67,63 @@ export async function initTestData() {
     console.log(`[Test Data] Created user: ${userData.email}`);
   }
 
+  // Create onboarding test account
+  // Using fixed IDs to match database seed data
+  const onboardingTenant = {
+    id: "tenant-onboarding-test",
+    name: "Onboarding Test Restaurant",
+    subscriptionPlan: "free",
+    subscriptionStatus: "active",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const onboardingCompany = {
+    id: "company-onboarding-test",
+    tenantId: onboardingTenant.id,
+    name: "New Restaurant",
+    legalName: null,
+    status: "active",
+    onboardingStatus: "not_started",
+    onboardingData: null,
+    onboardingCompletedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  mockUserStore.create({
+    tenantId: onboardingTenant.id,
+    companyId: onboardingCompany.id,
+    email: "onboarding@example.com",
+    passwordHash,
+    name: "Onboarding Test User",
+    role: "owner",
+    status: "active",
+    lastLoginAt: null,
+  });
+  console.log(`[Test Data] Created onboarding test user: onboarding@example.com`);
+
   console.log("[Test Data] Initialization complete!");
   console.log("\nTest Accounts:");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("Email: admin@test.com");
   console.log("Password: password123");
   console.log("Role: owner");
+  console.log("Status: Onboarding completed");
   console.log("");
   console.log("Email: manager@test.com");
   console.log("Password: password123");
   console.log("Role: manager");
+  console.log("Status: Onboarding completed");
   console.log("");
   console.log("Email: staff@test.com");
   console.log("Password: password123");
   console.log("Role: staff");
+  console.log("Status: Onboarding completed");
+  console.log("");
+  console.log("🎯 Email: onboarding@example.com");
+  console.log("🔑 Password: password123");
+  console.log("👤 Role: owner");
+  console.log("✨ Status: NOT onboarded (test onboarding flow!)");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 }
