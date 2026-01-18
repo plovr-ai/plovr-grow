@@ -2,6 +2,7 @@
 // TODO: Replace with Repository layer when database is ready
 
 import type { CompanySettings } from "@/types/company";
+import type { MerchantSettings } from "@/types/merchant";
 
 // ==================== Mock Data Types ====================
 
@@ -25,6 +26,7 @@ export interface MockMerchant {
   locale: string;
   taxRate: number;
   status: "active" | "inactive" | "temporarily_closed";
+  settings?: MerchantSettings;
   company: MockCompanyRef;
 }
 
@@ -54,6 +56,29 @@ export interface MockCompany {
   };
   merchants: MockMerchant[];
 }
+
+// ==================== Mock Merchant Settings ====================
+
+const DEFAULT_MERCHANT_SETTINGS: MerchantSettings = {
+  acceptsPickup: true,
+  acceptsDelivery: true,
+  tipConfig: {
+    mode: "percentage",
+    tiers: [0.15, 0.18, 0.2],
+    allowCustom: true,
+  },
+  feeConfig: {
+    fees: [
+      {
+        id: "service-fee",
+        name: "service_fee",
+        displayName: "Service Fee",
+        type: "percentage",
+        value: 0.03, // 3%
+      },
+    ],
+  },
+};
 
 // ==================== Mock Company Data ====================
 
@@ -105,6 +130,7 @@ const MOCK_COMPANIES: Record<string, MockCompany> = {
         locale: "en-US",
         taxRate: 0.08875,
         status: "active",
+        settings: DEFAULT_MERCHANT_SETTINGS,
         company: JOES_PIZZA_COMPANY_REF,
       },
       {
@@ -125,6 +151,7 @@ const MOCK_COMPANIES: Record<string, MockCompany> = {
         locale: "en-US",
         taxRate: 0.08875,
         status: "active",
+        settings: DEFAULT_MERCHANT_SETTINGS,
         company: JOES_PIZZA_COMPANY_REF,
       },
     ],

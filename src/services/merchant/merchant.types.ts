@@ -1,6 +1,7 @@
 // ==================== Merchant Service Types ====================
 
 import type { CompanySettings } from "@/types/company";
+import type { MerchantSettings } from "@/types/merchant";
 
 // ==================== Response Types ====================
 
@@ -24,6 +25,7 @@ export interface MerchantWithCompany {
   locale: string;
   taxRate: number;
   status: "active" | "inactive" | "temporarily_closed";
+  settings?: MerchantSettings;
   company: {
     id: string;
     slug: string;

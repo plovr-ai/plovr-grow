@@ -35,10 +35,10 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
     <ThemeProvider preset={themePreset}>
       <MerchantProvider
         config={{
-          currency: data.merchant.currency,
-          locale: data.merchant.locale,
-          tipConfig: data.merchant.tipConfig,
-          feeConfig: data.merchant.feeConfig,
+          currency: merchant?.currency ?? data.merchant.currency,
+          locale: merchant?.locale ?? data.merchant.locale,
+          tipConfig: merchant?.settings?.tipConfig,
+          feeConfig: merchant?.settings?.feeConfig,
         }}
       >
         {children}
