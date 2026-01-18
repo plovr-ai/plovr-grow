@@ -158,4 +158,55 @@ describe("MerchantService", () => {
       expect(available).toBe(true);
     });
   });
+
+  describe("merchant settings", () => {
+    it("should return merchant with settings", async () => {
+      const merchant = await merchantService.getMerchantBySlug("joes-pizza-downtown");
+
+      expect(merchant?.settings).toBeDefined();
+    });
+
+    it("should return settings with tipConfig", async () => {
+      const merchant = await merchantService.getMerchantBySlug("joes-pizza-downtown");
+
+      expect(merchant?.settings?.tipConfig).toBeDefined();
+      expect(merchant?.settings?.tipConfig?.mode).toBe("percentage");
+      expect(merchant?.settings?.tipConfig?.tiers).toEqual([0.15, 0.18, 0.2]);
+      expect(merchant?.settings?.tipConfig?.allowCustom).toBe(true);
+    });
+
+    it("should return settings with feeConfig", async () => {
+      const merchant = await merchantService.getMerchantBySlug("joes-pizza-downtown");
+
+      expect(merchant?.settings?.feeConfig).toBeDefined();
+      expect(merchant?.settings?.feeConfig?.fees).toHaveLength(1);
+    });
+
+    it("should return service fee with correct values", async () => {
+      const merchant = await merchantService.getMerchantBySlug("joes-pizza-downtown");
+      const serviceFee = merchant?.settings?.feeConfig?.fees[0];
+
+      expect(serviceFee?.id).toBe("service-fee");
+      expect(serviceFee?.name).toBe("service_fee");
+      expect(serviceFee?.displayName).toBe("Service Fee");
+      expect(serviceFee?.type).toBe("percentage");
+      expect(serviceFee?.value).toBe(0.03);
+    });
+
+    it("should return settings with pickup and delivery options", async () => {
+      const merchant = await merchantService.getMerchantBySlug("joes-pizza-downtown");
+
+      expect(merchant?.settings?.acceptsPickup).toBe(true);
+      expect(merchant?.settings?.acceptsDelivery).toBe(true);
+    });
+
+    it("should return same settings for all merchants", async () => {
+      const downtown = await merchantService.getMerchantBySlug("joes-pizza-downtown");
+      const midtown = await merchantService.getMerchantBySlug("joes-pizza-midtown");
+
+      expect(downtown?.settings?.feeConfig?.fees[0].value).toBe(
+        midtown?.settings?.feeConfig?.fees[0].value
+      );
+    });
+  });
 });
