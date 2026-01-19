@@ -36,39 +36,11 @@ async function main() {
         { platform: "yelp", url: "https://yelp.com/biz/joes-pizza" },
         { platform: "google", url: "https://g.page/joespizza" },
       ],
-      featuredItems: [
-        {
-          id: "featured-1",
-          name: "Classic Cheese Pizza",
-          description: "Our signature pizza with fresh mozzarella and house-made tomato sauce",
-          price: 18.99,
-          image: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop",
-          category: "Pizza",
-        },
-        {
-          id: "featured-2",
-          name: "Pepperoni Pizza",
-          description: "Classic pepperoni with premium mozzarella cheese",
-          price: 21.99,
-          image: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop",
-          category: "Pizza",
-        },
-        {
-          id: "featured-3",
-          name: "Margherita Pizza",
-          description: "Fresh tomatoes, mozzarella, basil, and olive oil",
-          price: 19.99,
-          image: "https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=400&h=300&fit=crop",
-          category: "Pizza",
-        },
-        {
-          id: "featured-4",
-          name: "Garlic Knots",
-          description: "Fresh baked knots with garlic butter (6 pieces)",
-          price: 5.99,
-          image: "https://images.unsplash.com/photo-1619531040576-f9416740661b?w=400&h=300&fit=crop",
-          category: "Sides",
-        },
+      featuredItemIds: [
+        "item-cheese-pizza",
+        "item-pepperoni-pizza",
+        "item-margherita-pizza",
+        "item-garlic-knots",
       ],
       reviews: [
         {
@@ -158,17 +130,17 @@ async function main() {
         sun: { open: "12:00", close: "21:00" },
       },
       settings: {
-        acceptsPickup: true,
-        acceptsDelivery: true,
-        deliveryRadius: 5,
-        minimumOrderAmount: 15,
-        estimatedPrepTime: 20,
-        tipConfig: {
+        accepts_pickup: true,
+        accepts_delivery: true,
+        delivery_radius: 5,
+        minimum_order_amount: 15,
+        estimated_prep_time: 20,
+        tip_config: {
           mode: "percentage",
           tiers: [0.15, 0.18, 0.2],
           allowCustom: true,
         },
-        feeConfig: {
+        fee_config: {
           fees: [
             {
               id: "service-fee",
@@ -218,17 +190,17 @@ async function main() {
         sun: { open: "12:00", close: "21:00" },
       },
       settings: {
-        acceptsPickup: true,
-        acceptsDelivery: true,
-        deliveryRadius: 5,
-        minimumOrderAmount: 15,
-        estimatedPrepTime: 20,
-        tipConfig: {
+        accepts_pickup: true,
+        accepts_delivery: true,
+        delivery_radius: 5,
+        minimum_order_amount: 15,
+        estimated_prep_time: 20,
+        tip_config: {
           mode: "percentage",
           tiers: [0.15, 0.18, 0.2],
           allowCustom: true,
         },
-        feeConfig: {
+        fee_config: {
           fees: [
             {
               id: "service-fee",
@@ -277,17 +249,17 @@ async function main() {
         sun: { open: "11:00", close: "22:00" },
       },
       settings: {
-        acceptsPickup: true,
-        acceptsDelivery: true,
-        deliveryRadius: 3,
-        minimumOrderAmount: 20,
-        estimatedPrepTime: 15,
-        tipConfig: {
+        accepts_pickup: true,
+        accepts_delivery: true,
+        delivery_radius: 3,
+        minimum_order_amount: 20,
+        estimated_prep_time: 15,
+        tip_config: {
           mode: "percentage",
           tiers: [0.15, 0.18, 0.2],
           allowCustom: true,
         },
-        feeConfig: {
+        fee_config: {
           fees: [
             {
               id: "service-fee",
@@ -303,6 +275,144 @@ async function main() {
   });
 
   console.log(`Created merchant: ${merchantMidtown.name}`);
+
+  // ==================== Tax Configurations for Joe's Pizza ====================
+  console.log("\nCreating tax configurations for Joe's Pizza...");
+
+  // Create tax configs (Company level)
+  const standardTax = await prisma.taxConfig.upsert({
+    where: { id: "tax-joes-standard" },
+    update: {},
+    create: {
+      id: "tax-joes-standard",
+      tenantId: tenant.id,
+      companyId: company.id,
+      name: "Standard Tax",
+      description: "Standard sales tax",
+      roundingMethod: "half_up",
+      isDefault: true,
+      status: "active",
+    },
+  });
+
+  const alcoholTax = await prisma.taxConfig.upsert({
+    where: { id: "tax-joes-alcohol" },
+    update: {},
+    create: {
+      id: "tax-joes-alcohol",
+      tenantId: tenant.id,
+      companyId: company.id,
+      name: "Alcohol Tax",
+      description: "Additional tax for alcoholic beverages",
+      roundingMethod: "half_up",
+      isDefault: false,
+      status: "active",
+    },
+  });
+
+  console.log(`Created tax configs: ${standardTax.name}, ${alcoholTax.name}`);
+
+  // Create merchant tax rates (different rates for different locations)
+  // Main Street location - NYC rate
+  await prisma.merchantTaxRate.upsert({
+    where: {
+      merchantId_taxConfigId: {
+        merchantId: merchant.id,
+        taxConfigId: standardTax.id,
+      },
+    },
+    update: { rate: 0.08875 },
+    create: {
+      id: "mtr-main-standard",
+      merchantId: merchant.id,
+      taxConfigId: standardTax.id,
+      rate: 0.08875, // NYC tax rate
+    },
+  });
+
+  await prisma.merchantTaxRate.upsert({
+    where: {
+      merchantId_taxConfigId: {
+        merchantId: merchant.id,
+        taxConfigId: alcoholTax.id,
+      },
+    },
+    update: { rate: 0.1 },
+    create: {
+      id: "mtr-main-alcohol",
+      merchantId: merchant.id,
+      taxConfigId: alcoholTax.id,
+      rate: 0.1, // 10% alcohol tax
+    },
+  });
+
+  // Downtown location - same NYC rate
+  await prisma.merchantTaxRate.upsert({
+    where: {
+      merchantId_taxConfigId: {
+        merchantId: merchantDowntown.id,
+        taxConfigId: standardTax.id,
+      },
+    },
+    update: { rate: 0.08875 },
+    create: {
+      id: "mtr-downtown-standard",
+      merchantId: merchantDowntown.id,
+      taxConfigId: standardTax.id,
+      rate: 0.08875,
+    },
+  });
+
+  await prisma.merchantTaxRate.upsert({
+    where: {
+      merchantId_taxConfigId: {
+        merchantId: merchantDowntown.id,
+        taxConfigId: alcoholTax.id,
+      },
+    },
+    update: { rate: 0.1 },
+    create: {
+      id: "mtr-downtown-alcohol",
+      merchantId: merchantDowntown.id,
+      taxConfigId: alcoholTax.id,
+      rate: 0.1,
+    },
+  });
+
+  // Midtown location - same NYC rate
+  await prisma.merchantTaxRate.upsert({
+    where: {
+      merchantId_taxConfigId: {
+        merchantId: merchantMidtown.id,
+        taxConfigId: standardTax.id,
+      },
+    },
+    update: { rate: 0.08875 },
+    create: {
+      id: "mtr-midtown-standard",
+      merchantId: merchantMidtown.id,
+      taxConfigId: standardTax.id,
+      rate: 0.08875,
+    },
+  });
+
+  await prisma.merchantTaxRate.upsert({
+    where: {
+      merchantId_taxConfigId: {
+        merchantId: merchantMidtown.id,
+        taxConfigId: alcoholTax.id,
+      },
+    },
+    update: { rate: 0.1 },
+    create: {
+      id: "mtr-midtown-alcohol",
+      merchantId: merchantMidtown.id,
+      taxConfigId: alcoholTax.id,
+      rate: 0.1,
+    },
+  });
+
+  console.log("Created merchant tax rates for all Joe's Pizza locations");
 
   // ==================== Bella's Bakery (Single Location) ====================
   console.log("\nCreating Bella's Bakery (single location)...");
@@ -334,47 +444,11 @@ async function main() {
         { platform: "instagram", url: "https://instagram.com/bellasbakery" },
         { platform: "yelp", url: "https://yelp.com/biz/bellas-bakery" },
       ],
-      featuredItems: [
-        {
-          id: "bella-featured-1",
-          name: "Sourdough Loaf",
-          description: "Our signature 24-hour fermented sourdough with a crispy crust",
-          price: 8.99,
-          image: "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=400&h=300&fit=crop",
-          category: "Bread",
-          menuItemId: "bella-item-sourdough",
-          hasModifiers: false,
-        },
-        {
-          id: "bella-featured-2",
-          name: "Butter Croissant",
-          description: "Flaky, golden layers of French butter perfection",
-          price: 4.49,
-          image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400&h=300&fit=crop",
-          category: "Pastry",
-          menuItemId: "bella-item-croissant",
-          hasModifiers: false,
-        },
-        {
-          id: "bella-featured-3",
-          name: "Almond Danish",
-          description: "Sweet almond cream in a buttery Danish pastry",
-          price: 5.29,
-          image: "https://images.unsplash.com/photo-1509365465985-25d11c17e812?w=400&h=300&fit=crop",
-          category: "Pastry",
-          menuItemId: "bella-item-almond-danish",
-          hasModifiers: false,
-        },
-        {
-          id: "bella-featured-4",
-          name: "Cappuccino",
-          description: "Rich espresso with perfectly steamed milk",
-          price: 4.99,
-          image: "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400&h=300&fit=crop",
-          category: "Coffee",
-          menuItemId: "bella-item-cappuccino",
-          hasModifiers: true,
-        },
+      featuredItemIds: [
+        "bella-item-sourdough",
+        "bella-item-croissant",
+        "bella-item-almond-danish",
+        "bella-item-cappuccino",
       ],
       reviews: [
         {
@@ -464,16 +538,16 @@ async function main() {
         sun: { open: "08:00", close: "17:00" },
       },
       settings: {
-        acceptsPickup: true,
-        acceptsDelivery: false,
-        minimumOrderAmount: 10,
-        estimatedPrepTime: 10,
-        tipConfig: {
+        accepts_pickup: true,
+        accepts_delivery: false,
+        minimum_order_amount: 10,
+        estimated_prep_time: 10,
+        tip_config: {
           mode: "percentage",
           tiers: [0.15, 0.18, 0.2],
           allowCustom: true,
         },
-        feeConfig: {
+        fee_config: {
           fees: [],
         },
       },
@@ -704,6 +778,59 @@ async function main() {
   }
 
   console.log(`Created ${bellaMenuItems.length} menu items for Bella's Bakery`);
+
+  // Create tax config for Bella's Bakery
+  const bellaTax = await prisma.taxConfig.upsert({
+    where: { id: "tax-bella-standard" },
+    update: {},
+    create: {
+      id: "tax-bella-standard",
+      tenantId: bellaTenant.id,
+      companyId: bellaCompany.id,
+      name: "CA Sales Tax",
+      description: "California sales tax",
+      roundingMethod: "half_up",
+      isDefault: true,
+      status: "active",
+    },
+  });
+
+  // Set merchant tax rate for Bella's Bakery
+  await prisma.merchantTaxRate.upsert({
+    where: {
+      merchantId_taxConfigId: {
+        merchantId: bellaMerchant.id,
+        taxConfigId: bellaTax.id,
+      },
+    },
+    update: { rate: 0.0875 },
+    create: {
+      id: "mtr-bella-standard",
+      merchantId: bellaMerchant.id,
+      taxConfigId: bellaTax.id,
+      rate: 0.0875, // SF tax rate
+    },
+  });
+
+  // Associate all Bella's menu items with the standard tax
+  for (const item of bellaMenuItems) {
+    await prisma.menuItemTax.upsert({
+      where: {
+        menuItemId_taxConfigId: {
+          menuItemId: item.id,
+          taxConfigId: bellaTax.id,
+        },
+      },
+      update: {},
+      create: {
+        id: `mit-${item.id}-standard`,
+        menuItemId: item.id,
+        taxConfigId: bellaTax.id,
+      },
+    });
+  }
+
+  console.log("Created tax configuration for Bella's Bakery");
   console.log("✅ Bella's Bakery (single location) created!");
 
   // Create menu categories (company-level menu)
@@ -1075,6 +1202,26 @@ async function main() {
   }
 
   console.log(`Created ${menuItems.length} menu items`);
+
+  // Associate Joe's Pizza menu items with standard tax
+  for (const item of menuItems) {
+    await prisma.menuItemTax.upsert({
+      where: {
+        menuItemId_taxConfigId: {
+          menuItemId: item.id,
+          taxConfigId: standardTax.id,
+        },
+      },
+      update: {},
+      create: {
+        id: `mit-${item.id}-standard`,
+        menuItemId: item.id,
+        taxConfigId: standardTax.id,
+      },
+    });
+  }
+
+  console.log("Associated menu items with tax configs");
 
   // ==================== Onboarding Test Account ====================
   console.log("\nCreating onboarding test account...");
