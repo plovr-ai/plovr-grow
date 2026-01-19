@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useFormatPhone } from "@/hooks";
+import { useMerchantConfig } from "@/contexts/MerchantContext";
 import type { MerchantInfo, SocialLink } from "@/types/website";
 
 interface FooterProps {
@@ -49,21 +50,49 @@ function SocialIcon({ platform }: { platform: SocialLink["platform"] }) {
   }
 }
 
-function formatBusinessHours(hours: MerchantInfo["businessHours"]): { day: string; time: string }[] {
-  const dayNames: Record<string, string> = {
-    mon: "Monday",
-    tue: "Tuesday",
-    wed: "Wednesday",
-    thu: "Thursday",
-    fri: "Friday",
-    sat: "Saturday",
-    sun: "Sunday",
-  };
+/**
+ * Get the first day of week for a locale (0 = Sunday, 1 = Monday, etc.)
+ * Most locales start with Monday, US/Canada/Japan start with Sunday
+ */
+function getFirstDayOfWeek(locale: string): number {
+  // Locales that start week on Sunday
+  const sundayFirstLocales = ["en-US", "en-CA", "ja-JP", "ko-KR", "zh-TW"];
+  return sundayFirstLocales.some((l) => locale.startsWith(l.split("-")[0]) && locale.includes(l.split("-")[1]))
+    ? 0
+    : 1;
+}
 
-  return Object.entries(hours).map(([key, value]) => ({
-    day: dayNames[key] || key,
-    time: value.closed ? "Closed" : `${value.open} - ${value.close}`,
-  }));
+/**
+ * Format business hours with locale-aware day names and sorting
+ */
+function formatBusinessHours(
+  hours: MerchantInfo["businessHours"],
+  locale: string
+): { day: string; time: string }[] {
+  // Day keys in ISO order (Monday = 1, Sunday = 7)
+  const dayKeys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+
+  // Get localized day names using Intl API
+  const formatter = new Intl.DateTimeFormat(locale, { weekday: "long" });
+  // Create a date for each day of week (2024-01-01 is Monday)
+  const dayNames: Record<string, string> = {};
+  dayKeys.forEach((key, index) => {
+    const date = new Date(2024, 0, 1 + index); // Jan 1, 2024 is Monday
+    dayNames[key] = formatter.format(date);
+  });
+
+  // Determine sort order based on locale's first day of week
+  const firstDay = getFirstDayOfWeek(locale);
+  const sortedKeys = firstDay === 0
+    ? ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] // Sunday first
+    : ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]; // Monday first
+
+  return sortedKeys
+    .filter((key) => hours[key]) // Only include days that exist in hours
+    .map((key) => ({
+      day: dayNames[key] || key,
+      time: hours[key].closed ? "Closed" : `${hours[key].open} - ${hours[key].close}`,
+    }));
 }
 
 export function Footer({
@@ -73,14 +102,19 @@ export function Footer({
   menuLink,
 }: FooterProps) {
   const formatPhone = useFormatPhone();
+  const { locale } = useMerchantConfig();
   // Support both old (tenantSlug) and new (companySlug) props
   const slug = companySlug ?? tenantSlug ?? "";
   const orderLink = menuLink ?? `/r/${slug}/menu`;
   // Locations is always a brand-level page
   const locationsLink = `/${slug}/locations`;
 
+  // Check if contact info is available (single-merchant companies)
+  const hasContactInfo = Boolean(merchant.phone || merchant.email || merchant.address);
+  const hasBusinessHours = Object.keys(merchant.businessHours).length > 0;
+
   const fullAddress = `${merchant.address}, ${merchant.city}, ${merchant.state} ${merchant.zipCode}`;
-  const businessHours = formatBusinessHours(merchant.businessHours);
+  const businessHours = formatBusinessHours(merchant.businessHours, locale);
 
   return (
     <footer id="location" className="bg-gray-900 text-white">
@@ -115,44 +149,54 @@ export function Footer({
             </div>
           </div>
 
-          {/* Contact */}
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Contact</h3>
-            <div className="space-y-3 text-gray-400">
-              <a href={`tel:${merchant.phone}`} className="flex items-center gap-3 hover:text-white transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-                {formatPhone(merchant.phone)}
-              </a>
-              <a href={`mailto:${merchant.email}`} className="flex items-center gap-3 hover:text-white transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                {merchant.email}
-              </a>
-              <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                {fullAddress}
+          {/* Contact - only show for single-merchant companies */}
+          {hasContactInfo && (
+            <div>
+              <h3 className="font-semibold text-lg mb-4">Contact</h3>
+              <div className="space-y-3 text-gray-400">
+                {merchant.phone && (
+                  <a href={`tel:${merchant.phone}`} className="flex items-center gap-3 hover:text-white transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    {formatPhone(merchant.phone)}
+                  </a>
+                )}
+                {merchant.email && (
+                  <a href={`mailto:${merchant.email}`} className="flex items-center gap-3 hover:text-white transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    {merchant.email}
+                  </a>
+                )}
+                {merchant.address && (
+                  <div className="flex items-start gap-3">
+                    <svg className="w-5 h-5 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    {fullAddress}
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Hours */}
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Hours</h3>
-            <div className="space-y-2 text-sm">
-              {businessHours.map(({ day, time }) => (
-                <div key={day} className="flex justify-between text-gray-400">
-                  <span>{day}</span>
-                  <span>{time}</span>
-                </div>
-              ))}
+          {/* Hours - only show for single-merchant companies */}
+          {hasBusinessHours && (
+            <div>
+              <h3 className="font-semibold text-lg mb-4">Hours</h3>
+              <div className="space-y-2 text-sm">
+                {businessHours.map(({ day, time }) => (
+                  <div key={day} className="flex justify-between text-gray-400">
+                    <span>{day}</span>
+                    <span>{time}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Quick Links */}
           <div>

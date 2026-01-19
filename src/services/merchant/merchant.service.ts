@@ -1,86 +1,382 @@
 // ==================== Merchant Service ====================
-// Currently uses mock data. Will be replaced with Repository layer later.
+// 商户服务层 - 封装商户相关业务逻辑
 
-import {
-  getMockMerchantBySlug,
-  getMockMerchantById,
-  getMockCompanyBySlug,
-  getMockMerchantsByCompanyId,
-  isMockSlugAvailable,
-} from "./merchant.mock";
-import type { MerchantWithCompany, CompanyWithMerchants } from "./merchant.types";
-
-// Re-export types
-export type { MerchantWithCompany, CompanyWithMerchants } from "./merchant.types";
+import { merchantRepository } from "@/repositories/merchant.repository";
+import { companyRepository } from "@/repositories/company.repository";
+import { menuService } from "@/services/menu";
+import { toMerchantWithCompany, toCompanyWithMerchants } from "./merchant.mapper";
+import type { Prisma } from "@prisma/client";
+import type {
+  MerchantWithCompany,
+  CompanyWithMerchants,
+  CreateMerchantInput,
+  UpdateMerchantInput,
+  UpdateMerchantSettingsInput,
+  GetMerchantsFilter,
+  WebsiteMerchantData,
+} from "./merchant.types";
+import type { SocialLink, CompanySettings } from "@/types/company";
+import type { MerchantSettings, BusinessHoursMap } from "@/types/merchant";
 
 export class MerchantService {
-  /**
-   * Get merchant by ID
-   */
-  async getMerchant(merchantId: string): Promise<MerchantWithCompany | null> {
-    // TODO: Replace with merchantRepository.getById(merchantId)
-    return getMockMerchantById(merchantId);
-  }
+  // ==================== 公开查询方法 (Storefront) ====================
 
   /**
-   * Get merchant by slug (for public URL access)
+   * 通过 Slug 获取 Merchant (公开访问，无需认证)
+   * 用于 Storefront 页面
    */
   async getMerchantBySlug(slug: string): Promise<MerchantWithCompany | null> {
-    // TODO: Replace with merchantRepository.getBySlug(slug)
-    return getMockMerchantBySlug(slug);
+    const data = await merchantRepository.getBySlugWithCompany(slug);
+    if (!data) return null;
+    return toMerchantWithCompany(data);
   }
 
   /**
-   * Get merchant by slug with company and tenant info
-   * Alias for getMerchantBySlug (mock data already includes company)
+   * 通过 Slug 获取 Merchant (别名，保持向后兼容)
    */
-  async getMerchantBySlugWithCompany(slug: string): Promise<MerchantWithCompany | null> {
-    // TODO: Replace with merchantRepository.getBySlugWithCompany(slug)
-    return getMockMerchantBySlug(slug);
+  async getMerchantBySlugWithCompany(
+    slug: string
+  ): Promise<MerchantWithCompany | null> {
+    return this.getMerchantBySlug(slug);
   }
 
   /**
-   * Get company by slug with all merchants
+   * 通过 Slug 获取 Company 及其所有 Merchants (公开访问)
+   * 用于品牌官网门店列表
    */
   async getCompanyBySlug(slug: string): Promise<CompanyWithMerchants | null> {
-    // TODO: Replace with companyRepository.getBySlug(slug)
-    return getMockCompanyBySlug(slug);
+    const data = await companyRepository.getBySlugWithFullMerchants(slug);
+    if (!data) return null;
+    return toCompanyWithMerchants(data);
   }
 
   /**
-   * Get all merchants for a company
+   * 获取网站显示数据 (公开访问)
+   * 合并 Company 和 Merchant 数据用于网站模板渲染
+   * @param merchantSlug - Merchant slug
    */
-  async getMerchantsByCompanyId(companyId: string): Promise<MerchantWithCompany[]> {
-    // TODO: Replace with merchantRepository.getByCompanyId(companyId)
-    return getMockMerchantsByCompanyId(companyId);
+  async getWebsiteData(merchantSlug: string): Promise<WebsiteMerchantData | null> {
+    const merchant = await this.getMerchantBySlug(merchantSlug);
+    if (!merchant) return null;
+
+    const companySettings = merchant.company.settings as CompanySettings | undefined;
+    const merchantSettings = merchant.settings as MerchantSettings | undefined;
+
+    // Merchant-level website config can override company-level
+    const companyWebsite = companySettings?.website;
+    const merchantWebsite = merchantSettings?.website;
+
+    // Build website data with fallback chain: Merchant -> Company -> Default
+    const websiteData: WebsiteMerchantData = {
+      name: merchant.company.name,
+      tagline: merchantWebsite?.tagline || companyWebsite?.tagline || "",
+      address: merchant.address || "",
+      city: merchant.city || "",
+      state: merchant.state || "",
+      zipCode: merchant.zipCode || "",
+      phone: merchant.phone || "",
+      email: merchant.email || "",
+      logo: merchant.logoUrl || merchant.company.logoUrl || "",
+      heroImage: merchantWebsite?.heroImage || companyWebsite?.heroImage || merchant.bannerUrl || "",
+      businessHours: merchant.businessHours || {},
+      socialLinks: companyWebsite?.socialLinks || ([] as SocialLink[]),
+      currency: merchant.currency,
+      locale: merchant.locale,
+      tipConfig: merchantSettings?.tipConfig,
+      feeConfig: merchantSettings?.feeConfig,
+    };
+
+    return websiteData;
   }
 
   /**
-   * Check if a slug is available
+   * 获取 Company 网站显示数据 (公开访问)
+   * 用于品牌官网首页
+   * @param companySlug - Company slug
    */
-  async isSlugAvailable(slug: string, excludeMerchantId?: string): Promise<boolean> {
-    // TODO: Replace with merchantRepository.isSlugAvailable(slug, excludeMerchantId)
-    return isMockSlugAvailable(slug, excludeMerchantId);
+  async getCompanyWebsiteData(companySlug: string): Promise<WebsiteMerchantData | null> {
+    const company = await this.getCompanyBySlug(companySlug);
+    if (!company) return null;
+
+    const companySettings = company.settings as CompanySettings | undefined;
+    const companyWebsite = companySettings?.website;
+
+    // Fetch featured items from menu database
+    let featuredItems: WebsiteMerchantData["featuredItems"] = [];
+    const featuredItemIds = companyWebsite?.featuredItemIds;
+    if (featuredItemIds && featuredItemIds.length > 0) {
+      const menuItems = await menuService.getMenuItemsByCompanyId(
+        company.tenantId,
+        company.id,
+        featuredItemIds
+      );
+
+      // Map menu items to FeaturedItem format
+      featuredItems = menuItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description || "",
+        price: Number(item.price),
+        image: item.imageUrl || "",
+        category: undefined, // Category info not needed for display
+        menuItemId: item.id,
+        hasModifiers: item.options != null && Array.isArray(item.options) && item.options.length > 0,
+      }));
+    }
+
+    // For single-merchant companies, include merchant contact info and business hours
+    // For multi-merchant companies, leave these empty (Footer will hide these sections)
+    const singleMerchant = company.merchants.length === 1 ? company.merchants[0] : null;
+
+    const websiteData: WebsiteMerchantData = {
+      name: company.name,
+      tagline: companyWebsite?.tagline || company.description || "",
+      address: singleMerchant?.address || "",
+      city: singleMerchant?.city || "",
+      state: singleMerchant?.state || "",
+      zipCode: singleMerchant?.zipCode || "",
+      phone: singleMerchant?.phone || "",
+      email: singleMerchant?.email || "",
+      logo: company.logoUrl || "",
+      heroImage: companyWebsite?.heroImage || "",
+      businessHours: singleMerchant?.businessHours || {},
+      socialLinks: companyWebsite?.socialLinks || ([] as SocialLink[]),
+      currency: companySettings?.defaultCurrency || "USD",
+      locale: companySettings?.defaultLocale || "en-US",
+      featuredItems,
+      reviews: companyWebsite?.reviews || [],
+    };
+
+    return websiteData;
+  }
+
+  // ==================== 受保护查询方法 (Dashboard/Admin) ====================
+
+  /**
+   * 通过 ID 获取 Merchant
+   * @param tenantId - 租户 ID (用于权限校验)
+   * @param merchantId - 商户 ID
+   */
+  async getMerchant(
+    tenantId: string,
+    merchantId: string
+  ): Promise<MerchantWithCompany | null> {
+    const data = await merchantRepository.getByIdWithCompany(merchantId);
+    if (!data) return null;
+
+    // 验证 tenant 隔离
+    if (data.company.tenantId !== tenantId) {
+      return null;
+    }
+
+    return toMerchantWithCompany(data);
   }
 
   /**
-   * Get merchant tax rate
+   * 获取 Company 下所有 Merchants
+   * @param tenantId - 租户 ID
+   * @param companyId - 公司 ID
+   * @param filter - 过滤条件
+   */
+  async getMerchantsByCompanyId(
+    tenantId: string,
+    companyId: string,
+    filter?: GetMerchantsFilter
+  ): Promise<MerchantWithCompany[]> {
+    // 验证 company 属于 tenant
+    const company = await companyRepository.getById(companyId);
+    if (!company || company.tenantId !== tenantId) {
+      return [];
+    }
+
+    const merchants = filter?.status === "active"
+      ? await merchantRepository.getActiveByCompanyIdWithCompany(companyId)
+      : await merchantRepository.getByCompanyIdWithCompany(companyId);
+
+    return merchants.map(toMerchantWithCompany);
+  }
+
+  // ==================== 写入方法 ====================
+
+  /**
+   * 创建 Merchant
+   * @param tenantId - 租户 ID
+   * @param companyId - 公司 ID
+   * @param input - 创建参数
+   */
+  async createMerchant(
+    tenantId: string,
+    companyId: string,
+    input: CreateMerchantInput
+  ): Promise<MerchantWithCompany> {
+    // 验证 company 属于 tenant
+    const company = await companyRepository.getById(companyId);
+    if (!company || company.tenantId !== tenantId) {
+      throw new Error("Company not found");
+    }
+
+    // 验证 slug 可用
+    const isAvailable = await merchantRepository.isSlugAvailable(input.slug);
+    if (!isAvailable) {
+      throw new Error(`Slug "${input.slug}" is already taken`);
+    }
+
+    const merchant = await merchantRepository.create(companyId, {
+      slug: input.slug,
+      name: input.name,
+      description: input.description,
+      address: input.address,
+      city: input.city,
+      state: input.state,
+      zipCode: input.zipCode,
+      country: input.country ?? "US",
+      phone: input.phone,
+      email: input.email,
+      logoUrl: input.logoUrl,
+      bannerUrl: input.bannerUrl,
+      businessHours: input.businessHours as unknown as Prisma.InputJsonValue,
+      timezone: input.timezone ?? "America/New_York",
+      currency: input.currency ?? "USD",
+      locale: input.locale ?? "en-US",
+      taxRate: input.taxRate ?? 0,
+      settings: input.settings as unknown as Prisma.InputJsonValue,
+    });
+
+    const data = await merchantRepository.getByIdWithCompany(merchant.id);
+    return toMerchantWithCompany(data!);
+  }
+
+  /**
+   * 更新 Merchant
+   * @param tenantId - 租户 ID
+   * @param merchantId - 商户 ID
+   * @param input - 更新参数
+   */
+  async updateMerchant(
+    tenantId: string,
+    merchantId: string,
+    input: UpdateMerchantInput
+  ): Promise<MerchantWithCompany> {
+    // 验证权限
+    const existing = await this.getMerchant(tenantId, merchantId);
+    if (!existing) {
+      throw new Error("Merchant not found");
+    }
+
+    // Slug 变更检查
+    if (input.slug && input.slug !== existing.slug) {
+      const isAvailable = await merchantRepository.isSlugAvailable(
+        input.slug,
+        merchantId
+      );
+      if (!isAvailable) {
+        throw new Error(`Slug "${input.slug}" is already taken`);
+      }
+    }
+
+    // 构建更新数据
+    const updateData: Prisma.MerchantUpdateInput = {};
+
+    if (input.name !== undefined) updateData.name = input.name;
+    if (input.slug !== undefined) updateData.slug = input.slug;
+    if (input.description !== undefined)
+      updateData.description = input.description;
+    if (input.address !== undefined) updateData.address = input.address;
+    if (input.city !== undefined) updateData.city = input.city;
+    if (input.state !== undefined) updateData.state = input.state;
+    if (input.zipCode !== undefined) updateData.zipCode = input.zipCode;
+    if (input.country !== undefined) updateData.country = input.country;
+    if (input.phone !== undefined) updateData.phone = input.phone;
+    if (input.email !== undefined) updateData.email = input.email;
+    if (input.logoUrl !== undefined) updateData.logoUrl = input.logoUrl;
+    if (input.bannerUrl !== undefined) updateData.bannerUrl = input.bannerUrl;
+    if (input.businessHours !== undefined)
+      updateData.businessHours =
+        input.businessHours as unknown as Prisma.InputJsonValue;
+    if (input.timezone !== undefined) updateData.timezone = input.timezone;
+    if (input.currency !== undefined) updateData.currency = input.currency;
+    if (input.locale !== undefined) updateData.locale = input.locale;
+    if (input.taxRate !== undefined) updateData.taxRate = input.taxRate;
+    if (input.status !== undefined) updateData.status = input.status;
+
+    // Settings 需要 merge
+    if (input.settings !== undefined) {
+      const currentSettings = existing.settings || {};
+      updateData.settings = {
+        ...currentSettings,
+        ...input.settings,
+      } as unknown as Prisma.InputJsonValue;
+    }
+
+    await merchantRepository.update(merchantId, updateData);
+
+    const data = await merchantRepository.getByIdWithCompany(merchantId);
+    return toMerchantWithCompany(data!);
+  }
+
+  /**
+   * 更新 Merchant Settings
+   * @param tenantId - 租户 ID
+   * @param merchantId - 商户 ID
+   * @param settings - 设置更新
+   */
+  async updateSettings(
+    tenantId: string,
+    merchantId: string,
+    settings: UpdateMerchantSettingsInput
+  ): Promise<MerchantWithCompany> {
+    // 验证权限
+    const existing = await this.getMerchant(tenantId, merchantId);
+    if (!existing) {
+      throw new Error("Merchant not found");
+    }
+
+    const data = await merchantRepository.updateSettings(
+      merchantId,
+      settings as Record<string, unknown>
+    );
+    return toMerchantWithCompany(data!);
+  }
+
+  /**
+   * 删除 Merchant
+   * @param tenantId - 租户 ID
+   * @param merchantId - 商户 ID
+   */
+  async deleteMerchant(tenantId: string, merchantId: string): Promise<void> {
+    // 验证权限
+    const existing = await this.getMerchant(tenantId, merchantId);
+    if (!existing) {
+      throw new Error("Merchant not found");
+    }
+
+    await merchantRepository.delete(merchantId);
+  }
+
+  // ==================== 业务查询方法 ====================
+
+  /**
+   * 检查 Slug 是否可用
+   */
+  async isSlugAvailable(
+    slug: string,
+    excludeMerchantId?: string
+  ): Promise<boolean> {
+    return merchantRepository.isSlugAvailable(slug, excludeMerchantId);
+  }
+
+  /**
+   * 获取 Merchant 税率
    */
   async getTaxRate(merchantId: string): Promise<number> {
-    // TODO: Replace with merchantRepository.getTaxRate(merchantId)
-    const merchant = getMockMerchantById(merchantId);
-    return merchant?.taxRate ?? 0;
+    return merchantRepository.getTaxRate(merchantId);
   }
 
   /**
-   * Check if merchant is currently open
-   * TODO: Implement based on businessHours when available
+   * 检查 Merchant 是否营业中
    */
   async isOpen(merchantId: string): Promise<boolean> {
-    const merchant = getMockMerchantById(merchantId);
-    if (!merchant) return false;
-    // For now, just check if merchant is active
-    return merchant.status === "active";
+    return merchantRepository.isOpen(merchantId);
   }
 }
 
