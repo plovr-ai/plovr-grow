@@ -1,9 +1,17 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { FeaturedItems } from "../FeaturedItems";
 import { MerchantProvider } from "@/contexts";
 import type { FeaturedItem } from "@/types/website";
 import type { ReactNode } from "react";
+
+// Mock next/navigation
+const mockPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
 
 function createWrapper(currency: string, locale: string) {
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -136,13 +144,30 @@ describe("FeaturedItems", () => {
       expect(categories).toHaveLength(2);
     });
 
-    it("should display Add buttons", () => {
+    it("should display Add buttons for single location (default)", () => {
       render(<FeaturedItems items={mockItems} />, {
         wrapper: createWrapper("USD", "en-US"),
       });
 
       const addButtons = screen.getAllByText("Add");
       expect(addButtons).toHaveLength(2);
+    });
+
+    it("should display Order buttons for multiple locations", () => {
+      render(
+        <FeaturedItems
+          items={mockItems}
+          menuLink="/joes-pizza/locations"
+          hasMultipleLocations={true}
+        />,
+        {
+          wrapper: createWrapper("USD", "en-US"),
+        }
+      );
+
+      const orderButtons = screen.getAllByText("Order");
+      expect(orderButtons).toHaveLength(2);
+      expect(screen.queryByText("Add")).not.toBeInTheDocument();
     });
 
     it("should display section header", () => {
@@ -156,6 +181,74 @@ describe("FeaturedItems", () => {
           "Discover our most popular dishes, crafted with the finest ingredients"
         )
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("navigation", () => {
+    beforeEach(() => {
+      mockPush.mockClear();
+    });
+
+    it("should show 'View Full Menu' link for single location", () => {
+      render(
+        <FeaturedItems items={mockItems} menuLink="/r/downtown/menu" />,
+        {
+          wrapper: createWrapper("USD", "en-US"),
+        }
+      );
+
+      const link = screen.getByText("View Full Menu");
+      expect(link).toBeInTheDocument();
+      expect(link.closest("a")).toHaveAttribute("href", "/r/downtown/menu");
+    });
+
+    it("should show 'Find a Location' link for multiple locations", () => {
+      render(
+        <FeaturedItems
+          items={mockItems}
+          menuLink="/joes-pizza/locations"
+          hasMultipleLocations={true}
+        />,
+        {
+          wrapper: createWrapper("USD", "en-US"),
+        }
+      );
+
+      const link = screen.getByText("Find a Location");
+      expect(link).toBeInTheDocument();
+      expect(link.closest("a")).toHaveAttribute("href", "/joes-pizza/locations");
+    });
+
+    it("should navigate to menu page when clicking Add button (single location)", () => {
+      render(
+        <FeaturedItems items={mockItems} menuLink="/r/downtown/menu" />,
+        {
+          wrapper: createWrapper("USD", "en-US"),
+        }
+      );
+
+      const addButtons = screen.getAllByText("Add");
+      fireEvent.click(addButtons[0]);
+
+      expect(mockPush).toHaveBeenCalledWith("/r/downtown/menu");
+    });
+
+    it("should navigate to locations page when clicking Order button (multiple locations)", () => {
+      render(
+        <FeaturedItems
+          items={mockItems}
+          menuLink="/joes-pizza/locations"
+          hasMultipleLocations={true}
+        />,
+        {
+          wrapper: createWrapper("USD", "en-US"),
+        }
+      );
+
+      const orderButtons = screen.getAllByText("Order");
+      fireEvent.click(orderButtons[0]);
+
+      expect(mockPush).toHaveBeenCalledWith("/joes-pizza/locations");
     });
   });
 });

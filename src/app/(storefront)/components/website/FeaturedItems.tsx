@@ -1,14 +1,30 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { FeaturedItem } from "@/types/website";
 import { useFormatPrice } from "@/hooks";
 
 interface FeaturedItemsProps {
   items: FeaturedItem[];
+  /** Link to menu page (single location) or locations page (multiple locations) */
+  menuLink?: string;
+  /** Whether this company has multiple locations */
+  hasMultipleLocations?: boolean;
 }
 
-export function FeaturedItems({ items }: FeaturedItemsProps) {
+export function FeaturedItems({
+  items,
+  menuLink = "#",
+  hasMultipleLocations = false,
+}: FeaturedItemsProps) {
   const formatPrice = useFormatPrice();
+  const router = useRouter();
+
+  const handleAddClick = (item: FeaturedItem) => {
+    // Navigate to menu or locations page
+    // TODO: If FeaturedItem has menuItemId, add to cart directly for single location
+    router.push(menuLink);
+  };
   return (
     <section id="menu" className="py-16 md:py-24 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -55,8 +71,11 @@ export function FeaturedItems({ items }: FeaturedItemsProps) {
                   <span className="text-lg font-bold text-gray-900">
                     {formatPrice(item.price)}
                   </span>
-                  <button className="bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-foreground px-4 py-2 rounded-full text-sm font-medium transition-colors">
-                    Add
+                  <button
+                    onClick={() => handleAddClick(item)}
+                    className="bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-foreground px-4 py-2 rounded-full text-sm font-medium transition-colors"
+                  >
+                    {hasMultipleLocations ? "Order" : "Add"}
                   </button>
                 </div>
               </div>
@@ -67,10 +86,10 @@ export function FeaturedItems({ items }: FeaturedItemsProps) {
         {/* View Full Menu Link */}
         <div className="text-center mt-12">
           <a
-            href="#menu-full"
+            href={menuLink}
             className="inline-flex items-center gap-2 text-theme-primary hover:text-theme-primary-hover font-semibold text-lg transition-colors"
           >
-            View Full Menu
+            {hasMultipleLocations ? "Find a Location" : "View Full Menu"}
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>

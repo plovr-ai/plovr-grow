@@ -82,7 +82,11 @@ export default async function CompanyHomePage({ params }: PageProps) {
         locationCount={locationCount}
         singleLocation={singleLocation}
       />
-      <FeaturedItems items={featuredItems} />
+      <FeaturedItems
+        items={featuredItems}
+        menuLink={menuLink}
+        hasMultipleLocations={!hasSingleMerchant}
+      />
       <CustomerReviews reviews={reviews} />
       <Footer
         merchant={merchantInfo}
