@@ -11,6 +11,7 @@ import {
   List,
   Receipt,
   ChevronDown,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +55,12 @@ const navigation: NavItem[] = [
     href: "/dashboard/orders",
     icon: ShoppingCart,
     pattern: /^\/dashboard\/orders/,
+  },
+  {
+    label: "Company",
+    href: "/dashboard/company",
+    icon: Building2,
+    pattern: /^\/dashboard\/company/,
   },
   {
     label: "Settings",
