@@ -18,10 +18,15 @@ async function getRepositories() {
 
 export class MenuService {
   /**
-   * Get full menu for customer-facing display
+   * Get menu for customer-facing display
+   *
+   * Interface: getMenu(tenantId, merchantId) - kept for compatibility
+   * Implementation: Fetches Company-level menu via merchant's companyId
+   *
+   * Future extension: Can add merchant-level overrides (price, availability) here
+   *
    * @param tenantId - Tenant ID for isolation
-   * @param merchantId - Merchant ID for store-specific menu
-   * TODO: Replace mock data with database implementation
+   * @param merchantId - Merchant ID (used to get companyId and merchant info)
    */
   async getMenu(tenantId: string, merchantId: string): Promise<GetMenuResponse> {
     // Temporarily use mock data until database is ready
@@ -29,15 +34,24 @@ export class MenuService {
 
     // Database implementation (commented out for now):
     // const { menuRepository, merchantRepository } = await getRepositories();
-    // const [categories, merchant] = await Promise.all([
-    //   menuRepository.getCategoriesWithItemsByMerchant(tenantId, merchantId),
-    //   merchantRepository.getById(merchantId),
-    // ]);
+    //
+    // // Get merchant to find companyId
+    // const merchant = await merchantRepository.getById(merchantId);
+    // if (!merchant) {
+    //   throw new Error("Merchant not found");
+    // }
+    //
+    // // Fetch Company-level menu using companyId
+    // const categories = await menuRepository.getCategoriesWithItemsByCompany(
+    //   tenantId,
+    //   merchant.companyId
+    // );
+    //
     // return {
     //   categories,
     //   merchantId,
-    //   merchantName: merchant?.name || "",
-    //   merchantLogo: merchant?.logoUrl || null,
+    //   merchantName: merchant.name,
+    //   merchantLogo: merchant.logoUrl || null,
     // };
   }
 
@@ -62,16 +76,24 @@ export class MenuService {
       .filter((item): item is NonNullable<typeof item> => item != null);
 
     // Database implementation (commented out for now):
-    // const { menuRepository } = await getRepositories();
-    // return menuRepository.getItemsByIds(tenantId, itemIds);
+    // const { menuRepository, merchantRepository } = await getRepositories();
+    // const merchant = await merchantRepository.getById(merchantId);
+    // if (!merchant) {
+    //   throw new Error("Merchant not found");
+    // }
+    // return menuRepository.getItemsByIdsByCompany(tenantId, merchant.companyId, itemIds);
   }
 
   /**
-   * Create a new category
+   * Create a new category at company level
    */
-  async createCategory(tenantId: string, input: CreateCategoryInput) {
+  async createCategory(
+    tenantId: string,
+    companyId: string,
+    input: CreateCategoryInput
+  ) {
     const { menuRepository } = await getRepositories();
-    return menuRepository.createCategory(tenantId, {
+    return menuRepository.createCategory(tenantId, companyId, {
       name: input.name,
       description: input.description,
       imageUrl: input.imageUrl,
@@ -92,11 +114,15 @@ export class MenuService {
   }
 
   /**
-   * Create a new menu item
+   * Create a new menu item at company level
    */
-  async createMenuItem(tenantId: string, input: CreateMenuItemInput) {
+  async createMenuItem(
+    tenantId: string,
+    companyId: string,
+    input: CreateMenuItemInput
+  ) {
     const { menuRepository } = await getRepositories();
-    return menuRepository.createItem(tenantId, input.categoryId, {
+    return menuRepository.createItem(tenantId, companyId, input.categoryId, {
       name: input.name,
       description: input.description,
       price: input.price,
