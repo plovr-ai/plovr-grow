@@ -228,7 +228,7 @@ export function Footer({
         <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-500 text-sm">
           <p>&copy; {new Date().getFullYear()} {merchant.name}. All rights reserved.</p>
           <p className="mt-2">
-            Powered by <span className="text-gray-400">Reborn</span>
+            Powered by <span className="text-gray-400">Plovr</span>
           </p>
         </div>
       </div>

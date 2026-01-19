@@ -55,7 +55,7 @@ http://localhost:3000/dashboard/merchant-onboarding-test
 ## 🎨 Onboarding Flow 功能
 
 ### 界面展示
-- ✅ 欢迎标题："Welcome to Reborn!"
+- ✅ 欢迎标题："Welcome to Plovr!"
 - ✅ 进度指示器（显示 3 个步骤）
 - ✅ 当前步骤高亮显示
 - ✅ 已完成步骤显示绿色勾选

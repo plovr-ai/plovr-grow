@@ -108,7 +108,7 @@ export function OnboardingWizard({
     <div className="mx-auto max-w-4xl">
       <Card>
         <CardHeader>
-          <CardTitle className="text-3xl">Welcome to Reborn!</CardTitle>
+          <CardTitle className="text-3xl">Welcome to Plovr!</CardTitle>
           <CardDescription className="text-base">
             Let's get your restaurant online in just a few steps
           </CardDescription>

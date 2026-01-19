@@ -266,7 +266,7 @@ describe("Footer", () => {
       renderWithProvider(<Footer merchant={mockMerchant} companySlug="joes-pizza" />);
 
       expect(screen.getByText("Powered by")).toBeInTheDocument();
-      expect(screen.getByText("Reborn")).toBeInTheDocument();
+      expect(screen.getByText("Plovr")).toBeInTheDocument();
     });
   });
 
