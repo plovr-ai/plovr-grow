@@ -17,6 +17,7 @@ vi.mock("@/repositories/order.repository", () => ({
     getNextOrderSequence: vi.fn(),
     getNextMerchantOrderSequence: vi.fn(),
     getStats: vi.fn(),
+    getCompanyOrders: vi.fn(),
     getMerchantOrders: vi.fn(),
     getMerchantTodayOrders: vi.fn(),
     getMerchantStats: vi.fn(),
@@ -313,6 +314,91 @@ describe("OrderService", () => {
       );
 
       unsubscribe();
+    });
+  });
+
+  describe("getCompanyOrders()", () => {
+    it("should call repository with correct parameters", async () => {
+      const mockResult = {
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 20,
+        totalPages: 0,
+      };
+      vi.mocked(orderRepository.getCompanyOrders).mockResolvedValue(mockResult);
+
+      const options = {
+        status: "pending" as OrderStatus,
+        page: 2,
+        pageSize: 10,
+      };
+
+      await orderService.getCompanyOrders("tenant-1", "company-1", options);
+
+      expect(orderRepository.getCompanyOrders).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        options
+      );
+    });
+
+    it("should return paginated orders for a company", async () => {
+      const mockOrders = [
+        {
+          id: "order-1",
+          orderNumber: "#001",
+          status: "pending",
+          merchantId: "merchant-1",
+          merchant: { id: "merchant-1", name: "Downtown", slug: "downtown" },
+        },
+        {
+          id: "order-2",
+          orderNumber: "#002",
+          status: "completed",
+          merchantId: "merchant-2",
+          merchant: { id: "merchant-2", name: "Uptown", slug: "uptown" },
+        },
+      ];
+      const mockResult = {
+        items: mockOrders,
+        total: 2,
+        page: 1,
+        pageSize: 20,
+        totalPages: 1,
+      };
+      vi.mocked(orderRepository.getCompanyOrders).mockResolvedValue(mockResult as never);
+
+      const result = await orderService.getCompanyOrders("tenant-1", "company-1");
+
+      expect(result.items).toHaveLength(2);
+      expect(result.total).toBe(2);
+      expect(result.totalPages).toBe(1);
+    });
+
+    it("should filter by merchantId when provided", async () => {
+      const mockResult = {
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 20,
+        totalPages: 0,
+      };
+      vi.mocked(orderRepository.getCompanyOrders).mockResolvedValue(mockResult);
+
+      await orderService.getCompanyOrders("tenant-1", "company-1", {
+        merchantId: "merchant-1",
+        status: "pending" as OrderStatus,
+      });
+
+      expect(orderRepository.getCompanyOrders).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        {
+          merchantId: "merchant-1",
+          status: "pending",
+        }
+      );
     });
   });
 

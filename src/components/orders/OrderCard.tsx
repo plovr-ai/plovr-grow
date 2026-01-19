@@ -15,7 +15,8 @@ const orderTypeLabels: Record<OrderType, string> = {
 };
 
 export function OrderCard({ order }: OrderCardProps) {
-  const items = JSON.parse(order.items as string) as Array<{
+  // items is already parsed by Prisma (JSON field)
+  const items = order.items as Array<{
     name: string;
     quantity: number;
   }>;

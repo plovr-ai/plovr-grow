@@ -427,6 +427,91 @@ export class OrderRepository {
   }
 
   /**
+   * Get orders for a company (all merchants under the company)
+   */
+  async getCompanyOrders(
+    tenantId: string,
+    companyId: string,
+    options: {
+      status?: OrderStatus;
+      merchantId?: string;
+      orderType?: OrderType;
+      dateFrom?: Date;
+      dateTo?: Date;
+      search?: string;
+      page?: number;
+      pageSize?: number;
+      orderBy?: "createdAt" | "updatedAt" | "totalAmount";
+      orderDirection?: "asc" | "desc";
+    } = {}
+  ) {
+    const {
+      status,
+      merchantId,
+      orderType,
+      dateFrom,
+      dateTo,
+      search,
+      page = 1,
+      pageSize = 20,
+      orderBy = "createdAt",
+      orderDirection = "desc",
+    } = options;
+
+    const where: Prisma.OrderWhereInput = {
+      tenantId,
+      merchant: {
+        companyId,
+        ...(merchantId && { id: merchantId }),
+      },
+      ...(status && { status }),
+      ...(orderType && { orderType }),
+      ...(dateFrom &&
+        dateTo && {
+          createdAt: {
+            gte: dateFrom,
+            lte: dateTo,
+          },
+        }),
+      ...(search && {
+        OR: [
+          { orderNumber: { contains: search } },
+          { customerName: { contains: search } },
+          { customerPhone: { contains: search } },
+        ],
+      }),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        orderBy: { [orderBy]: orderDirection },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          customer: true,
+          merchant: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+        },
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  }
+
+  /**
    * Update order status and return updated order
    */
   async updateStatusAndReturn(

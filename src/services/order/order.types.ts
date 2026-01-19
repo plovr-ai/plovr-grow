@@ -98,6 +98,19 @@ export interface MerchantOrderListOptions {
   orderDirection?: "asc" | "desc";
 }
 
+export interface CompanyOrderListOptions {
+  merchantId?: string;
+  status?: OrderStatus;
+  orderType?: OrderType;
+  dateFrom?: Date;
+  dateTo?: Date;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  orderBy?: "createdAt" | "updatedAt" | "totalAmount";
+  orderDirection?: "asc" | "desc";
+}
+
 export interface OrderWithMerchant extends Order {
   merchant: {
     id: string;

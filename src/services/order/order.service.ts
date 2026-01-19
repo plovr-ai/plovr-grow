@@ -12,6 +12,7 @@ import type {
   OrderCalculation,
   UpdateOrderStatusInput,
   MerchantOrderListOptions,
+  CompanyOrderListOptions,
   TimelineEvent,
   OrderWithTimeline,
 } from "./order.types";
@@ -201,6 +202,19 @@ export class OrderService {
     }
 
     return events;
+  }
+
+  // ==================== Company Order Management ====================
+
+  /**
+   * Get orders for a company (all merchants under the company, for Dashboard)
+   */
+  async getCompanyOrders(
+    tenantId: string,
+    companyId: string,
+    options: CompanyOrderListOptions = {}
+  ) {
+    return orderRepository.getCompanyOrders(tenantId, companyId, options);
   }
 
   // ==================== Merchant Order Management ====================
