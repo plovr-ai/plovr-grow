@@ -6,10 +6,11 @@ import { useCartStore } from "@/stores";
 import type { ReactNode } from "react";
 
 // Mock next/navigation
+const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
   useParams: () => ({ merchantSlug: "test-restaurant" }),
   useRouter: () => ({
-    push: vi.fn(),
+    push: mockPush,
   }),
 }));
 
@@ -58,6 +59,7 @@ describe("CheckoutPage", () => {
     // Reset cart store before each test
     useCartStore.setState({ tenantId: null, items: [] });
     mockFetch.mockReset();
+    mockPush.mockReset();
   });
 
   describe("empty cart", () => {
@@ -268,17 +270,6 @@ describe("CheckoutPage", () => {
       expect(totalLabels).toHaveLength(2);
     });
 
-    it("should have mobile OrderSummary with lg:hidden class", () => {
-      const { container } = render(<CheckoutPage />, {
-        wrapper: createWrapper(),
-      });
-
-      // Mobile order summary should be in a lg:hidden container within the form
-      const mobileOrderSummary = container.querySelector(
-        ".lg\\:col-span-2 .lg\\:hidden"
-      );
-      expect(mobileOrderSummary).toBeInTheDocument();
-    });
   });
 
   describe("form validation", () => {
@@ -304,6 +295,88 @@ describe("CheckoutPage", () => {
           screen.getByText("Name must be at least 2 characters")
         ).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("order submission", () => {
+    beforeEach(() => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: mockCartItems,
+      });
+    });
+
+    it("should not show empty cart page after successful order", async () => {
+      // Mock successful API response
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { orderId: "order-123" },
+        }),
+      });
+
+      render(<CheckoutPage />, {
+        wrapper: createWrapper(),
+      });
+
+      // Fill in required form fields
+      fireEvent.change(screen.getByPlaceholderText("Your full name"), {
+        target: { value: "John Doe" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
+        target: { value: "(555) 123-4567" },
+      });
+
+      // Submit the form
+      const placeOrderButtons = screen.getAllByText("Place Order");
+      fireEvent.click(placeOrderButtons[0]);
+
+      // Wait for the submission to complete
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith(
+          "/r/test-restaurant/orders/order-123"
+        );
+      });
+
+      // Should NOT show empty cart message after successful order
+      expect(screen.queryByText("Your cart is empty")).not.toBeInTheDocument();
+    });
+
+    it("should show error message when order fails", async () => {
+      // Mock failed API response
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({
+          success: false,
+          error: "Failed to place order",
+        }),
+      });
+
+      render(<CheckoutPage />, {
+        wrapper: createWrapper(),
+      });
+
+      // Fill in required form fields
+      fireEvent.change(screen.getByPlaceholderText("Your full name"), {
+        target: { value: "John Doe" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
+        target: { value: "(555) 123-4567" },
+      });
+
+      // Submit the form
+      const placeOrderButtons = screen.getAllByText("Place Order");
+      fireEvent.click(placeOrderButtons[0]);
+
+      // Wait for error message to appear (mobile + desktop)
+      await waitFor(() => {
+        const errorMessages = screen.getAllByText("Failed to place order");
+        expect(errorMessages.length).toBeGreaterThan(0);
+      });
+
+      // Should NOT redirect
+      expect(mockPush).not.toHaveBeenCalled();
     });
   });
 

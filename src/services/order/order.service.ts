@@ -2,7 +2,7 @@
 // Uses OrderRepository (Prisma) for database operations.
 
 import { Prisma } from "@prisma/client";
-import { menuService, taxConfigService } from "@/services/menu";
+import { menuService } from "@/services/menu";
 import { orderRepository } from "@/repositories/order.repository";
 import { generateOrderNumber } from "@/lib/utils";
 import { calculateOrderPricing, type PricingItem, type TipInput } from "@/lib/pricing";
@@ -84,36 +84,21 @@ export class OrderService {
    * Uses unified pricing module for consistency with client-side calculation
    */
   async calculateOrderTotals(
-    tenantId: string,
+    _tenantId: string,
     merchantId: string,
     input: Pick<CreateOrderInput, "items" | "orderType" | "tipAmount" | "discountCode">
   ): Promise<OrderCalculation> {
-    // Collect all unique tax config IDs from items
-    const taxConfigIds = input.items
-      .map((item) => item.taxConfigId)
-      .filter((id): id is string => id != null);
-
-    // Get tax configs for calculation
-    const taxConfigMap = await taxConfigService.getTaxConfigsMap(
-      tenantId,
-      taxConfigIds
-    );
-
-    // Convert to PricingItem with embedded tax config values
-    const pricingItems: PricingItem[] = input.items.map((item) => {
-      const taxConfig = item.taxConfigId
-        ? taxConfigMap.get(item.taxConfigId)
-        : null;
-
-      return {
-        itemId: item.menuItemId,
-        unitPrice: item.totalPrice / item.quantity,
-        quantity: item.quantity,
-        tax: taxConfig
-          ? { rate: Number(taxConfig.rate), roundingMethod: taxConfig.roundingMethod }
-          : null,
-      };
-    });
+    // Convert to PricingItem using taxes from cart items directly
+    // Frontend already passes complete tax info (rate, roundingMethod)
+    const pricingItems: PricingItem[] = input.items.map((item) => ({
+      itemId: item.menuItemId,
+      unitPrice: item.totalPrice / item.quantity,
+      quantity: item.quantity,
+      taxes: (item.taxes || []).map((t) => ({
+        rate: t.rate,
+        roundingMethod: t.roundingMethod,
+      })),
+    }));
 
     // Convert tipAmount to TipInput (fixed amount)
     const tip: TipInput | null = input.tipAmount

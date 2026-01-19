@@ -85,6 +85,7 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isOrderSuccess, setIsOrderSuccess] = useState(false);
 
   // Get fee config from merchant context
   const { fees: configFees } = useFeeConfig();
@@ -259,7 +260,8 @@ export default function CheckoutPage() {
         throw new Error(data.error || "Failed to place order");
       }
 
-      // Success - clear cart and redirect to order detail page
+      // Success - set flag first, then clear cart and redirect
+      setIsOrderSuccess(true);
       clearCart();
       router.push(`/r/${merchantSlug}/orders/${data.data.orderId}`);
     } catch (error) {
@@ -280,8 +282,8 @@ export default function CheckoutPage() {
     );
   }
 
-  // Redirect to menu if cart is empty
-  if (items.length === 0) {
+  // Redirect to menu if cart is empty (but not after successful order)
+  if (items.length === 0 && !isOrderSuccess) {
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
@@ -440,17 +442,13 @@ export default function CheckoutPage() {
               />
             </div>
 
-            {/* Order Summary (Mobile only) */}
-            <div className="lg:hidden">
-              <OrderSummary items={items} merchantSlug={merchantSlug} />
-            </div>
+            {/* Order Summary */}
+            <OrderSummary items={items} merchantSlug={merchantSlug} />
           </div>
 
-          {/* Right: Order Summary + Price + Button (PC only) */}
+          {/* Right: Price + Button (PC only) */}
           <div className="hidden lg:block">
-            <div className="sticky top-24 space-y-4">
-              <OrderSummary items={items} merchantSlug={merchantSlug} />
-
+            <div className="sticky top-24">
               <div className="bg-white rounded-xl border border-gray-100 p-4">
                 <PriceSummary
                   subtotal={calculations.subtotal}

@@ -9,10 +9,11 @@ export class OrderRepository {
   async create(
     tenantId: string,
     merchantId: string,
-    data: Omit<Prisma.OrderCreateInput, "tenant" | "merchant">
+    data: Omit<Prisma.OrderCreateInput, "tenant" | "merchant" | "id">
   ) {
     return prisma.order.create({
       data: {
+        id: crypto.randomUUID(),
         ...data,
         tenant: { connect: { id: tenantId } },
         merchant: { connect: { id: merchantId } },
