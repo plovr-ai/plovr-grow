@@ -22,7 +22,6 @@ export interface TaxConfigData {
   name: string;
   description: string | null;
   roundingMethod: RoundingMethod;
-  isDefault: boolean;
   status: "active" | "inactive";
 }
 
@@ -56,7 +55,6 @@ export interface TaxConfigInfo {
   name: string;
   description: string | null;
   roundingMethod: RoundingMethod;
-  isDefault: boolean;
   status: "active" | "inactive";
 }
 
@@ -83,7 +81,6 @@ export interface CreateTaxConfigInput {
   name: string;
   description?: string;
   roundingMethod: RoundingMethod;
-  isDefault?: boolean;
   merchantRates?: Array<{ merchantId: string; rate: number }>;
 }
 
@@ -94,7 +91,6 @@ export interface UpdateTaxConfigInput {
   name?: string;
   description?: string;
   roundingMethod?: RoundingMethod;
-  isDefault?: boolean;
   status?: "active" | "inactive";
   merchantRates?: Array<{ merchantId: string; rate: number }>;
 }

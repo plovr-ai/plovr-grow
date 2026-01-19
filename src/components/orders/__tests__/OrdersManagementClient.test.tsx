@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { OrdersManagementClient } from "../OrdersManagementClient";
-import type { Order } from "@prisma/client";
+import { OrdersManagementClient, type SerializedOrder } from "../OrdersManagementClient";
 
 // Mock Next.js navigation hooks
 const mockPush = vi.fn();
@@ -20,7 +19,7 @@ describe("OrdersManagementClient", () => {
     { id: "merchant2", name: "Westside Location" },
   ];
 
-  const mockOrders: Omit<Order, "tenant">[] = [
+  const mockOrders: SerializedOrder[] = [
     {
       id: "order1",
       tenantId: "tenant1",
@@ -32,13 +31,13 @@ describe("OrdersManagementClient", () => {
       customerEmail: "john@example.com",
       orderType: "pickup",
       status: "pending",
-      items: JSON.stringify([]),
-      subtotal: "10.00" as any,
-      taxAmount: "0.88" as any,
-      tipAmount: "0.00" as any,
-      deliveryFee: "0.00" as any,
-      discount: "0.00" as any,
-      totalAmount: "10.88" as any,
+      items: [{ name: "Test Item", quantity: 1 }],
+      subtotal: 10.0,
+      taxAmount: 0.88,
+      tipAmount: 0.0,
+      deliveryFee: 0.0,
+      discount: 0.0,
+      totalAmount: 10.88,
       notes: null,
       deliveryAddress: null,
       scheduledAt: null,
@@ -48,6 +47,12 @@ describe("OrdersManagementClient", () => {
       completedAt: null,
       cancelledAt: null,
       cancelReason: null,
+      merchant: {
+        id: "merchant1",
+        name: "Downtown Location",
+        slug: "downtown",
+        timezone: "America/New_York",
+      },
     },
   ];
 

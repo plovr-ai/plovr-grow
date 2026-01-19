@@ -9,7 +9,6 @@ interface CreateTaxConfigInput {
   name: string;
   description?: string;
   roundingMethod: RoundingMethod;
-  isDefault: boolean;
   merchantRates: Array<{ merchantId: string; rate: number }>;
 }
 
@@ -17,7 +16,6 @@ interface UpdateTaxConfigInput {
   name?: string;
   description?: string;
   roundingMethod?: RoundingMethod;
-  isDefault?: boolean;
   merchantRates?: Array<{ merchantId: string; rate: number }>;
 }
 
@@ -35,7 +33,6 @@ export async function createTaxConfigAction(input: CreateTaxConfigInput) {
       name: input.name,
       description: input.description,
       roundingMethod: input.roundingMethod,
-      isDefault: input.isDefault,
       merchantRates: input.merchantRates,
     });
 
@@ -65,7 +62,6 @@ export async function updateTaxConfigAction(id: string, input: UpdateTaxConfigIn
       name: input.name,
       description: input.description,
       roundingMethod: input.roundingMethod,
-      isDefault: input.isDefault,
       merchantRates: input.merchantRates,
     });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Edit2, Trash2, Check } from "lucide-react";
+import { Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { deleteTaxConfigAction } from "@/app/(dashboard)/dashboard/(protected)/menu/tax/actions";
@@ -64,7 +64,6 @@ export function TaxConfigList({ taxConfigs, merchants, onEdit }: TaxConfigListPr
               <tr className="border-b text-left text-sm text-gray-500">
                 <th className="pb-3 pr-4 font-medium">Name</th>
                 <th className="pb-3 pr-4 font-medium">Rounding</th>
-                <th className="pb-3 pr-4 font-medium">Default</th>
                 <th className="pb-3 pr-4 font-medium">Store Rates</th>
                 <th className="pb-3 font-medium">Actions</th>
               </tr>
@@ -80,14 +79,6 @@ export function TaxConfigList({ taxConfigs, merchants, onEdit }: TaxConfigListPr
                   </td>
                   <td className="py-4 pr-4 text-sm">
                     {ROUNDING_METHOD_LABELS[config.roundingMethod] || config.roundingMethod}
-                  </td>
-                  <td className="py-4 pr-4">
-                    {config.isDefault && (
-                      <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
-                        <Check className="mr-1 h-3 w-3" />
-                        Default
-                      </span>
-                    )}
                   </td>
                   <td className="py-4 pr-4">
                     <StoreRatesSummary

@@ -290,7 +290,6 @@ async function main() {
       name: "Standard Tax",
       description: "Standard sales tax",
       roundingMethod: "half_up",
-      isDefault: true,
       status: "active",
     },
   });
@@ -305,7 +304,6 @@ async function main() {
       name: "Alcohol Tax",
       description: "Additional tax for alcoholic beverages",
       roundingMethod: "half_up",
-      isDefault: false,
       status: "active",
     },
   });
@@ -790,7 +788,6 @@ async function main() {
       name: "CA Sales Tax",
       description: "California sales tax",
       roundingMethod: "half_up",
-      isDefault: true,
       status: "active",
     },
   });

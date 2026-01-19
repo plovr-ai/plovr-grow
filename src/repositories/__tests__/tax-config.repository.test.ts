@@ -42,7 +42,6 @@ describe("TaxConfigRepository", () => {
           name: "Standard Tax",
           description: "Standard sales tax",
           roundingMethod: "half_up",
-          isDefault: true,
           status: "active",
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -54,7 +53,6 @@ describe("TaxConfigRepository", () => {
           name: "Alcohol Tax",
           description: "Additional alcohol tax",
           roundingMethod: "half_up",
-          isDefault: false,
           status: "active",
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -103,7 +101,6 @@ describe("TaxConfigRepository", () => {
         name: "Standard Tax",
         description: "Standard sales tax",
         roundingMethod: "half_up",
-        isDefault: true,
         status: "active",
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -144,7 +141,6 @@ describe("TaxConfigRepository", () => {
           name: "Standard Tax",
           description: null,
           roundingMethod: "half_up",
-          isDefault: true,
           status: "active",
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -156,7 +152,6 @@ describe("TaxConfigRepository", () => {
           name: "Alcohol Tax",
           description: null,
           roundingMethod: "half_up",
-          isDefault: false,
           status: "active",
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -185,40 +180,6 @@ describe("TaxConfigRepository", () => {
 
       expect(prisma.taxConfig.findMany).not.toHaveBeenCalled();
       expect(result).toHaveLength(0);
-    });
-  });
-
-  describe("getDefaultTaxConfig", () => {
-    it("should return the default tax config for a company", async () => {
-      const mockConfig = {
-        id: "tax-1",
-        tenantId: "tenant-1",
-        companyId: "company-1",
-        name: "Standard Tax",
-        description: null,
-        roundingMethod: "half_up",
-        isDefault: true,
-        status: "active",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      vi.mocked(prisma.taxConfig.findFirst).mockResolvedValue(mockConfig);
-
-      const result = await repository.getDefaultTaxConfig(
-        "tenant-1",
-        "company-1"
-      );
-
-      expect(prisma.taxConfig.findFirst).toHaveBeenCalledWith({
-        where: {
-          tenantId: "tenant-1",
-          companyId: "company-1",
-          isDefault: true,
-          status: "active",
-        },
-      });
-      expect(result?.isDefault).toBe(true);
     });
   });
 
@@ -473,7 +434,6 @@ describe("TaxConfigRepository", () => {
         name: "New Tax",
         description: "A new tax",
         roundingMethod: "half_up",
-        isDefault: false,
         status: "active",
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -485,7 +445,6 @@ describe("TaxConfigRepository", () => {
         name: "New Tax",
         description: "A new tax",
         roundingMethod: "half_up",
-        isDefault: false,
       });
 
       expect(prisma.taxConfig.create).toHaveBeenCalledWith({
@@ -496,7 +455,6 @@ describe("TaxConfigRepository", () => {
           name: "New Tax",
           description: "A new tax",
           roundingMethod: "half_up",
-          isDefault: false,
         },
       });
       expect(result.name).toBe("New Tax");
@@ -510,7 +468,6 @@ describe("TaxConfigRepository", () => {
         name: "Simple Tax",
         description: null,
         roundingMethod: "half_up",
-        isDefault: false,
         status: "active",
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -530,7 +487,6 @@ describe("TaxConfigRepository", () => {
           name: "Simple Tax",
           description: undefined,
           roundingMethod: "half_up",
-          isDefault: false,
         },
       });
     });

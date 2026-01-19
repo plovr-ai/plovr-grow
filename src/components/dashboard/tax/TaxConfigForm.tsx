@@ -48,7 +48,6 @@ export function TaxConfigForm({
   const [roundingMethod, setRoundingMethod] = useState<RoundingMethod>(
     taxConfig?.roundingMethod ?? "half_up"
   );
-  const [isDefault, setIsDefault] = useState(taxConfig?.isDefault ?? false);
 
   // Merchant rates state
   const [merchantRates, setMerchantRates] = useState<Record<string, MerchantRateState>>(() => {
@@ -117,14 +116,12 @@ export function TaxConfigForm({
             name: name.trim(),
             description: description.trim() || undefined,
             roundingMethod,
-            isDefault,
             merchantRates: rates,
           })
         : await createTaxConfigAction({
             name: name.trim(),
             description: description.trim() || undefined,
             roundingMethod,
-            isDefault,
             merchantRates: rates,
           });
 
@@ -195,21 +192,6 @@ export function TaxConfigForm({
                   </option>
                 ))}
               </Select>
-            </div>
-
-            {/* Is Default */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isDefault"
-                checked={isDefault}
-                onChange={(e) => setIsDefault(e.target.checked)}
-                disabled={isPending}
-                className="h-4 w-4 rounded border-gray-300"
-              />
-              <Label htmlFor="isDefault" className="font-normal">
-                Set as default tax type
-              </Label>
             </div>
 
             {/* Store Tax Rates */}

@@ -7,7 +7,6 @@ vi.mock("@/repositories/tax-config.repository", () => ({
     getTaxConfigsByCompany: vi.fn(),
     getTaxConfigById: vi.fn(),
     getTaxConfigsByIds: vi.fn(),
-    getDefaultTaxConfig: vi.fn(),
     getMerchantTaxRates: vi.fn(),
     getMerchantTaxRateMap: vi.fn(),
     getTaxConfigMerchantRates: vi.fn(),
@@ -34,7 +33,6 @@ describe("TaxConfigService", () => {
       name: "Standard Tax",
       description: "Standard sales tax",
       roundingMethod: "half_up",
-      isDefault: true,
       status: "active",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -46,7 +44,6 @@ describe("TaxConfigService", () => {
       name: "Alcohol Tax",
       description: "Additional alcohol tax",
       roundingMethod: "half_up",
-      isDefault: false,
       status: "active",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -58,7 +55,6 @@ describe("TaxConfigService", () => {
       name: "Reduced Tax",
       description: "Reduced rate for groceries",
       roundingMethod: "always_round_down",
-      isDefault: false,
       status: "active",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -88,7 +84,6 @@ describe("TaxConfigService", () => {
         name: "Standard Tax",
         description: "Standard sales tax",
         roundingMethod: "half_up",
-        isDefault: true,
         status: "active",
       });
     });
@@ -121,7 +116,6 @@ describe("TaxConfigService", () => {
         name: "Standard Tax",
         description: "Standard sales tax",
         roundingMethod: "half_up",
-        isDefault: true,
         status: "active",
       });
     });
@@ -154,31 +148,6 @@ describe("TaxConfigService", () => {
       expect(result.size).toBe(2);
       expect(result.get("tax-standard")?.name).toBe("Standard Tax");
       expect(result.get("tax-alcohol")?.name).toBe("Alcohol Tax");
-    });
-  });
-
-  describe("getDefaultTaxConfig", () => {
-    it("should return the default tax config", async () => {
-      vi.mocked(taxConfigRepository.getDefaultTaxConfig).mockResolvedValue(
-        mockTaxConfigs[0]
-      );
-
-      const result = await service.getDefaultTaxConfig("tenant-1", "company-1");
-
-      expect(taxConfigRepository.getDefaultTaxConfig).toHaveBeenCalledWith(
-        "tenant-1",
-        "company-1"
-      );
-      expect(result?.isDefault).toBe(true);
-      expect(result?.name).toBe("Standard Tax");
-    });
-
-    it("should return null when no default config exists", async () => {
-      vi.mocked(taxConfigRepository.getDefaultTaxConfig).mockResolvedValue(null);
-
-      const result = await service.getDefaultTaxConfig("tenant-1", "company-1");
-
-      expect(result).toBeNull();
     });
   });
 
@@ -264,13 +233,11 @@ describe("TaxConfigService", () => {
         name: "New Tax",
         description: "A new tax",
         roundingMethod: "half_up",
-        isDefault: false,
         status: "active",
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      vi.mocked(taxConfigRepository.getDefaultTaxConfig).mockResolvedValue(null);
       vi.mocked(taxConfigRepository.createTaxConfig).mockResolvedValue(newConfig);
       vi.mocked(taxConfigRepository.setMerchantTaxRate).mockResolvedValue({
         id: "mtr-1",
@@ -285,7 +252,6 @@ describe("TaxConfigService", () => {
         name: "New Tax",
         description: "A new tax",
         roundingMethod: "half_up",
-        isDefault: false,
         merchantRates: [{ merchantId: "merchant-1", rate: 0.09 }],
       });
 
@@ -296,7 +262,6 @@ describe("TaxConfigService", () => {
           name: "New Tax",
           description: "A new tax",
           roundingMethod: "half_up",
-          isDefault: false,
         }
       );
       expect(taxConfigRepository.setMerchantTaxRate).toHaveBeenCalledWith(
@@ -310,7 +275,6 @@ describe("TaxConfigService", () => {
 
   describe("updateTaxConfig", () => {
     it("should update a tax config", async () => {
-      vi.mocked(taxConfigRepository.getDefaultTaxConfig).mockResolvedValue(null);
       vi.mocked(taxConfigRepository.updateTaxConfig).mockResolvedValue({
         count: 1,
       });

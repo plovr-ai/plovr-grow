@@ -246,7 +246,6 @@ model TaxConfig {
   name             String
   description      String?           @db.Text
   roundingMethod   String            @default("half_up") @map("rounding_method")
-  isDefault        Boolean           @default(false) @map("is_default")
   status           String            @default("active")
   createdAt        DateTime          @default(now()) @map("created_at")
   updatedAt        DateTime          @updatedAt @map("updated_at")

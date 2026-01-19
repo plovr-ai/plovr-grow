@@ -35,13 +35,12 @@ export type MerchantInfo = WebsiteMerchantInfo;
 
 export interface FeaturedItem {
   id: string;
-  menuItemId?: string;
+  menuItemId?: string; // For adding to cart
   name: string;
   description: string;
   price: number;
   image: string;
   category?: string;
-  menuItemId?: string; // For adding to cart
   hasModifiers?: boolean; // Whether item has modifier options
 }
 

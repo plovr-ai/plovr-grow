@@ -46,20 +46,6 @@ export class TaxConfigRepository {
     });
   }
 
-  /**
-   * Get default tax config for a company
-   */
-  async getDefaultTaxConfig(tenantId: string, companyId: string) {
-    return prisma.taxConfig.findFirst({
-      where: {
-        tenantId,
-        companyId,
-        isDefault: true,
-        status: "active",
-      },
-    });
-  }
-
   // ==================== Merchant Tax Rates ====================
 
   /**
@@ -227,7 +213,6 @@ export class TaxConfigRepository {
       name: string;
       description?: string | null;
       roundingMethod?: string;
-      isDefault?: boolean;
     }
   ) {
     return prisma.taxConfig.create({
@@ -238,7 +223,6 @@ export class TaxConfigRepository {
         name: data.name,
         description: data.description,
         roundingMethod: data.roundingMethod ?? "half_up",
-        isDefault: data.isDefault ?? false,
       },
     });
   }

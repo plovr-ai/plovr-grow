@@ -39,7 +39,6 @@ export class TaxConfigService {
       name: c.name,
       description: c.description,
       roundingMethod: c.roundingMethod as RoundingMethod,
-      isDefault: c.isDefault,
       status: c.status as "active" | "inactive",
     }));
   }
@@ -61,7 +60,6 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
-      isDefault: config.isDefault,
       status: config.status as "active" | "inactive",
     };
   }
@@ -83,33 +81,10 @@ export class TaxConfigService {
         name: c.name,
         description: c.description,
         roundingMethod: c.roundingMethod as RoundingMethod,
-        isDefault: c.isDefault,
         status: c.status as "active" | "inactive",
       });
     }
     return map;
-  }
-
-  /**
-   * Get the default tax config for a company
-   */
-  async getDefaultTaxConfig(
-    tenantId: string,
-    companyId: string
-  ): Promise<TaxConfigData | null> {
-    const repository = await getRepository();
-    const config = await repository.getDefaultTaxConfig(tenantId, companyId);
-
-    if (!config) return null;
-
-    return {
-      id: config.id,
-      name: config.name,
-      description: config.description,
-      roundingMethod: config.roundingMethod as RoundingMethod,
-      isDefault: config.isDefault,
-      status: config.status as "active" | "inactive",
-    };
   }
 
   /**
@@ -151,7 +126,6 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
-      isDefault: config.isDefault,
       status: config.status as "active" | "inactive",
       merchantRates: merchants
         .map((merchant, index) => {
@@ -184,7 +158,6 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
-      isDefault: config.isDefault,
       status: config.status as "active" | "inactive",
     };
   }
@@ -201,16 +174,10 @@ export class TaxConfigService {
   ): Promise<TaxConfigInfo> {
     const repository = await getRepository();
 
-    // If setting as default, unset existing default
-    if (input.isDefault) {
-      await this.unsetDefaultTaxConfig(tenantId, companyId);
-    }
-
     const config = await repository.createTaxConfig(tenantId, companyId, {
       name: input.name,
       description: input.description,
       roundingMethod: input.roundingMethod,
-      isDefault: input.isDefault,
     });
 
     // Set merchant rates if provided
@@ -227,7 +194,6 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
-      isDefault: config.isDefault,
       status: config.status as "active" | "inactive",
     };
   }
@@ -243,17 +209,11 @@ export class TaxConfigService {
   ): Promise<void> {
     const repository = await getRepository();
 
-    // If setting as default, unset existing default
-    if (input.isDefault) {
-      await this.unsetDefaultTaxConfig(tenantId, companyId, id);
-    }
-
     // Update tax config
     const updateData: Record<string, unknown> = {};
     if (input.name !== undefined) updateData.name = input.name;
     if (input.description !== undefined) updateData.description = input.description;
     if (input.roundingMethod !== undefined) updateData.roundingMethod = input.roundingMethod;
-    if (input.isDefault !== undefined) updateData.isDefault = input.isDefault;
     if (input.status !== undefined) updateData.status = input.status;
 
     if (Object.keys(updateData).length > 0) {
@@ -309,25 +269,6 @@ export class TaxConfigService {
   ): Promise<void> {
     const repository = await getRepository();
     await repository.setMenuItemTaxConfigs(itemId, taxConfigIds);
-  }
-
-  // ==================== Helper methods ====================
-
-  /**
-   * Unset the default tax config for a company
-   */
-  private async unsetDefaultTaxConfig(
-    tenantId: string,
-    companyId: string,
-    excludeId?: string
-  ): Promise<void> {
-    const repository = await getRepository();
-    const currentDefault = await repository.getDefaultTaxConfig(tenantId, companyId);
-    if (currentDefault && currentDefault.id !== excludeId) {
-      await repository.updateTaxConfig(tenantId, currentDefault.id, {
-        isDefault: false,
-      });
-    }
   }
 }
 

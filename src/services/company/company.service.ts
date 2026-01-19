@@ -24,6 +24,7 @@ export class CompanyService {
       // Create tenant (for subscription/billing)
       const tenant = await tx.tenant.create({
         data: {
+          id: crypto.randomUUID(),
           name: input.tenantName,
         },
       });
@@ -31,6 +32,7 @@ export class CompanyService {
       // Create company (brand)
       const company = await tx.company.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId: tenant.id,
           slug: input.companySlug,
           name: input.companyName,
