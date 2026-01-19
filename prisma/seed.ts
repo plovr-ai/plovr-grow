@@ -340,7 +340,7 @@ async function main() {
           name: "Sourdough Loaf",
           description: "Our signature 24-hour fermented sourdough with a crispy crust",
           price: 8.99,
-          image: "https://images.unsplash.com/photo-1585478259715-876acc5be8eb?w=400&h=300&fit=crop",
+          image: "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=400&h=300&fit=crop",
           category: "Bread",
         },
         {
