@@ -169,96 +169,6 @@ const orderMockMethods = {
   }),
 };
 
-// Mock tax config data for Bella's Bakery
-const mockBellasTaxConfig = {
-  id: "tax-bella-standard",
-  tenantId: "tenant-bellas-bakery",
-  companyId: "company-bellas-bakery",
-  name: "Standard Tax",
-  description: "California state and local sales tax",
-  roundingMethod: "half_up",
-  isDefault: true,
-  status: "active",
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
-
-// TaxConfig model with Bella's Bakery data
-const taxConfigMockMethods = {
-  ...mockMethods,
-  findMany: async (args: any) => {
-    if (
-      args?.where?.companyId === "company-bellas-bakery" ||
-      args?.where?.tenantId === "tenant-bellas-bakery"
-    ) {
-      return [mockBellasTaxConfig];
-    }
-    return [];
-  },
-  findFirst: async (args: any) => {
-    if (
-      args?.where?.id === "tax-bella-standard" ||
-      args?.where?.companyId === "company-bellas-bakery"
-    ) {
-      return mockBellasTaxConfig;
-    }
-    return null;
-  },
-  findUnique: async (args: any) => {
-    if (args?.where?.id === "tax-bella-standard") {
-      return mockBellasTaxConfig;
-    }
-    return null;
-  },
-  create: async (args: any) => ({
-    id: `tax-${Date.now()}`,
-    ...args?.data,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }),
-  update: async (args: any) => ({
-    ...mockBellasTaxConfig,
-    ...args?.data,
-    updatedAt: new Date(),
-  }),
-};
-
-// Mock merchant tax rate data
-const mockBellasMerchantTaxRate = {
-  id: "rate-bella-standard",
-  merchantId: "merchant-bellas-sf",
-  taxConfigId: "tax-bella-standard",
-  rate: 0.0875, // 8.75% CA tax rate
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
-
-// MerchantTaxRate model
-const merchantTaxRateMockMethods = {
-  ...mockMethods,
-  findMany: async (args: any) => {
-    if (args?.where?.merchantId === "merchant-bellas-sf") {
-      return [mockBellasMerchantTaxRate];
-    }
-    return [];
-  },
-  findFirst: async (args: any) => {
-    if (
-      args?.where?.merchantId === "merchant-bellas-sf" ||
-      args?.where?.taxConfigId === "tax-bella-standard"
-    ) {
-      return mockBellasMerchantTaxRate;
-    }
-    return null;
-  },
-  upsert: async (args: any) => ({
-    ...mockBellasMerchantTaxRate,
-    ...args?.create,
-    ...args?.update,
-  }),
-  deleteMany: async () => ({ count: 1 }),
-};
-
 // Mock prisma instance with PrismaClient type for compatibility
 export const prisma = {
   menuCategory: mockMethods,
@@ -269,8 +179,8 @@ export const prisma = {
   order: orderMockMethods,
   customer: mockMethods,
   user: mockMethods,
-  taxConfig: taxConfigMockMethods,
-  merchantTaxRate: merchantTaxRateMockMethods,
+  taxConfig: mockMethods,
+  merchantTaxRate: mockMethods,
   menuItemTax: mockMethods,
   $connect: async () => {},
   $disconnect: async () => {},
