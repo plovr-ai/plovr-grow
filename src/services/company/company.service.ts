@@ -233,7 +233,7 @@ export class CompanyService {
 
     // Get current data or initialize
     const currentData =
-      (company.onboardingData as OnboardingData) || DEFAULT_ONBOARDING_DATA;
+      (company.onboardingData as unknown as OnboardingData) || DEFAULT_ONBOARDING_DATA;
 
     // Update the specific step
     const updatedData: OnboardingData = {

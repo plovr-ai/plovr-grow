@@ -62,6 +62,7 @@ model Company {
   users          User[]
   menuCategories MenuCategory[]
   menuItems      MenuItem[]
+  taxConfigs     TaxConfig[]
 
   @@index([tenantId])
   @@index([slug])
@@ -96,9 +97,10 @@ model Merchant {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
-  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   orders    Order[]
   customers Customer[]
+  taxRates  MerchantTaxRate[]
 
   @@index([companyId])
   @@index([slug])
@@ -174,9 +176,10 @@ model MenuItem {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company  Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  category MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  category      MenuCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  menuItemTaxes MenuItemTax[]
 
   @@index([tenantId])
   @@index([companyId])
@@ -267,4 +270,63 @@ model Customer {
   @@index([tenantId])
   @@index([merchantId])
   @@map("customers")
+}
+
+// ==================== Tax Configuration ====================
+
+model TaxConfig {
+  id             String   @id @default(cuid())
+  tenantId       String   @map("tenant_id")
+  companyId      String   @map("company_id")
+  name           String
+  description    String?  @db.Text
+  roundingMethod String   @default("half_up") @map("rounding_method") // half_up, half_even, always_round_up, always_round_down
+  isDefault      Boolean  @default(false) @map("is_default")
+  status         String   @default("active") // active, inactive
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  merchantTaxRates MerchantTaxRate[]
+  menuItemTaxes    MenuItemTax[]
+
+  @@index([tenantId])
+  @@index([companyId])
+  @@index([companyId, status])
+  @@map("tax_configs")
+}
+
+model MerchantTaxRate {
+  id          String   @id @default(cuid())
+  merchantId  String   @map("merchant_id")
+  taxConfigId String   @map("tax_config_id")
+  rate        Decimal  @db.Decimal(5, 4) // e.g., 0.0825 for 8.25%
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  merchant  Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  taxConfig TaxConfig @relation(fields: [taxConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([merchantId, taxConfigId])
+  @@index([merchantId])
+  @@index([taxConfigId])
+  @@map("merchant_tax_rates")
+}
+
+model MenuItemTax {
+  id          String   @id @default(cuid())
+  menuItemId  String   @map("menu_item_id")
+  taxConfigId String   @map("tax_config_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  menuItem  MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  taxConfig TaxConfig @relation(fields: [taxConfigId], references: [id], onDelete: Cascade)
+
+  @@unique([menuItemId, taxConfigId])
+  @@index([menuItemId])
+  @@index([taxConfigId])
+  @@map("menu_item_taxes")
 }

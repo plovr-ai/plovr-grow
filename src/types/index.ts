@@ -1,10 +1,11 @@
 import type { Prisma } from "@prisma/client";
+import type { ItemTaxInfo as _ItemTaxInfo, TaxBreakdownItem as _TaxBreakdownItem } from "@/services/menu/tax-config.types";
 
 // Re-export tax types for convenience
-export type {
-  TaxBreakdownItem,
-  ItemTaxInfo,
-} from "@/services/menu/tax-config.types";
+export type { _ItemTaxInfo as ItemTaxInfo, _TaxBreakdownItem as TaxBreakdownItem };
+
+// Local alias for use in this file
+type ItemTaxInfo = _ItemTaxInfo;
 
 // Re-export company and merchant types
 export * from "./company";
@@ -104,6 +105,7 @@ export interface OrderItemData {
   selectedModifiers: SelectedModifier[];
   specialInstructions?: string;
   totalPrice: number;
+  taxConfigId?: string;  // Tax config ID for tax calculation
   taxes?: ItemTaxInfo[];
 }
 

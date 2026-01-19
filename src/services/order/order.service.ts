@@ -96,7 +96,8 @@ export class OrderService {
     // Get tax configs for calculation
     const taxConfigMap = await taxConfigService.getTaxConfigsMap(
       tenantId,
-      taxConfigIds
+      taxConfigIds,
+      merchantId
     );
 
     // Convert to PricingItem with embedded tax config values
@@ -109,9 +110,9 @@ export class OrderService {
         itemId: item.menuItemId,
         unitPrice: item.totalPrice / item.quantity,
         quantity: item.quantity,
-        tax: taxConfig
-          ? { rate: Number(taxConfig.rate), roundingMethod: taxConfig.roundingMethod }
-          : null,
+        taxes: taxConfig
+          ? [{ rate: Number(taxConfig.rate), roundingMethod: taxConfig.roundingMethod }]
+          : [],
       };
     });
 

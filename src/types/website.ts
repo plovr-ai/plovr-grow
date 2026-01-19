@@ -36,6 +36,7 @@ export interface SocialLink {
 
 export interface FeaturedItem {
   id: string;
+  menuItemId?: string;
   name: string;
   description: string;
   price: number;

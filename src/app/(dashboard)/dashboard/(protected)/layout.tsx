@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { Sidebar, Header } from "@/components/dashboard";
+import { DashboardLayoutClient } from "@/components/dashboard";
+import { merchantService } from "@/services/merchant";
+import { companyRepository } from "@/repositories/company.repository";
 
 export default async function ProtectedLayout({
   children,
@@ -10,23 +12,43 @@ export default async function ProtectedLayout({
   const session = await auth();
 
   // Note: Middleware handles redirect, but this is a fallback
-  if (!session) {
+  if (!session?.user?.tenantId || !session?.user?.companyId) {
     redirect("/dashboard/login");
   }
 
+  const { tenantId, companyId } = session.user;
+
+  // Fetch company and merchants data
+  const [company, merchants] = await Promise.all([
+    companyRepository.getById(companyId),
+    merchantService.getMerchantsByCompanyId(tenantId, companyId),
+  ]);
+
+  if (!company) {
+    redirect("/dashboard/login");
+  }
+
+  const dashboardContext = {
+    tenantId,
+    companyId,
+    company: {
+      id: company.id,
+      name: company.name,
+      slug: company.slug,
+    },
+    merchants: merchants.map((m) => ({
+      id: m.id,
+      name: m.name,
+      slug: m.slug,
+      address: m.address ?? null,
+      city: m.city ?? null,
+      status: m.status,
+    })),
+  };
+
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Left Sidebar */}
-      <Sidebar />
-
-      {/* Right Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top Header */}
-        <Header />
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
-      </div>
-    </div>
+    <DashboardLayoutClient dashboardContext={dashboardContext}>
+      {children}
+    </DashboardLayoutClient>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -7,7 +8,9 @@ import {
   UtensilsCrossed,
   ShoppingCart,
   Settings,
-  Store,
+  List,
+  Receipt,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,70 +19,148 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   pattern?: RegExp;
+  children?: NavItem[];
 }
 
 const navigation: NavItem[] = [
   {
-    label: "Dashboard",
+    label: "Overview",
     href: "/dashboard",
     icon: LayoutDashboard,
     pattern: /^\/dashboard$/,
   },
   {
-    label: "Merchants",
-    href: "/dashboard/merchants",
-    icon: Store,
-    pattern: /^\/dashboard\/merchants/,
+    label: "Menu",
+    href: "/dashboard/menu",
+    icon: UtensilsCrossed,
+    pattern: /^\/dashboard\/menu/,
+    children: [
+      {
+        label: "Items",
+        href: "/dashboard/menu",
+        icon: List,
+        pattern: /^\/dashboard\/menu$/,
+      },
+      {
+        label: "Tax",
+        href: "/dashboard/menu/tax",
+        icon: Receipt,
+        pattern: /^\/dashboard\/menu\/tax/,
+      },
+    ],
+  },
+  {
+    label: "Orders",
+    href: "/dashboard/orders",
+    icon: ShoppingCart,
+    pattern: /^\/dashboard\/orders/,
+  },
+  {
+    label: "Settings",
+    href: "/dashboard/settings",
+    icon: Settings,
+    pattern: /^\/dashboard\/settings/,
   },
 ];
 
-function getMerchantNavigation(merchantId: string): NavItem[] {
-  return [
-    {
-      label: "Overview",
-      href: `/dashboard/${merchantId}`,
-      icon: LayoutDashboard,
-      pattern: new RegExp(`^/dashboard/${merchantId}$`),
-    },
-    {
-      label: "Menu",
-      href: `/dashboard/${merchantId}/menu`,
-      icon: UtensilsCrossed,
-      pattern: new RegExp(`^/dashboard/${merchantId}/menu`),
-    },
-    {
-      label: "Orders",
-      href: `/dashboard/${merchantId}/orders`,
-      icon: ShoppingCart,
-      pattern: new RegExp(`^/dashboard/${merchantId}/orders`),
-    },
-    {
-      label: "Settings",
-      href: `/dashboard/${merchantId}/settings`,
-      icon: Settings,
-      pattern: new RegExp(`^/dashboard/${merchantId}/settings`),
-    },
-  ];
-}
-
 export function Sidebar() {
   const pathname = usePathname();
-
-  // Check if we're on a merchant-specific page
-  const merchantMatch = pathname.match(/^\/dashboard\/([^/]+)/);
-  const merchantId = merchantMatch?.[1];
-
-  // Determine which navigation to show
-  const navItems =
-    merchantId && merchantId !== "merchants"
-      ? getMerchantNavigation(merchantId)
-      : navigation;
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   const isActive = (item: NavItem) => {
     if (item.pattern) {
       return item.pattern.test(pathname);
     }
     return pathname === item.href;
+  };
+
+  const isChildActive = (item: NavItem) => {
+    if (!item.children) return false;
+    return item.children.some((child) => isActive(child));
+  };
+
+  // Auto-expand parent when child is active
+  useEffect(() => {
+    navigation.forEach((item) => {
+      if (item.children) {
+        const hasActiveChild = item.children.some((child) => {
+          if (child.pattern) {
+            return child.pattern.test(pathname);
+          }
+          return pathname === child.href;
+        });
+        if (hasActiveChild) {
+          setExpandedItems((prev) => new Set(prev).add(item.href));
+        }
+      }
+    });
+  }, [pathname]);
+
+  const toggleExpanded = (href: string) => {
+    setExpandedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(href)) {
+        next.delete(href);
+      } else {
+        next.add(href);
+      }
+      return next;
+    });
+  };
+
+  const renderNavItem = (item: NavItem, depth: number = 0) => {
+    const Icon = item.icon;
+    const active = isActive(item);
+    const childActive = isChildActive(item);
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedItems.has(item.href);
+
+    if (hasChildren) {
+      return (
+        <div key={item.href}>
+          <button
+            onClick={() => toggleExpanded(item.href)}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              active || childActive
+                ? "bg-gray-100 text-gray-900"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            )}
+          >
+            <Icon className="h-5 w-5 shrink-0" />
+            <span className="flex-1 text-left">{item.label}</span>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 shrink-0 transition-transform",
+                isExpanded && "rotate-180"
+              )}
+            />
+          </button>
+          {isExpanded && (
+            <div className="ml-4 mt-1 space-y-1">
+              {item.children!.map((child) => renderNavItem(child, depth + 1))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn(
+          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+          depth > 0 && "pl-6",
+          active
+            ? "bg-gray-100 text-gray-900"
+            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+        )}
+      >
+        <Icon className={cn("shrink-0", depth > 0 ? "h-4 w-4" : "h-5 w-5")} />
+        <span>{item.label}</span>
+      </Link>
+    );
   };
 
   return (
@@ -91,33 +172,12 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item);
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                active
-                  ? "bg-gray-100 text-gray-900"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              )}
-            >
-              <Icon className="h-5 w-5 shrink-0" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+        {navigation.map((item) => renderNavItem(item))}
       </nav>
 
       {/* Footer */}
       <div className="border-t border-gray-200 p-4">
-        <p className="text-xs text-gray-500">
-          Reborn Dashboard v0.1.0
-        </p>
+        <p className="text-xs text-gray-500">Reborn Dashboard v0.1.0</p>
       </div>
     </aside>
   );

@@ -76,6 +76,59 @@ export class MerchantRepository {
   }
 
   /**
+   * Get merchant by ID with company info
+   */
+  async getByIdWithCompany(merchantId: string) {
+    return prisma.merchant.findUnique({
+      where: { id: merchantId },
+      include: {
+        company: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Get all merchants for a company with company info
+   */
+  async getByCompanyIdWithCompany(companyId: string) {
+    return prisma.merchant.findMany({
+      where: { companyId },
+      orderBy: { name: "asc" },
+      include: {
+        company: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Get active merchants for a company with company info
+   */
+  async getActiveByCompanyIdWithCompany(companyId: string) {
+    return prisma.merchant.findMany({
+      where: {
+        companyId,
+        status: "active",
+      },
+      orderBy: { name: "asc" },
+      include: {
+        company: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
    * Create a new merchant
    */
   async create(
@@ -97,6 +150,23 @@ export class MerchantRepository {
     return prisma.merchant.update({
       where: { id: merchantId },
       data,
+    });
+  }
+
+  /**
+   * Update merchant settings (JSON field)
+   */
+  async updateSettings(merchantId: string, settings: Record<string, unknown>) {
+    return prisma.merchant.update({
+      where: { id: merchantId },
+      data: { settings: settings as Prisma.InputJsonValue },
+      include: {
+        company: {
+          include: {
+            tenant: true,
+          },
+        },
+      },
     });
   }
 

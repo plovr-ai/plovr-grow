@@ -77,6 +77,18 @@ export class MenuService {
   }
 
   /**
+   * Get menu items by IDs using company ID directly (for company-level pages)
+   *
+   * @param tenantId - Tenant ID for isolation
+   * @param companyId - Company ID
+   * @param itemIds - Array of menu item IDs to fetch
+   */
+  async getMenuItemsByCompanyId(tenantId: string, companyId: string, itemIds: string[]) {
+    const { menuRepository } = await getRepositories();
+    return menuRepository.getItemsByIdsByCompany(tenantId, companyId, itemIds);
+  }
+
+  /**
    * Create a new category at company level
    */
   async createCategory(

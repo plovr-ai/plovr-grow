@@ -103,6 +103,19 @@ export async function initTestData() {
   });
   console.log(`[Test Data] Created onboarding test user: onboarding@example.com`);
 
+  // Create Bella's Bakery test account (matches seed data)
+  mockUserStore.create({
+    tenantId: "tenant-bellas-bakery",
+    companyId: "company-bellas-bakery",
+    email: "bella@bellas-bakery.com",
+    passwordHash,
+    name: "Bella Owner",
+    role: "owner",
+    status: "active",
+    lastLoginAt: null,
+  });
+  console.log(`[Test Data] Created Bella's Bakery user: bella@bellas-bakery.com`);
+
   console.log("[Test Data] Initialization complete!");
   console.log("\nTest Accounts:");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -125,5 +138,10 @@ export async function initTestData() {
   console.log("🔑 Password: password123");
   console.log("👤 Role: owner");
   console.log("✨ Status: NOT onboarded (test onboarding flow!)");
+  console.log("");
+  console.log("🍞 Email: bella@bellas-bakery.com");
+  console.log("🔑 Password: password123");
+  console.log("👤 Role: owner");
+  console.log("🏪 Company: Bella's Bakery");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 }

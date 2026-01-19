@@ -120,6 +120,31 @@ export class TaxConfigRepository {
     });
   }
 
+  /**
+   * Delete tax rate for a merchant
+   */
+  async deleteMerchantTaxRate(merchantId: string, taxConfigId: string) {
+    return prisma.merchantTaxRate.delete({
+      where: {
+        merchantId_taxConfigId: {
+          merchantId,
+          taxConfigId,
+        },
+      },
+    });
+  }
+
+  /**
+   * Get all merchant rates for a specific tax config
+   */
+  async getTaxConfigMerchantRates(taxConfigId: string) {
+    return prisma.merchantTaxRate.findMany({
+      where: {
+        taxConfigId,
+      },
+    });
+  }
+
   // ==================== Menu Item Taxes ====================
 
   /**
