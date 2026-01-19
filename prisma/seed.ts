@@ -482,14 +482,14 @@ async function main() {
 
   console.log(`Created merchant: ${bellaMerchant.name} (single location)`);
 
-  // Create menu categories for Bella's Bakery
+  // Create menu categories for Bella's Bakery (company-level menu)
   const bellaBreadCategory = await prisma.menuCategory.upsert({
     where: { id: "bella-cat-bread" },
     update: {},
     create: {
       id: "bella-cat-bread",
       tenantId: bellaTenant.id,
-      merchantId: bellaMerchant.id,
+      companyId: bellaCompany.id,
       name: "Artisan Breads",
       description: "Handcrafted breads baked fresh daily",
       sortOrder: 1,
@@ -502,7 +502,7 @@ async function main() {
     create: {
       id: "bella-cat-pastry",
       tenantId: bellaTenant.id,
-      merchantId: bellaMerchant.id,
+      companyId: bellaCompany.id,
       name: "Pastries",
       description: "Sweet and savory pastries",
       sortOrder: 2,
@@ -515,7 +515,7 @@ async function main() {
     create: {
       id: "bella-cat-coffee",
       tenantId: bellaTenant.id,
-      merchantId: bellaMerchant.id,
+      companyId: bellaCompany.id,
       name: "Coffee & Drinks",
       description: "Specialty coffee and beverages",
       sortOrder: 3,
@@ -530,7 +530,7 @@ async function main() {
     {
       id: "bella-item-sourdough",
       tenantId: bellaTenant.id,
-      merchantId: bellaMerchant.id,
+      companyId: bellaCompany.id,
       categoryId: bellaBreadCategory.id,
       name: "Sourdough Loaf",
       description: "Our signature 24-hour fermented sourdough with a crispy crust and soft interior",
@@ -542,7 +542,7 @@ async function main() {
     {
       id: "bella-item-baguette",
       tenantId: bellaTenant.id,
-      merchantId: bellaMerchant.id,
+      companyId: bellaCompany.id,
       categoryId: bellaBreadCategory.id,
       name: "French Baguette",
       description: "Traditional French baguette with a golden crust",
@@ -554,7 +554,7 @@ async function main() {
     {
       id: "bella-item-focaccia",
       tenantId: bellaTenant.id,
-      merchantId: bellaMerchant.id,
+      companyId: bellaCompany.id,
       categoryId: bellaBreadCategory.id,
       name: "Rosemary Focaccia",
       description: "Italian flatbread with fresh rosemary and sea salt",
@@ -567,7 +567,7 @@ async function main() {
     {
       id: "bella-item-croissant",
       tenantId: bellaTenant.id,
-      merchantId: bellaMerchant.id,
+      companyId: bellaCompany.id,
       categoryId: bellaPastryCategory.id,
       name: "Butter Croissant",
       description: "Flaky, golden layers of French butter perfection",
@@ -579,7 +579,7 @@ async function main() {
     {
       id: "bella-item-almond-danish",
       tenantId: bellaTenant.id,
-      merchantId: bellaMerchant.id,
+      companyId: bellaCompany.id,
       categoryId: bellaPastryCategory.id,
       name: "Almond Danish",
       description: "Sweet almond cream in a buttery Danish pastry",
@@ -591,7 +591,7 @@ async function main() {
     {
       id: "bella-item-chocolate-croissant",
       tenantId: bellaTenant.id,
-      merchantId: bellaMerchant.id,
+      companyId: bellaCompany.id,
       categoryId: bellaPastryCategory.id,
       name: "Chocolate Croissant",
       description: "Buttery croissant filled with rich dark chocolate",
@@ -603,7 +603,7 @@ async function main() {
     {
       id: "bella-item-cinnamon-roll",
       tenantId: bellaTenant.id,
-      merchantId: bellaMerchant.id,
+      companyId: bellaCompany.id,
       categoryId: bellaPastryCategory.id,
       name: "Cinnamon Roll",
       description: "Warm, gooey cinnamon roll with cream cheese frosting",
@@ -616,7 +616,7 @@ async function main() {
     {
       id: "bella-item-cappuccino",
       tenantId: bellaTenant.id,
-      merchantId: bellaMerchant.id,
+      companyId: bellaCompany.id,
       categoryId: bellaCoffeeCategory.id,
       name: "Cappuccino",
       description: "Rich espresso with perfectly steamed milk and foam",
@@ -650,7 +650,7 @@ async function main() {
     {
       id: "bella-item-latte",
       tenantId: bellaTenant.id,
-      merchantId: bellaMerchant.id,
+      companyId: bellaCompany.id,
       categoryId: bellaCoffeeCategory.id,
       name: "Café Latte",
       description: "Smooth espresso with steamed milk",
@@ -673,7 +673,7 @@ async function main() {
     {
       id: "bella-item-drip-coffee",
       tenantId: bellaTenant.id,
-      merchantId: bellaMerchant.id,
+      companyId: bellaCompany.id,
       categoryId: bellaCoffeeCategory.id,
       name: "Drip Coffee",
       description: "House blend drip coffee",
@@ -737,6 +737,21 @@ async function main() {
     },
   });
 
+  const pastaCategory = await prisma.menuCategory.upsert({
+    where: {
+      id: "cat-pasta",
+    },
+    update: {},
+    create: {
+      id: "cat-pasta",
+      tenantId: tenant.id,
+      companyId: company.id,
+      name: "Pasta",
+      description: "Homemade pasta dishes",
+      sortOrder: 3,
+    },
+  });
+
   const drinksCategory = await prisma.menuCategory.upsert({
     where: {
       id: "cat-drinks",
@@ -748,7 +763,7 @@ async function main() {
       companyId: company.id,
       name: "Drinks",
       description: "Beverages",
-      sortOrder: 3,
+      sortOrder: 4,
     },
   });
 
@@ -765,29 +780,34 @@ async function main() {
       name: "Classic Cheese Pizza",
       description: "Our signature pizza with fresh mozzarella and house-made tomato sauce",
       price: 18.99,
+      imageUrl: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop",
       sortOrder: 1,
-      tags: ["vegetarian"],
+      tags: ["vegetarian", "popular"],
       options: [
         {
           id: "size",
           name: "Size",
           type: "single",
           required: true,
-          choices: [
-            { id: "small", name: "Small (10\")", price: 0 },
-            { id: "medium", name: "Medium (14\")", price: 4 },
-            { id: "large", name: "Large (18\")", price: 8 },
+          modifiers: [
+            { id: "size-s", name: "Small (10\")", price: 0, isDefault: true },
+            { id: "size-m", name: "Medium (14\")", price: 4 },
+            { id: "size-l", name: "Large (18\")", price: 8 },
           ],
         },
         {
-          id: "crust",
-          name: "Crust",
-          type: "single",
+          id: "toppings",
+          name: "Extra Toppings",
+          type: "multiple",
           required: false,
-          choices: [
-            { id: "regular", name: "Regular", price: 0 },
-            { id: "thin", name: "Thin Crust", price: 0 },
-            { id: "thick", name: "Thick Crust", price: 2 },
+          allowQuantity: true,
+          maxQuantityPerModifier: 3,
+          modifiers: [
+            { id: "topping-pepperoni", name: "Pepperoni", price: 2 },
+            { id: "topping-mushrooms", name: "Mushrooms", price: 1.5 },
+            { id: "topping-olives", name: "Black Olives", price: 1.5 },
+            { id: "topping-peppers", name: "Bell Peppers", price: 1.5 },
+            { id: "topping-onions", name: "Onions", price: 1 },
           ],
         },
       ],
@@ -798,20 +818,21 @@ async function main() {
       companyId: company.id,
       categoryId: pizzaCategory.id,
       name: "Pepperoni Pizza",
-      description: "Classic pepperoni with mozzarella cheese",
+      description: "Classic pepperoni with premium mozzarella cheese",
       price: 21.99,
+      imageUrl: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop",
       sortOrder: 2,
-      tags: [],
+      tags: ["popular"],
       options: [
         {
           id: "size",
           name: "Size",
           type: "single",
           required: true,
-          choices: [
-            { id: "small", name: "Small (10\")", price: 0 },
-            { id: "medium", name: "Medium (14\")", price: 4 },
-            { id: "large", name: "Large (18\")", price: 8 },
+          modifiers: [
+            { id: "size-s", name: "Small (10\")", price: 0, isDefault: true },
+            { id: "size-m", name: "Medium (14\")", price: 4 },
+            { id: "size-l", name: "Large (18\")", price: 8 },
           ],
         },
       ],
@@ -824,6 +845,7 @@ async function main() {
       name: "Margherita Pizza",
       description: "Fresh tomatoes, mozzarella, basil, and olive oil",
       price: 19.99,
+      imageUrl: "https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=400&h=300&fit=crop",
       sortOrder: 3,
       tags: ["vegetarian"],
       options: [
@@ -832,22 +854,23 @@ async function main() {
           name: "Size",
           type: "single",
           required: true,
-          choices: [
-            { id: "small", name: "Small (10\")", price: 0 },
-            { id: "medium", name: "Medium (14\")", price: 4 },
-            { id: "large", name: "Large (18\")", price: 8 },
+          modifiers: [
+            { id: "size-s", name: "Small (10\")", price: 0, isDefault: true },
+            { id: "size-m", name: "Medium (14\")", price: 4 },
+            { id: "size-l", name: "Large (18\")", price: 8 },
           ],
         },
       ],
     },
     {
-      id: "item-meat-lovers-pizza",
+      id: "item-supreme-pizza",
       tenantId: tenant.id,
       companyId: company.id,
       categoryId: pizzaCategory.id,
-      name: "Meat Lovers Pizza",
-      description: "Pepperoni, sausage, bacon, and ham",
+      name: "Supreme Pizza",
+      description: "Pepperoni, sausage, peppers, onions, and mushrooms",
       price: 24.99,
+      imageUrl: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop",
       sortOrder: 4,
       tags: [],
       options: [
@@ -856,13 +879,65 @@ async function main() {
           name: "Size",
           type: "single",
           required: true,
-          choices: [
-            { id: "small", name: "Small (10\")", price: 0 },
-            { id: "medium", name: "Medium (14\")", price: 4 },
-            { id: "large", name: "Large (18\")", price: 8 },
+          modifiers: [
+            { id: "size-s", name: "Small (10\")", price: 0, isDefault: true },
+            { id: "size-m", name: "Medium (14\")", price: 4 },
+            { id: "size-l", name: "Large (18\")", price: 8 },
           ],
         },
       ],
+    },
+    // Pasta
+    {
+      id: "item-spaghetti-meatballs",
+      tenantId: tenant.id,
+      companyId: company.id,
+      categoryId: pastaCategory.id,
+      name: "Spaghetti & Meatballs",
+      description: "Classic spaghetti with house-made meatballs and marinara sauce",
+      price: 16.99,
+      imageUrl: "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=300&fit=crop",
+      sortOrder: 1,
+      tags: [],
+      options: [],
+    },
+    {
+      id: "item-fettuccine-alfredo",
+      tenantId: tenant.id,
+      companyId: company.id,
+      categoryId: pastaCategory.id,
+      name: "Fettuccine Alfredo",
+      description: "Creamy parmesan alfredo sauce over fettuccine",
+      price: 15.99,
+      imageUrl: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=400&h=300&fit=crop",
+      sortOrder: 2,
+      tags: ["vegetarian"],
+      options: [
+        {
+          id: "protein",
+          name: "Add Protein",
+          type: "multiple",
+          required: false,
+          modifiers: [
+            { id: "protein-chicken", name: "Grilled Chicken", price: 4 },
+            { id: "protein-shrimp", name: "Shrimp", price: 5 },
+            { id: "protein-meatballs", name: "Meatballs (3)", price: 3 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "item-baked-ziti",
+      tenantId: tenant.id,
+      companyId: company.id,
+      categoryId: pastaCategory.id,
+      name: "Baked Ziti",
+      description: "Ziti pasta baked with ricotta, mozzarella, and marinara",
+      price: 14.99,
+      imageUrl: "https://images.unsplash.com/photo-1629115916087-7e8c114a24ed?w=400&h=300&fit=crop",
+      sortOrder: 3,
+      tags: ["vegetarian"],
+      options: [],
     },
     // Sides
     {
@@ -873,8 +948,9 @@ async function main() {
       name: "Garlic Knots",
       description: "Fresh baked knots with garlic butter (6 pieces)",
       price: 5.99,
+      imageUrl: "https://images.unsplash.com/photo-1619531040576-f9416740661b?w=400&h=300&fit=crop",
       sortOrder: 1,
-      tags: ["vegetarian"],
+      tags: ["vegetarian", "popular"],
       options: [],
     },
     {
@@ -883,8 +959,9 @@ async function main() {
       companyId: company.id,
       categoryId: sidesCategory.id,
       name: "Mozzarella Sticks",
-      description: "Crispy fried mozzarella with marinara sauce (6 pieces)",
-      price: 8.99,
+      description: "Crispy fried mozzarella served with marinara (6 pieces)",
+      price: 7.99,
+      imageUrl: "https://images.unsplash.com/photo-1531749668029-2db88e4276c7?w=400&h=300&fit=crop",
       sortOrder: 2,
       tags: ["vegetarian"],
       options: [],
@@ -895,55 +972,82 @@ async function main() {
       companyId: company.id,
       categoryId: sidesCategory.id,
       name: "Caesar Salad",
-      description: "Romaine lettuce, parmesan, croutons, and Caesar dressing",
-      price: 9.99,
+      description: "Crisp romaine, parmesan, croutons, and caesar dressing",
+      price: 8.99,
+      imageUrl: "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400&h=300&fit=crop",
       sortOrder: 3,
       tags: ["vegetarian"],
       options: [
         {
-          id: "protein",
-          name: "Add Protein",
+          id: "dressing",
+          name: "Dressing",
           type: "single",
+          required: true,
+          modifiers: [
+            { id: "dressing-caesar", name: "Caesar", price: 0, isDefault: true },
+            { id: "dressing-ranch", name: "Ranch", price: 0 },
+            { id: "dressing-italian", name: "Italian", price: 0 },
+            { id: "dressing-balsamic", name: "Balsamic Vinaigrette", price: 0 },
+          ],
+        },
+        {
+          id: "extras",
+          name: "Add Extras",
+          type: "multiple",
           required: false,
-          choices: [
-            { id: "none", name: "No Protein", price: 0 },
-            { id: "chicken", name: "Grilled Chicken", price: 4 },
-            { id: "shrimp", name: "Shrimp", price: 6 },
+          modifiers: [
+            { id: "extra-chicken", name: "Grilled Chicken", price: 4 },
+            { id: "extra-bacon", name: "Bacon Bits", price: 2 },
+            { id: "extra-avocado", name: "Avocado", price: 2.5 },
           ],
         },
       ],
     },
     // Drinks
     {
-      id: "item-soda",
+      id: "item-fountain-drink",
       tenantId: tenant.id,
       companyId: company.id,
       categoryId: drinksCategory.id,
-      name: "Soda",
-      description: "Coca-Cola, Sprite, or Fanta",
-      price: 2.49,
+      name: "Fountain Drink",
+      description: "Coca-Cola, Sprite, Fanta, or Lemonade",
+      price: 2.99,
       sortOrder: 1,
       tags: [],
       options: [
         {
-          id: "flavor",
-          name: "Flavor",
-          type: "single",
-          required: true,
-          choices: [
-            { id: "coke", name: "Coca-Cola", price: 0 },
-            { id: "sprite", name: "Sprite", price: 0 },
-            { id: "fanta", name: "Fanta Orange", price: 0 },
-          ],
-        },
-        {
-          id: "size",
+          id: "size-drink",
           name: "Size",
           type: "single",
           required: true,
-          choices: [
-            { id: "regular", name: "Regular (12 oz)", price: 0 },
-            { id: "large", name: "Large (20 oz)", price: 1 },
+          modifiers: [
+            { id: "drink-small", name: "Small", price: 0, isDefault: true },
+            { id: "drink-medium", name: "Medium", price: 0.5 },
+            { id: "drink-large", name: "Large", price: 1 },
+          ],
+        },
+      ],
+    },
+    {
+      id: "item-italian-soda",
+      tenantId: tenant.id,
+      companyId: company.id,
+      categoryId: drinksCategory.id,
+      name: "Italian Soda",
+      description: "Sparkling water with your choice of flavor",
+      price: 3.99,
+      sortOrder: 2,
+      tags: [],
+      options: [
+        {
+          id: "size-drink",
+          name: "Size",
+          type: "single",
+          required: true,
+          modifiers: [
+            { id: "drink-small", name: "Small", price: 0, isDefault: true },
+            { id: "drink-medium", name: "Medium", price: 0.5 },
+            { id: "drink-large", name: "Large", price: 1 },
           ],
         },
       ],
@@ -956,7 +1060,7 @@ async function main() {
       name: "Bottled Water",
       description: "Purified spring water",
       price: 1.99,
-      sortOrder: 2,
+      sortOrder: 3,
       tags: [],
       options: [],
     },

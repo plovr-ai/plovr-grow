@@ -36,7 +36,7 @@ export class OrderService {
 
     // Validate menu items exist and are available
     const itemIds = input.items.map((item) => item.menuItemId);
-    const menuItems = await menuService.getMenuItemsByIds(tenantId, itemIds);
+    const menuItems = await menuService.getMenuItemsByIds(tenantId, merchantId, itemIds);
 
     if (menuItems.length !== itemIds.length) {
       throw new Error("Some menu items are not available");

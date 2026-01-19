@@ -1,4 +1,3 @@
-import { getMockGetMenuResponse, mockGetMenuResponse } from "@/data/mock/menu-service";
 import type {
   GetMenuResponse,
   CreateCategoryInput,
@@ -29,30 +28,26 @@ export class MenuService {
    * @param merchantId - Merchant ID (used to get companyId and merchant info)
    */
   async getMenu(tenantId: string, merchantId: string): Promise<GetMenuResponse> {
-    // Temporarily use mock data until database is ready
-    return getMockGetMenuResponse(tenantId, merchantId);
+    const { menuRepository, merchantRepository } = await getRepositories();
 
-    // Database implementation (commented out for now):
-    // const { menuRepository, merchantRepository } = await getRepositories();
-    //
-    // // Get merchant to find companyId
-    // const merchant = await merchantRepository.getById(merchantId);
-    // if (!merchant) {
-    //   throw new Error("Merchant not found");
-    // }
-    //
-    // // Fetch Company-level menu using companyId
-    // const categories = await menuRepository.getCategoriesWithItemsByCompany(
-    //   tenantId,
-    //   merchant.companyId
-    // );
-    //
-    // return {
-    //   categories,
-    //   merchantId,
-    //   merchantName: merchant.name,
-    //   merchantLogo: merchant.logoUrl || null,
-    // };
+    // Get merchant to find companyId
+    const merchant = await merchantRepository.getById(merchantId);
+    if (!merchant) {
+      throw new Error("Merchant not found");
+    }
+
+    // Fetch Company-level menu using companyId
+    const categories = await menuRepository.getCategoriesWithItemsByCompany(
+      tenantId,
+      merchant.companyId
+    );
+
+    return {
+      categories,
+      merchantId,
+      merchantName: merchant.name,
+      merchantLogo: merchant.logoUrl || null,
+    };
   }
 
   /**
@@ -65,23 +60,20 @@ export class MenuService {
 
   /**
    * Get menu items by IDs (for cart validation)
-   * TODO: Replace mock data with database implementation
+   *
+   * @param tenantId - Tenant ID for isolation
+   * @param merchantId - Merchant ID (used to get companyId)
+   * @param itemIds - Array of menu item IDs to fetch
    */
-  async getMenuItemsByIds(_tenantId: string, itemIds: string[]) {
-    // Temporarily use mock data until database is ready
-    const allItems = mockGetMenuResponse.categories.flatMap((cat) => cat.menuItems);
-    const uniqueItems = new Map(allItems.map((item) => [item.id, item]));
-    return itemIds
-      .map((id) => uniqueItems.get(id))
-      .filter((item): item is NonNullable<typeof item> => item != null);
+  async getMenuItemsByIds(tenantId: string, merchantId: string, itemIds: string[]) {
+    const { menuRepository, merchantRepository } = await getRepositories();
 
-    // Database implementation (commented out for now):
-    // const { menuRepository, merchantRepository } = await getRepositories();
-    // const merchant = await merchantRepository.getById(merchantId);
-    // if (!merchant) {
-    //   throw new Error("Merchant not found");
-    // }
-    // return menuRepository.getItemsByIdsByCompany(tenantId, merchant.companyId, itemIds);
+    const merchant = await merchantRepository.getById(merchantId);
+    if (!merchant) {
+      throw new Error("Merchant not found");
+    }
+
+    return menuRepository.getItemsByIdsByCompany(tenantId, merchant.companyId, itemIds);
   }
 
   /**
