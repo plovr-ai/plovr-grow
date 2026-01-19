@@ -20,10 +20,11 @@ export interface MerchantSettings {
   estimatedPrepTime?: number; // minutes
   tipConfig?: TipConfig;
   feeConfig?: FeeConfig;
-  // Website configuration (merchant-level override)
+
+  // Website configuration (merchant-level, can override company defaults)
   website?: {
-    tagline?: string;
-    heroImage?: string;
+    tagline?: string; // Override company tagline for this location
+    heroImage?: string; // Override company hero image for this location
   };
 }
 
@@ -85,97 +86,5 @@ export interface MerchantContext {
   tenantId: string;
 }
 
-// ==================== Merchant Input Types ====================
-
-export interface CreateMerchantInput {
-  slug: string;
-  name: string;
-  description?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  country?: string;
-  phone?: string;
-  email?: string;
-  logoUrl?: string;
-  bannerUrl?: string;
-  businessHours?: BusinessHoursMap;
-  timezone?: string;
-  currency?: string;
-  locale?: string;
-  taxRate?: number;
-  settings?: MerchantSettings;
-}
-
-export interface UpdateMerchantInput {
-  slug?: string;
-  name?: string;
-  description?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  country?: string;
-  phone?: string;
-  email?: string;
-  logoUrl?: string;
-  bannerUrl?: string;
-  businessHours?: BusinessHoursMap;
-  timezone?: string;
-  currency?: string;
-  locale?: string;
-  taxRate?: number;
-  settings?: MerchantSettings;
-  status?: MerchantStatus;
-}
-
-// Update settings input (just the settings field)
-export type UpdateMerchantSettingsInput = Partial<MerchantSettings>;
-
-// Filter options for getMerchants
-export interface GetMerchantsFilter {
-  status?: MerchantStatus;
-}
-
-// Import SocialLink from company.ts to avoid duplicate
-import type { SocialLink } from "./company";
-
-// Website display data (merged Company + Merchant data)
-export interface WebsiteMerchantData {
-  name: string;
-  tagline: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  phone: string;
-  email: string;
-  logo: string;
-  heroImage: string;
-  businessHours: BusinessHoursMap;
-  socialLinks: SocialLink[];
-  currency: string;
-  locale: string;
-  tipConfig?: TipConfig;
-  feeConfig?: FeeConfig;
-  featuredItems?: {
-    id: string;
-    name: string;
-    description: string;
-    price: number;
-    image: string;
-    category?: string;
-    menuItemId?: string;
-    hasModifiers?: boolean;
-  }[];
-  reviews?: {
-    id: string;
-    customerName: string;
-    rating: number;
-    content: string;
-    date: string;
-    source: "google" | "yelp" | "facebook" | "website";
-    avatarUrl?: string;
-  }[];
-}
+// Note: Input types (CreateMerchantInput, UpdateMerchantInput) are defined in
+// @/services/merchant/merchant.types.ts for better service encapsulation

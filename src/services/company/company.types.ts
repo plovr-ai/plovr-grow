@@ -12,7 +12,7 @@ export type {
 export type {
   CreateMerchantInput,
   UpdateMerchantInput,
-} from "@/types/merchant";
+} from "@/services/merchant/merchant.types";
 
 export type {
   OnboardingStatus,

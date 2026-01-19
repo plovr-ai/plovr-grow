@@ -70,79 +70,47 @@ describe("TaxConfigService", () => {
     service = new TaxConfigService();
   });
 
-  describe("getTaxConfigsForMerchant", () => {
-    it("should return tax configs with merchant-specific rates", async () => {
-      const rateMap = new Map([
-        ["tax-standard", 0.0825],
-        ["tax-alcohol", 0.1],
-      ]);
-
+  describe("getTaxConfigs", () => {
+    it("should return all tax configs for a company", async () => {
       vi.mocked(taxConfigRepository.getTaxConfigsByCompany).mockResolvedValue(
         mockTaxConfigs
       );
-      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
-        rateMap
-      );
 
-      const result = await service.getTaxConfigsForMerchant(
-        "tenant-1",
-        "company-1",
-        "merchant-1"
-      );
+      const result = await service.getTaxConfigs("tenant-1", "company-1");
 
       expect(taxConfigRepository.getTaxConfigsByCompany).toHaveBeenCalledWith(
         "tenant-1",
         "company-1"
       );
-      expect(taxConfigRepository.getMerchantTaxRateMap).toHaveBeenCalledWith(
-        "merchant-1"
-      );
-      // Only returns configs that have rates for this merchant
-      expect(result).toHaveLength(2);
+      expect(result).toHaveLength(3);
       expect(result[0]).toEqual({
         id: "tax-standard",
         name: "Standard Tax",
-        rate: 0.0825,
+        description: "Standard sales tax",
         roundingMethod: "half_up",
         isDefault: true,
         status: "active",
       });
     });
 
-    it("should return empty array when no merchant rates configured", async () => {
+    it("should return empty array when no configs exist", async () => {
       vi.mocked(taxConfigRepository.getTaxConfigsByCompany).mockResolvedValue(
-        mockTaxConfigs
-      );
-      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
-        new Map()
+        []
       );
 
-      const result = await service.getTaxConfigsForMerchant(
-        "tenant-1",
-        "company-1",
-        "merchant-1"
-      );
+      const result = await service.getTaxConfigs("tenant-1", "company-1");
 
       expect(result).toHaveLength(0);
     });
   });
 
   describe("getTaxConfig", () => {
-    it("should return a single tax config with merchant-specific rate", async () => {
-      const rateMap = new Map([["tax-standard", 0.0825]]);
-
+    it("should return a single tax config by ID", async () => {
       vi.mocked(taxConfigRepository.getTaxConfigById).mockResolvedValue(
         mockTaxConfigs[0]
       );
-      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
-        rateMap
-      );
 
-      const result = await service.getTaxConfig(
-        "tenant-1",
-        "tax-standard",
-        "merchant-1"
-      );
+      const result = await service.getTaxConfig("tenant-1", "tax-standard");
 
       expect(taxConfigRepository.getTaxConfigById).toHaveBeenCalledWith(
         "tenant-1",
@@ -151,7 +119,7 @@ describe("TaxConfigService", () => {
       expect(result).toEqual({
         id: "tax-standard",
         name: "Standard Tax",
-        rate: 0.0825,
+        description: "Standard sales tax",
         roundingMethod: "half_up",
         isDefault: true,
         status: "active",
@@ -160,89 +128,98 @@ describe("TaxConfigService", () => {
 
     it("should return null when tax config not found", async () => {
       vi.mocked(taxConfigRepository.getTaxConfigById).mockResolvedValue(null);
-      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
-        new Map()
-      );
 
-      const result = await service.getTaxConfig(
-        "tenant-1",
-        "non-existent",
-        "merchant-1"
-      );
+      const result = await service.getTaxConfig("tenant-1", "non-existent");
 
       expect(result).toBeNull();
     });
   });
 
   describe("getTaxConfigsMap", () => {
-    it("should return a map of tax configs with merchant rates", async () => {
-      const rateMap = new Map([
-        ["tax-standard", 0.0825],
-        ["tax-alcohol", 0.1],
-      ]);
-
+    it("should return a map of tax configs", async () => {
       vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([
         mockTaxConfigs[0],
         mockTaxConfigs[1],
       ]);
-      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
-        rateMap
-      );
 
-      const result = await service.getTaxConfigsMap(
-        "tenant-1",
-        ["tax-standard", "tax-alcohol"],
-        "merchant-1"
-      );
+      const result = await service.getTaxConfigsMap("tenant-1", [
+        "tax-standard",
+        "tax-alcohol",
+      ]);
 
       expect(taxConfigRepository.getTaxConfigsByIds).toHaveBeenCalledWith(
         "tenant-1",
         ["tax-standard", "tax-alcohol"]
       );
       expect(result.size).toBe(2);
-      expect(result.get("tax-standard")?.rate).toBe(0.0825);
-      expect(result.get("tax-alcohol")?.rate).toBe(0.1);
+      expect(result.get("tax-standard")?.name).toBe("Standard Tax");
+      expect(result.get("tax-alcohol")?.name).toBe("Alcohol Tax");
     });
   });
 
   describe("getDefaultTaxConfig", () => {
-    it("should return the default tax config with merchant rate", async () => {
-      const rateMap = new Map([["tax-standard", 0.0825]]);
-
+    it("should return the default tax config", async () => {
       vi.mocked(taxConfigRepository.getDefaultTaxConfig).mockResolvedValue(
         mockTaxConfigs[0]
       );
-      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
-        rateMap
-      );
 
-      const result = await service.getDefaultTaxConfig(
-        "tenant-1",
-        "company-1",
-        "merchant-1"
-      );
+      const result = await service.getDefaultTaxConfig("tenant-1", "company-1");
 
       expect(taxConfigRepository.getDefaultTaxConfig).toHaveBeenCalledWith(
         "tenant-1",
         "company-1"
       );
       expect(result?.isDefault).toBe(true);
-      expect(result?.rate).toBe(0.0825);
+      expect(result?.name).toBe("Standard Tax");
     });
 
     it("should return null when no default config exists", async () => {
       vi.mocked(taxConfigRepository.getDefaultTaxConfig).mockResolvedValue(null);
-      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
-        new Map()
-      );
 
-      const result = await service.getDefaultTaxConfig(
-        "tenant-1",
-        "company-1",
-        "merchant-1"
-      );
+      const result = await service.getDefaultTaxConfig("tenant-1", "company-1");
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe("getMerchantTaxConfigs", () => {
+    it("should return merchant tax configs with rates", async () => {
+      // Prisma Decimal is converted to number via Number()
+      const mockMerchantRates = [
+        {
+          taxConfigId: "tax-standard",
+          rate: 0.0825,
+          taxConfig: {
+            name: "Standard Tax",
+            roundingMethod: "half_up",
+          },
+        },
+        {
+          taxConfigId: "tax-alcohol",
+          rate: 0.1,
+          taxConfig: {
+            name: "Alcohol Tax",
+            roundingMethod: "half_up",
+          },
+        },
+      ];
+
+      vi.mocked(taxConfigRepository.getMerchantTaxRates).mockResolvedValue(
+        mockMerchantRates as never
+      );
+
+      const result = await service.getMerchantTaxConfigs("merchant-1");
+
+      expect(taxConfigRepository.getMerchantTaxRates).toHaveBeenCalledWith(
+        "merchant-1"
+      );
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        id: "tax-standard",
+        name: "Standard Tax",
+        rate: 0.0825,
+        roundingMethod: "half_up",
+      });
     });
   });
 
@@ -368,6 +345,45 @@ describe("TaxConfigService", () => {
       expect(taxConfigRepository.deleteTaxConfig).toHaveBeenCalledWith(
         "tenant-1",
         "tax-standard"
+      );
+    });
+  });
+
+  describe("setMerchantTaxRate", () => {
+    it("should set a merchant tax rate", async () => {
+      vi.mocked(taxConfigRepository.setMerchantTaxRate).mockResolvedValue({
+        id: "mtr-1",
+        merchantId: "merchant-1",
+        taxConfigId: "tax-standard",
+        rate: { toNumber: () => 0.0825 } as unknown as import("@prisma/client/runtime/library").Decimal,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await service.setMerchantTaxRate("merchant-1", "tax-standard", 0.0825);
+
+      expect(taxConfigRepository.setMerchantTaxRate).toHaveBeenCalledWith(
+        "merchant-1",
+        "tax-standard",
+        0.0825
+      );
+    });
+  });
+
+  describe("setMenuItemTaxConfigs", () => {
+    it("should set tax configs for a menu item", async () => {
+      vi.mocked(taxConfigRepository.setMenuItemTaxConfigs).mockResolvedValue(
+        undefined
+      );
+
+      await service.setMenuItemTaxConfigs("item-1", [
+        "tax-standard",
+        "tax-alcohol",
+      ]);
+
+      expect(taxConfigRepository.setMenuItemTaxConfigs).toHaveBeenCalledWith(
+        "item-1",
+        ["tax-standard", "tax-alcohol"]
       );
     });
   });

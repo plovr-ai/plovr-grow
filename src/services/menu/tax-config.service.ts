@@ -3,64 +3,63 @@
  * 税率配置服务
  */
 
-import { taxConfigRepository } from "@/repositories/tax-config.repository";
 import type {
   TaxConfigData,
   TaxConfigInfo,
   TaxConfigWithRates,
+  MerchantTaxConfig,
   CreateTaxConfigInput,
   UpdateTaxConfigInput,
   RoundingMethod,
 } from "./tax-config.types";
 
+// Lazy load repository to avoid Prisma initialization at module load time
+async function getRepository() {
+  const { taxConfigRepository } = await import(
+    "@/repositories/tax-config.repository"
+  );
+  return taxConfigRepository;
+}
+
 export class TaxConfigService {
   // ==================== Query methods (for Storefront) ====================
 
   /**
-   * Get all active tax configs for a company (with merchant-specific rates)
-   * Used by storefront to calculate order tax
+   * Get all tax configs for a company
    */
-  async getTaxConfigsForMerchant(
+  async getTaxConfigs(
     tenantId: string,
-    companyId: string,
-    merchantId: string
+    companyId: string
   ): Promise<TaxConfigData[]> {
-    const [taxConfigs, rateMap] = await Promise.all([
-      taxConfigRepository.getTaxConfigsByCompany(tenantId, companyId),
-      taxConfigRepository.getMerchantTaxRateMap(merchantId),
-    ]);
+    const repository = await getRepository();
+    const configs = await repository.getTaxConfigsByCompany(tenantId, companyId);
 
-    return taxConfigs
-      .filter((config) => rateMap.has(config.id)) // Only return configs with rates for this merchant
-      .map((config) => ({
-        id: config.id,
-        name: config.name,
-        rate: rateMap.get(config.id) ?? 0,
-        roundingMethod: config.roundingMethod as RoundingMethod,
-        isDefault: config.isDefault,
-        status: config.status as "active" | "inactive",
-      }));
+    return configs.map((c) => ({
+      id: c.id,
+      name: c.name,
+      description: c.description,
+      roundingMethod: c.roundingMethod as RoundingMethod,
+      isDefault: c.isDefault,
+      status: c.status as "active" | "inactive",
+    }));
   }
 
   /**
-   * Get a single tax config by ID (with merchant-specific rate)
+   * Get a single tax config by ID
    */
   async getTaxConfig(
     tenantId: string,
-    id: string,
-    merchantId: string
+    id: string
   ): Promise<TaxConfigData | null> {
-    const [config, rateMap] = await Promise.all([
-      taxConfigRepository.getTaxConfigById(tenantId, id),
-      taxConfigRepository.getMerchantTaxRateMap(merchantId),
-    ]);
+    const repository = await getRepository();
+    const config = await repository.getTaxConfigById(tenantId, id);
 
     if (!config) return null;
 
     return {
       id: config.id,
       name: config.name,
-      rate: rateMap.get(config.id) ?? 0,
+      description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
       isDefault: config.isDefault,
       status: config.status as "active" | "inactive",
@@ -68,30 +67,26 @@ export class TaxConfigService {
   }
 
   /**
-   * Get tax configs as a Map for efficient lookup during order calculation
+   * Get tax configs as a Map for efficient lookup
    */
   async getTaxConfigsMap(
     tenantId: string,
-    ids: string[],
-    merchantId: string
+    ids: string[]
   ): Promise<Map<string, TaxConfigData>> {
-    const [configs, rateMap] = await Promise.all([
-      taxConfigRepository.getTaxConfigsByIds(tenantId, ids),
-      taxConfigRepository.getMerchantTaxRateMap(merchantId),
-    ]);
+    const repository = await getRepository();
+    const configs = await repository.getTaxConfigsByIds(tenantId, ids);
 
     const map = new Map<string, TaxConfigData>();
-    for (const config of configs) {
-      map.set(config.id, {
-        id: config.id,
-        name: config.name,
-        rate: rateMap.get(config.id) ?? 0,
-        roundingMethod: config.roundingMethod as RoundingMethod,
-        isDefault: config.isDefault,
-        status: config.status as "active" | "inactive",
+    for (const c of configs) {
+      map.set(c.id, {
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        roundingMethod: c.roundingMethod as RoundingMethod,
+        isDefault: c.isDefault,
+        status: c.status as "active" | "inactive",
       });
     }
-
     return map;
   }
 
@@ -100,24 +95,36 @@ export class TaxConfigService {
    */
   async getDefaultTaxConfig(
     tenantId: string,
-    companyId: string,
-    merchantId: string
+    companyId: string
   ): Promise<TaxConfigData | null> {
-    const [config, rateMap] = await Promise.all([
-      taxConfigRepository.getDefaultTaxConfig(tenantId, companyId),
-      taxConfigRepository.getMerchantTaxRateMap(merchantId),
-    ]);
+    const repository = await getRepository();
+    const config = await repository.getDefaultTaxConfig(tenantId, companyId);
 
     if (!config) return null;
 
     return {
       id: config.id,
       name: config.name,
-      rate: rateMap.get(config.id) ?? 0,
+      description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
       isDefault: config.isDefault,
       status: config.status as "active" | "inactive",
     };
+  }
+
+  /**
+   * Get merchant tax configs with specific rates
+   */
+  async getMerchantTaxConfigs(merchantId: string): Promise<MerchantTaxConfig[]> {
+    const repository = await getRepository();
+    const rates = await repository.getMerchantTaxRates(merchantId);
+
+    return rates.map((r) => ({
+      id: r.taxConfigId,
+      name: r.taxConfig.name,
+      rate: Number(r.rate),
+      roundingMethod: r.taxConfig.roundingMethod as RoundingMethod,
+    }));
   }
 
   // ==================== Dashboard methods ====================
@@ -130,14 +137,12 @@ export class TaxConfigService {
     companyId: string,
     merchants: Array<{ id: string; name: string }>
   ): Promise<TaxConfigWithRates[]> {
-    const taxConfigs = await taxConfigRepository.getTaxConfigsByCompany(
-      tenantId,
-      companyId
-    );
+    const repository = await getRepository();
+    const taxConfigs = await repository.getTaxConfigsByCompany(tenantId, companyId);
 
     // Get all merchant tax rates in parallel
     const merchantRatesPromises = merchants.map((merchant) =>
-      taxConfigRepository.getMerchantTaxRateMap(merchant.id)
+      repository.getMerchantTaxRateMap(merchant.id)
     );
     const merchantRateMaps = await Promise.all(merchantRatesPromises);
 
@@ -170,7 +175,8 @@ export class TaxConfigService {
     tenantId: string,
     id: string
   ): Promise<TaxConfigInfo | null> {
-    const config = await taxConfigRepository.getTaxConfigById(tenantId, id);
+    const repository = await getRepository();
+    const config = await repository.getTaxConfigById(tenantId, id);
     if (!config) return null;
 
     return {
@@ -186,34 +192,32 @@ export class TaxConfigService {
   // ==================== CRUD methods ====================
 
   /**
-   * Create a new tax config with optional merchant rates
+   * Create a new tax config
    */
   async createTaxConfig(
     tenantId: string,
     companyId: string,
     input: CreateTaxConfigInput
   ): Promise<TaxConfigInfo> {
+    const repository = await getRepository();
+
     // If setting as default, unset existing default
     if (input.isDefault) {
       await this.unsetDefaultTaxConfig(tenantId, companyId);
     }
 
-    const config = await taxConfigRepository.createTaxConfig(
-      tenantId,
-      companyId,
-      {
-        name: input.name,
-        description: input.description,
-        roundingMethod: input.roundingMethod,
-        isDefault: input.isDefault,
-      }
-    );
+    const config = await repository.createTaxConfig(tenantId, companyId, {
+      name: input.name,
+      description: input.description,
+      roundingMethod: input.roundingMethod,
+      isDefault: input.isDefault,
+    });
 
     // Set merchant rates if provided
     if (input.merchantRates && input.merchantRates.length > 0) {
       await Promise.all(
         input.merchantRates.map((mr) =>
-          taxConfigRepository.setMerchantTaxRate(mr.merchantId, config.id, mr.rate)
+          repository.setMerchantTaxRate(mr.merchantId, config.id, mr.rate)
         )
       );
     }
@@ -229,7 +233,7 @@ export class TaxConfigService {
   }
 
   /**
-   * Update a tax config with optional merchant rates
+   * Update a tax config
    */
   async updateTaxConfig(
     tenantId: string,
@@ -237,6 +241,8 @@ export class TaxConfigService {
     id: string,
     input: UpdateTaxConfigInput
   ): Promise<void> {
+    const repository = await getRepository();
+
     // If setting as default, unset existing default
     if (input.isDefault) {
       await this.unsetDefaultTaxConfig(tenantId, companyId, id);
@@ -251,25 +257,25 @@ export class TaxConfigService {
     if (input.status !== undefined) updateData.status = input.status;
 
     if (Object.keys(updateData).length > 0) {
-      await taxConfigRepository.updateTaxConfig(tenantId, id, updateData);
+      await repository.updateTaxConfig(tenantId, id, updateData);
     }
 
     // Update merchant rates if provided
     if (input.merchantRates !== undefined) {
       // Get current merchant rates
-      const currentRates = await taxConfigRepository.getTaxConfigMerchantRates(id);
+      const currentRates = await repository.getTaxConfigMerchantRates(id);
       const newMerchantIds = new Set(input.merchantRates.map((r) => r.merchantId));
 
       // Delete rates for merchants not in new list
       for (const rate of currentRates) {
         if (!newMerchantIds.has(rate.merchantId)) {
-          await taxConfigRepository.deleteMerchantTaxRate(rate.merchantId, id);
+          await repository.deleteMerchantTaxRate(rate.merchantId, id);
         }
       }
 
       // Upsert rates for merchants in new list
       for (const mr of input.merchantRates) {
-        await taxConfigRepository.setMerchantTaxRate(mr.merchantId, id, mr.rate);
+        await repository.setMerchantTaxRate(mr.merchantId, id, mr.rate);
       }
     }
   }
@@ -278,7 +284,31 @@ export class TaxConfigService {
    * Delete a tax config (soft delete)
    */
   async deleteTaxConfig(tenantId: string, id: string): Promise<void> {
-    await taxConfigRepository.deleteTaxConfig(tenantId, id);
+    const repository = await getRepository();
+    await repository.deleteTaxConfig(tenantId, id);
+  }
+
+  /**
+   * Set tax rate for a merchant
+   */
+  async setMerchantTaxRate(
+    merchantId: string,
+    taxConfigId: string,
+    rate: number
+  ): Promise<void> {
+    const repository = await getRepository();
+    await repository.setMerchantTaxRate(merchantId, taxConfigId, rate);
+  }
+
+  /**
+   * Set tax configs for a menu item
+   */
+  async setMenuItemTaxConfigs(
+    itemId: string,
+    taxConfigIds: string[]
+  ): Promise<void> {
+    const repository = await getRepository();
+    await repository.setMenuItemTaxConfigs(itemId, taxConfigIds);
   }
 
   // ==================== Helper methods ====================
@@ -291,12 +321,10 @@ export class TaxConfigService {
     companyId: string,
     excludeId?: string
   ): Promise<void> {
-    const currentDefault = await taxConfigRepository.getDefaultTaxConfig(
-      tenantId,
-      companyId
-    );
+    const repository = await getRepository();
+    const currentDefault = await repository.getDefaultTaxConfig(tenantId, companyId);
     if (currentDefault && currentDefault.id !== excludeId) {
-      await taxConfigRepository.updateTaxConfig(tenantId, currentDefault.id, {
+      await repository.updateTaxConfig(tenantId, currentDefault.id, {
         isDefault: false,
       });
     }

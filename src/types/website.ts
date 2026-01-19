@@ -1,8 +1,17 @@
 // Website Template Types
 
 import type { TipConfig, FeeConfig } from "./index";
+import type { SocialLink } from "./company";
+import type { BusinessHoursMap } from "./merchant";
 
-export interface MerchantInfo {
+// Re-export for convenience
+export type { SocialLink, BusinessHoursMap };
+
+/**
+ * Website display info - combines data from Company and Merchant
+ * This is a denormalized view for rendering website templates
+ */
+export interface WebsiteMerchantInfo {
   name: string;
   tagline: string;
   address: string;
@@ -21,18 +30,8 @@ export interface MerchantInfo {
   feeConfig?: FeeConfig;
 }
 
-export interface BusinessHoursMap {
-  [key: string]: {
-    open: string;
-    close: string;
-    closed?: boolean;
-  };
-}
-
-export interface SocialLink {
-  platform: "facebook" | "instagram" | "twitter" | "yelp" | "google";
-  url: string;
-}
+// Legacy alias - kept for backward compatibility
+export type MerchantInfo = WebsiteMerchantInfo;
 
 export interface FeaturedItem {
   id: string;
@@ -42,6 +41,8 @@ export interface FeaturedItem {
   price: number;
   image: string;
   category?: string;
+  menuItemId?: string; // For adding to cart
+  hasModifiers?: boolean; // Whether item has modifier options
 }
 
 export interface CustomerReview {

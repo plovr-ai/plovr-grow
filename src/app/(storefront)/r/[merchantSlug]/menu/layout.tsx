@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getMockMenuPageData } from "@/data/mock/menu";
+import { merchantService } from "@/services/merchant";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,11 +10,17 @@ export async function generateMetadata({
   params,
 }: LayoutProps): Promise<Metadata> {
   const { merchantSlug } = await params;
-  const data = getMockMenuPageData(merchantSlug);
+  const websiteData = await merchantService.getWebsiteData(merchantSlug);
+
+  if (!websiteData) {
+    return {
+      title: "Menu",
+    };
+  }
 
   return {
-    title: `Menu | ${data.merchantName}`,
-    description: `Order online from ${data.merchantName}`,
+    title: `Menu | ${websiteData.name}`,
+    description: `Order online from ${websiteData.name}`,
   };
 }
 

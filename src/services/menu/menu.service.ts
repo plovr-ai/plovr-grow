@@ -5,14 +5,17 @@ import type {
   CreateMenuItemInput,
   UpdateMenuItemInput,
 } from "./menu.types";
+import type { RoundingMethod } from "./tax-config.types";
 
 // Lazy load repositories to avoid Prisma initialization at module load time
 async function getRepositories() {
-  const [{ menuRepository }, { merchantRepository }] = await Promise.all([
-    import("@/repositories/menu.repository"),
-    import("@/repositories/merchant.repository"),
-  ]);
-  return { menuRepository, merchantRepository };
+  const [{ menuRepository }, { merchantRepository }, { taxConfigRepository }] =
+    await Promise.all([
+      import("@/repositories/menu.repository"),
+      import("@/repositories/merchant.repository"),
+      import("@/repositories/tax-config.repository"),
+    ]);
+  return { menuRepository, merchantRepository, taxConfigRepository };
 }
 
 export class MenuService {
@@ -22,13 +25,16 @@ export class MenuService {
    * Interface: getMenu(tenantId, merchantId) - kept for compatibility
    * Implementation: Fetches Company-level menu via merchant's companyId
    *
-   * Future extension: Can add merchant-level overrides (price, availability) here
+   * Populates tax information for each item based on:
+   * 1. Menu item's associated tax configs
+   * 2. Merchant's specific tax rates for those configs
    *
    * @param tenantId - Tenant ID for isolation
    * @param merchantId - Merchant ID (used to get companyId and merchant info)
    */
   async getMenu(tenantId: string, merchantId: string): Promise<GetMenuResponse> {
-    const { menuRepository, merchantRepository } = await getRepositories();
+    const { menuRepository, merchantRepository, taxConfigRepository } =
+      await getRepositories();
 
     // Get merchant to find companyId
     const merchant = await merchantRepository.getById(merchantId);
@@ -42,8 +48,55 @@ export class MenuService {
       merchant.companyId
     );
 
+    // Get all item IDs
+    const itemIds = categories.flatMap((c: { menuItems: { id: string }[] }) =>
+      c.menuItems.map((i: { id: string }) => i.id)
+    );
+
+    // Get tax config IDs for all items
+    const itemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(itemIds);
+
+    // Get all unique tax config IDs
+    const allTaxConfigIds = [...new Set([...itemTaxMap.values()].flat())];
+
+    // Get tax configs and merchant rates
+    const [taxConfigs, merchantTaxRateMap] = await Promise.all([
+      taxConfigRepository.getTaxConfigsByIds(tenantId, allTaxConfigIds),
+      taxConfigRepository.getMerchantTaxRateMap(merchantId),
+    ]);
+
+    // Build tax config lookup map
+    const taxConfigMap = new Map(taxConfigs.map((c) => [c.id, c]));
+
+    // Enrich categories with tax info
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const enrichedCategories = categories.map((category: any) => ({
+      ...category,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      menuItems: category.menuItems.map((item: any) => {
+        const taxConfigIds = itemTaxMap.get(item.id) || [];
+        const taxes = taxConfigIds
+          .map((taxId) => {
+            const config = taxConfigMap.get(taxId);
+            if (!config) return null;
+            return {
+              taxConfigId: taxId,
+              name: config.name,
+              rate: merchantTaxRateMap.get(taxId) || 0,
+              roundingMethod: config.roundingMethod as RoundingMethod,
+            };
+          })
+          .filter((t) => t !== null);
+
+        return {
+          ...item,
+          taxes,
+        };
+      }),
+    }));
+
     return {
-      categories,
+      categories: enrichedCategories,
       merchantId,
       merchantName: merchant.name,
       merchantLogo: merchant.logoUrl || null,
@@ -77,7 +130,7 @@ export class MenuService {
   }
 
   /**
-   * Get menu items by IDs using company ID directly (for company-level pages)
+   * Get menu items by IDs for a specific company (for featured items)
    *
    * @param tenantId - Tenant ID for isolation
    * @param companyId - Company ID

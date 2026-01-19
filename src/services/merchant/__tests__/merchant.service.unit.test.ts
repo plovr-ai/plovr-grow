@@ -22,7 +22,7 @@ vi.mock("@/repositories/merchant.repository", () => ({
 vi.mock("@/repositories/company.repository", () => ({
   companyRepository: {
     getById: vi.fn(),
-    getBySlugWithFullMerchants: vi.fn(),
+    getBySlugWithMerchants: vi.fn(),
   },
 }));
 
@@ -180,7 +180,7 @@ describe("MerchantService (unit tests)", () => {
 
   describe("getCompanyWebsiteData()", () => {
     beforeEach(() => {
-      vi.mocked(companyRepository.getBySlugWithFullMerchants).mockResolvedValue(
+      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue(
         mockCompanyWithMerchants as never
       );
       vi.mocked(menuService.getMenuItemsByCompanyId).mockResolvedValue(
@@ -235,7 +235,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should return empty featuredItems when no featuredItemIds configured", async () => {
-      vi.mocked(companyRepository.getBySlugWithFullMerchants).mockResolvedValue({
+      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue({
         ...mockCompanyWithMerchants,
         settings: {
           ...mockCompanyWithMerchants.settings,
@@ -253,7 +253,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should return empty featuredItems when featuredItemIds is empty array", async () => {
-      vi.mocked(companyRepository.getBySlugWithFullMerchants).mockResolvedValue({
+      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue({
         ...mockCompanyWithMerchants,
         settings: {
           ...mockCompanyWithMerchants.settings,
@@ -305,7 +305,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should return null for non-existent company", async () => {
-      vi.mocked(companyRepository.getBySlugWithFullMerchants).mockResolvedValue(
+      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue(
         null as never
       );
 
@@ -315,7 +315,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should use default currency and locale when not configured", async () => {
-      vi.mocked(companyRepository.getBySlugWithFullMerchants).mockResolvedValue({
+      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue({
         ...mockCompanyWithMerchants,
         settings: null,
       } as never);

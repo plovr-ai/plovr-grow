@@ -94,10 +94,11 @@ export class MenuRepository {
   async createCategory(
     tenantId: string,
     companyId: string,
-    data: Omit<Prisma.MenuCategoryCreateInput, "tenant" | "company">
+    data: Omit<Prisma.MenuCategoryCreateInput, "id" | "tenant" | "company">
   ) {
     return prisma.menuCategory.create({
       data: {
+        id: crypto.randomUUID(),
         ...data,
         tenant: { connect: { id: tenantId } },
         company: { connect: { id: companyId } },
@@ -129,10 +130,11 @@ export class MenuRepository {
     tenantId: string,
     companyId: string,
     categoryId: string,
-    data: Omit<Prisma.MenuItemCreateInput, "tenant" | "company" | "category">
+    data: Omit<Prisma.MenuItemCreateInput, "id" | "tenant" | "company" | "category">
   ) {
     return prisma.menuItem.create({
       data: {
+        id: crypto.randomUUID(),
         ...data,
         tenant: { connect: { id: tenantId } },
         company: { connect: { id: companyId } },

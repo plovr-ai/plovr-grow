@@ -76,10 +76,11 @@ export class CompanyRepository {
    */
   async create(
     tenantId: string,
-    data: Omit<Prisma.CompanyCreateInput, "tenant">
+    data: Omit<Prisma.CompanyCreateInput, "id" | "tenant">
   ) {
     return prisma.company.create({
       data: {
+        id: crypto.randomUUID(),
         ...data,
         tenant: { connect: { id: tenantId } },
       },
@@ -102,6 +103,22 @@ export class CompanyRepository {
   async delete(companyId: string) {
     return prisma.company.delete({
       where: { id: companyId },
+    });
+  }
+
+  /**
+   * Get company by slug with full merchant data (including business hours)
+   */
+  async getBySlugWithFullMerchants(slug: string) {
+    return prisma.company.findUnique({
+      where: { slug },
+      include: {
+        tenant: true,
+        merchants: {
+          where: { status: "active" },
+          orderBy: { name: "asc" },
+        },
+      },
     });
   }
 }

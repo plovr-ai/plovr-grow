@@ -34,19 +34,9 @@ export interface SocialLink {
   url: string;
 }
 
-// Featured item for homepage display (stored in settings until proper table is created)
-export interface FeaturedItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-  category?: string;
-  /** Links to actual menu item for add-to-cart functionality */
-  menuItemId?: string;
-  /** Whether the menu item has modifiers (requires modal) */
-  hasModifiers?: boolean;
-}
+// Featured item reference - stored in Company settings
+// Only stores menu item ID, actual data is fetched from menu database
+export type FeaturedItemRef = string; // Menu item ID
 
 // Customer review for homepage display (stored in settings until proper table is created)
 export interface CustomerReview {
@@ -72,8 +62,7 @@ export interface CompanySettings {
     tagline?: string; // Brand tagline, e.g., "Authentic New York Style Pizza Since 1985"
     heroImage?: string; // Default hero image for all merchants
     socialLinks?: SocialLink[]; // Brand social media links
-    featuredItems?: FeaturedItem[]; // Featured items for homepage (cached)
-    featuredItemIds?: string[]; // IDs of featured menu items (for fetching fresh data)
+    featuredItemIds?: FeaturedItemRef[]; // Menu item IDs for featured items
     reviews?: CustomerReview[]; // Customer reviews for homepage
   };
 }

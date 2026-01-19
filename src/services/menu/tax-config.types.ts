@@ -14,19 +14,42 @@ export const ROUNDING_METHODS = [
 export type RoundingMethod = (typeof ROUNDING_METHODS)[number];
 
 /**
- * Tax configuration data (for storefront, includes rate from MerchantTaxRate)
+ * Tax configuration data (Company level, without specific rate)
+ * 税种定义（Company 级别，不含具体税率）
  */
 export interface TaxConfigData {
   id: string;
   name: string;
-  rate: number; // Decimal ratio (0.0825 for 8.25%) - from MerchantTaxRate
+  description: string | null;
   roundingMethod: RoundingMethod;
   isDefault: boolean;
   status: "active" | "inactive";
 }
 
 /**
- * Tax configuration (Company level, without rate)
+ * Merchant tax config (with specific rate for the merchant)
+ * 门店税种配置（包含该门店的具体税率值）
+ */
+export interface MerchantTaxConfig {
+  id: string; // taxConfigId
+  name: string;
+  rate: number; // 该门店的具体税率
+  roundingMethod: RoundingMethod;
+}
+
+/**
+ * Item tax info (for order calculation)
+ * 菜品税种信息（用于订单计算）
+ */
+export interface ItemTaxInfo {
+  taxConfigId: string;
+  name: string;
+  rate: number;
+  roundingMethod: RoundingMethod;
+}
+
+/**
+ * Tax configuration info (Company level, for Dashboard)
  */
 export interface TaxConfigInfo {
   id: string;
@@ -38,7 +61,7 @@ export interface TaxConfigInfo {
 }
 
 /**
- * Merchant tax rate
+ * Merchant tax rate info
  */
 export interface MerchantTaxRateInfo {
   merchantId: string;
@@ -74,16 +97,6 @@ export interface UpdateTaxConfigInput {
   isDefault?: boolean;
   status?: "active" | "inactive";
   merchantRates?: Array<{ merchantId: string; rate: number }>;
-}
-
-/**
- * Tax info for menu items and cart items
- */
-export interface ItemTaxInfo {
-  taxConfigId: string;
-  name: string;
-  rate: number; // Decimal ratio (0.0825 for 8.25%)
-  roundingMethod: RoundingMethod;
 }
 
 /**

@@ -1,106 +1,162 @@
-// Prisma schema for Restaurant SaaS Platform
-// Multi-tenant architecture with tenant_id isolation
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
-// ==================== Tenant Management ====================
-
 model Tenant {
-  id                 String   @id @default(cuid())
+  id                 String          @id
   name               String
-  subscriptionPlan   String   @default("free") @map("subscription_plan")
-  subscriptionStatus String   @default("active") @map("subscription_status")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  company        Company?
-  // Legacy relations (will be migrated to merchantId)
-  users          User[]
-  menuCategories MenuCategory[]
-  menuItems      MenuItem[]
-  orders         Order[]
-  customers      Customer[]
+  subscriptionPlan   String          @default("free") @map("subscription_plan")
+  subscriptionStatus String          @default("active") @map("subscription_status")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+  company            Company?
+  customers          Customer[]
+  menuCategories     MenuCategory[]
+  menuItems          MenuItem[]
+  orders             Order[]
+  users              User[]
+  taxConfigs         TaxConfig[]
 
   @@map("tenants")
 }
 
-// ==================== Company (Brand/Chain) ====================
-
 model Company {
-  id                    String    @id @default(cuid())
-  tenantId              String    @unique @map("tenant_id")
-  slug                  String    @unique              // Global unique, for URL routing e.g., "joes-pizza"
-  name                  String                          // Brand name, e.g., "Joe's Pizza"
-  legalName             String?   @map("legal_name")     // Legal entity name
-  description           String?   @db.Text
-  logoUrl               String?   @map("logo_url")
-  websiteUrl            String?   @map("website_url")
-  supportEmail          String?   @map("support_email")
-  supportPhone          String?   @map("support_phone")
-  taxId                 String?   @map("tax_id")         // EIN/Tax ID
-  settings              Json?                            // Brand-level settings
-  status                String    @default("active")     // active, inactive, suspended
+  id                    String          @id
+  tenantId              String          @unique @map("tenant_id")
+  slug                  String          @unique
+  name                  String
+  legalName             String?         @map("legal_name")
+  description           String?         @db.Text
+  logoUrl               String?         @map("logo_url")
+  websiteUrl            String?         @map("website_url")
+  supportEmail          String?         @map("support_email")
+  supportPhone          String?         @map("support_phone")
+  taxId                 String?         @map("tax_id")
+  settings              Json?
+  status                String          @default("active")
+  onboardingStatus      String          @default("not_started") @map("onboarding_status")
+  onboardingData        Json?           @map("onboarding_data")
+  onboardingCompletedAt DateTime?       @map("onboarding_completed_at")
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+  tenant                Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  menuCategories        MenuCategory[]
+  menuItems             MenuItem[]
+  merchants             Merchant[]
+  users                 User[]
+  taxConfigs            TaxConfig[]
 
-  // Onboarding fields
-  onboardingStatus      String    @default("not_started") @map("onboarding_status") // not_started, in_progress, completed
-  onboardingData        Json?     @map("onboarding_data")  // Step-by-step progress tracking
-  onboardingCompletedAt DateTime? @map("onboarding_completed_at")
-
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  merchants      Merchant[]
-  users          User[]
-  menuCategories MenuCategory[]
-  menuItems      MenuItem[]
-  taxConfigs     TaxConfig[]
-
-  @@index([tenantId])
   @@index([slug])
+  @@index([tenantId])
   @@map("companies")
 }
 
-// ==================== Merchant (Store/Location) ====================
+model Customer {
+  id          String    @id
+  tenantId    String    @map("tenant_id")
+  merchantId  String?   @map("merchant_id")
+  phone       String
+  email       String?
+  name        String?
+  points      Int       @default(0)
+  totalOrders Int       @default(0) @map("total_orders")
+  totalSpent  Decimal   @default(0.00) @map("total_spent") @db.Decimal(10, 2)
+  lastOrderAt DateTime? @map("last_order_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  merchant    Merchant? @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders      Order[]
+
+  @@unique([tenantId, phone])
+  @@index([merchantId])
+  @@index([tenantId])
+  @@map("customers")
+}
+
+model MenuCategory {
+  id          String     @id
+  tenantId    String     @map("tenant_id")
+  companyId   String     @map("company_id")
+  name        String
+  description String?    @db.Text
+  imageUrl    String?    @map("image_url")
+  sortOrder   Int        @default(0) @map("sort_order")
+  status      String     @default("active")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  menuItems   MenuItem[]
+
+  @@index([companyId])
+  @@index([companyId, sortOrder])
+  @@index([tenantId])
+  @@map("menu_categories")
+}
+
+model MenuItem {
+  id            String        @id
+  tenantId      String        @map("tenant_id")
+  companyId     String        @map("company_id")
+  categoryId    String        @map("category_id")
+  name          String
+  description   String?       @db.Text
+  price         Decimal       @db.Decimal(10, 2)
+  imageUrl      String?       @map("image_url")
+  sortOrder     Int           @default(0) @map("sort_order")
+  status        String        @default("active")
+  options       Json?
+  nutrition     Json?
+  tags          Json?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  category      MenuCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  menuItemTaxes MenuItemTax[]
+
+  @@index([categoryId], map: "menu_items_category_id_fkey")
+  @@index([companyId, categoryId])
+  @@index([companyId])
+  @@index([companyId, status])
+  @@index([tenantId])
+  @@map("menu_items")
+}
 
 model Merchant {
-  id            String   @id @default(cuid())
-  companyId     String   @map("company_id")
-  slug          String   @unique              // Global unique, for URL routing e.g., "joes-pizza-times-square"
-  name          String                        // Store name, e.g., "Joe's Pizza - Times Square"
-  description   String?  @db.Text
-  address       String?
-  city          String?
-  state         String?
-  zipCode       String?  @map("zip_code")
-  country       String   @default("US")
-  phone         String?
-  email         String?
-  logoUrl       String?  @map("logo_url")     // Store logo (can override company logo)
-  bannerUrl     String?  @map("banner_url")
-  businessHours Json?    @map("business_hours") // { mon: { open: "09:00", close: "22:00" }, ... }
-  timezone      String   @default("America/New_York")
-  currency      String   @default("USD")
-  locale        String   @default("en-US")
-  taxRate       Decimal  @default(0) @map("tax_rate") @db.Decimal(5, 4) // e.g., 0.0825 for 8.25%
-  status        String   @default("active") // active, inactive, temporarily_closed
-  settings      Json?    // Store-level settings (tipConfig, etc.)
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  orders    Order[]
-  customers Customer[]
-  taxRates  MerchantTaxRate[]
+  id               String            @id
+  companyId        String            @map("company_id")
+  slug             String            @unique
+  name             String
+  description      String?           @db.Text
+  address          String?
+  city             String?
+  state            String?
+  zipCode          String?           @map("zip_code")
+  country          String            @default("US")
+  phone            String?
+  email            String?
+  logoUrl          String?           @map("logo_url")
+  bannerUrl        String?           @map("banner_url")
+  businessHours    Json?             @map("business_hours")
+  timezone         String            @default("America/New_York")
+  currency         String            @default("USD")
+  locale           String            @default("en-US")
+  taxRate          Decimal           @default(0.0000) @map("tax_rate") @db.Decimal(5, 4)
+  status           String            @default("active")
+  settings         Json?
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  customers        Customer[]
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  orders           Order[]
+  merchantTaxRates MerchantTaxRate[]
 
   @@index([companyId])
   @@index([slug])
@@ -108,133 +164,48 @@ model Merchant {
   @@map("merchants")
 }
 
-// ==================== User (Company Staff) ====================
-
-model User {
-  id           String    @id @default(cuid())
-  tenantId     String    @map("tenant_id")           // Legacy, will be removed
-  companyId    String?   @map("company_id")          // New: company-level staff
-  email        String
-  passwordHash String    @map("password_hash")
-  name         String
-  role         String    @default("staff") // owner, manager, staff
-  status       String    @default("active") // active, inactive
-  lastLoginAt  DateTime? @map("last_login_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, email])
-  @@index([tenantId])
-  @@index([companyId])
-  @@map("users")
-}
-
-// ==================== Menu ====================
-
-model MenuCategory {
-  id          String   @id @default(cuid())
-  tenantId    String   @map("tenant_id")           // Tenant isolation
-  companyId   String   @map("company_id")          // Company-level menu
-  name        String
-  description String?  @db.Text
-  imageUrl    String?  @map("image_url")
-  sortOrder   Int      @default(0) @map("sort_order")
-  status      String   @default("active") // active, inactive
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  menuItems MenuItem[]
-
-  @@index([tenantId])
-  @@index([companyId])
-  @@index([companyId, sortOrder])
-  @@map("menu_categories")
-}
-
-model MenuItem {
-  id          String   @id @default(cuid())
-  tenantId    String   @map("tenant_id")           // Tenant isolation
-  companyId   String   @map("company_id")          // Company-level menu
-  categoryId  String   @map("category_id")
-  name        String
-  description String?  @db.Text
-  price       Decimal  @db.Decimal(10, 2)
-  imageUrl    String?  @map("image_url")
-  sortOrder   Int      @default(0) @map("sort_order")
-  status      String   @default("active") // active, inactive, out_of_stock
-  options     Json?    // Modifiers, sizes, add-ons
-  nutrition   Json?    // Nutritional information
-  tags        Json?    // ["vegetarian", "spicy", "gluten-free"]
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  category      MenuCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  menuItemTaxes MenuItemTax[]
-
-  @@index([tenantId])
-  @@index([companyId])
-  @@index([companyId, categoryId])
-  @@index([companyId, status])
-  @@map("menu_items")
-}
-
-// ==================== Orders ====================
-
 model Order {
-  id              String    @id @default(cuid())
-  tenantId        String    @map("tenant_id")           // Legacy, will be migrated to merchantId
-  merchantId      String?   @map("merchant_id")         // New: store-level order
-  orderNumber     String    @map("order_number") // Human-readable order number
+  id              String    @id
+  tenantId        String    @map("tenant_id")
+  merchantId      String?   @map("merchant_id")
+  orderNumber     String    @map("order_number")
   customerId      String?   @map("customer_id")
   customerName    String    @map("customer_name")
   customerPhone   String    @map("customer_phone")
   customerEmail   String?   @map("customer_email")
-  orderType       String    @map("order_type") // pickup, delivery, dine_in
-  status          String    @default("pending") // pending, confirmed, preparing, ready, completed, cancelled
-  items           Json      // Array of order items with details
+  orderType       String    @map("order_type")
+  status          String    @default("pending")
+  items           Json
   subtotal        Decimal   @db.Decimal(10, 2)
   taxAmount       Decimal   @map("tax_amount") @db.Decimal(10, 2)
-  tipAmount       Decimal   @default(0) @map("tip_amount") @db.Decimal(10, 2)
-  deliveryFee     Decimal   @default(0) @map("delivery_fee") @db.Decimal(10, 2)
-  discount        Decimal   @default(0) @db.Decimal(10, 2)
+  tipAmount       Decimal   @default(0.00) @map("tip_amount") @db.Decimal(10, 2)
+  deliveryFee     Decimal   @default(0.00) @map("delivery_fee") @db.Decimal(10, 2)
+  discount        Decimal   @default(0.00) @db.Decimal(10, 2)
   totalAmount     Decimal   @map("total_amount") @db.Decimal(10, 2)
   notes           String?   @db.Text
-  deliveryAddress Json?     @map("delivery_address") // For delivery orders
-  scheduledAt     DateTime? @map("scheduled_at") // For scheduled orders
+  deliveryAddress Json?     @map("delivery_address")
+  scheduledAt     DateTime? @map("scheduled_at")
   confirmedAt     DateTime? @map("confirmed_at")
   completedAt     DateTime? @map("completed_at")
   cancelledAt     DateTime? @map("cancelled_at")
   cancelReason    String?   @map("cancel_reason")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  merchant Merchant? @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  customer Customer? @relation(fields: [customerId], references: [id])
+  customer        Customer? @relation(fields: [customerId], references: [id])
+  merchant        Merchant? @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, orderNumber])
+  @@index([customerId], map: "orders_customer_id_fkey")
+  @@index([merchantId])
+  @@index([tenantId, createdAt])
   @@index([tenantId])
   @@index([tenantId, status])
-  @@index([tenantId, createdAt])
-  @@index([merchantId])
   @@map("orders")
 }
 
-// ==================== Password Reset Tokens ====================
-
 model PasswordResetToken {
-  id        String   @id @default(cuid())
+  id        String   @id
   email     String
   token     String   @unique
   expiresAt DateTime @map("expires_at")
@@ -245,48 +216,41 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
-// ==================== Customers (for Loyalty) ====================
+model User {
+  id           String    @id
+  tenantId     String    @map("tenant_id")
+  companyId    String?   @map("company_id")
+  email        String
+  passwordHash String    @map("password_hash")
+  name         String
+  role         String    @default("staff")
+  status       String    @default("active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  company      Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-model Customer {
-  id          String    @id @default(cuid())
-  tenantId    String    @map("tenant_id")           // Legacy, will be migrated to merchantId
-  merchantId  String?   @map("merchant_id")         // New: store-level customer
-  phone       String
-  email       String?
-  name        String?
-  points      Int       @default(0) // Loyalty points
-  totalOrders Int       @default(0) @map("total_orders")
-  totalSpent  Decimal   @default(0) @map("total_spent") @db.Decimal(10, 2)
-  lastOrderAt DateTime? @map("last_order_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  merchant Merchant? @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  orders   Order[]
-
-  @@unique([tenantId, phone])
+  @@unique([tenantId, email])
+  @@index([companyId])
   @@index([tenantId])
-  @@index([merchantId])
-  @@map("customers")
+  @@map("users")
 }
 
 // ==================== Tax Configuration ====================
 
 model TaxConfig {
-  id             String   @id @default(cuid())
-  tenantId       String   @map("tenant_id")
-  companyId      String   @map("company_id")
-  name           String
-  description    String?  @db.Text
-  roundingMethod String   @default("half_up") @map("rounding_method") // half_up, half_even, always_round_up, always_round_down
-  isDefault      Boolean  @default(false) @map("is_default")
-  status         String   @default("active") // active, inactive
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-
-  // Relations
+  id               String            @id
+  tenantId         String            @map("tenant_id")
+  companyId        String            @map("company_id")
+  name             String
+  description      String?           @db.Text
+  roundingMethod   String            @default("half_up") @map("rounding_method")
+  isDefault        Boolean           @default(false) @map("is_default")
+  status           String            @default("active")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   merchantTaxRates MerchantTaxRate[]
   menuItemTaxes    MenuItemTax[]
@@ -298,16 +262,14 @@ model TaxConfig {
 }
 
 model MerchantTaxRate {
-  id          String   @id @default(cuid())
-  merchantId  String   @map("merchant_id")
-  taxConfigId String   @map("tax_config_id")
-  rate        Decimal  @db.Decimal(5, 4) // e.g., 0.0825 for 8.25%
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  merchant  Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  taxConfig TaxConfig @relation(fields: [taxConfigId], references: [id], onDelete: Cascade)
+  id          String    @id
+  merchantId  String    @map("merchant_id")
+  taxConfigId String    @map("tax_config_id")
+  rate        Decimal   @db.Decimal(5, 4)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  merchant    Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  taxConfig   TaxConfig @relation(fields: [taxConfigId], references: [id], onDelete: Cascade)
 
   @@unique([merchantId, taxConfigId])
   @@index([merchantId])
@@ -316,14 +278,12 @@ model MerchantTaxRate {
 }
 
 model MenuItemTax {
-  id          String   @id @default(cuid())
-  menuItemId  String   @map("menu_item_id")
-  taxConfigId String   @map("tax_config_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  // Relations
-  menuItem  MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  taxConfig TaxConfig @relation(fields: [taxConfigId], references: [id], onDelete: Cascade)
+  id          String    @id
+  menuItemId  String    @map("menu_item_id")
+  taxConfigId String    @map("tax_config_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  menuItem    MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  taxConfig   TaxConfig @relation(fields: [taxConfigId], references: [id], onDelete: Cascade)
 
   @@unique([menuItemId, taxConfigId])
   @@index([menuItemId])
