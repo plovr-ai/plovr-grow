@@ -124,6 +124,88 @@ describe("FeaturedItems", () => {
     });
   });
 
+  describe("image rendering", () => {
+    it("should render images with correct src URLs", () => {
+      render(<FeaturedItems items={mockItems} />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      const images = screen.getAllByRole("img");
+      expect(images[0]).toHaveAttribute("src", "https://example.com/pizza.jpg");
+      expect(images[1]).toHaveAttribute("src", "https://example.com/pepperoni.jpg");
+    });
+
+    it("should render images with correct alt text from item names", () => {
+      render(<FeaturedItems items={mockItems} />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      expect(screen.getByAltText("Classic Cheese Pizza")).toBeInTheDocument();
+      expect(screen.getByAltText("Pepperoni Pizza")).toBeInTheDocument();
+    });
+
+    it("should render images from database with Unsplash URLs", () => {
+      const itemsFromDatabase: FeaturedItem[] = [
+        {
+          id: "item-cheese-pizza",
+          name: "Classic Cheese Pizza",
+          description: "Fresh mozzarella and tomato sauce",
+          price: 18.99,
+          image: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop",
+          menuItemId: "item-cheese-pizza",
+          hasModifiers: true,
+        },
+        {
+          id: "item-garlic-knots",
+          name: "Garlic Knots",
+          description: "Fresh baked knots with garlic butter",
+          price: 5.99,
+          image: "https://images.unsplash.com/photo-1619531040576-f9416740661b?w=400&h=300&fit=crop",
+          menuItemId: "item-garlic-knots",
+          hasModifiers: false,
+        },
+      ];
+
+      render(<FeaturedItems items={itemsFromDatabase} />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      const cheeseImg = screen.getByAltText("Classic Cheese Pizza");
+      expect(cheeseImg).toHaveAttribute(
+        "src",
+        "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop"
+      );
+
+      const garlicImg = screen.getByAltText("Garlic Knots");
+      expect(garlicImg).toHaveAttribute(
+        "src",
+        "https://images.unsplash.com/photo-1619531040576-f9416740661b?w=400&h=300&fit=crop"
+      );
+    });
+
+    it("should handle empty image URL gracefully", () => {
+      const itemsWithEmptyImage: FeaturedItem[] = [
+        {
+          id: "1",
+          name: "Item Without Image",
+          description: "No image available",
+          price: 10.99,
+          image: "",
+        },
+      ];
+
+      render(<FeaturedItems items={itemsWithEmptyImage} />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      // Should display placeholder icon instead of img element
+      expect(screen.queryByAltText("Item Without Image")).not.toBeInTheDocument();
+      // The item card should still render with name and price
+      expect(screen.getByText("Item Without Image")).toBeInTheDocument();
+      expect(screen.getByText("$10.99")).toBeInTheDocument();
+    });
+  });
+
   describe("item display", () => {
     it("should display item names", () => {
       render(<FeaturedItems items={mockItems} />, {
@@ -252,6 +334,54 @@ describe("FeaturedItems", () => {
       render(
         <FeaturedItems
           items={mockItems}
+          menuLink="/joes-pizza/locations"
+          hasMultipleLocations={true}
+        />,
+        {
+          wrapper: createWrapper("USD", "en-US"),
+        }
+      );
+
+      const orderButtons = screen.getAllByText("Order");
+      fireEvent.click(orderButtons[0]);
+
+      expect(mockPush).toHaveBeenCalledWith("/joes-pizza/locations");
+    });
+
+    it("should navigate to locations page with addItem param when item has menuItemId (multiple locations)", () => {
+      const itemsWithMenuId: FeaturedItem[] = [
+        {
+          id: "1",
+          name: "Classic Pizza",
+          description: "Fresh pizza",
+          price: 18.99,
+          image: "https://example.com/pizza.jpg",
+          menuItemId: "item-pizza",
+          hasModifiers: true,
+        },
+      ];
+
+      render(
+        <FeaturedItems
+          items={itemsWithMenuId}
+          menuLink="/joes-pizza/locations"
+          hasMultipleLocations={true}
+        />,
+        {
+          wrapper: createWrapper("USD", "en-US"),
+        }
+      );
+
+      const orderButtons = screen.getAllByText("Order");
+      fireEvent.click(orderButtons[0]);
+
+      expect(mockPush).toHaveBeenCalledWith("/joes-pizza/locations?addItem=item-pizza");
+    });
+
+    it("should navigate to locations page without addItem param when item has no menuItemId (multiple locations)", () => {
+      render(
+        <FeaturedItems
+          items={mockItems} // Items without menuItemId
           menuLink="/joes-pizza/locations"
           hasMultipleLocations={true}
         />,

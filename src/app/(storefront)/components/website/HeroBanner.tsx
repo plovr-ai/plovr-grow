@@ -1,11 +1,31 @@
 import Link from "next/link";
-import type { MerchantInfo } from "@/types/website";
+import type { MerchantInfo, BusinessHoursMap } from "@/types/website";
 
 interface LocationInfo {
   address: string;
   city: string;
   state: string;
   zipCode: string;
+}
+
+// Helper to get today's business hours
+function getTodayHours(businessHours: BusinessHoursMap | null): string | null {
+  if (!businessHours) return null;
+
+  // Use abbreviated day keys to match database format
+  const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  const today = days[new Date().getDay()];
+  const todayHours = businessHours[today];
+
+  if (!todayHours) {
+    return null;
+  }
+
+  if (todayHours.closed) {
+    return "Closed today";
+  }
+
+  return `${todayHours.open} - ${todayHours.close}`;
 }
 
 interface HeroBannerProps {
@@ -41,6 +61,9 @@ export function HeroBanner({
     ? `${singleLocation.address}, ${singleLocation.city}, ${singleLocation.state} ${singleLocation.zipCode}`
     : `${merchant.address}, ${merchant.city}, ${merchant.state} ${merchant.zipCode}`;
 
+  // Get today's hours for single location
+  const todayHours = hasSingleLocation ? getTodayHours(merchant.businessHours) : null;
+
   return (
     <section className="relative h-screen min-h-[600px] max-h-[900px] flex items-center justify-center">
       {/* Background Image */}
@@ -64,7 +87,7 @@ export function HeroBanner({
           </p>
         )}
 
-        <div className="flex items-center justify-center gap-2 mb-8 text-white/80">
+        <div className="flex items-center justify-center gap-2 text-white/80">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
@@ -90,6 +113,24 @@ export function HeroBanner({
             </Link>
           )}
         </div>
+
+        {/* Business Hours for single location */}
+        {hasSingleLocation && todayHours && (
+          <div className="flex items-center justify-center gap-2 mt-2 mb-8 text-white/80">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span className="text-base md:text-lg">Today: {todayHours}</span>
+          </div>
+        )}
+
+        {/* Spacer when no business hours */}
+        {!(hasSingleLocation && todayHours) && <div className="mb-8" />}
 
         <Link
           href={orderLink}

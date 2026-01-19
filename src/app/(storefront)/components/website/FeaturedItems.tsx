@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { FeaturedItem } from "@/types/website";
 import { useFormatPrice } from "@/hooks";
 import { useCartStore } from "@/stores";
+import { ImagePlaceholderIcon } from "@storefront/components/icons";
 
 interface FeaturedItemsProps {
   items: FeaturedItem[];
@@ -27,9 +28,13 @@ export function FeaturedItems({
   const addItem = useCartStore((state) => state.addItem);
 
   const handleAddClick = (item: FeaturedItem) => {
-    // For multiple locations, just navigate to locations page
+    // For multiple locations, navigate to locations page with addItem param
     if (hasMultipleLocations) {
-      router.push(menuLink);
+      if (item.menuItemId) {
+        router.push(`${menuLink}?addItem=${item.menuItemId}`);
+      } else {
+        router.push(menuLink);
+      }
       return;
     }
 
@@ -84,11 +89,17 @@ export function FeaturedItems({
             >
               {/* Image */}
               <div className="relative h-48 md:h-56 overflow-hidden">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                    <ImagePlaceholderIcon className="w-12 h-12 text-gray-300" />
+                  </div>
+                )}
                 {item.category && (
                   <span className="absolute top-3 left-3 bg-white/90 text-gray-700 text-xs font-medium px-3 py-1 rounded-full">
                     {item.category}

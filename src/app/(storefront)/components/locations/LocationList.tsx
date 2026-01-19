@@ -1,7 +1,7 @@
 "use client";
 
 import { LocationCard } from "./LocationCard";
-import type { MerchantStatus } from "@/types/merchant";
+import type { MerchantStatus, BusinessHoursMap } from "@/types/merchant";
 
 interface LocationItem {
   id: string;
@@ -10,15 +10,20 @@ interface LocationItem {
   address: string | null;
   city: string | null;
   state: string | null;
+  phone: string | null;
+  email: string | null;
+  businessHours: BusinessHoursMap | null;
   status: MerchantStatus;
 }
 
 interface LocationListProps {
   locations: LocationItem[];
   currentMerchantId: string;
+  /** Menu item ID to add to cart after selecting a location */
+  addItem?: string;
 }
 
-export function LocationList({ locations, currentMerchantId }: LocationListProps) {
+export function LocationList({ locations, currentMerchantId, addItem }: LocationListProps) {
   if (locations.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -38,8 +43,12 @@ export function LocationList({ locations, currentMerchantId }: LocationListProps
           address={location.address}
           city={location.city}
           state={location.state}
+          phone={location.phone}
+          email={location.email}
+          businessHours={location.businessHours}
           status={location.status}
           isCurrentLocation={location.id === currentMerchantId}
+          addItem={addItem}
         />
       ))}
     </div>

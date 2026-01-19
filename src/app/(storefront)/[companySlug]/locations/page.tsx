@@ -1,23 +1,45 @@
 import { notFound } from "next/navigation";
 import { Navigation, Footer } from "@storefront/components/website";
 import { LocationList } from "@storefront/components/locations";
-import { getMockWebsiteData } from "@/data/mock/website";
 import { merchantService } from "@/services/merchant";
 
 interface PageProps {
   params: Promise<{ companySlug: string }>;
+  searchParams: Promise<{ addItem?: string }>;
 }
 
-export default async function LocationsPage({ params }: PageProps) {
+export default async function LocationsPage({ params, searchParams }: PageProps) {
   const { companySlug } = await params;
+  const { addItem } = await searchParams;
   const company = await merchantService.getCompanyBySlug(companySlug);
 
   if (!company) {
     notFound();
   }
 
-  // Get website display data (mock for now)
-  const data = getMockWebsiteData(companySlug);
+  // Get website display data from database
+  const websiteData = await merchantService.getCompanyWebsiteData(companySlug);
+  if (!websiteData) {
+    notFound();
+  }
+
+  // Convert WebsiteMerchantData to the format expected by components
+  const merchantInfo = {
+    name: websiteData.name,
+    tagline: websiteData.tagline,
+    address: websiteData.address,
+    city: websiteData.city,
+    state: websiteData.state,
+    zipCode: websiteData.zipCode,
+    phone: websiteData.phone,
+    email: websiteData.email,
+    logo: websiteData.logo,
+    heroImage: websiteData.heroImage,
+    businessHours: websiteData.businessHours,
+    socialLinks: websiteData.socialLinks,
+    currency: websiteData.currency,
+    locale: websiteData.locale,
+  };
 
   // Convert company merchants to location format
   const locations = company.merchants.map((merchant) => ({
@@ -27,13 +49,16 @@ export default async function LocationsPage({ params }: PageProps) {
     address: merchant.address ?? null,
     city: merchant.city ?? null,
     state: merchant.state ?? null,
-    status: "active" as const,
+    phone: merchant.phone ?? null,
+    email: merchant.email ?? null,
+    businessHours: merchant.businessHours ?? null,
+    status: merchant.status,
   }));
 
   return (
     <main className="min-h-screen bg-white">
       <Navigation
-        logo={data.merchant.logo}
+        logo={merchantInfo.logo}
         restaurantName={company.name}
         companySlug={companySlug}
         menuLink={`/${companySlug}/locations`}
@@ -50,12 +75,12 @@ export default async function LocationsPage({ params }: PageProps) {
             </p>
           </div>
 
-          <LocationList locations={locations} currentMerchantId="" />
+          <LocationList locations={locations} currentMerchantId="" addItem={addItem} />
         </div>
       </div>
 
       <Footer
-        merchant={data.merchant}
+        merchant={merchantInfo}
         companySlug={companySlug}
         menuLink={`/${companySlug}/locations`}
       />
