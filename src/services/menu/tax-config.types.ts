@@ -14,36 +14,76 @@ export const ROUNDING_METHODS = [
 export type RoundingMethod = (typeof ROUNDING_METHODS)[number];
 
 /**
- * Tax configuration data
+ * Tax configuration data (for storefront, includes rate from MerchantTaxRate)
  */
 export interface TaxConfigData {
   id: string;
   name: string;
-  rate: number; // Decimal ratio (0.0825 for 8.25%)
+  rate: number; // Decimal ratio (0.0825 for 8.25%) - from MerchantTaxRate
   roundingMethod: RoundingMethod;
   isDefault: boolean;
   status: "active" | "inactive";
 }
 
 /**
- * Input for creating a new tax config
+ * Tax configuration (Company level, without rate)
  */
-export interface CreateTaxConfigInput {
+export interface TaxConfigInfo {
+  id: string;
   name: string;
-  rate: number;
+  description: string | null;
   roundingMethod: RoundingMethod;
-  isDefault?: boolean;
+  isDefault: boolean;
+  status: "active" | "inactive";
 }
 
 /**
- * Input for updating an existing tax config
+ * Merchant tax rate
+ */
+export interface MerchantTaxRateInfo {
+  merchantId: string;
+  merchantName: string;
+  rate: number; // Decimal ratio (0.0825 for 8.25%)
+}
+
+/**
+ * Tax configuration with all merchant rates (for Dashboard)
+ */
+export interface TaxConfigWithRates extends TaxConfigInfo {
+  merchantRates: MerchantTaxRateInfo[];
+}
+
+/**
+ * Input for creating a new tax config (with merchant rates)
+ */
+export interface CreateTaxConfigInput {
+  name: string;
+  description?: string;
+  roundingMethod: RoundingMethod;
+  isDefault?: boolean;
+  merchantRates?: Array<{ merchantId: string; rate: number }>;
+}
+
+/**
+ * Input for updating an existing tax config (with merchant rates)
  */
 export interface UpdateTaxConfigInput {
   name?: string;
-  rate?: number;
+  description?: string;
   roundingMethod?: RoundingMethod;
   isDefault?: boolean;
   status?: "active" | "inactive";
+  merchantRates?: Array<{ merchantId: string; rate: number }>;
+}
+
+/**
+ * Tax info for menu items and cart items
+ */
+export interface ItemTaxInfo {
+  taxConfigId: string;
+  name: string;
+  rate: number; // Decimal ratio (0.0825 for 8.25%)
+  roundingMethod: RoundingMethod;
 }
 
 /**

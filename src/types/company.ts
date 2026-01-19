@@ -72,7 +72,8 @@ export interface CompanySettings {
     tagline?: string; // Brand tagline, e.g., "Authentic New York Style Pizza Since 1985"
     heroImage?: string; // Default hero image for all merchants
     socialLinks?: SocialLink[]; // Brand social media links
-    featuredItems?: FeaturedItem[]; // Featured items for homepage
+    featuredItems?: FeaturedItem[]; // Featured items for homepage (cached)
+    featuredItemIds?: string[]; // IDs of featured menu items (for fetching fresh data)
     reviews?: CustomerReview[]; // Customer reviews for homepage
   };
 }

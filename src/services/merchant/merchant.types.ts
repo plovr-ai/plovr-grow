@@ -1,7 +1,16 @@
 // ==================== Merchant Service Types ====================
 
 import type { CompanySettings } from "@/types/company";
-import type { MerchantSettings } from "@/types/merchant";
+import type { MerchantSettings, BusinessHoursMap } from "@/types/merchant";
+
+// Re-export input types from @/types/merchant for service layer
+export type {
+  CreateMerchantInput,
+  UpdateMerchantInput,
+  UpdateMerchantSettingsInput,
+  GetMerchantsFilter,
+  WebsiteMerchantData,
+} from "@/types/merchant";
 
 // ==================== Response Types ====================
 
@@ -20,6 +29,7 @@ export interface MerchantWithCompany {
   email?: string;
   logoUrl?: string;
   bannerUrl?: string;
+  businessHours?: BusinessHoursMap;
   timezone: string;
   currency: string;
   locale: string;
@@ -31,6 +41,7 @@ export interface MerchantWithCompany {
     slug: string;
     tenantId: string;
     name: string;
+    logoUrl?: string;
     settings?: CompanySettings;
     tenant: {
       id: string;

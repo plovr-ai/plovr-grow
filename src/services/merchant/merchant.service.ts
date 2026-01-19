@@ -45,7 +45,7 @@ export class MerchantService {
    * 用于品牌官网门店列表
    */
   async getCompanyBySlug(slug: string): Promise<CompanyWithMerchants | null> {
-    const data = await companyRepository.getBySlugWithFullMerchants(slug);
+    const data = await companyRepository.getBySlugWithMerchants(slug);
     if (!data) return null;
     return toCompanyWithMerchants(data);
   }

@@ -1,7 +1,12 @@
 import type { MenuCategory, MenuItem } from "@prisma/client";
+import type { ItemTaxInfo } from "@/services/menu/tax-config.types";
+
+export interface MenuItemWithTaxes extends MenuItem {
+  taxes?: ItemTaxInfo[];
+}
 
 export interface MenuCategoryWithItems extends MenuCategory {
-  menuItems: MenuItem[];
+  menuItems: MenuItemWithTaxes[];
 }
 
 export interface GetMenuResponse {
