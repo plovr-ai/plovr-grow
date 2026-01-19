@@ -12,7 +12,7 @@ import type { FeeBreakdownItem } from "@/lib/pricing";
 export interface OrderData {
   id: string;
   tenantId: string;
-  merchantId: string;
+  merchantId: string | null;
   customerId: string | null;
   orderNumber: string;
   customerName: string;
