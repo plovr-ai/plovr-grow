@@ -7,6 +7,7 @@ import {
   useLayoutEffect,
   useEffect,
 } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   MenuHeader,
   MenuCategoryNav,
@@ -34,6 +35,7 @@ export function MenuPageClient({
 }: MenuPageClientProps) {
   // Support both old (tenantSlug) and new (merchantSlug) props
   const slug = merchantSlug ?? tenantSlug ?? "";
+  const searchParams = useSearchParams();
   const initialCategory = data.categories[0]?.category.id ?? null;
   const [activeCategory, setActiveCategory] = useState<string | null>(
     initialCategory
@@ -55,6 +57,31 @@ export function MenuPageClient({
       setTenantId(slug);
     }
   }, [slug, setTenantId]);
+
+  // Handle addItem query param from FeaturedItems
+  const addItemHandledRef = useRef(false);
+  useEffect(() => {
+    const addItemId = searchParams.get("addItem");
+    if (!addItemId || addItemHandledRef.current) return;
+
+    addItemHandledRef.current = true;
+
+    // Find the item in menu categories
+    let menuItem: MenuItemViewModel | undefined;
+    for (const category of data.categories) {
+      menuItem = category.items.find((item) => item.id === addItemId);
+      if (menuItem) break;
+    }
+
+    if (!menuItem) return;
+
+    // If item has modifiers, open the modal
+    if (menuItem.hasModifiers && menuItem.modifierGroups.length > 0) {
+      setModalItem(menuItem);
+      setIsModalOpen(true);
+    }
+    // Note: Items without modifiers are already added to cart by FeaturedItems
+  }, [searchParams, data.categories]);
 
   const isScrollingRef = useRef(false);
 

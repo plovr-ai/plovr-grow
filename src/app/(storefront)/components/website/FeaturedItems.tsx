@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import type { FeaturedItem } from "@/types/website";
 import { useFormatPrice } from "@/hooks";
+import { useCartStore } from "@/stores";
 
 interface FeaturedItemsProps {
   items: FeaturedItem[];
@@ -10,20 +11,56 @@ interface FeaturedItemsProps {
   menuLink?: string;
   /** Whether this company has multiple locations */
   hasMultipleLocations?: boolean;
+  /** Merchant slug for cart (single location only) */
+  merchantSlug?: string;
 }
 
 export function FeaturedItems({
   items,
   menuLink = "#",
   hasMultipleLocations = false,
+  merchantSlug,
 }: FeaturedItemsProps) {
   const formatPrice = useFormatPrice();
   const router = useRouter();
+  const setTenantId = useCartStore((state) => state.setTenantId);
+  const addItem = useCartStore((state) => state.addItem);
 
   const handleAddClick = (item: FeaturedItem) => {
-    // Navigate to menu or locations page
-    // TODO: If FeaturedItem has menuItemId, add to cart directly for single location
-    router.push(menuLink);
+    // For multiple locations, just navigate to locations page
+    if (hasMultipleLocations) {
+      router.push(menuLink);
+      return;
+    }
+
+    // Single location: check if item has menuItemId for direct cart action
+    if (!item.menuItemId) {
+      // No menuItemId, just navigate to menu
+      router.push(menuLink);
+      return;
+    }
+
+    // Set the merchant context for cart
+    if (merchantSlug) {
+      setTenantId(merchantSlug);
+    }
+
+    // Check if item has modifiers
+    if (item.hasModifiers) {
+      // Navigate to menu with query param to open modifier modal
+      router.push(`${menuLink}?addItem=${item.menuItemId}`);
+    } else {
+      // Add directly to cart, then navigate to menu
+      addItem({
+        menuItemId: item.menuItemId,
+        name: item.name,
+        price: item.price,
+        quantity: 1,
+        selectedModifiers: [],
+        imageUrl: item.image,
+      });
+      router.push(menuLink);
+    }
   };
   return (
     <section id="menu" className="py-16 md:py-24 bg-gray-50">

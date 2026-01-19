@@ -29,6 +29,36 @@ export interface CompanyInfo {
   updatedAt: Date;
 }
 
+export interface SocialLink {
+  platform: "facebook" | "instagram" | "twitter" | "yelp" | "google";
+  url: string;
+}
+
+// Featured item for homepage display (stored in settings until proper table is created)
+export interface FeaturedItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  category?: string;
+  /** Links to actual menu item for add-to-cart functionality */
+  menuItemId?: string;
+  /** Whether the menu item has modifiers (requires modal) */
+  hasModifiers?: boolean;
+}
+
+// Customer review for homepage display (stored in settings until proper table is created)
+export interface CustomerReview {
+  id: string;
+  customerName: string;
+  rating: number; // 1-5
+  content: string;
+  date: string;
+  source: "google" | "yelp" | "facebook" | "website";
+  avatarUrl?: string;
+}
+
 export interface CompanySettings {
   // Brand-level default settings (can be overridden by merchants)
   defaultCurrency?: string;
@@ -36,6 +66,15 @@ export interface CompanySettings {
   defaultTimezone?: string;
   // Theme configuration
   themePreset?: ThemePresetName;
+
+  // Website configuration (brand-level)
+  website?: {
+    tagline?: string; // Brand tagline, e.g., "Authentic New York Style Pizza Since 1985"
+    heroImage?: string; // Default hero image for all merchants
+    socialLinks?: SocialLink[]; // Brand social media links
+    featuredItems?: FeaturedItem[]; // Featured items for homepage
+    reviews?: CustomerReview[]; // Customer reviews for homepage
+  };
 }
 
 export interface MerchantSummary {

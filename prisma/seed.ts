@@ -342,6 +342,8 @@ async function main() {
           price: 8.99,
           image: "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=400&h=300&fit=crop",
           category: "Bread",
+          menuItemId: "bella-item-sourdough",
+          hasModifiers: false,
         },
         {
           id: "bella-featured-2",
@@ -350,6 +352,8 @@ async function main() {
           price: 4.49,
           image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400&h=300&fit=crop",
           category: "Pastry",
+          menuItemId: "bella-item-croissant",
+          hasModifiers: false,
         },
         {
           id: "bella-featured-3",
@@ -358,6 +362,8 @@ async function main() {
           price: 5.29,
           image: "https://images.unsplash.com/photo-1509365465985-25d11c17e812?w=400&h=300&fit=crop",
           category: "Pastry",
+          menuItemId: "bella-item-almond-danish",
+          hasModifiers: false,
         },
         {
           id: "bella-featured-4",
@@ -366,6 +372,8 @@ async function main() {
           price: 4.99,
           image: "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400&h=300&fit=crop",
           category: "Coffee",
+          menuItemId: "bella-item-cappuccino",
+          hasModifiers: true,
         },
       ],
       reviews: [
