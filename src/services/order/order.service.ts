@@ -1,22 +1,12 @@
 // ==================== Order Service ====================
-// Currently uses mock data. Will be replaced with Repository layer later.
+// Uses OrderRepository (Prisma) for database operations.
 
+import { Prisma } from "@prisma/client";
 import { menuService, taxConfigService } from "@/services/menu";
-import { merchantService } from "@/services/merchant";
+import { orderRepository } from "@/repositories/order.repository";
 import { generateOrderNumber } from "@/lib/utils";
 import { calculateOrderPricing, type PricingItem, type TipInput } from "@/lib/pricing";
 import { orderEventEmitter } from "./order-events";
-import {
-  mockCreateOrder,
-  mockGetOrderByIdWithMerchant,
-  mockGetOrderByNumber,
-  mockGetNextMerchantOrderSequence,
-  mockUpdateOrderStatus,
-  mockGetMerchantOrders,
-  mockGetMerchantTodayOrders,
-  mockCountPendingOrders,
-  mockGetMerchantStats,
-} from "./order.mock";
 import type {
   CreateOrderInput,
   OrderCalculation,
@@ -42,49 +32,34 @@ export class OrderService {
       throw new Error("Some menu items are not available");
     }
 
-    // Get merchant info for the order
-    const merchant = await merchantService.getMerchant(merchantId);
-    const merchantInfo = merchant
-      ? { id: merchant.id, name: merchant.name, slug: merchant.slug }
-      : undefined;
-
     // Calculate order totals
     const calculation = await this.calculateOrderTotals(tenantId, merchantId, input);
 
     // Generate order number (merchant-specific sequence)
-    // TODO: Replace with orderRepository.getNextMerchantOrderSequence
-    const sequence = mockGetNextMerchantOrderSequence(tenantId, merchantId);
+    const sequence = await orderRepository.getNextMerchantOrderSequence(tenantId, merchantId);
     const orderNumber = generateOrderNumber(sequence);
 
-    // Create the order with merchantId
-    // TODO: Replace with orderRepository.create
-    const order = mockCreateOrder(
-      tenantId,
-      merchantId,
-      {
-        orderNumber,
-        customerName: input.customerName,
-        customerPhone: input.customerPhone,
-        customerEmail: input.customerEmail ?? null,
-        orderType: input.orderType,
-        status: "pending",
-        items: input.items,
-        subtotal: calculation.subtotal,
-        taxAmount: calculation.taxAmount,
-        tipAmount: calculation.tipAmount,
-        deliveryFee: calculation.deliveryFee,
-        discount: calculation.discount,
-        totalAmount: calculation.totalAmount,
-        notes: input.notes ?? null,
-        deliveryAddress: input.deliveryAddress ?? null,
-        scheduledAt: input.scheduledAt ?? null,
-        confirmedAt: null,
-        completedAt: null,
-        cancelledAt: null,
-        cancelReason: null,
-      },
-      merchantInfo
-    );
+    // Create the order in database
+    const order = await orderRepository.create(tenantId, merchantId, {
+      orderNumber,
+      customerName: input.customerName,
+      customerPhone: input.customerPhone,
+      customerEmail: input.customerEmail ?? null,
+      orderType: input.orderType,
+      status: "pending",
+      items: input.items as unknown as Prisma.InputJsonValue,
+      subtotal: calculation.subtotal,
+      taxAmount: calculation.taxAmount,
+      tipAmount: calculation.tipAmount,
+      deliveryFee: calculation.deliveryFee,
+      discount: calculation.discount,
+      totalAmount: calculation.totalAmount,
+      notes: input.notes ?? null,
+      deliveryAddress: input.deliveryAddress
+        ? (input.deliveryAddress as unknown as Prisma.InputJsonValue)
+        : Prisma.JsonNull,
+      scheduledAt: input.scheduledAt ?? null,
+    });
 
     // Emit order created event
     orderEventEmitter.emit("order.created", {
@@ -177,16 +152,14 @@ export class OrderService {
    * Get order by ID with merchant info
    */
   async getOrder(tenantId: string, orderId: string) {
-    // TODO: Replace with orderRepository.getByIdWithMerchant
-    return mockGetOrderByIdWithMerchant(tenantId, orderId);
+    return orderRepository.getByIdWithMerchant(tenantId, orderId);
   }
 
   /**
    * Get order by order number
    */
   async getOrderByNumber(tenantId: string, orderNumber: string) {
-    // TODO: Replace with orderRepository.getByOrderNumber
-    return mockGetOrderByNumber(tenantId, orderNumber);
+    return orderRepository.getByOrderNumber(tenantId, orderNumber);
   }
 
   /**
@@ -196,8 +169,7 @@ export class OrderService {
     tenantId: string,
     orderId: string
   ): Promise<OrderWithTimeline | null> {
-    // TODO: Replace with orderRepository.getByIdWithMerchant
-    const order = mockGetOrderByIdWithMerchant(tenantId, orderId);
+    const order = await orderRepository.getByIdWithMerchant(tenantId, orderId);
     if (!order) return null;
 
     const timeline = this.buildTimeline(order);
@@ -256,16 +228,14 @@ export class OrderService {
     merchantId: string,
     options: MerchantOrderListOptions = {}
   ) {
-    // TODO: Replace with orderRepository.getMerchantOrders
-    return mockGetMerchantOrders(tenantId, merchantId, options);
+    return orderRepository.getMerchantOrders(tenantId, merchantId, options);
   }
 
   /**
    * Get today's orders for a merchant
    */
   async getMerchantTodayOrders(tenantId: string, merchantId: string) {
-    // TODO: Replace with orderRepository.getMerchantTodayOrders
-    return mockGetMerchantTodayOrders(tenantId, merchantId);
+    return orderRepository.getMerchantTodayOrders(tenantId, merchantId);
   }
 
   /**
@@ -277,16 +247,14 @@ export class OrderService {
     dateFrom?: Date,
     dateTo?: Date
   ) {
-    // TODO: Replace with orderRepository.getMerchantStats
-    return mockGetMerchantStats(tenantId, merchantId, dateFrom, dateTo);
+    return orderRepository.getMerchantStats(tenantId, merchantId, dateFrom, dateTo);
   }
 
   /**
    * Count pending orders for a merchant (for Dashboard badge)
    */
   async countMerchantPendingOrders(tenantId: string, merchantId: string) {
-    // TODO: Replace with orderRepository.countPendingOrders
-    return mockCountPendingOrders(tenantId, merchantId);
+    return orderRepository.countPendingOrders(tenantId, merchantId);
   }
 
   /**
@@ -335,17 +303,13 @@ export class OrderService {
         break;
     }
 
-    // TODO: Replace with orderRepository.updateStatusAndReturn
-    const updatedOrder = mockUpdateOrderStatus(
+    // Update order status in database
+    const updatedOrder = await orderRepository.updateStatusAndReturn(
       tenantId,
       orderId,
       input.status,
       additionalData
     );
-
-    if (!updatedOrder) {
-      throw new Error("Failed to update order status");
-    }
 
     // Emit status change event (only for valid status transitions)
     if (currentOrder.merchantId && input.status !== "pending") {
