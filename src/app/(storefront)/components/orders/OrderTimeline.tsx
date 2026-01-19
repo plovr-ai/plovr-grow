@@ -2,6 +2,7 @@
 
 import type { OrderStatus } from "@/types";
 import type { TimelineEvent } from "./order-detail.types";
+import { useFormatDateTime } from "@/hooks";
 
 interface Props {
   timeline: TimelineEvent[];
@@ -44,25 +45,8 @@ const STATUS_CONFIG: Record<
   },
 };
 
-function formatTimestamp(timestamp: Date | string): string {
-  const date = typeof timestamp === "string" ? new Date(timestamp) : timestamp;
-  return date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
-function formatDate(timestamp: Date | string): string {
-  const date = typeof timestamp === "string" ? new Date(timestamp) : timestamp;
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 export function OrderTimeline({ timeline, cancelReason }: Props) {
+  const { formatDate, formatTime } = useFormatDateTime();
   // Sort timeline by timestamp descending (most recent first)
   const sortedTimeline = [...timeline].sort((a, b) => {
     const dateA = typeof a.timestamp === "string" ? new Date(a.timestamp) : a.timestamp;
@@ -94,7 +78,7 @@ export function OrderTimeline({ timeline, cancelReason }: Props) {
               <div className="flex-1 min-w-0 -mt-0.5">
                 <p className={`font-medium ${config.color}`}>{config.label}</p>
                 <p className="text-sm text-gray-400">
-                  {formatDate(event.timestamp)} at {formatTimestamp(event.timestamp)}
+                  {formatDate(event.timestamp)} at {formatTime(event.timestamp)}
                 </p>
                 {event.status === "cancelled" && cancelReason && (
                   <p className="text-sm text-red-500 mt-1">

@@ -116,6 +116,7 @@ export interface OrderWithMerchant extends Order {
     id: string;
     name: string;
     slug: string;
+    timezone: string;
   } | null;
 }
 
@@ -148,6 +149,7 @@ export interface OrderWithTimeline extends OrderData {
     id: string;
     name: string;
     slug: string;
+    timezone: string;
   } | null;
   customer: unknown | null;
 }

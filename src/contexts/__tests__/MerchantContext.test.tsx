@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 describe("MerchantContext", () => {
   describe("MerchantProvider", () => {
     it("should provide config to children", () => {
-      const config = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US" };
+      const config = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US", timezone: "America/New_York" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={config}>{children}</MerchantProvider>
@@ -25,7 +25,7 @@ describe("MerchantContext", () => {
     });
 
     it("should provide EUR config correctly", () => {
-      const config = { name: "Test", logoUrl: null, currency: "EUR", locale: "de-DE" };
+      const config = { name: "Test", logoUrl: null, currency: "EUR", locale: "de-DE", timezone: "Europe/Berlin" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={config}>{children}</MerchantProvider>
@@ -38,7 +38,7 @@ describe("MerchantContext", () => {
     });
 
     it("should provide CNY config correctly", () => {
-      const config = { name: "Test", logoUrl: null, currency: "CNY", locale: "zh-CN" };
+      const config = { name: "Test", logoUrl: null, currency: "CNY", locale: "zh-CN", timezone: "Asia/Shanghai" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={config}>{children}</MerchantProvider>
@@ -66,7 +66,7 @@ describe("MerchantContext", () => {
     });
 
     it("should return the same config object reference", () => {
-      const config = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US" };
+      const config = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US", timezone: "America/New_York" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={config}>{children}</MerchantProvider>
@@ -87,8 +87,8 @@ describe("MerchantContext", () => {
 
   describe("nested providers", () => {
     it("should use the nearest provider config", () => {
-      const outerConfig = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US" };
-      const innerConfig = { name: "Test", logoUrl: null, currency: "EUR", locale: "de-DE" };
+      const outerConfig = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US", timezone: "America/New_York" };
+      const innerConfig = { name: "Test", logoUrl: null, currency: "EUR", locale: "de-DE", timezone: "Europe/Berlin" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={outerConfig}>
@@ -106,7 +106,7 @@ describe("MerchantContext", () => {
 
   describe("tipConfig", () => {
     it("should use default tipConfig when not provided", () => {
-      const config = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US" };
+      const config = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US", timezone: "America/New_York" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={config}>{children}</MerchantProvider>
@@ -131,6 +131,7 @@ describe("MerchantContext", () => {
         logoUrl: null,
         currency: "USD",
         locale: "en-US",
+        timezone: "America/New_York",
         tipConfig: customTipConfig,
       };
 
@@ -152,6 +153,7 @@ describe("MerchantContext", () => {
         logoUrl: null,
         currency: "USD",
         locale: "en-US",
+        timezone: "America/New_York",
         tipConfig: undefined,
       };
 
@@ -167,7 +169,7 @@ describe("MerchantContext", () => {
 
   describe("feeConfig", () => {
     it("should use default feeConfig (empty fees) when not provided", () => {
-      const config = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US" };
+      const config = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US", timezone: "America/New_York" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={config}>{children}</MerchantProvider>
@@ -196,6 +198,7 @@ describe("MerchantContext", () => {
         logoUrl: null,
         currency: "USD",
         locale: "en-US",
+        timezone: "America/New_York",
         feeConfig: customFeeConfig,
       };
 
@@ -217,6 +220,7 @@ describe("MerchantContext", () => {
         logoUrl: null,
         currency: "USD",
         locale: "en-US",
+        timezone: "America/New_York",
         feeConfig: undefined,
       };
 
@@ -254,6 +258,7 @@ describe("MerchantContext", () => {
         logoUrl: null,
         currency: "USD",
         locale: "en-US",
+        timezone: "America/New_York",
         feeConfig: customFeeConfig,
       };
 
@@ -276,6 +281,7 @@ describe("MerchantContext", () => {
         logoUrl: null,
         currency: "USD",
         locale: "en-US",
+        timezone: "America/New_York",
         tipConfig: {
           mode: "percentage" as const,
           tiers: [0.15, 0.18, 0.2],
@@ -312,6 +318,7 @@ describe("MerchantContext", () => {
         logoUrl: null,
         currency: "USD",
         locale: "en-US",
+        timezone: "America/New_York",
         tipConfig: {
           mode: "fixed" as const,
           tiers: [1, 2, 3],
@@ -335,6 +342,7 @@ describe("MerchantContext", () => {
         logoUrl: null,
         currency: "USD",
         locale: "en-US",
+        timezone: "America/New_York",
         feeConfig: {
           fees: [
             {

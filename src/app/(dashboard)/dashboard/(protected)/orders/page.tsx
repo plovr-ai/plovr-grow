@@ -54,6 +54,7 @@ export default async function OrdersManagementPage({
   });
 
   // Convert Decimal fields to numbers for Client Component serialization
+  // Merchant info (including timezone) is already included from the repository
   const serializedOrders = ordersData.items.map((order) => ({
     ...order,
     subtotal: Number(order.subtotal),

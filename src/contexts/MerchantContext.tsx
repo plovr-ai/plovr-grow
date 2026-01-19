@@ -13,6 +13,7 @@ export interface MerchantConfig {
   logoUrl: string | null;
   currency: string;
   locale: string;
+  timezone: string;
   tipConfig: TipConfig;
   feeConfig: FeeConfig;
 }
@@ -24,6 +25,7 @@ interface MerchantProviderProps {
     logoUrl: string | null;
     currency: string;
     locale: string;
+    timezone: string;
     tipConfig?: TipConfig;
     feeConfig?: FeeConfig;
   };
@@ -38,10 +40,11 @@ export function MerchantProvider({ children, config }: MerchantProviderProps) {
       logoUrl: config.logoUrl,
       currency: config.currency,
       locale: config.locale,
+      timezone: config.timezone,
       tipConfig: config.tipConfig ?? DEFAULT_TIP_CONFIG,
       feeConfig: config.feeConfig ?? DEFAULT_FEE_CONFIG,
     }),
-    [config.name, config.logoUrl, config.currency, config.locale, config.tipConfig, config.feeConfig]
+    [config.name, config.logoUrl, config.currency, config.locale, config.timezone, config.tipConfig, config.feeConfig]
   );
 
   return (
@@ -72,4 +75,9 @@ export function useFeeConfig(): FeeConfig {
 export function useMerchantInfo(): { name: string; logoUrl: string | null } {
   const { name, logoUrl } = useMerchantConfig();
   return { name, logoUrl };
+}
+
+export function useTimezone(): string {
+  const { timezone } = useMerchantConfig();
+  return timezone;
 }

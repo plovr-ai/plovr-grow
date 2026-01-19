@@ -2,10 +2,27 @@ import type { Order } from "@prisma/client";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { StatusBadge } from "./StatusBadge";
 import { formatPrice } from "@/lib/utils";
+import { formatDate, formatTime, getTimezoneAbbr } from "@/lib/datetime";
 import type { OrderType, OrderStatus } from "@/types";
 
+// Serialized order type with Decimal fields converted to numbers
+type SerializedOrder = Omit<Order, "tenant" | "subtotal" | "taxAmount" | "tipAmount" | "deliveryFee" | "discount" | "totalAmount"> & {
+  subtotal: number;
+  taxAmount: number;
+  tipAmount: number;
+  deliveryFee: number;
+  discount: number;
+  totalAmount: number;
+  merchant?: {
+    id: string;
+    name: string;
+    slug: string;
+    timezone: string;
+  } | null;
+};
+
 interface OrderCardProps {
-  order: Omit<Order, "tenant">;
+  order: SerializedOrder;
 }
 
 const orderTypeLabels: Record<OrderType, string> = {
@@ -22,17 +39,15 @@ export function OrderCard({ order }: OrderCardProps) {
   }>;
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Format date
+  // Get timezone from merchant or use default
+  const timezone = order.merchant?.timezone ?? "America/New_York";
+  const locale = "en-US";
+
+  // Format date with merchant's timezone
   const createdDate = new Date(order.createdAt);
-  const formattedDate = createdDate.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-  const formattedTime = createdDate.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const formattedDate = formatDate(createdDate, timezone, locale);
+  const formattedTime = formatTime(createdDate, timezone, locale);
+  const timezoneAbbr = getTimezoneAbbr(timezone, createdDate);
 
   return (
     <Card className="hover:shadow-lg transition-shadow cursor-pointer gap-3 !py-4">
@@ -41,7 +56,7 @@ export function OrderCard({ order }: OrderCardProps) {
           <div className="flex-1">
             <h3 className="font-semibold text-lg">#{order.orderNumber}</h3>
             <p className="text-sm text-gray-600 mt-1">
-              {formattedDate} at {formattedTime}
+              {formattedDate} at {formattedTime} {timezoneAbbr}
             </p>
           </div>
           <StatusBadge status={order.status as OrderStatus} />
@@ -64,7 +79,7 @@ export function OrderCard({ order }: OrderCardProps) {
         <div className="flex items-center justify-between w-full">
           <span className="text-sm font-medium text-gray-600">Total:</span>
           <span className="text-base font-bold">
-            {formatPrice(Number(order.totalAmount), "USD", "en-US")}
+            {formatPrice(order.totalAmount, "USD", "en-US")}
           </span>
         </div>
       </CardFooter>

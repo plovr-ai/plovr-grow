@@ -53,6 +53,7 @@ export default async function CompanyLayout({ children, params }: LayoutProps) {
           logoUrl: company.logoUrl ?? null,
           currency: "USD",
           locale: "en-US",
+          timezone: "America/New_York",
           tipConfig: defaultTipConfig,
         }}
       >

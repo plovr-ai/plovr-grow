@@ -7,9 +7,25 @@ import { OrderFilters } from "./OrderFilters";
 import { OrderCard } from "./OrderCard";
 import { Pagination } from "./Pagination";
 
+// Serialized order type with Decimal fields converted to numbers
+type SerializedOrder = Omit<Order, "tenant" | "subtotal" | "taxAmount" | "tipAmount" | "deliveryFee" | "discount" | "totalAmount"> & {
+  subtotal: number;
+  taxAmount: number;
+  tipAmount: number;
+  deliveryFee: number;
+  discount: number;
+  totalAmount: number;
+  merchant?: {
+    id: string;
+    name: string;
+    slug: string;
+    timezone: string;
+  } | null;
+};
+
 interface OrdersManagementClientProps {
   merchants: Array<{ id: string; name: string }>;
-  initialOrders: Omit<Order, "tenant">[];
+  initialOrders: SerializedOrder[];
   totalPages: number;
   currentPage: number;
   initialFilters: {
