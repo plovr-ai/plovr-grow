@@ -79,7 +79,7 @@ async function main() {
 
   console.log(`Created merchant: ${merchant.name}`);
 
-  // Create menu categories (with both tenantId for legacy and merchantId for new)
+  // Create menu categories (company-level menu)
   const pizzaCategory = await prisma.menuCategory.upsert({
     where: {
       id: "cat-pizza",
@@ -88,7 +88,7 @@ async function main() {
     create: {
       id: "cat-pizza",
       tenantId: tenant.id,
-      merchantId: merchant.id,
+      companyId: company.id,
       name: "Pizza",
       description: "Our famous New York style pizzas",
       sortOrder: 1,
@@ -103,7 +103,7 @@ async function main() {
     create: {
       id: "cat-sides",
       tenantId: tenant.id,
-      merchantId: merchant.id,
+      companyId: company.id,
       name: "Sides",
       description: "Appetizers and sides",
       sortOrder: 2,
@@ -118,7 +118,7 @@ async function main() {
     create: {
       id: "cat-drinks",
       tenantId: tenant.id,
-      merchantId: merchant.id,
+      companyId: company.id,
       name: "Drinks",
       description: "Beverages",
       sortOrder: 3,
@@ -127,13 +127,13 @@ async function main() {
 
   console.log("Created menu categories");
 
-  // Create menu items (with both tenantId for legacy and merchantId for new)
+  // Create menu items (company-level menu)
   const menuItems = [
     // Pizzas
     {
       id: "item-cheese-pizza",
       tenantId: tenant.id,
-      merchantId: merchant.id,
+      companyId: company.id,
       categoryId: pizzaCategory.id,
       name: "Classic Cheese Pizza",
       description: "Our signature pizza with fresh mozzarella and house-made tomato sauce",
@@ -168,7 +168,7 @@ async function main() {
     {
       id: "item-pepperoni-pizza",
       tenantId: tenant.id,
-      merchantId: merchant.id,
+      companyId: company.id,
       categoryId: pizzaCategory.id,
       name: "Pepperoni Pizza",
       description: "Classic pepperoni with mozzarella cheese",
@@ -192,7 +192,7 @@ async function main() {
     {
       id: "item-margherita-pizza",
       tenantId: tenant.id,
-      merchantId: merchant.id,
+      companyId: company.id,
       categoryId: pizzaCategory.id,
       name: "Margherita Pizza",
       description: "Fresh tomatoes, mozzarella, basil, and olive oil",
@@ -216,7 +216,7 @@ async function main() {
     {
       id: "item-meat-lovers-pizza",
       tenantId: tenant.id,
-      merchantId: merchant.id,
+      companyId: company.id,
       categoryId: pizzaCategory.id,
       name: "Meat Lovers Pizza",
       description: "Pepperoni, sausage, bacon, and ham",
@@ -241,7 +241,7 @@ async function main() {
     {
       id: "item-garlic-knots",
       tenantId: tenant.id,
-      merchantId: merchant.id,
+      companyId: company.id,
       categoryId: sidesCategory.id,
       name: "Garlic Knots",
       description: "Fresh baked knots with garlic butter (6 pieces)",
@@ -253,7 +253,7 @@ async function main() {
     {
       id: "item-mozzarella-sticks",
       tenantId: tenant.id,
-      merchantId: merchant.id,
+      companyId: company.id,
       categoryId: sidesCategory.id,
       name: "Mozzarella Sticks",
       description: "Crispy fried mozzarella with marinara sauce (6 pieces)",
@@ -265,7 +265,7 @@ async function main() {
     {
       id: "item-caesar-salad",
       tenantId: tenant.id,
-      merchantId: merchant.id,
+      companyId: company.id,
       categoryId: sidesCategory.id,
       name: "Caesar Salad",
       description: "Romaine lettuce, parmesan, croutons, and Caesar dressing",
@@ -290,7 +290,7 @@ async function main() {
     {
       id: "item-soda",
       tenantId: tenant.id,
-      merchantId: merchant.id,
+      companyId: company.id,
       categoryId: drinksCategory.id,
       name: "Soda",
       description: "Coca-Cola, Sprite, or Fanta",
@@ -324,7 +324,7 @@ async function main() {
     {
       id: "item-water",
       tenantId: tenant.id,
-      merchantId: merchant.id,
+      companyId: company.id,
       categoryId: drinksCategory.id,
       name: "Bottled Water",
       description: "Purified spring water",

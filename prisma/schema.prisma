@@ -57,9 +57,11 @@ model Company {
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  merchants Merchant[]
-  users     User[]
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  merchants      Merchant[]
+  users          User[]
+  menuCategories MenuCategory[]
+  menuItems      MenuItem[]
 
   @@index([tenantId])
   @@index([slug])
@@ -94,11 +96,9 @@ model Merchant {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
-  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  menuCategories MenuCategory[]
-  menuItems      MenuItem[]
-  orders         Order[]
-  customers      Customer[]
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  orders    Order[]
+  customers Customer[]
 
   @@index([companyId])
   @@index([slug])
@@ -135,8 +135,8 @@ model User {
 
 model MenuCategory {
   id          String   @id @default(cuid())
-  tenantId    String   @map("tenant_id")           // Legacy, will be migrated to merchantId
-  merchantId  String?  @map("merchant_id")         // New: store-level category
+  tenantId    String   @map("tenant_id")           // Tenant isolation
+  companyId   String   @map("company_id")          // Company-level menu
   name        String
   description String?  @db.Text
   imageUrl    String?  @map("image_url")
@@ -147,19 +147,19 @@ model MenuCategory {
 
   // Relations
   tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  merchant  Merchant?  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   menuItems MenuItem[]
 
   @@index([tenantId])
-  @@index([tenantId, sortOrder])
-  @@index([merchantId])
+  @@index([companyId])
+  @@index([companyId, sortOrder])
   @@map("menu_categories")
 }
 
 model MenuItem {
   id          String   @id @default(cuid())
-  tenantId    String   @map("tenant_id")           // Legacy, will be migrated to merchantId
-  merchantId  String?  @map("merchant_id")         // New: store-level item
+  tenantId    String   @map("tenant_id")           // Tenant isolation
+  companyId   String   @map("company_id")          // Company-level menu
   categoryId  String   @map("category_id")
   name        String
   description String?  @db.Text
@@ -175,13 +175,13 @@ model MenuItem {
 
   // Relations
   tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  merchant Merchant?    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  company  Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   category MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
-  @@index([tenantId, categoryId])
-  @@index([tenantId, status])
-  @@index([merchantId])
+  @@index([companyId])
+  @@index([companyId, categoryId])
+  @@index([companyId, status])
   @@map("menu_items")
 }
 

@@ -2,13 +2,17 @@ import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 
 export class MenuRepository {
+  // ==================== Company-scoped query methods ====================
+
   /**
-   * Get all active categories with their items for a tenant
+   * Get all active categories with their items for a company
+   * All merchants under this company share the same menu
    */
-  async getCategoriesWithItems(tenantId: string) {
+  async getCategoriesWithItemsByCompany(tenantId: string, companyId: string) {
     return prisma.menuCategory.findMany({
       where: {
         tenantId,
+        companyId,
         status: "active",
       },
       include: {
@@ -65,29 +69,38 @@ export class MenuRepository {
   }
 
   /**
-   * Get multiple menu items by IDs
+   * Get multiple menu items by IDs (company-scoped)
    */
-  async getItemsByIds(tenantId: string, itemIds: string[]) {
+  async getItemsByIdsByCompany(
+    tenantId: string,
+    companyId: string,
+    itemIds: string[]
+  ) {
     return prisma.menuItem.findMany({
       where: {
         id: { in: itemIds },
         tenantId,
+        companyId,
         status: "active",
       },
     });
   }
 
+  // ==================== Create/Update methods ====================
+
   /**
-   * Create a new category
+   * Create a new category at company level
    */
   async createCategory(
     tenantId: string,
-    data: Omit<Prisma.MenuCategoryCreateInput, "tenant">
+    companyId: string,
+    data: Omit<Prisma.MenuCategoryCreateInput, "tenant" | "company">
   ) {
     return prisma.menuCategory.create({
       data: {
         ...data,
         tenant: { connect: { id: tenantId } },
+        company: { connect: { id: companyId } },
       },
     });
   }
@@ -110,17 +123,19 @@ export class MenuRepository {
   }
 
   /**
-   * Create a new menu item
+   * Create a new menu item at company level
    */
   async createItem(
     tenantId: string,
+    companyId: string,
     categoryId: string,
-    data: Omit<Prisma.MenuItemCreateInput, "tenant" | "category">
+    data: Omit<Prisma.MenuItemCreateInput, "tenant" | "company" | "category">
   ) {
     return prisma.menuItem.create({
       data: {
         ...data,
         tenant: { connect: { id: tenantId } },
+        company: { connect: { id: companyId } },
         category: { connect: { id: categoryId } },
       },
     });
@@ -154,73 +169,6 @@ export class MenuRepository {
       },
       data: {
         status: "inactive",
-      },
-    });
-  }
-
-  // ==================== Merchant-scoped methods ====================
-
-  /**
-   * Get all active categories with their items for a specific merchant
-   */
-  async getCategoriesWithItemsByMerchant(tenantId: string, merchantId: string) {
-    return prisma.menuCategory.findMany({
-      where: {
-        tenantId,
-        merchantId,
-        status: "active",
-      },
-      include: {
-        menuItems: {
-          where: {
-            status: "active",
-            merchantId,
-          },
-          orderBy: {
-            sortOrder: "asc",
-          },
-        },
-      },
-      orderBy: {
-        sortOrder: "asc",
-      },
-    });
-  }
-
-  /**
-   * Get a single menu item by ID (scoped to merchant)
-   */
-  async getItemByMerchant(
-    tenantId: string,
-    merchantId: string,
-    itemId: string
-  ) {
-    return prisma.menuItem.findFirst({
-      where: {
-        id: itemId,
-        tenantId,
-        merchantId,
-      },
-      include: {
-        category: true,
-      },
-    });
-  }
-
-  /**
-   * Get multiple menu items by IDs (scoped to merchant)
-   */
-  async getItemsByIdsByMerchant(
-    tenantId: string,
-    merchantId: string,
-    itemIds: string[]
-  ) {
-    return prisma.menuItem.findMany({
-      where: {
-        id: { in: itemIds },
-        tenantId,
-        merchantId,
-        status: "active",
       },
     });
   }
