@@ -1,0 +1,578 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { TaxConfigRepository } from "../tax-config.repository";
+
+// Mock Prisma client
+vi.mock("@/lib/db", () => ({
+  default: {
+    taxConfig: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    merchantTaxRate: {
+      findMany: vi.fn(),
+      upsert: vi.fn(),
+    },
+    menuItemTax: {
+      findMany: vi.fn(),
+      deleteMany: vi.fn(),
+      createMany: vi.fn(),
+    },
+  },
+}));
+
+import prisma from "@/lib/db";
+
+describe("TaxConfigRepository", () => {
+  let repository: TaxConfigRepository;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    repository = new TaxConfigRepository();
+  });
+
+  describe("getTaxConfigsByCompany", () => {
+    it("should return all active tax configs for a company", async () => {
+      const mockConfigs = [
+        {
+          id: "tax-1",
+          tenantId: "tenant-1",
+          companyId: "company-1",
+          name: "Standard Tax",
+          description: "Standard sales tax",
+          roundingMethod: "half_up",
+          isDefault: true,
+          status: "active",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "tax-2",
+          tenantId: "tenant-1",
+          companyId: "company-1",
+          name: "Alcohol Tax",
+          description: "Additional alcohol tax",
+          roundingMethod: "half_up",
+          isDefault: false,
+          status: "active",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      vi.mocked(prisma.taxConfig.findMany).mockResolvedValue(mockConfigs);
+
+      const result = await repository.getTaxConfigsByCompany(
+        "tenant-1",
+        "company-1"
+      );
+
+      expect(prisma.taxConfig.findMany).toHaveBeenCalledWith({
+        where: {
+          tenantId: "tenant-1",
+          companyId: "company-1",
+          status: "active",
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
+      expect(result).toHaveLength(2);
+      expect(result[0].name).toBe("Standard Tax");
+    });
+
+    it("should return empty array when no configs exist", async () => {
+      vi.mocked(prisma.taxConfig.findMany).mockResolvedValue([]);
+
+      const result = await repository.getTaxConfigsByCompany(
+        "tenant-1",
+        "company-1"
+      );
+
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe("getTaxConfigById", () => {
+    it("should return a single tax config by ID", async () => {
+      const mockConfig = {
+        id: "tax-1",
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        name: "Standard Tax",
+        description: "Standard sales tax",
+        roundingMethod: "half_up",
+        isDefault: true,
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.mocked(prisma.taxConfig.findFirst).mockResolvedValue(mockConfig);
+
+      const result = await repository.getTaxConfigById("tenant-1", "tax-1");
+
+      expect(prisma.taxConfig.findFirst).toHaveBeenCalledWith({
+        where: {
+          id: "tax-1",
+          tenantId: "tenant-1",
+        },
+      });
+      expect(result?.name).toBe("Standard Tax");
+    });
+
+    it("should return null when tax config not found", async () => {
+      vi.mocked(prisma.taxConfig.findFirst).mockResolvedValue(null);
+
+      const result = await repository.getTaxConfigById(
+        "tenant-1",
+        "non-existent"
+      );
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("getTaxConfigsByIds", () => {
+    it("should return tax configs for given IDs", async () => {
+      const mockConfigs = [
+        {
+          id: "tax-1",
+          tenantId: "tenant-1",
+          companyId: "company-1",
+          name: "Standard Tax",
+          description: null,
+          roundingMethod: "half_up",
+          isDefault: true,
+          status: "active",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "tax-2",
+          tenantId: "tenant-1",
+          companyId: "company-1",
+          name: "Alcohol Tax",
+          description: null,
+          roundingMethod: "half_up",
+          isDefault: false,
+          status: "active",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      vi.mocked(prisma.taxConfig.findMany).mockResolvedValue(mockConfigs);
+
+      const result = await repository.getTaxConfigsByIds("tenant-1", [
+        "tax-1",
+        "tax-2",
+      ]);
+
+      expect(prisma.taxConfig.findMany).toHaveBeenCalledWith({
+        where: {
+          id: { in: ["tax-1", "tax-2"] },
+          tenantId: "tenant-1",
+          status: "active",
+        },
+      });
+      expect(result).toHaveLength(2);
+    });
+
+    it("should return empty array for empty IDs array", async () => {
+      const result = await repository.getTaxConfigsByIds("tenant-1", []);
+
+      expect(prisma.taxConfig.findMany).not.toHaveBeenCalled();
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe("getDefaultTaxConfig", () => {
+    it("should return the default tax config for a company", async () => {
+      const mockConfig = {
+        id: "tax-1",
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        name: "Standard Tax",
+        description: null,
+        roundingMethod: "half_up",
+        isDefault: true,
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.mocked(prisma.taxConfig.findFirst).mockResolvedValue(mockConfig);
+
+      const result = await repository.getDefaultTaxConfig(
+        "tenant-1",
+        "company-1"
+      );
+
+      expect(prisma.taxConfig.findFirst).toHaveBeenCalledWith({
+        where: {
+          tenantId: "tenant-1",
+          companyId: "company-1",
+          isDefault: true,
+          status: "active",
+        },
+      });
+      expect(result?.isDefault).toBe(true);
+    });
+  });
+
+  describe("getMerchantTaxRates", () => {
+    it("should return merchant tax rates with tax config details", async () => {
+      const mockRates = [
+        {
+          id: "mtr-1",
+          merchantId: "merchant-1",
+          taxConfigId: "tax-1",
+          rate: { toNumber: () => 0.0825 },
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          taxConfig: {
+            id: "tax-1",
+            name: "Standard Tax",
+            roundingMethod: "half_up",
+          },
+        },
+      ];
+
+      vi.mocked(prisma.merchantTaxRate.findMany).mockResolvedValue(
+        mockRates as unknown as ReturnType<
+          typeof prisma.merchantTaxRate.findMany
+        > extends Promise<infer T>
+          ? T
+          : never
+      );
+
+      const result = await repository.getMerchantTaxRates("merchant-1");
+
+      expect(prisma.merchantTaxRate.findMany).toHaveBeenCalledWith({
+        where: {
+          merchantId: "merchant-1",
+        },
+        include: {
+          taxConfig: true,
+        },
+      });
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe("getMerchantTaxRateMap", () => {
+    it("should return a Map of tax config ID to rate", async () => {
+      // Prisma Decimal values convert to number via Number() which uses toString()
+      const mockRates = [
+        {
+          taxConfigId: "tax-1",
+          rate: { toString: () => "0.0825" },
+        },
+        {
+          taxConfigId: "tax-2",
+          rate: { toString: () => "0.1" },
+        },
+      ];
+
+      vi.mocked(prisma.merchantTaxRate.findMany).mockResolvedValue(
+        mockRates as unknown as ReturnType<
+          typeof prisma.merchantTaxRate.findMany
+        > extends Promise<infer T>
+          ? T
+          : never
+      );
+
+      const result = await repository.getMerchantTaxRateMap("merchant-1");
+
+      expect(prisma.merchantTaxRate.findMany).toHaveBeenCalledWith({
+        where: {
+          merchantId: "merchant-1",
+        },
+        select: {
+          taxConfigId: true,
+          rate: true,
+        },
+      });
+      expect(result instanceof Map).toBe(true);
+      expect(result.get("tax-1")).toBe(0.0825);
+      expect(result.get("tax-2")).toBe(0.1);
+    });
+
+    it("should return empty map when no rates configured", async () => {
+      vi.mocked(prisma.merchantTaxRate.findMany).mockResolvedValue([]);
+
+      const result = await repository.getMerchantTaxRateMap("merchant-1");
+
+      expect(result.size).toBe(0);
+    });
+  });
+
+  describe("getMenuItemTaxConfigIds", () => {
+    it("should return tax config IDs for a menu item", async () => {
+      const mockRelations = [
+        { taxConfigId: "tax-1" },
+        { taxConfigId: "tax-2" },
+      ];
+
+      vi.mocked(prisma.menuItemTax.findMany).mockResolvedValue(
+        mockRelations as unknown as ReturnType<
+          typeof prisma.menuItemTax.findMany
+        > extends Promise<infer T>
+          ? T
+          : never
+      );
+
+      const result = await repository.getMenuItemTaxConfigIds("item-1");
+
+      expect(prisma.menuItemTax.findMany).toHaveBeenCalledWith({
+        where: {
+          menuItemId: "item-1",
+        },
+        select: {
+          taxConfigId: true,
+        },
+      });
+      expect(result).toEqual(["tax-1", "tax-2"]);
+    });
+  });
+
+  describe("getMenuItemsTaxConfigIds", () => {
+    it("should return a Map of item ID to tax config IDs", async () => {
+      const mockRelations = [
+        { menuItemId: "item-1", taxConfigId: "tax-1" },
+        { menuItemId: "item-1", taxConfigId: "tax-2" },
+        { menuItemId: "item-2", taxConfigId: "tax-1" },
+      ];
+
+      vi.mocked(prisma.menuItemTax.findMany).mockResolvedValue(
+        mockRelations as unknown as ReturnType<
+          typeof prisma.menuItemTax.findMany
+        > extends Promise<infer T>
+          ? T
+          : never
+      );
+
+      const result = await repository.getMenuItemsTaxConfigIds([
+        "item-1",
+        "item-2",
+        "item-3",
+      ]);
+
+      expect(prisma.menuItemTax.findMany).toHaveBeenCalledWith({
+        where: {
+          menuItemId: { in: ["item-1", "item-2", "item-3"] },
+        },
+        select: {
+          menuItemId: true,
+          taxConfigId: true,
+        },
+      });
+      expect(result instanceof Map).toBe(true);
+      expect(result.get("item-1")).toEqual(["tax-1", "tax-2"]);
+      expect(result.get("item-2")).toEqual(["tax-1"]);
+      expect(result.get("item-3")).toEqual([]); // item-3 has no taxes
+    });
+
+    it("should return empty map for empty item IDs array", async () => {
+      const result = await repository.getMenuItemsTaxConfigIds([]);
+
+      expect(prisma.menuItemTax.findMany).not.toHaveBeenCalled();
+      expect(result.size).toBe(0);
+    });
+  });
+
+  describe("setMerchantTaxRate", () => {
+    it("should upsert merchant tax rate", async () => {
+      const mockResult = {
+        id: "mtr-1",
+        merchantId: "merchant-1",
+        taxConfigId: "tax-1",
+        rate: { toNumber: () => 0.09 },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.mocked(prisma.merchantTaxRate.upsert).mockResolvedValue(
+        mockResult as unknown as ReturnType<
+          typeof prisma.merchantTaxRate.upsert
+        > extends Promise<infer T>
+          ? T
+          : never
+      );
+
+      await repository.setMerchantTaxRate("merchant-1", "tax-1", 0.09);
+
+      expect(prisma.merchantTaxRate.upsert).toHaveBeenCalledWith({
+        where: {
+          merchantId_taxConfigId: {
+            merchantId: "merchant-1",
+            taxConfigId: "tax-1",
+          },
+        },
+        update: {
+          rate: 0.09,
+        },
+        create: {
+          id: expect.any(String),
+          merchantId: "merchant-1",
+          taxConfigId: "tax-1",
+          rate: 0.09,
+        },
+      });
+    });
+  });
+
+  describe("setMenuItemTaxConfigs", () => {
+    it("should replace all tax configs for a menu item", async () => {
+      vi.mocked(prisma.menuItemTax.deleteMany).mockResolvedValue({
+        count: 1,
+      });
+      vi.mocked(prisma.menuItemTax.createMany).mockResolvedValue({
+        count: 2,
+      });
+
+      await repository.setMenuItemTaxConfigs("item-1", ["tax-1", "tax-2"]);
+
+      expect(prisma.menuItemTax.deleteMany).toHaveBeenCalledWith({
+        where: {
+          menuItemId: "item-1",
+        },
+      });
+      expect(prisma.menuItemTax.createMany).toHaveBeenCalledWith({
+        data: [
+          { id: expect.any(String), menuItemId: "item-1", taxConfigId: "tax-1" },
+          { id: expect.any(String), menuItemId: "item-1", taxConfigId: "tax-2" },
+        ],
+      });
+    });
+
+    it("should only delete when tax config IDs array is empty", async () => {
+      vi.mocked(prisma.menuItemTax.deleteMany).mockResolvedValue({
+        count: 2,
+      });
+
+      await repository.setMenuItemTaxConfigs("item-1", []);
+
+      expect(prisma.menuItemTax.deleteMany).toHaveBeenCalledWith({
+        where: {
+          menuItemId: "item-1",
+        },
+      });
+      expect(prisma.menuItemTax.createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("createTaxConfig", () => {
+    it("should create a new tax config", async () => {
+      const mockConfig = {
+        id: "tax-new",
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        name: "New Tax",
+        description: "A new tax",
+        roundingMethod: "half_up",
+        isDefault: false,
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.mocked(prisma.taxConfig.create).mockResolvedValue(mockConfig);
+
+      const result = await repository.createTaxConfig("tenant-1", "company-1", {
+        name: "New Tax",
+        description: "A new tax",
+        roundingMethod: "half_up",
+        isDefault: false,
+      });
+
+      expect(prisma.taxConfig.create).toHaveBeenCalledWith({
+        data: {
+          id: expect.any(String),
+          tenantId: "tenant-1",
+          companyId: "company-1",
+          name: "New Tax",
+          description: "A new tax",
+          roundingMethod: "half_up",
+          isDefault: false,
+        },
+      });
+      expect(result.name).toBe("New Tax");
+    });
+
+    it("should use default values when not provided", async () => {
+      const mockConfig = {
+        id: "tax-new",
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        name: "Simple Tax",
+        description: null,
+        roundingMethod: "half_up",
+        isDefault: false,
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.mocked(prisma.taxConfig.create).mockResolvedValue(mockConfig);
+
+      await repository.createTaxConfig("tenant-1", "company-1", {
+        name: "Simple Tax",
+      });
+
+      expect(prisma.taxConfig.create).toHaveBeenCalledWith({
+        data: {
+          id: expect.any(String),
+          tenantId: "tenant-1",
+          companyId: "company-1",
+          name: "Simple Tax",
+          description: undefined,
+          roundingMethod: "half_up",
+          isDefault: false,
+        },
+      });
+    });
+  });
+
+  describe("updateTaxConfig", () => {
+    it("should update a tax config", async () => {
+      vi.mocked(prisma.taxConfig.updateMany).mockResolvedValue({ count: 1 });
+
+      await repository.updateTaxConfig("tenant-1", "tax-1", {
+        name: "Updated Tax",
+        roundingMethod: "always_round_up",
+      });
+
+      expect(prisma.taxConfig.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: "tax-1",
+          tenantId: "tenant-1",
+        },
+        data: {
+          name: "Updated Tax",
+          roundingMethod: "always_round_up",
+        },
+      });
+    });
+  });
+
+  describe("deleteTaxConfig", () => {
+    it("should soft delete a tax config by setting status to inactive", async () => {
+      vi.mocked(prisma.taxConfig.updateMany).mockResolvedValue({ count: 1 });
+
+      await repository.deleteTaxConfig("tenant-1", "tax-1");
+
+      expect(prisma.taxConfig.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: "tax-1",
+          tenantId: "tenant-1",
+        },
+        data: {
+          status: "inactive",
+        },
+      });
+    });
+  });
+});
