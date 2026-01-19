@@ -13,19 +13,6 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-// Mock cart store
-const mockSetTenantId = vi.fn();
-const mockAddItem = vi.fn();
-vi.mock("@/stores", () => ({
-  useCartStore: (selector: (state: unknown) => unknown) => {
-    const state = {
-      setTenantId: mockSetTenantId,
-      addItem: mockAddItem,
-    };
-    return selector(state);
-  },
-}));
-
 function createWrapper(currency: string, locale: string) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
@@ -282,8 +269,6 @@ describe("FeaturedItems", () => {
   describe("navigation", () => {
     beforeEach(() => {
       mockPush.mockClear();
-      mockSetTenantId.mockClear();
-      mockAddItem.mockClear();
     });
 
     it("should show 'View Full Menu' link for single location", () => {
@@ -316,7 +301,32 @@ describe("FeaturedItems", () => {
       expect(link.closest("a")).toHaveAttribute("href", "/joes-pizza/locations");
     });
 
-    it("should navigate to menu page when clicking Add button (single location)", () => {
+    it("should navigate to menu with addItem param when item has menuItemId", () => {
+      const itemsWithMenuId: FeaturedItem[] = [
+        {
+          id: "1",
+          name: "Classic Pizza",
+          description: "Fresh pizza",
+          price: 18.99,
+          image: "https://example.com/pizza.jpg",
+          menuItemId: "item-pizza",
+        },
+      ];
+
+      render(
+        <FeaturedItems items={itemsWithMenuId} menuLink="/r/downtown/menu" />,
+        {
+          wrapper: createWrapper("USD", "en-US"),
+        }
+      );
+
+      const addButtons = screen.getAllByText("Add");
+      fireEvent.click(addButtons[0]);
+
+      expect(mockPush).toHaveBeenCalledWith("/r/downtown/menu?addItem=item-pizza");
+    });
+
+    it("should navigate to menu page when item has no menuItemId", () => {
       render(
         <FeaturedItems items={mockItems} menuLink="/r/downtown/menu" />,
         {
@@ -376,121 +386,6 @@ describe("FeaturedItems", () => {
       fireEvent.click(orderButtons[0]);
 
       expect(mockPush).toHaveBeenCalledWith("/joes-pizza/locations?addItem=item-pizza");
-    });
-
-    it("should navigate to locations page without addItem param when item has no menuItemId (multiple locations)", () => {
-      render(
-        <FeaturedItems
-          items={mockItems} // Items without menuItemId
-          menuLink="/joes-pizza/locations"
-          hasMultipleLocations={true}
-        />,
-        {
-          wrapper: createWrapper("USD", "en-US"),
-        }
-      );
-
-      const orderButtons = screen.getAllByText("Order");
-      fireEvent.click(orderButtons[0]);
-
-      expect(mockPush).toHaveBeenCalledWith("/joes-pizza/locations");
-    });
-  });
-
-  describe("cart functionality (single location)", () => {
-    const itemsWithMenuId: FeaturedItem[] = [
-      {
-        id: "1",
-        name: "Sourdough Loaf",
-        description: "Fresh baked sourdough",
-        price: 8.99,
-        image: "https://example.com/sourdough.jpg",
-        category: "Bread",
-        menuItemId: "item-sourdough",
-        hasModifiers: false,
-      },
-      {
-        id: "2",
-        name: "Cappuccino",
-        description: "Rich espresso with milk",
-        price: 4.99,
-        image: "https://example.com/cappuccino.jpg",
-        category: "Coffee",
-        menuItemId: "item-cappuccino",
-        hasModifiers: true,
-      },
-    ];
-
-    beforeEach(() => {
-      mockPush.mockClear();
-      mockSetTenantId.mockClear();
-      mockAddItem.mockClear();
-    });
-
-    it("should add item to cart and navigate when item has no modifiers", () => {
-      render(
-        <FeaturedItems
-          items={itemsWithMenuId}
-          menuLink="/r/bakery/menu"
-          merchantSlug="bakery"
-        />,
-        {
-          wrapper: createWrapper("USD", "en-US"),
-        }
-      );
-
-      const addButtons = screen.getAllByText("Add");
-      fireEvent.click(addButtons[0]); // Click Sourdough (no modifiers)
-
-      expect(mockSetTenantId).toHaveBeenCalledWith("bakery");
-      expect(mockAddItem).toHaveBeenCalledWith({
-        menuItemId: "item-sourdough",
-        name: "Sourdough Loaf",
-        price: 8.99,
-        quantity: 1,
-        selectedModifiers: [],
-        imageUrl: "https://example.com/sourdough.jpg",
-      });
-      expect(mockPush).toHaveBeenCalledWith("/r/bakery/menu");
-    });
-
-    it("should navigate with query param when item has modifiers", () => {
-      render(
-        <FeaturedItems
-          items={itemsWithMenuId}
-          menuLink="/r/bakery/menu"
-          merchantSlug="bakery"
-        />,
-        {
-          wrapper: createWrapper("USD", "en-US"),
-        }
-      );
-
-      const addButtons = screen.getAllByText("Add");
-      fireEvent.click(addButtons[1]); // Click Cappuccino (has modifiers)
-
-      expect(mockSetTenantId).toHaveBeenCalledWith("bakery");
-      expect(mockAddItem).not.toHaveBeenCalled(); // Should not add directly
-      expect(mockPush).toHaveBeenCalledWith("/r/bakery/menu?addItem=item-cappuccino");
-    });
-
-    it("should just navigate when item has no menuItemId", () => {
-      render(
-        <FeaturedItems
-          items={mockItems} // Items without menuItemId
-          menuLink="/r/bakery/menu"
-          merchantSlug="bakery"
-        />,
-        {
-          wrapper: createWrapper("USD", "en-US"),
-        }
-      );
-
-      const addButtons = screen.getAllByText("Add");
-      fireEvent.click(addButtons[0]);
-
-      expect(mockAddItem).not.toHaveBeenCalled();
-      expect(mockPush).toHaveBeenCalledWith("/r/bakery/menu");
     });
   });
 });

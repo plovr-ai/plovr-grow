@@ -79,9 +79,19 @@ export function MenuPageClient({
     if (menuItem.hasModifiers && menuItem.modifierGroups.length > 0) {
       setModalItem(menuItem);
       setIsModalOpen(true);
+    } else {
+      // Add item without modifiers directly to cart (with proper tax info)
+      addItem({
+        menuItemId: menuItem.id,
+        name: menuItem.name,
+        price: menuItem.price,
+        quantity: 1,
+        selectedModifiers: [],
+        imageUrl: menuItem.imageUrl,
+        taxes: menuItem.taxes,
+      });
     }
-    // Note: Items without modifiers are already added to cart by FeaturedItems
-  }, [searchParams, data.categories]);
+  }, [searchParams, data.categories, addItem]);
 
   const isScrollingRef = useRef(false);
 
@@ -160,7 +170,7 @@ export function MenuPageClient({
           quantity: 1,
           selectedModifiers: [],
           imageUrl: menuItem.imageUrl,
-          taxConfigId: menuItem.taxConfigId,
+          taxes: menuItem.taxes,
         });
       }
     },
@@ -185,7 +195,7 @@ export function MenuPageClient({
         quantity,
         selectedModifiers,
         imageUrl: modalItem.imageUrl,
-        taxConfigId: modalItem.taxConfigId,
+        taxes: modalItem.taxes,
       });
     },
     [modalItem, addItem]

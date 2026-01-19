@@ -86,7 +86,6 @@ export default async function CompanyHomePage({ params }: PageProps) {
         items={featuredItems}
         menuLink={menuLink}
         hasMultipleLocations={!hasSingleMerchant}
-        merchantSlug={hasSingleMerchant ? company.merchants[0].slug : undefined}
       />
       <CustomerReviews reviews={reviews} />
       <Footer

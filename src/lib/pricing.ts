@@ -21,7 +21,7 @@ export interface PricingItem {
   itemId: string;
   unitPrice: number;
   quantity: number;
-  tax: ItemTaxConfig | null;
+  taxes: ItemTaxConfig[];
 }
 
 /**
@@ -130,13 +130,16 @@ export function calculateOrderPricing(
   );
   const roundedSubtotal = roundPrice(subtotal);
 
-  // 2. 计算 per-item 税费
+  // 2. 计算 per-item 税费（支持多税种）
   let totalTaxAmount = 0;
   for (const item of items) {
-    if (item.tax && item.tax.rate > 0) {
-      const taxableAmount = item.unitPrice * item.quantity;
-      const rawTax = taxableAmount * item.tax.rate;
-      totalTaxAmount += applyRounding(rawTax, item.tax.roundingMethod);
+    const taxableAmount = item.unitPrice * item.quantity;
+    const taxes = item.taxes || [];
+    for (const tax of taxes) {
+      if (tax.rate > 0) {
+        const rawTax = taxableAmount * tax.rate;
+        totalTaxAmount += applyRounding(rawTax, tax.roundingMethod);
+      }
     }
   }
   totalTaxAmount = roundPrice(totalTaxAmount);

@@ -109,7 +109,7 @@ export function convertToMenuDisplayData(
             hasModifiers: modifierGroups.length > 0,
             modifierGroups,
             isAvailable: item.status === "active",
-            taxConfigId: null, // TODO: Add taxConfigId to Prisma schema if needed
+            taxes: item.taxes || [],
           };
         }),
       })

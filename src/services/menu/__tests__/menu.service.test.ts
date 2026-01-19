@@ -22,9 +22,18 @@ vi.mock("@/repositories/merchant.repository", () => ({
   },
 }));
 
+vi.mock("@/repositories/tax-config.repository", () => ({
+  taxConfigRepository: {
+    getMenuItemsTaxConfigIds: vi.fn(),
+    getTaxConfigsByIds: vi.fn(),
+    getMerchantTaxRateMap: vi.fn(),
+  },
+}));
+
 // Import mocked modules
 import { menuRepository } from "@/repositories/menu.repository";
 import { merchantRepository } from "@/repositories/merchant.repository";
+import { taxConfigRepository } from "@/repositories/tax-config.repository";
 
 describe("MenuService", () => {
   let menuService: MenuService;
@@ -163,11 +172,54 @@ describe("MenuService", () => {
   });
 
   describe("getMenu()", () => {
+    // Mock tax data
+    const mockItemTaxMap = new Map([
+      ["item-cheese-pizza", ["tax-standard"]],
+      ["item-pepperoni-pizza", ["tax-standard", "tax-alcohol"]],
+      ["item-garlic-knots", ["tax-standard"]],
+    ]);
+
+    const mockTaxConfigs = [
+      {
+        id: "tax-standard",
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        name: "Standard Tax",
+        description: null,
+        roundingMethod: "half_up",
+        isDefault: true,
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: "tax-alcohol",
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        name: "Alcohol Tax",
+        description: null,
+        roundingMethod: "half_up",
+        isDefault: false,
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    const mockMerchantTaxRateMap = new Map([
+      ["tax-standard", 0.0825],
+      ["tax-alcohol", 0.05],
+    ]);
+
     beforeEach(() => {
       vi.mocked(merchantRepository.getById).mockResolvedValue(mockMerchant as never);
       vi.mocked(menuRepository.getCategoriesWithItemsByCompany).mockResolvedValue(
         mockCategories as never
       );
+      // Default tax mocks
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(mockItemTaxMap);
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue(mockTaxConfigs as never);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(mockMerchantTaxRateMap);
     });
 
     it("should return menu with categories and items", async () => {
@@ -228,6 +280,89 @@ describe("MenuService", () => {
       const result = await menuService.getMenu("tenant-1", "merchant-1");
 
       expect(result.categories).toHaveLength(0);
+    });
+
+    // Tax integration tests
+    it("should enrich menu items with taxes array", async () => {
+      const result = await menuService.getMenu("tenant-1", "merchant-1");
+
+      // Check that items have taxes
+      const cheesePizza = result.categories[0].menuItems.find(
+        (item) => item.id === "item-cheese-pizza"
+      );
+      expect(cheesePizza?.taxes).toBeDefined();
+      expect(cheesePizza?.taxes).toHaveLength(1);
+      expect(cheesePizza?.taxes?.[0]).toEqual({
+        taxConfigId: "tax-standard",
+        name: "Standard Tax",
+        rate: 0.0825,
+        roundingMethod: "half_up",
+      });
+    });
+
+    it("should support multiple taxes per item", async () => {
+      const result = await menuService.getMenu("tenant-1", "merchant-1");
+
+      // Pepperoni pizza has both standard and alcohol tax
+      const pepperoniPizza = result.categories[0].menuItems.find(
+        (item) => item.id === "item-pepperoni-pizza"
+      );
+      expect(pepperoniPizza?.taxes).toHaveLength(2);
+      expect(pepperoniPizza?.taxes?.[0]).toEqual({
+        taxConfigId: "tax-standard",
+        name: "Standard Tax",
+        rate: 0.0825,
+        roundingMethod: "half_up",
+      });
+      expect(pepperoniPizza?.taxes?.[1]).toEqual({
+        taxConfigId: "tax-alcohol",
+        name: "Alcohol Tax",
+        rate: 0.05,
+        roundingMethod: "half_up",
+      });
+    });
+
+    it("should use merchant-specific tax rates", async () => {
+      // Different merchant with different rates
+      const differentRateMap = new Map([
+        ["tax-standard", 0.09], // 9% instead of 8.25%
+        ["tax-alcohol", 0.1], // 10% instead of 5%
+      ]);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(differentRateMap);
+
+      const result = await menuService.getMenu("tenant-1", "merchant-1");
+
+      const cheesePizza = result.categories[0].menuItems.find(
+        (item) => item.id === "item-cheese-pizza"
+      );
+      expect(cheesePizza?.taxes?.[0].rate).toBe(0.09);
+    });
+
+    it("should return empty taxes array for items without tax config", async () => {
+      // Item without tax config
+      const emptyTaxMap = new Map<string, string[]>();
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(emptyTaxMap);
+
+      const result = await menuService.getMenu("tenant-1", "merchant-1");
+
+      const cheesePizza = result.categories[0].menuItems.find(
+        (item) => item.id === "item-cheese-pizza"
+      );
+      expect(cheesePizza?.taxes).toEqual([]);
+    });
+
+    it("should call tax repository methods with correct parameters", async () => {
+      await menuService.getMenu("tenant-1", "merchant-1");
+
+      // Should fetch tax config IDs for all menu items
+      expect(taxConfigRepository.getMenuItemsTaxConfigIds).toHaveBeenCalledWith([
+        "item-cheese-pizza",
+        "item-pepperoni-pizza",
+        "item-garlic-knots",
+      ]);
+
+      // Should get merchant-specific rates
+      expect(taxConfigRepository.getMerchantTaxRateMap).toHaveBeenCalledWith("merchant-1");
     });
   });
 
@@ -295,6 +430,51 @@ describe("MenuService", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe("item-cheese-pizza");
+    });
+  });
+
+  describe("getMenuItemsByCompanyId()", () => {
+    beforeEach(() => {
+      vi.mocked(menuRepository.getItemsByIdsByCompany).mockResolvedValue(mockMenuItems as never);
+    });
+
+    it("should return menu items for given IDs by companyId", async () => {
+      const itemIds = ["item-cheese-pizza", "item-pepperoni-pizza"];
+
+      const result = await menuService.getMenuItemsByCompanyId("tenant-1", "company-1", itemIds);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe("item-cheese-pizza");
+      expect(result[1].id).toBe("item-pepperoni-pizza");
+    });
+
+    it("should call menuRepository.getItemsByIdsByCompany with correct params", async () => {
+      const itemIds = ["item-cheese-pizza", "item-pepperoni-pizza"];
+
+      await menuService.getMenuItemsByCompanyId("tenant-1", "company-1", itemIds);
+
+      expect(menuRepository.getItemsByIdsByCompany).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        itemIds
+      );
+    });
+
+    it("should return empty array when no items match", async () => {
+      vi.mocked(menuRepository.getItemsByIdsByCompany).mockResolvedValue([] as never);
+
+      const result = await menuService.getMenuItemsByCompanyId("tenant-1", "company-1", [
+        "non-existent-item",
+      ]);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it("should not require merchantId lookup", async () => {
+      await menuService.getMenuItemsByCompanyId("tenant-1", "company-1", ["item-1"]);
+
+      // Should NOT call merchantRepository since we already have companyId
+      expect(merchantRepository.getById).not.toHaveBeenCalled();
     });
   });
 

@@ -10,7 +10,7 @@ describe("calculateOrderPricing", () => {
   describe("subtotal calculation", () => {
     it("should calculate subtotal for single item", () => {
       const items: PricingItem[] = [
-        { itemId: "item-1", unitPrice: 10.0, quantity: 1, tax: null },
+        { itemId: "item-1", unitPrice: 10.0, quantity: 1, taxes: [] },
       ];
 
       const result = calculateOrderPricing(items);
@@ -20,8 +20,8 @@ describe("calculateOrderPricing", () => {
 
     it("should calculate subtotal for multiple items", () => {
       const items: PricingItem[] = [
-        { itemId: "item-1", unitPrice: 10.0, quantity: 2, tax: null },
-        { itemId: "item-2", unitPrice: 5.0, quantity: 3, tax: null },
+        { itemId: "item-1", unitPrice: 10.0, quantity: 2, taxes: [] },
+        { itemId: "item-2", unitPrice: 5.0, quantity: 3, taxes: [] },
       ];
 
       const result = calculateOrderPricing(items);
@@ -47,7 +47,7 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 18.99,
           quantity: 1,
-          tax: { rate: 0.0825, roundingMethod: "half_up" },
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
         },
       ];
 
@@ -63,7 +63,7 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 10.99,
           quantity: 1,
-          tax: { rate: 0.05, roundingMethod: "always_round_down" },
+          taxes: [{ rate: 0.05, roundingMethod: "always_round_down" }],
         },
       ];
 
@@ -79,7 +79,7 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 10.01,
           quantity: 1,
-          tax: { rate: 0.05, roundingMethod: "always_round_up" },
+          taxes: [{ rate: 0.05, roundingMethod: "always_round_up" }],
         },
       ];
 
@@ -95,7 +95,7 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 100.0,
           quantity: 1,
-          tax: { rate: 0.00125, roundingMethod: "half_even" },
+          taxes: [{ rate: 0.00125, roundingMethod: "half_even" }],
         },
       ];
 
@@ -113,13 +113,13 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 18.99,
           quantity: 1,
-          tax: { rate: 0.0825, roundingMethod: "half_up" },
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
         },
         {
           itemId: "item-2",
           unitPrice: 21.99,
           quantity: 2,
-          tax: { rate: 0.0825, roundingMethod: "half_up" },
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
         },
       ];
 
@@ -137,13 +137,13 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 10.0,
           quantity: 1,
-          tax: { rate: 0.0825, roundingMethod: "half_up" },
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
         },
         {
           itemId: "item-2",
           unitPrice: 10.0,
           quantity: 1,
-          tax: { rate: 0.05, roundingMethod: "always_round_down" },
+          taxes: [{ rate: 0.05, roundingMethod: "always_round_down" }],
         },
       ];
 
@@ -156,11 +156,56 @@ describe("calculateOrderPricing", () => {
     });
   });
 
-  describe("tax-free items", () => {
-    it("should return zero tax for items with null tax config", () => {
+  describe("multiple taxes per item", () => {
+    it("should calculate multiple taxes for a single item", () => {
       const items: PricingItem[] = [
-        { itemId: "item-1", unitPrice: 10.0, quantity: 1, tax: null },
-        { itemId: "item-2", unitPrice: 20.0, quantity: 1, tax: null },
+        {
+          itemId: "item-1",
+          unitPrice: 100.0,
+          quantity: 1,
+          taxes: [
+            { rate: 0.08, roundingMethod: "half_up" }, // Standard tax
+            { rate: 0.02, roundingMethod: "half_up" }, // Additional tax
+          ],
+        },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      // Standard tax: 100 * 0.08 = 8.00
+      // Additional tax: 100 * 0.02 = 2.00
+      // Total: 8.00 + 2.00 = 10.00
+      expect(result.taxAmount).toBe(10.0);
+      expect(result.totalAmount).toBe(110.0);
+    });
+
+    it("should handle alcohol tax scenario", () => {
+      const items: PricingItem[] = [
+        {
+          itemId: "beer",
+          unitPrice: 8.0,
+          quantity: 2,
+          taxes: [
+            { rate: 0.0825, roundingMethod: "half_up" }, // Standard tax
+            { rate: 0.05, roundingMethod: "half_up" }, // Alcohol tax
+          ],
+        },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      // Standard tax: 16 * 0.0825 = 1.32
+      // Alcohol tax: 16 * 0.05 = 0.80
+      // Total tax: 1.32 + 0.80 = 2.12
+      expect(result.taxAmount).toBe(2.12);
+    });
+  });
+
+  describe("tax-free items", () => {
+    it("should return zero tax for items with empty taxes array", () => {
+      const items: PricingItem[] = [
+        { itemId: "item-1", unitPrice: 10.0, quantity: 1, taxes: [] },
+        { itemId: "item-2", unitPrice: 20.0, quantity: 1, taxes: [] },
       ];
 
       const result = calculateOrderPricing(items);
@@ -176,9 +221,9 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 10.0,
           quantity: 1,
-          tax: { rate: 0.0825, roundingMethod: "half_up" },
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
         },
-        { itemId: "item-2", unitPrice: 10.0, quantity: 1, tax: null },
+        { itemId: "item-2", unitPrice: 10.0, quantity: 1, taxes: [] },
       ];
 
       const result = calculateOrderPricing(items);
@@ -193,7 +238,7 @@ describe("calculateOrderPricing", () => {
   describe("tip calculation", () => {
     it("should include fixed tip in total amount", () => {
       const items: PricingItem[] = [
-        { itemId: "item-1", unitPrice: 10.0, quantity: 1, tax: null },
+        { itemId: "item-1", unitPrice: 10.0, quantity: 1, taxes: [] },
       ];
 
       const result = calculateOrderPricing(items, { type: "fixed", amount: 5.0 });
@@ -205,7 +250,7 @@ describe("calculateOrderPricing", () => {
 
     it("should calculate percentage tip based on subtotal", () => {
       const items: PricingItem[] = [
-        { itemId: "item-1", unitPrice: 100.0, quantity: 1, tax: null },
+        { itemId: "item-1", unitPrice: 100.0, quantity: 1, taxes: [] },
       ];
 
       // 15% tip
@@ -218,7 +263,7 @@ describe("calculateOrderPricing", () => {
 
     it("should calculate percentage tip with proper rounding", () => {
       const items: PricingItem[] = [
-        { itemId: "item-1", unitPrice: 33.33, quantity: 1, tax: null },
+        { itemId: "item-1", unitPrice: 33.33, quantity: 1, taxes: [] },
       ];
 
       // 18% tip
@@ -236,7 +281,7 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 10.0,
           quantity: 1,
-          tax: { rate: 0.0825, roundingMethod: "half_up" },
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
         },
       ];
 
@@ -254,7 +299,7 @@ describe("calculateOrderPricing", () => {
 
     it("should default tip to 0 when not provided", () => {
       const items: PricingItem[] = [
-        { itemId: "item-1", unitPrice: 10.0, quantity: 1, tax: null },
+        { itemId: "item-1", unitPrice: 10.0, quantity: 1, taxes: [] },
       ];
 
       const result = calculateOrderPricing(items);
@@ -264,7 +309,7 @@ describe("calculateOrderPricing", () => {
 
     it("should default tip to 0 when null is provided", () => {
       const items: PricingItem[] = [
-        { itemId: "item-1", unitPrice: 10.0, quantity: 1, tax: null },
+        { itemId: "item-1", unitPrice: 10.0, quantity: 1, taxes: [] },
       ];
 
       const result = calculateOrderPricing(items, null);
@@ -310,13 +355,13 @@ describe("calculateOrderPricing", () => {
           itemId: "pizza",
           unitPrice: 18.99,
           quantity: 2,
-          tax: { rate: 0.0825, roundingMethod: "half_up" },
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
         },
         {
           itemId: "drink",
           unitPrice: 2.99,
           quantity: 1,
-          tax: { rate: 0.05, roundingMethod: "always_round_down" },
+          taxes: [{ rate: 0.05, roundingMethod: "always_round_down" }],
         },
       ];
 
@@ -340,13 +385,13 @@ describe("calculateOrderPricing", () => {
           itemId: "pizza",
           unitPrice: 18.99,
           quantity: 2,
-          tax: { rate: 0.0825, roundingMethod: "half_up" },
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
         },
         {
           itemId: "drink",
           unitPrice: 2.99,
           quantity: 1,
-          tax: { rate: 0.05, roundingMethod: "always_round_down" },
+          taxes: [{ rate: 0.05, roundingMethod: "always_round_down" }],
         },
       ];
 
@@ -371,7 +416,7 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 18.99,
           quantity: 5,
-          tax: { rate: 0.0825, roundingMethod: "half_up" },
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
         },
       ];
 
@@ -382,6 +427,41 @@ describe("calculateOrderPricing", () => {
       expect(result.subtotal).toBe(94.95);
       expect(result.taxAmount).toBe(7.83);
       expect(result.totalAmount).toBe(102.78);
+    });
+
+    it("should calculate order with multiple taxes per item", () => {
+      // Simulate an order with alcohol (has both standard and alcohol tax)
+      const items: PricingItem[] = [
+        {
+          itemId: "pizza",
+          unitPrice: 18.99,
+          quantity: 1,
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
+        },
+        {
+          itemId: "beer",
+          unitPrice: 8.0,
+          quantity: 2,
+          taxes: [
+            { rate: 0.0825, roundingMethod: "half_up" }, // Standard tax
+            { rate: 0.05, roundingMethod: "half_up" }, // Alcohol tax
+          ],
+        },
+      ];
+
+      const result = calculateOrderPricing(items, { type: "percentage", percentage: 0.15 });
+
+      // subtotal: 18.99 + 16 = 34.99
+      // pizza tax: 18.99 * 0.0825 = 1.566675 -> 1.57
+      // beer standard tax: 16 * 0.0825 = 1.32
+      // beer alcohol tax: 16 * 0.05 = 0.80
+      // total tax: 1.57 + 1.32 + 0.80 = 3.69
+      // tip: 34.99 * 0.15 = 5.2485 -> 5.25
+      // total: 34.99 + 3.69 + 5.25 = 43.93
+      expect(result.subtotal).toBe(34.99);
+      expect(result.taxAmount).toBe(3.69);
+      expect(result.tipAmount).toBe(5.25);
+      expect(result.totalAmount).toBe(43.93);
     });
   });
 });

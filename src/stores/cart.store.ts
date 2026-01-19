@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { CartItem, SelectedModifier } from "@/types";
+import type { CartItem, SelectedModifier, ItemTaxInfo } from "@/types";
 
 interface AddToCartInput {
   menuItemId: string;
@@ -12,7 +12,7 @@ interface AddToCartInput {
   selectedModifiers?: SelectedModifier[];
   specialInstructions?: string;
   imageUrl?: string | null;
-  taxConfigId?: string | null;
+  taxes?: ItemTaxInfo[];
 }
 
 interface CartState {
@@ -81,7 +81,7 @@ export const useCartStore = create<CartStore>()(
           selectedModifiers = [],
           specialInstructions,
           imageUrl,
-          taxConfigId,
+          taxes = [],
         } = input;
 
         set((state) => {
@@ -121,7 +121,7 @@ export const useCartStore = create<CartStore>()(
             specialInstructions,
             totalPrice: calculateItemTotalPrice(price, quantity, selectedModifiers),
             imageUrl,
-            taxConfigId: taxConfigId ?? null,
+            taxes,
           };
 
           return { items: [...state.items, newItem] };
@@ -171,10 +171,10 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "cart-storage",
-      version: 1,
+      version: 2,
       migrate: (persistedState, version) => {
-        if (version === 0) {
-          // Migration from version 0: clear cart to ensure fresh data with imageUrl
+        if (version < 2) {
+          // Migration from version 0/1: clear cart to ensure fresh data with taxes array
           return { tenantId: null, items: [] };
         }
         return persistedState as CartStore;

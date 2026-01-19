@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import type { FeaturedItem } from "@/types/website";
 import { useFormatPrice } from "@/hooks";
-import { useCartStore } from "@/stores";
 import { ImagePlaceholderIcon } from "@storefront/components/icons";
 
 interface FeaturedItemsProps {
@@ -12,58 +11,21 @@ interface FeaturedItemsProps {
   menuLink?: string;
   /** Whether this company has multiple locations */
   hasMultipleLocations?: boolean;
-  /** Merchant slug for cart (single location only) */
-  merchantSlug?: string;
 }
 
 export function FeaturedItems({
   items,
   menuLink = "#",
   hasMultipleLocations = false,
-  merchantSlug,
 }: FeaturedItemsProps) {
   const formatPrice = useFormatPrice();
   const router = useRouter();
-  const setTenantId = useCartStore((state) => state.setTenantId);
-  const addItem = useCartStore((state) => state.addItem);
 
   const handleAddClick = (item: FeaturedItem) => {
-    // For multiple locations, navigate to locations page with addItem param
-    if (hasMultipleLocations) {
-      if (item.menuItemId) {
-        router.push(`${menuLink}?addItem=${item.menuItemId}`);
-      } else {
-        router.push(menuLink);
-      }
-      return;
-    }
-
-    // Single location: check if item has menuItemId for direct cart action
-    if (!item.menuItemId) {
-      // No menuItemId, just navigate to menu
-      router.push(menuLink);
-      return;
-    }
-
-    // Set the merchant context for cart
-    if (merchantSlug) {
-      setTenantId(merchantSlug);
-    }
-
-    // Check if item has modifiers
-    if (item.hasModifiers) {
-      // Navigate to menu with query param to open modifier modal
+    // Navigate to menu with addItem param so it can be added with proper tax info
+    if (item.menuItemId) {
       router.push(`${menuLink}?addItem=${item.menuItemId}`);
     } else {
-      // Add directly to cart, then navigate to menu
-      addItem({
-        menuItemId: item.menuItemId,
-        name: item.name,
-        price: item.price,
-        quantity: 1,
-        selectedModifiers: [],
-        imageUrl: item.image,
-      });
       router.push(menuLink);
     }
   };

@@ -3,6 +3,8 @@
  * 用于 Menu 页面展示的视图模型类型定义
  */
 
+import type { ItemTaxInfo } from "@/services/menu/tax-config.types";
+
 // 菜品标签类型
 export type MenuItemTag =
   | "vegetarian"
@@ -52,7 +54,7 @@ export interface MenuItemViewModel {
   hasModifiers: boolean;
   modifierGroups: ModifierGroupViewModel[];
   isAvailable: boolean;
-  taxConfigId: string | null;
+  taxes: ItemTaxInfo[];
 }
 
 // 分类 + 菜品组合

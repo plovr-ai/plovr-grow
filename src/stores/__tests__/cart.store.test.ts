@@ -484,4 +484,121 @@ describe("cart.store", () => {
       expect(useCartStore.getState().getSubtotal()).toBe(0);
     });
   });
+
+  describe("taxes field", () => {
+    const mockTaxes = [
+      {
+        taxConfigId: "tax-standard",
+        name: "Standard Tax",
+        rate: 0.0825,
+        roundingMethod: "half_up" as const,
+      },
+    ];
+
+    const mockMultipleTaxes = [
+      {
+        taxConfigId: "tax-standard",
+        name: "Standard Tax",
+        rate: 0.0825,
+        roundingMethod: "half_up" as const,
+      },
+      {
+        taxConfigId: "tax-alcohol",
+        name: "Alcohol Tax",
+        rate: 0.05,
+        roundingMethod: "half_up" as const,
+      },
+    ];
+
+    it("should store taxes array when adding item", () => {
+      useCartStore.getState().addItem({
+        menuItemId: "item-1",
+        name: "Pizza",
+        price: 18.99,
+        quantity: 1,
+        selectedModifiers: [],
+        taxes: mockTaxes,
+      });
+
+      const item = useCartStore.getState().items[0];
+      expect(item.taxes).toBeDefined();
+      expect(item.taxes).toHaveLength(1);
+      expect(item.taxes?.[0]).toEqual(mockTaxes[0]);
+    });
+
+    it("should store multiple taxes for items with alcohol/special taxes", () => {
+      useCartStore.getState().addItem({
+        menuItemId: "item-beer",
+        name: "Craft Beer",
+        price: 8.0,
+        quantity: 1,
+        selectedModifiers: [],
+        taxes: mockMultipleTaxes,
+      });
+
+      const item = useCartStore.getState().items[0];
+      expect(item.taxes).toHaveLength(2);
+      expect(item.taxes?.[0].name).toBe("Standard Tax");
+      expect(item.taxes?.[1].name).toBe("Alcohol Tax");
+    });
+
+    it("should default to empty taxes array when not provided", () => {
+      useCartStore.getState().addItem({
+        menuItemId: "item-1",
+        name: "Pizza",
+        price: 18.99,
+        quantity: 1,
+        selectedModifiers: [],
+      });
+
+      const item = useCartStore.getState().items[0];
+      expect(item.taxes).toEqual([]);
+    });
+
+    it("should preserve taxes when updating quantity", () => {
+      useCartStore.getState().addItem({
+        menuItemId: "item-1",
+        name: "Pizza",
+        price: 18.99,
+        quantity: 1,
+        selectedModifiers: [],
+        taxes: mockTaxes,
+      });
+
+      const itemId = useCartStore.getState().items[0].id;
+      useCartStore.getState().updateQuantity(itemId, 5);
+
+      const item = useCartStore.getState().items[0];
+      expect(item.quantity).toBe(5);
+      expect(item.taxes).toEqual(mockTaxes);
+    });
+
+    it("should preserve taxes when incrementing quantity for same item", () => {
+      const addItem = useCartStore.getState().addItem;
+
+      addItem({
+        menuItemId: "item-1",
+        name: "Pizza",
+        price: 18.99,
+        quantity: 1,
+        selectedModifiers: [],
+        taxes: mockTaxes,
+      });
+
+      // Add same item again
+      addItem({
+        menuItemId: "item-1",
+        name: "Pizza",
+        price: 18.99,
+        quantity: 2,
+        selectedModifiers: [],
+        taxes: mockTaxes,
+      });
+
+      const items = useCartStore.getState().items;
+      expect(items.length).toBe(1);
+      expect(items[0].quantity).toBe(3);
+      expect(items[0].taxes).toEqual(mockTaxes);
+    });
+  });
 });
