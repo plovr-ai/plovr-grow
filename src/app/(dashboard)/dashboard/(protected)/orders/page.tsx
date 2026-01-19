@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { companyService } from "@/services/company";
 import { orderService } from "@/services/order";
-import { OrdersManagementClient } from "@/components/orders/OrdersManagementClient";
+import { OrdersManagementClient, type SerializedOrder } from "@/components/orders/OrdersManagementClient";
 import type { OrderStatus, OrderType } from "@/types";
 
 interface OrdersManagementProps {
@@ -63,7 +63,7 @@ export default async function OrdersManagementPage({
     deliveryFee: Number(order.deliveryFee),
     discount: Number(order.discount),
     totalAmount: Number(order.totalAmount),
-  }));
+  })) as SerializedOrder[];
 
   return (
     <OrdersManagementClient
