@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 describe("MerchantContext", () => {
   describe("MerchantProvider", () => {
     it("should provide config to children", () => {
-      const config = { currency: "USD", locale: "en-US" };
+      const config = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={config}>{children}</MerchantProvider>
@@ -25,7 +25,7 @@ describe("MerchantContext", () => {
     });
 
     it("should provide EUR config correctly", () => {
-      const config = { currency: "EUR", locale: "de-DE" };
+      const config = { name: "Test", logoUrl: null, currency: "EUR", locale: "de-DE" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={config}>{children}</MerchantProvider>
@@ -38,7 +38,7 @@ describe("MerchantContext", () => {
     });
 
     it("should provide CNY config correctly", () => {
-      const config = { currency: "CNY", locale: "zh-CN" };
+      const config = { name: "Test", logoUrl: null, currency: "CNY", locale: "zh-CN" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={config}>{children}</MerchantProvider>
@@ -66,7 +66,7 @@ describe("MerchantContext", () => {
     });
 
     it("should return the same config object reference", () => {
-      const config = { currency: "USD", locale: "en-US" };
+      const config = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={config}>{children}</MerchantProvider>
@@ -87,8 +87,8 @@ describe("MerchantContext", () => {
 
   describe("nested providers", () => {
     it("should use the nearest provider config", () => {
-      const outerConfig = { currency: "USD", locale: "en-US" };
-      const innerConfig = { currency: "EUR", locale: "de-DE" };
+      const outerConfig = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US" };
+      const innerConfig = { name: "Test", logoUrl: null, currency: "EUR", locale: "de-DE" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={outerConfig}>
@@ -106,7 +106,7 @@ describe("MerchantContext", () => {
 
   describe("tipConfig", () => {
     it("should use default tipConfig when not provided", () => {
-      const config = { currency: "USD", locale: "en-US" };
+      const config = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={config}>{children}</MerchantProvider>
@@ -127,6 +127,8 @@ describe("MerchantContext", () => {
         allowCustom: false,
       };
       const config = {
+        name: "Test",
+        logoUrl: null,
         currency: "USD",
         locale: "en-US",
         tipConfig: customTipConfig,
@@ -146,6 +148,8 @@ describe("MerchantContext", () => {
 
     it("should use default tipConfig when undefined is passed", () => {
       const config = {
+        name: "Test",
+        logoUrl: null,
         currency: "USD",
         locale: "en-US",
         tipConfig: undefined,
@@ -163,7 +167,7 @@ describe("MerchantContext", () => {
 
   describe("feeConfig", () => {
     it("should use default feeConfig (empty fees) when not provided", () => {
-      const config = { currency: "USD", locale: "en-US" };
+      const config = { name: "Test", logoUrl: null, currency: "USD", locale: "en-US" };
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <MerchantProvider config={config}>{children}</MerchantProvider>
@@ -188,6 +192,8 @@ describe("MerchantContext", () => {
         ],
       };
       const config = {
+        name: "Test",
+        logoUrl: null,
         currency: "USD",
         locale: "en-US",
         feeConfig: customFeeConfig,
@@ -207,6 +213,8 @@ describe("MerchantContext", () => {
 
     it("should use default feeConfig when undefined is passed", () => {
       const config = {
+        name: "Test",
+        logoUrl: null,
         currency: "USD",
         locale: "en-US",
         feeConfig: undefined,
@@ -242,6 +250,8 @@ describe("MerchantContext", () => {
         ],
       };
       const config = {
+        name: "Test",
+        logoUrl: null,
         currency: "USD",
         locale: "en-US",
         feeConfig: customFeeConfig,
@@ -262,6 +272,8 @@ describe("MerchantContext", () => {
   describe("config with both tipConfig and feeConfig", () => {
     it("should handle full config with all options", () => {
       const config = {
+        name: "Test",
+        logoUrl: null,
         currency: "USD",
         locale: "en-US",
         tipConfig: {
@@ -296,6 +308,8 @@ describe("MerchantContext", () => {
 
     it("should handle partial config (only tipConfig)", () => {
       const config = {
+        name: "Test",
+        logoUrl: null,
         currency: "USD",
         locale: "en-US",
         tipConfig: {
@@ -317,6 +331,8 @@ describe("MerchantContext", () => {
 
     it("should handle partial config (only feeConfig)", () => {
       const config = {
+        name: "Test",
+        logoUrl: null,
         currency: "USD",
         locale: "en-US",
         feeConfig: {

@@ -10,11 +10,9 @@ import type { Prisma } from "@prisma/client";
 
 /**
  * Menu display data for UI rendering
- * Does not include currency/locale (provided by MerchantProvider)
+ * Does not include currency/locale or merchant info (provided by MerchantProvider)
  */
 export interface MenuDisplayData {
-  merchantName: string;
-  merchantLogo: string | null;
   companySlug: string;
   categories: MenuCategoryWithItemsViewModel[];
 }
@@ -90,8 +88,6 @@ export function convertToMenuDisplayData(
   companySlug: string
 ): MenuDisplayData {
   return {
-    merchantName: response.merchantName,
-    merchantLogo: response.merchantLogo,
     companySlug,
     categories: response.categories.map(
       (category): MenuCategoryWithItemsViewModel => ({

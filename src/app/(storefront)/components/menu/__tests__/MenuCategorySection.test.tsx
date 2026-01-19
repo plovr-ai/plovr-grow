@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 
 function Wrapper({ children }: { children: ReactNode }) {
   return (
-    <MerchantProvider config={{ currency: "USD", locale: "en-US" }}>
+    <MerchantProvider config={{ name: "Test Restaurant", logoUrl: null, currency: "USD", locale: "en-US" }}>
       {children}
     </MerchantProvider>
   );

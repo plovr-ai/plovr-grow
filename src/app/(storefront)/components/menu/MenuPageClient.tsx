@@ -204,8 +204,6 @@ export function MenuPageClient({
   return (
     <>
       <MenuHeader
-        merchantName={data.merchantName}
-        merchantLogo={data.merchantLogo}
         merchantSlug={slug}
         companySlug={data.companySlug}
       />

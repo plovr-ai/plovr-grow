@@ -11,6 +11,8 @@ function createWrapper(tipConfig?: TipConfig) {
     return (
       <MerchantProvider
         config={{
+          name: "Test Restaurant",
+          logoUrl: null,
           currency: "USD",
           locale: "en-US",
           tipConfig,

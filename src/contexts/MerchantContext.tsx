@@ -9,6 +9,8 @@ import {
 } from "@/types";
 
 export interface MerchantConfig {
+  name: string;
+  logoUrl: string | null;
   currency: string;
   locale: string;
   tipConfig: TipConfig;
@@ -18,6 +20,8 @@ export interface MerchantConfig {
 interface MerchantProviderProps {
   children: ReactNode;
   config: {
+    name: string;
+    logoUrl: string | null;
     currency: string;
     locale: string;
     tipConfig?: TipConfig;
@@ -30,12 +34,14 @@ const MerchantContext = createContext<MerchantConfig | null>(null);
 export function MerchantProvider({ children, config }: MerchantProviderProps) {
   const fullConfig = useMemo<MerchantConfig>(
     () => ({
+      name: config.name,
+      logoUrl: config.logoUrl,
       currency: config.currency,
       locale: config.locale,
       tipConfig: config.tipConfig ?? DEFAULT_TIP_CONFIG,
       feeConfig: config.feeConfig ?? DEFAULT_FEE_CONFIG,
     }),
-    [config.currency, config.locale, config.tipConfig, config.feeConfig]
+    [config.name, config.logoUrl, config.currency, config.locale, config.tipConfig, config.feeConfig]
   );
 
   return (
@@ -61,4 +67,9 @@ export function useTipConfig(): TipConfig {
 export function useFeeConfig(): FeeConfig {
   const { feeConfig } = useMerchantConfig();
   return feeConfig;
+}
+
+export function useMerchantInfo(): { name: string; logoUrl: string | null } {
+  const { name, logoUrl } = useMerchantConfig();
+  return { name, logoUrl };
 }

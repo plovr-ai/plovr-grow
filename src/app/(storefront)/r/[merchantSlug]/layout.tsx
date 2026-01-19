@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { getMockWebsiteData } from "@/data/mock/website";
 import { merchantService } from "@/services/merchant";
 import { MerchantProvider, ThemeProvider } from "@/contexts";
 
@@ -10,22 +9,27 @@ interface LayoutProps {
 
 export async function generateMetadata({ params }: LayoutProps): Promise<Metadata> {
   const { merchantSlug } = await params;
-  const data = getMockWebsiteData(merchantSlug);
+  const websiteData = await merchantService.getWebsiteData(merchantSlug);
+
+  if (!websiteData) {
+    return {
+      title: "Order Online",
+    };
+  }
 
   return {
-    title: `${data.merchant.name} | Order Online`,
-    description: data.merchant.tagline,
+    title: `${websiteData.name} | Order Online`,
+    description: websiteData.tagline,
     openGraph: {
-      title: data.merchant.name,
-      description: data.merchant.tagline,
-      images: [data.merchant.heroImage],
+      title: websiteData.name,
+      description: websiteData.tagline,
+      images: websiteData.heroImage ? [websiteData.heroImage] : [],
     },
   };
 }
 
 export default async function MerchantLayout({ children, params }: LayoutProps) {
   const { merchantSlug } = await params;
-  const data = getMockWebsiteData(merchantSlug);
   const merchant = await merchantService.getMerchantBySlug(merchantSlug);
 
   // Get theme preset from company settings
@@ -35,8 +39,10 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
     <ThemeProvider preset={themePreset}>
       <MerchantProvider
         config={{
-          currency: merchant?.currency ?? data.merchant.currency,
-          locale: merchant?.locale ?? data.merchant.locale,
+          name: merchant?.name ?? "",
+          logoUrl: merchant?.logoUrl ?? null,
+          currency: merchant?.currency ?? "USD",
+          locale: merchant?.locale ?? "en-US",
           tipConfig: merchant?.settings?.tipConfig,
           feeConfig: merchant?.settings?.feeConfig,
         }}

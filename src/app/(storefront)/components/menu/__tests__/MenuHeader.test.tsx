@@ -5,10 +5,10 @@ import { MerchantProvider } from "@/contexts";
 import { useCartStore } from "@/stores";
 import type { ReactNode } from "react";
 
-function createWrapper(currency: string, locale: string) {
+function createWrapper(currency: string, locale: string, name = "Test Restaurant", logoUrl: string | null = null) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <MerchantProvider config={{ currency, locale }}>
+      <MerchantProvider config={{ name, logoUrl, currency, locale }}>
         {children}
       </MerchantProvider>
     );
@@ -40,11 +40,7 @@ describe("MenuHeader", () => {
       });
 
       render(
-        <MenuHeader
-          merchantName="Test Restaurant"
-          merchantLogo={null}
-          tenantSlug="test"
-        />,
+        <MenuHeader tenantSlug="test" />,
         { wrapper: createWrapper("USD", "en-US") }
       );
 
@@ -69,11 +65,7 @@ describe("MenuHeader", () => {
       });
 
       render(
-        <MenuHeader
-          merchantName="Test Restaurant"
-          merchantLogo={null}
-          tenantSlug="test"
-        />,
+        <MenuHeader tenantSlug="test" />,
         { wrapper: createWrapper("EUR", "de-DE") }
       );
 
@@ -100,11 +92,7 @@ describe("MenuHeader", () => {
       });
 
       render(
-        <MenuHeader
-          merchantName="Test Restaurant"
-          merchantLogo={null}
-          tenantSlug="test"
-        />,
+        <MenuHeader tenantSlug="test" />,
         { wrapper: createWrapper("CNY", "zh-CN") }
       );
 
@@ -130,11 +118,7 @@ describe("MenuHeader", () => {
       });
 
       render(
-        <MenuHeader
-          merchantName="Test Restaurant"
-          merchantLogo={null}
-          tenantSlug="test"
-        />,
+        <MenuHeader tenantSlug="test" />,
         { wrapper: createWrapper("GBP", "en-GB") }
       );
 
@@ -146,11 +130,7 @@ describe("MenuHeader", () => {
   describe("cart button visibility", () => {
     it("should hide cart button with CSS when cart is empty", () => {
       render(
-        <MenuHeader
-          merchantName="Test Restaurant"
-          merchantLogo={null}
-          tenantSlug="test"
-        />,
+        <MenuHeader tenantSlug="test" />,
         { wrapper: createWrapper("USD", "en-US") }
       );
 
@@ -181,11 +161,7 @@ describe("MenuHeader", () => {
       });
 
       render(
-        <MenuHeader
-          merchantName="Test Restaurant"
-          merchantLogo={null}
-          tenantSlug="test"
-        />,
+        <MenuHeader tenantSlug="test" />,
         { wrapper: createWrapper("USD", "en-US") }
       );
 
@@ -203,11 +179,7 @@ describe("MenuHeader", () => {
   describe("fly-to-cart animation target", () => {
     it("should always render cart-icon-target element for animation", () => {
       render(
-        <MenuHeader
-          merchantName="Test Restaurant"
-          merchantLogo={null}
-          tenantSlug="test"
-        />,
+        <MenuHeader tenantSlug="test" />,
         { wrapper: createWrapper("USD", "en-US") }
       );
 
@@ -233,11 +205,7 @@ describe("MenuHeader", () => {
       });
 
       render(
-        <MenuHeader
-          merchantName="Test Restaurant"
-          merchantLogo={null}
-          tenantSlug="test"
-        />,
+        <MenuHeader tenantSlug="test" />,
         { wrapper: createWrapper("USD", "en-US") }
       );
 

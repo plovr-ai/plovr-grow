@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 function createWrapper(currency: string, locale: string) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <MerchantProvider config={{ currency, locale }}>
+      <MerchantProvider config={{ name: "Test Restaurant", logoUrl: null, currency, locale }}>
         {children}
       </MerchantProvider>
     );

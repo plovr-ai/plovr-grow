@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { useCartStore, useCartHydration } from "@/stores";
 import { useFormatPrice } from "@/hooks";
+import { useMerchantInfo } from "@/contexts";
 import { ArrowLeftIcon } from "@storefront/components/icons";
 
 interface MenuHeaderProps {
-  merchantName: string;
-  merchantLogo: string | null;
   /** @deprecated Use merchantSlug instead */
   tenantSlug?: string;
   merchantSlug?: string;
@@ -15,14 +14,13 @@ interface MenuHeaderProps {
 }
 
 export function MenuHeader({
-  merchantName,
-  merchantLogo,
   tenantSlug,
   merchantSlug,
   companySlug,
 }: MenuHeaderProps) {
   // Support both old (tenantSlug) and new (merchantSlug) props
   const slug = merchantSlug ?? tenantSlug ?? "";
+  const { name: merchantName, logoUrl: merchantLogo } = useMerchantInfo();
   const hydrated = useCartHydration();
   const formatPrice = useFormatPrice();
   const itemCount = useCartStore((state) =>

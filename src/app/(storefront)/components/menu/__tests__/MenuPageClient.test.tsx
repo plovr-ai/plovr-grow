@@ -41,6 +41,11 @@ vi.mock("@/hooks", () => ({
   useFormatPrice: () => (price: number) => `$${price.toFixed(2)}`,
 }));
 
+// Mock useMerchantInfo hook
+vi.mock("@/contexts", () => ({
+  useMerchantInfo: () => ({ name: "Test Bakery", logoUrl: null }),
+}));
+
 // Mock cartAnimation
 vi.mock("@storefront/lib/cartAnimation", () => ({
   animateFlyToCart: vi.fn(),
@@ -64,21 +69,23 @@ const createMenuItem = (
 });
 
 // Helper to create menu data
-const createMenuData = (items: MenuItemViewModel[] = []): MenuDisplayData => ({
-  merchantName: "Test Bakery",
-  merchantLogo: null,
-  companySlug: "test-bakery",
-  categories: [
-    {
-      category: {
-        id: "cat-1",
-        name: "Breads",
-        description: "Fresh breads",
+const createMenuData = (items: MenuItemViewModel[] = []): MenuDisplayData => {
+  const menuItems = items.length > 0 ? items : [createMenuItem()];
+  return {
+    companySlug: "test-bakery",
+    categories: [
+      {
+        category: {
+          id: "cat-1",
+          name: "Breads",
+          description: "Fresh breads",
+          itemCount: menuItems.length,
+        },
+        items: menuItems,
       },
-      items: items.length > 0 ? items : [createMenuItem()],
-    },
-  ],
-});
+    ],
+  };
+};
 
 describe("MenuPageClient", () => {
   beforeEach(() => {

@@ -38,30 +38,23 @@ export default async function CompanyLayout({ children, params }: LayoutProps) {
     notFound();
   }
 
-  // Use first merchant's config for brand-level pages, or defaults
-  const firstMerchant = company.merchants[0];
-  const defaultConfig = {
-    currency: "USD",
-    locale: "en-US",
-    tipConfig: {
-      mode: "percentage" as const,
-      tiers: [0.15, 0.18, 0.2],
-      allowCustom: true,
-    },
+  // Use company info for brand-level pages
+  const defaultTipConfig = {
+    mode: "percentage" as const,
+    tiers: [0.15, 0.18, 0.2],
+    allowCustom: true,
   };
 
   return (
     <ThemeProvider preset={company.settings?.themePreset}>
       <MerchantProvider
-        config={
-          firstMerchant
-            ? {
-                currency: "USD",
-                locale: "en-US",
-                tipConfig: defaultConfig.tipConfig,
-              }
-            : defaultConfig
-        }
+        config={{
+          name: company.name,
+          logoUrl: company.logoUrl ?? null,
+          currency: "USD",
+          locale: "en-US",
+          tipConfig: defaultTipConfig,
+        }}
       >
         {children}
       </MerchantProvider>

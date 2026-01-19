@@ -1,6 +1,7 @@
 export {
   MerchantProvider,
   useMerchantConfig,
+  useMerchantInfo,
   useTipConfig,
   useFeeConfig,
 } from "./MerchantContext";
