@@ -248,7 +248,7 @@ export default function CheckoutPage() {
             totalPrice: item.totalPrice,
             selectedModifiers: item.selectedModifiers,
             specialInstructions: item.specialInstructions,
-            taxConfigId: item.taxConfigId,
+            taxes: item.taxes,
           })),
         }),
       });
@@ -380,68 +380,142 @@ export default function CheckoutPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-72 space-y-4">
-        <OrderTypeSelector
-          value={formState.orderType}
-          onChange={handleOrderTypeChange}
-          disabled={isSubmitting}
-        />
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-72 lg:pb-6">
+        <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+          {/* Left: Form sections */}
+          <div className="lg:col-span-2 space-y-4">
+            <OrderTypeSelector
+              value={formState.orderType}
+              onChange={handleOrderTypeChange}
+              disabled={isSubmitting}
+            />
 
-        <ContactInfoForm
-          values={{
-            customerName: formState.customerName,
-            customerPhone: formState.customerPhone,
-            customerEmail: formState.customerEmail,
-          }}
-          errors={{
-            customerName: errors.customerName,
-            customerPhone: errors.customerPhone,
-            customerEmail: errors.customerEmail,
-          }}
-          onChange={handleContactChange}
-          disabled={isSubmitting}
-        />
+            <ContactInfoForm
+              values={{
+                customerName: formState.customerName,
+                customerPhone: formState.customerPhone,
+                customerEmail: formState.customerEmail,
+              }}
+              errors={{
+                customerName: errors.customerName,
+                customerPhone: errors.customerPhone,
+                customerEmail: errors.customerEmail,
+              }}
+              onChange={handleContactChange}
+              disabled={isSubmitting}
+            />
 
-        {formState.orderType === "delivery" && (
-          <DeliveryAddressForm
-            values={formState.deliveryAddress}
-            errors={errors.deliveryAddress || {}}
-            onChange={handleAddressChange}
-            disabled={isSubmitting}
-          />
-        )}
+            {formState.orderType === "delivery" && (
+              <DeliveryAddressForm
+                values={formState.deliveryAddress}
+                errors={errors.deliveryAddress || {}}
+                onChange={handleAddressChange}
+                disabled={isSubmitting}
+              />
+            )}
 
-        <TipSelector
-          subtotal={calculations.subtotal}
-          value={formState.tip}
-          onChange={handleTipChange}
-          disabled={isSubmitting}
-        />
+            <TipSelector
+              subtotal={calculations.subtotal}
+              value={formState.tip}
+              onChange={handleTipChange}
+              disabled={isSubmitting}
+            />
 
-        {/* Order Notes */}
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <label
-            htmlFor="notes"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            Order Notes <span className="text-gray-400">(optional)</span>
-          </label>
-          <textarea
-            id="notes"
-            value={formState.notes}
-            onChange={handleNotesChange}
-            disabled={isSubmitting}
-            placeholder="Any special requests for your order?"
-            rows={2}
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-colors resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-          />
+            {/* Order Notes */}
+            <div className="bg-white rounded-xl border border-gray-100 p-4">
+              <label
+                htmlFor="notes"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Order Notes <span className="text-gray-400">(optional)</span>
+              </label>
+              <textarea
+                id="notes"
+                value={formState.notes}
+                onChange={handleNotesChange}
+                disabled={isSubmitting}
+                placeholder="Any special requests for your order?"
+                rows={2}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-colors resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            {/* Order Summary (Mobile only) */}
+            <div className="lg:hidden">
+              <OrderSummary items={items} merchantSlug={merchantSlug} />
+            </div>
+          </div>
+
+          {/* Right: Order Summary + Price + Button (PC only) */}
+          <div className="hidden lg:block">
+            <div className="sticky top-24 space-y-4">
+              <OrderSummary items={items} merchantSlug={merchantSlug} />
+
+              <div className="bg-white rounded-xl border border-gray-100 p-4">
+                <PriceSummary
+                  subtotal={calculations.subtotal}
+                  taxAmount={calculations.taxAmount}
+                  fees={calculations.fees}
+                  deliveryFee={calculations.deliveryFee}
+                  tipAmount={calculations.tipAmount}
+                  totalAmount={calculations.totalAmount}
+                />
+
+                {/* Payment Notice */}
+                <div className="flex items-center justify-center gap-2 mt-4 text-gray-500">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                    />
+                  </svg>
+                  <span className="text-sm">{paymentLabel}</span>
+                </div>
+
+                {/* Submit Error */}
+                {submitError && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600 text-center">
+                      {submitError}
+                    </p>
+                  </div>
+                )}
+
+                {/* Place Order Button */}
+                <button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="w-full mt-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold py-4 rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                      <span>Placing Order...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Place Order</span>
+                      <span className="font-bold">
+                        {formatPrice(calculations.totalAmount)}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <OrderSummary items={items} merchantSlug={merchantSlug} />
       </main>
 
-      {/* Fixed Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
+      {/* Fixed Footer (Mobile only) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <PriceSummary
             subtotal={calculations.subtotal}

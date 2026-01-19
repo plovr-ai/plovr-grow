@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
-  useParams: () => ({ slug: "test-restaurant" }),
+  useParams: () => ({ merchantSlug: "test-restaurant" }),
 }));
 
 function createWrapper(currency: string, locale: string) {
@@ -452,6 +452,145 @@ describe("CartPage", () => {
 
       // Should show empty cart message
       expect(screen.getByText("Your cart is empty")).toBeInTheDocument();
+    });
+  });
+
+  describe("responsive layout", () => {
+    it("should have responsive grid layout classes", () => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: [
+          {
+            id: "1",
+            menuItemId: "item-1",
+            name: "Test Item",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 10,
+            imageUrl: null,
+          },
+        ],
+      });
+
+      const { container } = render(<CartPage />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      // Check that the main content has responsive grid classes
+      const gridContainer = container.querySelector(".lg\\:grid.lg\\:grid-cols-3");
+      expect(gridContainer).toBeInTheDocument();
+
+      // Check that left column has col-span-2 class
+      const leftColumn = container.querySelector(".lg\\:col-span-2");
+      expect(leftColumn).toBeInTheDocument();
+    });
+
+    it("should have desktop sidebar with lg:block class", () => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: [
+          {
+            id: "1",
+            menuItemId: "item-1",
+            name: "Test Item",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 10,
+            imageUrl: null,
+          },
+        ],
+      });
+
+      const { container } = render(<CartPage />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      // Check for desktop sidebar (hidden on mobile, visible on lg+)
+      const desktopSidebar = container.querySelector(".hidden.lg\\:block");
+      expect(desktopSidebar).toBeInTheDocument();
+
+      // Check for sticky positioning
+      const stickySidebar = container.querySelector(".sticky.top-24");
+      expect(stickySidebar).toBeInTheDocument();
+    });
+
+    it("should have mobile fixed footer with lg:hidden class", () => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: [
+          {
+            id: "1",
+            menuItemId: "item-1",
+            name: "Test Item",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 10,
+            imageUrl: null,
+          },
+        ],
+      });
+
+      const { container } = render(<CartPage />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      // Check for mobile footer (visible on mobile, hidden on lg+)
+      const mobileFooter = container.querySelector(".lg\\:hidden.fixed.bottom-0");
+      expect(mobileFooter).toBeInTheDocument();
+    });
+
+    it("should display Order Summary heading in desktop sidebar", () => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: [
+          {
+            id: "1",
+            menuItemId: "item-1",
+            name: "Test Item",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 10,
+            imageUrl: null,
+          },
+        ],
+      });
+
+      render(<CartPage />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      // Desktop sidebar has "Order Summary" heading
+      expect(screen.getByText("Order Summary")).toBeInTheDocument();
+    });
+
+    it("should have checkout button in both mobile and desktop views", () => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: [
+          {
+            id: "1",
+            menuItemId: "item-1",
+            name: "Test Item",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 10,
+            imageUrl: null,
+          },
+        ],
+      });
+
+      render(<CartPage />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      // Should have two checkout buttons (one for mobile, one for desktop)
+      const checkoutButtons = screen.getAllByText("Continue to Checkout");
+      expect(checkoutButtons).toHaveLength(2);
     });
   });
 });

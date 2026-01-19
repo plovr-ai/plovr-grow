@@ -95,96 +95,136 @@ export default function CartPage() {
       </header>
 
       {/* Cart Items */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-48">
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <ul className="divide-y divide-gray-100">
-            {items.map((item) => (
-              <li key={item.id} className="p-4">
-                <div className="flex gap-4">
-                  {/* Item Image */}
-                  {item.imageUrl ? (
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 rounded-lg bg-gray-100 flex-shrink-0 flex items-center justify-center">
-                      <ImagePlaceholderIcon className="w-8 h-8 text-gray-300" />
-                    </div>
-                  )}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-48 lg:pb-6">
+        <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+          {/* Left: Cart Items */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              <ul className="divide-y divide-gray-100">
+                {items.map((item) => (
+                  <li key={item.id} className="p-4">
+                    <div className="flex gap-4">
+                      {/* Item Image */}
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-lg bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                          <ImagePlaceholderIcon className="w-8 h-8 text-gray-300" />
+                        </div>
+                      )}
 
-                  {/* Item Details */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-900">{item.name}</h3>
-                    {item.selectedModifiers?.length > 0 && (
-                      <p className="text-sm text-gray-500 mt-1">
-                        {item.selectedModifiers
-                          .map((mod) => mod.modifierName)
-                          .join(", ")}
-                      </p>
-                    )}
-                    {item.specialInstructions && (
-                      <p className="text-sm text-gray-400 mt-1 italic">
-                        {item.specialInstructions}
-                      </p>
-                    )}
-                    <p className="text-sm text-gray-600 mt-1">
-                      {formatPrice(item.price)} each
-                    </p>
-                  </div>
-
-                  {/* Price and Quantity */}
-                  <div className="text-right flex-shrink-0">
-                    <p className="font-semibold text-gray-900">
-                      {formatPrice(item.totalPrice)}
-                    </p>
-
-                    {/* Quantity Controls */}
-                    <div className="flex items-center gap-2 mt-2">
-                      <button
-                        onClick={() =>
-                          updateQuantity(item.id, item.quantity - 1)
-                        }
-                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
-                      >
-                        {item.quantity === 1 ? (
-                          <TrashIcon className="w-4 h-4 text-red-500" />
-                        ) : (
-                          <MinusIcon className="w-4 h-4" />
+                      {/* Item Details */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-gray-900">{item.name}</h3>
+                        {item.selectedModifiers?.length > 0 && (
+                          <p className="text-sm text-gray-500 mt-1">
+                            {item.selectedModifiers
+                              .map((mod) => mod.modifierName)
+                              .join(", ")}
+                          </p>
                         )}
-                      </button>
-                      <span className="w-8 text-center font-medium">
-                        {item.quantity}
-                      </span>
-                      <button
-                        onClick={() =>
-                          updateQuantity(item.id, item.quantity + 1)
-                        }
-                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
-                      >
-                        <PlusIcon className="w-4 h-4" />
-                      </button>
+                        {item.specialInstructions && (
+                          <p className="text-sm text-gray-400 mt-1 italic">
+                            {item.specialInstructions}
+                          </p>
+                        )}
+                        <p className="text-sm text-gray-600 mt-1">
+                          {formatPrice(item.price)} each
+                        </p>
+                      </div>
+
+                      {/* Price and Quantity */}
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-semibold text-gray-900">
+                          {formatPrice(item.totalPrice)}
+                        </p>
+
+                        {/* Quantity Controls */}
+                        <div className="flex items-center gap-2 mt-2">
+                          <button
+                            onClick={() =>
+                              updateQuantity(item.id, item.quantity - 1)
+                            }
+                            className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                          >
+                            {item.quantity === 1 ? (
+                              <TrashIcon className="w-4 h-4 text-red-500" />
+                            ) : (
+                              <MinusIcon className="w-4 h-4" />
+                            )}
+                          </button>
+                          <span className="w-8 text-center font-medium">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() =>
+                              updateQuantity(item.id, item.quantity + 1)
+                            }
+                            className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                          >
+                            <PlusIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Add More Items */}
+            <Link
+              href={`/r/${merchantSlug}/menu`}
+              className="mt-4 flex items-center justify-center gap-2 py-3 text-red-600 hover:text-red-700 font-medium transition-colors"
+            >
+              <PlusIcon className="w-5 h-5" />
+              Add more items
+            </Link>
+          </div>
+
+          {/* Right: Order Summary (PC only) */}
+          <div className="hidden lg:block">
+            <div className="sticky top-24">
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  Order Summary
+                </h2>
+
+                {/* Summary */}
+                <div className="space-y-2 mb-6">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Subtotal</span>
+                    <span>{formatPrice(pricing.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Tax</span>
+                    <span>{formatPrice(pricing.taxAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-semibold text-gray-900 pt-2 border-t border-gray-100">
+                    <span>Total</span>
+                    <span>{formatPrice(pricing.totalAmount)}</span>
                   </div>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </div>
 
-        {/* Add More Items */}
-        <Link
-          href={`/r/${merchantSlug}/menu`}
-          className="mt-4 flex items-center justify-center gap-2 py-3 text-red-600 hover:text-red-700 font-medium transition-colors"
-        >
-          <PlusIcon className="w-5 h-5" />
-          Add more items
-        </Link>
+                {/* Checkout Button */}
+                <Link
+                  href={`/r/${merchantSlug}/checkout`}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-4 rounded-xl transition-colors block text-center"
+                >
+                  Continue to Checkout
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
 
-      {/* Order Summary - Fixed at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
+      {/* Order Summary - Fixed at bottom (Mobile only) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Summary */}
           <div className="space-y-2 mb-4">
