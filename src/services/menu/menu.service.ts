@@ -1,4 +1,4 @@
-import { getMockGetMenuResponse } from "@/data/mock/menu-service";
+import { getMockGetMenuResponse, mockGetMenuResponse } from "@/data/mock/menu-service";
 import type {
   GetMenuResponse,
   CreateCategoryInput,
@@ -51,10 +51,19 @@ export class MenuService {
 
   /**
    * Get menu items by IDs (for cart validation)
+   * TODO: Replace mock data with database implementation
    */
-  async getMenuItemsByIds(tenantId: string, itemIds: string[]) {
-    const { menuRepository } = await getRepositories();
-    return menuRepository.getItemsByIds(tenantId, itemIds);
+  async getMenuItemsByIds(_tenantId: string, itemIds: string[]) {
+    // Temporarily use mock data until database is ready
+    const allItems = mockGetMenuResponse.categories.flatMap((cat) => cat.menuItems);
+    const uniqueItems = new Map(allItems.map((item) => [item.id, item]));
+    return itemIds
+      .map((id) => uniqueItems.get(id))
+      .filter((item): item is NonNullable<typeof item> => item != null);
+
+    // Database implementation (commented out for now):
+    // const { menuRepository } = await getRepositories();
+    // return menuRepository.getItemsByIds(tenantId, itemIds);
   }
 
   /**

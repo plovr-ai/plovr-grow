@@ -1,5 +1,7 @@
 "use client";
 
+import { usePhoneInput } from "@/hooks";
+
 interface ContactInfo {
   customerName: string;
   customerPhone: string;
@@ -19,6 +21,13 @@ export function ContactInfoForm({
   onChange,
   disabled = false,
 }: ContactInfoFormProps) {
+  const { format: formatPhoneInput } = usePhoneInput();
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneInput(e.target.value);
+    onChange("customerPhone", formatted);
+  };
+
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4">
       <h2 className="text-sm font-medium text-gray-700 mb-3">
@@ -61,7 +70,7 @@ export function ContactInfoForm({
             type="tel"
             id="customerPhone"
             value={values.customerPhone}
-            onChange={(e) => onChange("customerPhone", e.target.value)}
+            onChange={handlePhoneChange}
             disabled={disabled}
             placeholder="(555) 123-4567"
             className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${

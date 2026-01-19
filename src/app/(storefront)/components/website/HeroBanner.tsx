@@ -1,6 +1,13 @@
 import Link from "next/link";
 import type { MerchantInfo } from "@/types/website";
 
+interface LocationInfo {
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+}
+
 interface HeroBannerProps {
   merchant: MerchantInfo;
   /** @deprecated Use companySlug instead */
@@ -9,6 +16,10 @@ interface HeroBannerProps {
   companySlug?: string;
   /** Custom menu link (for single vs multi-store logic) */
   menuLink?: string;
+  /** Number of locations for this company */
+  locationCount?: number;
+  /** Single location address (when locationCount === 1) */
+  singleLocation?: LocationInfo;
 }
 
 export function HeroBanner({
@@ -16,11 +27,19 @@ export function HeroBanner({
   tenantSlug,
   companySlug,
   menuLink,
+  locationCount = 1,
+  singleLocation,
 }: HeroBannerProps) {
   // Support both old (tenantSlug) and new (companySlug) props
   const slug = companySlug ?? tenantSlug ?? "";
   const orderLink = menuLink ?? `/r/${slug}/menu`;
-  const fullAddress = `${merchant.address}, ${merchant.city}, ${merchant.state} ${merchant.zipCode}`;
+  const locationsLink = `/${slug}/locations`;
+
+  // Determine what to show in the location area
+  const hasSingleLocation = locationCount === 1;
+  const locationAddress = singleLocation
+    ? `${singleLocation.address}, ${singleLocation.city}, ${singleLocation.state} ${singleLocation.zipCode}`
+    : `${merchant.address}, ${merchant.city}, ${merchant.state} ${merchant.zipCode}`;
 
   return (
     <section className="relative h-screen min-h-[600px] max-h-[900px] flex items-center justify-center">
@@ -60,7 +79,16 @@ export function HeroBanner({
               d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
             />
           </svg>
-          <span className="text-base md:text-lg">{fullAddress}</span>
+          {hasSingleLocation ? (
+            <span className="text-base md:text-lg">{locationAddress}</span>
+          ) : (
+            <Link
+              href={locationsLink}
+              className="text-base md:text-lg hover:text-white underline underline-offset-2 transition-colors"
+            >
+              View {locationCount} Locations
+            </Link>
+          )}
         </div>
 
         <Link

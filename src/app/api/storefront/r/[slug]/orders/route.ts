@@ -75,8 +75,9 @@ export async function POST(
       );
     }
 
-    // Create order (using tenantId for legacy order service)
+    // Create order with merchantId
     const order = await orderService.createOrder(tenantId, {
+      merchantId: merchant.id,
       customerName: formValidation.data.customerName,
       customerPhone: formValidation.data.customerPhone,
       customerEmail: formValidation.data.customerEmail || undefined,

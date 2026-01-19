@@ -235,7 +235,7 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/r/${merchantSlug}/orders`, {
+      const response = await fetch(`/api/storefront/r/${merchantSlug}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -259,9 +259,9 @@ export default function CheckoutPage() {
         throw new Error(data.error || "Failed to place order");
       }
 
-      // Success - clear cart and redirect
+      // Success - clear cart and redirect to order detail page
       clearCart();
-      router.push(`/r/${merchantSlug}/menu?orderSuccess=${data.data.orderNumber}`);
+      router.push(`/r/${merchantSlug}/orders/${data.data.orderId}`);
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : "Failed to place order"

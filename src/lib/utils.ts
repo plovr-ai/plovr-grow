@@ -62,3 +62,50 @@ export function safeJsonParse<T>(
     return fallback;
   }
 }
+
+/**
+ * Format phone number based on locale
+ * For US locale: (555) 123-4567
+ * For other locales: returns original format
+ */
+export function formatPhone(phone: string, locale = "en-US"): string {
+  // Remove all non-digit characters except leading +
+  const cleaned = phone.replace(/[^\d+]/g, "");
+
+  // US format: (XXX) XXX-XXXX
+  if (locale.startsWith("en-US") || locale === "en") {
+    // Handle 10-digit US numbers (with optional +1 prefix)
+    const match = cleaned.match(/^(\+?1)?(\d{3})(\d{3})(\d{4})$/);
+    if (match) {
+      return `(${match[2]}) ${match[3]}-${match[4]}`;
+    }
+  }
+
+  // For other locales or unparseable numbers, return original
+  return phone;
+}
+
+/**
+ * Format phone input progressively as user types
+ * Handles both typing and deletion gracefully
+ * For US locale: (XXX) XXX-XXXX
+ */
+export function formatPhoneInput(value: string, locale = "en-US"): string {
+  // Only format for US locale
+  if (!locale.startsWith("en-US") && locale !== "en") {
+    return value;
+  }
+
+  // Extract digits only
+  const digits = value.replace(/\D/g, "");
+
+  // Limit to 10 digits (US phone)
+  const limited = digits.slice(0, 10);
+
+  // Progressive formatting based on digit count
+  if (limited.length === 0) return "";
+  if (limited.length <= 3) return `(${limited}`;
+  if (limited.length <= 6)
+    return `(${limited.slice(0, 3)}) ${limited.slice(3)}`;
+  return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
+}

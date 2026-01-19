@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatPrice } from "../utils";
+import { formatPrice, formatPhone, formatPhoneInput } from "../utils";
 
 describe("formatPrice", () => {
   describe("USD currency", () => {
@@ -96,6 +96,204 @@ describe("formatPrice", () => {
     it("should handle very large numbers", () => {
       const result = formatPrice(1000000, "USD", "en-US");
       expect(result).toBe("$1,000,000.00");
+    });
+  });
+});
+
+describe("formatPhone", () => {
+  describe("US locale (en-US)", () => {
+    it("should format 10-digit US phone number", () => {
+      expect(formatPhone("2125550100", "en-US")).toBe("(212) 555-0100");
+    });
+
+    it("should format phone number with +1 country code", () => {
+      expect(formatPhone("+12125550100", "en-US")).toBe("(212) 555-0100");
+    });
+
+    it("should format phone number with 1 country code (no plus)", () => {
+      expect(formatPhone("12125550100", "en-US")).toBe("(212) 555-0100");
+    });
+
+    it("should handle phone number with dashes", () => {
+      expect(formatPhone("212-555-0100", "en-US")).toBe("(212) 555-0100");
+    });
+
+    it("should handle phone number with spaces", () => {
+      expect(formatPhone("212 555 0100", "en-US")).toBe("(212) 555-0100");
+    });
+
+    it("should handle phone number with parentheses", () => {
+      expect(formatPhone("(212) 555-0100", "en-US")).toBe("(212) 555-0100");
+    });
+
+    it("should handle phone number with dots", () => {
+      expect(formatPhone("212.555.0100", "en-US")).toBe("(212) 555-0100");
+    });
+
+    it("should use en-US as default locale", () => {
+      expect(formatPhone("2125550100")).toBe("(212) 555-0100");
+    });
+  });
+
+  describe("en locale (generic English)", () => {
+    it("should format US phone number with en locale", () => {
+      expect(formatPhone("2125550100", "en")).toBe("(212) 555-0100");
+    });
+  });
+
+  describe("non-US locales", () => {
+    it("should return original format for de-DE locale", () => {
+      expect(formatPhone("+49 30 12345678", "de-DE")).toBe("+49 30 12345678");
+    });
+
+    it("should return original format for zh-CN locale", () => {
+      expect(formatPhone("+86 10 12345678", "zh-CN")).toBe("+86 10 12345678");
+    });
+
+    it("should return original format for ja-JP locale", () => {
+      expect(formatPhone("+81 3 1234 5678", "ja-JP")).toBe("+81 3 1234 5678");
+    });
+
+    it("should return original format for en-GB locale", () => {
+      expect(formatPhone("+44 20 7946 0958", "en-GB")).toBe("+44 20 7946 0958");
+    });
+  });
+
+  describe("edge cases", () => {
+    it("should return original for invalid US number (too short)", () => {
+      expect(formatPhone("12345", "en-US")).toBe("12345");
+    });
+
+    it("should return original for invalid US number (too long)", () => {
+      expect(formatPhone("123456789012345", "en-US")).toBe("123456789012345");
+    });
+
+    it("should handle empty string", () => {
+      expect(formatPhone("", "en-US")).toBe("");
+    });
+
+    it("should handle number with letters", () => {
+      // Letters are stripped, but if result doesn't match pattern, return original
+      expect(formatPhone("212-555-HELP", "en-US")).toBe("212-555-HELP");
+    });
+  });
+});
+
+describe("formatPhoneInput", () => {
+  describe("progressive formatting (en-US)", () => {
+    it("should return empty string for empty input", () => {
+      expect(formatPhoneInput("", "en-US")).toBe("");
+    });
+
+    it("should format 1 digit", () => {
+      expect(formatPhoneInput("2", "en-US")).toBe("(2");
+    });
+
+    it("should format 2 digits", () => {
+      expect(formatPhoneInput("21", "en-US")).toBe("(21");
+    });
+
+    it("should format 3 digits", () => {
+      expect(formatPhoneInput("212", "en-US")).toBe("(212");
+    });
+
+    it("should format 4 digits", () => {
+      expect(formatPhoneInput("2125", "en-US")).toBe("(212) 5");
+    });
+
+    it("should format 5 digits", () => {
+      expect(formatPhoneInput("21255", "en-US")).toBe("(212) 55");
+    });
+
+    it("should format 6 digits", () => {
+      expect(formatPhoneInput("212555", "en-US")).toBe("(212) 555");
+    });
+
+    it("should format 7 digits", () => {
+      expect(formatPhoneInput("2125550", "en-US")).toBe("(212) 555-0");
+    });
+
+    it("should format 8 digits", () => {
+      expect(formatPhoneInput("21255501", "en-US")).toBe("(212) 555-01");
+    });
+
+    it("should format 9 digits", () => {
+      expect(formatPhoneInput("212555010", "en-US")).toBe("(212) 555-010");
+    });
+
+    it("should format 10 digits (complete)", () => {
+      expect(formatPhoneInput("2125550100", "en-US")).toBe("(212) 555-0100");
+    });
+  });
+
+  describe("input cleaning", () => {
+    it("should strip non-digit characters", () => {
+      expect(formatPhoneInput("(212) 555-0100", "en-US")).toBe("(212) 555-0100");
+    });
+
+    it("should handle input with spaces", () => {
+      expect(formatPhoneInput("212 555 0100", "en-US")).toBe("(212) 555-0100");
+    });
+
+    it("should handle input with dashes", () => {
+      expect(formatPhoneInput("212-555-0100", "en-US")).toBe("(212) 555-0100");
+    });
+
+    it("should handle input with dots", () => {
+      expect(formatPhoneInput("212.555.0100", "en-US")).toBe("(212) 555-0100");
+    });
+
+    it("should limit to 10 digits", () => {
+      expect(formatPhoneInput("21255501001234", "en-US")).toBe("(212) 555-0100");
+    });
+
+    it("should ignore letters", () => {
+      expect(formatPhoneInput("212abc555def0100", "en-US")).toBe("(212) 555-0100");
+    });
+  });
+
+  describe("deletion scenarios", () => {
+    it("should handle deletion from complete number", () => {
+      // User deletes last digit from (212) 555-0100
+      expect(formatPhoneInput("(212) 555-010", "en-US")).toBe("(212) 555-010");
+    });
+
+    it("should handle deletion to 6 digits", () => {
+      expect(formatPhoneInput("(212) 555", "en-US")).toBe("(212) 555");
+    });
+
+    it("should handle deletion to 3 digits", () => {
+      expect(formatPhoneInput("(212", "en-US")).toBe("(212");
+    });
+
+    it("should handle deletion to empty", () => {
+      expect(formatPhoneInput("(", "en-US")).toBe("");
+    });
+  });
+
+  describe("non-US locales", () => {
+    it("should return original value for de-DE locale", () => {
+      expect(formatPhoneInput("12345", "de-DE")).toBe("12345");
+    });
+
+    it("should return original value for zh-CN locale", () => {
+      expect(formatPhoneInput("12345", "zh-CN")).toBe("12345");
+    });
+
+    it("should return original value for en-GB locale", () => {
+      expect(formatPhoneInput("12345", "en-GB")).toBe("12345");
+    });
+  });
+
+  describe("en locale (generic English)", () => {
+    it("should format with en locale", () => {
+      expect(formatPhoneInput("2125550100", "en")).toBe("(212) 555-0100");
+    });
+  });
+
+  describe("default locale", () => {
+    it("should use en-US as default locale", () => {
+      expect(formatPhoneInput("2125550100")).toBe("(212) 555-0100");
     });
   });
 });
