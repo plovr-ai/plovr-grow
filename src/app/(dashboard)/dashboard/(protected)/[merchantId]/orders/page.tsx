@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { companyService } from "@/services/company";
-import { orderMockService } from "@/services/order/order-mock.service";
+import { orderService } from "@/services/order";
 import { OrdersManagementClient } from "@/components/orders/OrdersManagementClient";
 import type { OrderStatus, OrderType } from "@/types";
 
@@ -44,9 +44,13 @@ export default async function OrdersManagementPage({
   const dateFrom = search.dateFrom ? new Date(search.dateFrom) : undefined;
   const dateTo = search.dateTo ? new Date(search.dateTo) : undefined;
 
-  // Get orders data (using mock service for now)
-  const ordersData = orderMockService.getOrders(tenantId, {
-    merchantId: merchantFilter,
+  // Get orders data from database
+  // Use merchantFilter if specified, otherwise use the current merchantId from URL
+  const targetMerchantId = merchantFilter && merchantFilter !== "all"
+    ? merchantFilter
+    : merchantId;
+
+  const ordersData = await orderService.getMerchantOrders(tenantId, targetMerchantId, {
     status: statusFilter,
     orderType: typeFilter,
     dateFrom,
