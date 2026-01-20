@@ -109,6 +109,32 @@ export async function deleteMenuAction(id: string): Promise<ActionResult> {
   }
 }
 
+export async function updateMenuSortOrderAction(
+  updates: Array<{ id: string; sortOrder: number }>
+): Promise<ActionResult> {
+  const session = await auth();
+
+  if (!session?.user?.tenantId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { tenantId } = session.user;
+
+  try {
+    await menuService.updateMenuSortOrders(tenantId, updates);
+
+    revalidatePath("/dashboard/menu", "page");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update menu sort order:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update menu sort order",
+    };
+  }
+}
+
 // ==================== Category Actions ====================
 
 interface CreateCategoryInput {

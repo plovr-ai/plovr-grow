@@ -337,6 +337,17 @@ export class MenuService {
   }
 
   /**
+   * Batch update menu sort orders
+   */
+  async updateMenuSortOrders(
+    tenantId: string,
+    updates: Array<{ id: string; sortOrder: number }>
+  ) {
+    const { menuEntityRepository } = await getRepositories();
+    return menuEntityRepository.updateMenuSortOrders(tenantId, updates);
+  }
+
+  /**
    * Get menu for Dashboard (includes all statuses)
    * Returns all categories and items without status filtering
    *

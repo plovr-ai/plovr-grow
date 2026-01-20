@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { MenuForm } from "./MenuForm";
 import { CategoryList } from "./CategoryList";
 import { CategoryForm } from "./CategoryForm";
 import { MenuItemList } from "./MenuItemList";
+import { updateMenuSortOrderAction } from "@/app/(dashboard)/dashboard/(protected)/menu/actions";
 import type {
   MenuInfo,
   DashboardCategory,
@@ -30,6 +31,7 @@ export function MenuManagementClient({
 }: MenuManagementClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
 
   // Menu state
   const [isMenuFormOpen, setIsMenuFormOpen] = useState(false);
@@ -67,6 +69,14 @@ export function MenuManagementClient({
   const handleCloseMenuForm = () => {
     setIsMenuFormOpen(false);
     setEditingMenu(null);
+  };
+
+  const handleReorderMenus = (
+    updates: Array<{ id: string; sortOrder: number }>
+  ) => {
+    startTransition(async () => {
+      await updateMenuSortOrderAction(updates);
+    });
   };
 
   // Category handlers
@@ -119,6 +129,7 @@ export function MenuManagementClient({
         onSelectMenu={handleSelectMenu}
         onAddMenu={handleAddMenu}
         onEditMenu={handleEditMenu}
+        onReorderMenus={handleReorderMenus}
       />
 
       {/* Main content */}

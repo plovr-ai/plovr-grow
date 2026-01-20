@@ -34,6 +34,7 @@ describe("MenuTabs", () => {
     onSelectMenu: vi.fn(),
     onAddMenu: vi.fn(),
     onEditMenu: vi.fn(),
+    onReorderMenus: vi.fn(),
   };
 
   describe("Rendering", () => {
@@ -56,18 +57,29 @@ describe("MenuTabs", () => {
 
       expect(screen.getByText("Add Menu")).toBeInTheDocument();
     });
+
+    it("should render drag handles for each menu tab", () => {
+      const { container } = render(<MenuTabs {...defaultProps} />);
+
+      // Each menu tab should have a drag handle (GripVertical icon)
+      const dragHandles = container.querySelectorAll(".cursor-grab");
+      expect(dragHandles).toHaveLength(3);
+    });
   });
 
   describe("Selection", () => {
     it("should apply selected style to current menu", () => {
-      render(<MenuTabs {...defaultProps} selectedMenuId="menu-2" />);
+      const { container } = render(
+        <MenuTabs {...defaultProps} selectedMenuId="menu-2" />
+      );
 
-      const menu1Button = screen.getByText("Main Menu");
-      const menu2Button = screen.getByText("Lunch Menu");
+      // Find the sortable containers (parent divs of the menu tabs)
+      const sortableItems = container.querySelectorAll(".group");
 
-      // Check class names for selected state
-      expect(menu2Button).toHaveClass("border-primary");
-      expect(menu1Button).toHaveClass("border-transparent");
+      // First menu should have transparent border (not selected)
+      expect(sortableItems[0]).toHaveClass("border-transparent");
+      // Second menu should have primary border (selected)
+      expect(sortableItems[1]).toHaveClass("border-primary");
     });
 
     it("should call onSelectMenu when clicking a menu tab", () => {
@@ -105,12 +117,65 @@ describe("MenuTabs", () => {
     });
   });
 
+  describe("Drag and Drop", () => {
+    it("should have onReorderMenus callback", () => {
+      const onReorderMenus = vi.fn();
+      render(<MenuTabs {...defaultProps} onReorderMenus={onReorderMenus} />);
+
+      // The callback should be passed (component renders without error)
+      expect(screen.getByText("Main Menu")).toBeInTheDocument();
+    });
+
+    it("should render drag handles with cursor-grab class", () => {
+      const { container } = render(<MenuTabs {...defaultProps} />);
+
+      const dragHandles = container.querySelectorAll(".cursor-grab");
+      expect(dragHandles).toHaveLength(3);
+
+      // Verify they have touch-none for better mobile support
+      dragHandles.forEach((handle) => {
+        expect(handle).toHaveClass("touch-none");
+      });
+    });
+
+    it("should have drag handles initially hidden (opacity-0)", () => {
+      const { container } = render(<MenuTabs {...defaultProps} />);
+
+      const dragHandles = container.querySelectorAll(".cursor-grab");
+      dragHandles.forEach((handle) => {
+        expect(handle).toHaveClass("opacity-0");
+        expect(handle).toHaveClass("group-hover:opacity-100");
+      });
+    });
+
+    it("should not trigger onSelectMenu when clicking drag handle", () => {
+      const onSelectMenu = vi.fn();
+      const { container } = render(
+        <MenuTabs {...defaultProps} onSelectMenu={onSelectMenu} />
+      );
+
+      const dragHandles = container.querySelectorAll(".cursor-grab");
+      fireEvent.click(dragHandles[0]);
+
+      // Should not call onSelectMenu because we stop propagation
+      expect(onSelectMenu).not.toHaveBeenCalled();
+    });
+
+    it("should wrap menus in sortable context", () => {
+      const { container } = render(<MenuTabs {...defaultProps} />);
+
+      // Each menu tab should be draggable (wrapped in sortable div)
+      const sortableTabs = container.querySelectorAll(".group");
+      expect(sortableTabs).toHaveLength(3);
+    });
+  });
+
   describe("Empty State", () => {
     it("should render only add button when no menus", () => {
       render(<MenuTabs {...defaultProps} menus={[]} />);
 
       expect(screen.getByText("Add Menu")).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /main menu/i })).not.toBeInTheDocument();
+      expect(screen.queryByText("Main Menu")).not.toBeInTheDocument();
     });
   });
 });

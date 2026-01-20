@@ -16,6 +16,18 @@ vi.mock("@/repositories/menu.repository", () => ({
   },
 }));
 
+vi.mock("@/repositories/menu-entity.repository", () => ({
+  menuEntityRepository: {
+    getMenusByCompany: vi.fn(),
+    getMenusByCompanyForDashboard: vi.fn(),
+    createMenu: vi.fn(),
+    updateMenu: vi.fn(),
+    deleteMenu: vi.fn(),
+    countMenusByCompany: vi.fn(),
+    updateMenuSortOrders: vi.fn(),
+  },
+}));
+
 vi.mock("@/repositories/merchant.repository", () => ({
   merchantRepository: {
     getById: vi.fn(),
@@ -32,6 +44,7 @@ vi.mock("@/repositories/tax-config.repository", () => ({
 
 // Import mocked modules
 import { menuRepository } from "@/repositories/menu.repository";
+import { menuEntityRepository } from "@/repositories/menu-entity.repository";
 import { merchantRepository } from "@/repositories/merchant.repository";
 import { taxConfigRepository } from "@/repositories/tax-config.repository";
 
@@ -526,6 +539,57 @@ describe("MenuService", () => {
       const result = await menuService.getMenuItem("tenant-1", "non-existent");
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe("updateMenuSortOrders()", () => {
+    it("should call menuEntityRepository.updateMenuSortOrders with correct params", async () => {
+      const updates = [
+        { id: "menu-1", sortOrder: 2 },
+        { id: "menu-2", sortOrder: 0 },
+        { id: "menu-3", sortOrder: 1 },
+      ];
+
+      vi.mocked(menuEntityRepository.updateMenuSortOrders).mockResolvedValue([
+        { count: 1 },
+        { count: 1 },
+        { count: 1 },
+      ] as never);
+
+      await menuService.updateMenuSortOrders("tenant-1", updates);
+
+      expect(menuEntityRepository.updateMenuSortOrders).toHaveBeenCalledWith(
+        "tenant-1",
+        updates
+      );
+    });
+
+    it("should return the result from repository", async () => {
+      const updates = [
+        { id: "menu-1", sortOrder: 1 },
+        { id: "menu-2", sortOrder: 0 },
+      ];
+
+      const expectedResult = [{ count: 1 }, { count: 1 }];
+      vi.mocked(menuEntityRepository.updateMenuSortOrders).mockResolvedValue(
+        expectedResult as never
+      );
+
+      const result = await menuService.updateMenuSortOrders("tenant-1", updates);
+
+      expect(result).toEqual(expectedResult);
+    });
+
+    it("should handle empty updates array", async () => {
+      vi.mocked(menuEntityRepository.updateMenuSortOrders).mockResolvedValue([] as never);
+
+      const result = await menuService.updateMenuSortOrders("tenant-1", []);
+
+      expect(menuEntityRepository.updateMenuSortOrders).toHaveBeenCalledWith(
+        "tenant-1",
+        []
+      );
+      expect(result).toEqual([]);
     });
   });
 });
