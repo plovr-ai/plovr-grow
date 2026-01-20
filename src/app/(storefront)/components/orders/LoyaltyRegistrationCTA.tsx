@@ -1,0 +1,331 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useLoyalty, useCompanySlug } from "@/contexts";
+import { usePhoneInput } from "@/hooks";
+import { OtpModal } from "@storefront/components/checkout/OtpModal";
+
+interface LoyaltyRegistrationCTAProps {
+  orderId: string;
+  customerPhone: string;
+  customerName: string | null;
+  subtotal: number;
+}
+
+export function LoyaltyRegistrationCTA({
+  orderId,
+  customerPhone,
+  customerName,
+  subtotal,
+}: LoyaltyRegistrationCTAProps) {
+  const companySlug = useCompanySlug();
+  const { member, isLoading, pointsPerDollar, login } = useLoyalty();
+  const { format: formatPhone } = usePhoneInput();
+
+  // State
+  const [pointsAlreadyAwarded, setPointsAlreadyAwarded] = useState<
+    boolean | null
+  >(null);
+  const [checkingPoints, setCheckingPoints] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [verifyError, setVerifyError] = useState("");
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [earnedPoints, setEarnedPoints] = useState(0);
+
+  // Calculate estimated points
+  const estimatedPoints = Math.floor(subtotal * pointsPerDollar);
+
+  // Check if points already awarded for this order
+  useEffect(() => {
+    async function checkPoints() {
+      if (!companySlug) {
+        setCheckingPoints(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/api/storefront/loyalty/order-points-status?orderId=${orderId}&companySlug=${companySlug}`
+        );
+        const data = await response.json();
+        setPointsAlreadyAwarded(data.data?.pointsAwarded ?? false);
+      } catch {
+        setPointsAlreadyAwarded(false);
+      } finally {
+        setCheckingPoints(false);
+      }
+    }
+
+    checkPoints();
+  }, [orderId, companySlug]);
+
+  // Pre-fill phone from order on initial load
+  useEffect(() => {
+    if (customerPhone && !phone) {
+      setPhone(formatPhone(customerPhone));
+    }
+  }, [customerPhone, phone, formatPhone]);
+
+  // Don't render if:
+  // - No company slug (loyalty not configured)
+  // - Still loading
+  // - Already a member
+  // - Points already awarded
+  if (!companySlug || isLoading || checkingPoints) {
+    return null;
+  }
+
+  if (member || pointsAlreadyAwarded || registrationSuccess) {
+    // Show success message if just registered
+    if (registrationSuccess) {
+      return (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 text-green-700">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span className="font-medium">
+              Welcome to rewards! You earned {earnedPoints} points from this
+              order.
+            </span>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  }
+
+  const formatPhoneForApi = (formattedPhone: string): string => {
+    const digits = formattedPhone.replace(/\D/g, "");
+    if (digits.length === 10) return `+1${digits}`;
+    if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+    return `+${digits}`;
+  };
+
+  const handleSendOtp = async () => {
+    if (!companySlug || !phone) return;
+
+    setIsSendingOtp(true);
+    setSendError("");
+
+    try {
+      const response = await fetch("/api/storefront/loyalty/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: formatPhoneForApi(phone),
+          companySlug,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        setSendError(data.error || "Failed to send verification code");
+        return;
+      }
+
+      setShowOtpModal(true);
+    } catch {
+      setSendError("Network error. Please try again.");
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async (code: string) => {
+    if (!companySlug) return;
+
+    setIsVerifying(true);
+    setVerifyError("");
+
+    try {
+      // Verify OTP and register
+      const response = await fetch("/api/storefront/loyalty/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: formatPhoneForApi(phone),
+          code,
+          companySlug,
+          name: customerName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        setVerifyError(data.error || "Verification failed");
+        return;
+      }
+
+      const memberId = data.data.member.id;
+
+      // Award points for this order
+      const awardResponse = await fetch(
+        "/api/storefront/loyalty/award-order-points",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId,
+            memberId,
+            companySlug,
+          }),
+        }
+      );
+
+      const awardData = await awardResponse.json();
+
+      // Update context
+      login(data.data.member, pointsPerDollar);
+
+      // Show success
+      setEarnedPoints(awardData.data?.pointsEarned || estimatedPoints);
+      setShowOtpModal(false);
+      setRegistrationSuccess(true);
+    } catch {
+      setVerifyError("Network error. Please try again.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!companySlug || !phone) return;
+
+    const response = await fetch("/api/storefront/loyalty/otp/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: formatPhoneForApi(phone),
+        companySlug,
+      }),
+    });
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+  };
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+      {!isExpanded ? (
+        <button
+          type="button"
+          onClick={() => setIsExpanded(true)}
+          className="w-full flex items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-2">
+            <svg
+              className="w-5 h-5 text-amber-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+              />
+            </svg>
+            <span className="text-gray-700">
+              Join rewards and earn{" "}
+              <span className="font-medium text-amber-700">
+                {estimatedPoints} points
+              </span>{" "}
+              for this order!
+            </span>
+          </div>
+          <svg
+            className="w-5 h-5 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
+      ) : (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-medium text-gray-700">
+              Join Rewards Program
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsExpanded(false)}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <p className="text-sm text-gray-600 mb-3">
+            Verify your phone number to create an account and earn{" "}
+            {estimatedPoints} points from this order.
+          </p>
+
+          <div className="flex gap-2">
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => {
+                setPhone(formatPhone(e.target.value));
+                setSendError("");
+              }}
+              placeholder="(555) 123-4567"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+              disabled={isSendingOtp}
+            />
+            <button
+              type="button"
+              onClick={handleSendOtp}
+              disabled={phone.replace(/\D/g, "").length < 10 || isSendingOtp}
+              className="px-4 py-2 bg-amber-600 text-white font-medium rounded-lg hover:bg-amber-700 disabled:bg-gray-200 disabled:text-gray-400"
+            >
+              {isSendingOtp ? "Sending..." : "Verify"}
+            </button>
+          </div>
+
+          {sendError && <p className="text-sm text-red-500 mt-2">{sendError}</p>}
+        </div>
+      )}
+
+      <OtpModal
+        isOpen={showOtpModal}
+        phone={phone}
+        onClose={() => {
+          setShowOtpModal(false);
+          setVerifyError("");
+        }}
+        onVerify={handleVerifyOtp}
+        onResend={handleResendOtp}
+        isVerifying={isVerifying}
+        error={verifyError}
+      />
+    </div>
+  );
+}

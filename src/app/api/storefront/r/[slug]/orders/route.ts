@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { orderService } from "@/services/order";
 import { merchantService } from "@/services/merchant";
+import { pointsService, loyaltyConfigService } from "@/services/loyalty";
 import { checkoutFormSchema } from "@storefront/lib/validations/checkout";
 import type { OrderItemData } from "@/types";
 
@@ -89,6 +90,35 @@ export async function POST(
       deliveryAddress: formValidation.data.deliveryAddress,
       tipAmount: formValidation.data.tipAmount,
     });
+
+    // Award loyalty points if member is logged in
+    if (body.loyaltyMemberId) {
+      try {
+        const companyId = merchant.company.id;
+        const isEnabled = await loyaltyConfigService.isLoyaltyEnabled(
+          tenantId,
+          companyId
+        );
+
+        if (isEnabled) {
+          const pointsPerDollar = await loyaltyConfigService.getPointsPerDollar(
+            tenantId,
+            companyId
+          );
+
+          await pointsService.awardPoints(tenantId, body.loyaltyMemberId, {
+            merchantId: merchant.id,
+            orderId: order.id,
+            orderAmount: Number(order.totalAmount),
+            pointsPerDollar,
+            description: `Earned from order #${order.orderNumber}`,
+          });
+        }
+      } catch (error) {
+        // Log but don't fail the order if points awarding fails
+        console.error("Failed to award loyalty points:", error);
+      }
+    }
 
     return NextResponse.json(
       {

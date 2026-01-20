@@ -8,6 +8,7 @@ import { OrderItemsList } from "./OrderItemsList";
 import { OrderPriceSummary } from "./OrderPriceSummary";
 import { CustomerInfo } from "./CustomerInfo";
 import { OrderTimeline } from "./OrderTimeline";
+import { LoyaltyRegistrationCTA } from "./LoyaltyRegistrationCTA";
 import type { OrderDetailData, TimelineEvent } from "./order-detail.types";
 import type { OrderStatus, OrderType, OrderItemData } from "@/types";
 
@@ -158,6 +159,14 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug }: Props) 
         <OrderStatusProgress
           currentStatus={order.status as OrderStatus}
           orderType={order.orderType as OrderType}
+        />
+
+        {/* Loyalty Registration CTA (for non-members) */}
+        <LoyaltyRegistrationCTA
+          orderId={order.id}
+          customerPhone={order.customerPhone}
+          customerName={order.customerName}
+          subtotal={Number(order.subtotal)}
         />
 
         {/* Order Items */}
