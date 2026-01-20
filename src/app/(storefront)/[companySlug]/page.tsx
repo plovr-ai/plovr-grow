@@ -7,6 +7,7 @@ import {
   Footer,
 } from "@storefront/components/website";
 import { merchantService } from "@/services/merchant";
+import { loyaltyConfigService } from "@/services/loyalty";
 
 interface PageProps {
   params: Promise<{ companySlug: string }>;
@@ -25,6 +26,12 @@ export default async function CompanyHomePage({ params }: PageProps) {
   if (!websiteData) {
     notFound();
   }
+
+  // Check if loyalty is enabled for this company
+  const isLoyaltyEnabled = await loyaltyConfigService.isLoyaltyEnabled(
+    company.tenantId,
+    company.id
+  );
 
   // Determine the menu link:
   // - If single merchant, link directly to that merchant's menu
@@ -74,6 +81,7 @@ export default async function CompanyHomePage({ params }: PageProps) {
         restaurantName={company.name}
         companySlug={companySlug}
         menuLink={menuLink}
+        isLoyaltyEnabled={isLoyaltyEnabled}
       />
       <HeroBanner
         merchant={merchantInfo}
