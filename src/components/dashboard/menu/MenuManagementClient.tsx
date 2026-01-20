@@ -4,39 +4,70 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MenuTabs } from "./MenuTabs";
+import { MenuForm } from "./MenuForm";
 import { CategoryList } from "./CategoryList";
 import { CategoryForm } from "./CategoryForm";
 import { MenuItemList } from "./MenuItemList";
 import type {
+  MenuInfo,
   DashboardCategory,
   TaxConfigOption,
 } from "@/services/menu/menu.types";
 
 interface MenuManagementClientProps {
+  menus: MenuInfo[];
+  currentMenuId: string;
   categories: DashboardCategory[];
   taxConfigs: TaxConfigOption[];
 }
 
 export function MenuManagementClient({
+  menus,
+  currentMenuId,
   categories,
   taxConfigs,
 }: MenuManagementClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // URL is the single source of truth for selected category
+  // Menu state
+  const [isMenuFormOpen, setIsMenuFormOpen] = useState(false);
+  const [editingMenu, setEditingMenu] = useState<MenuInfo | null>(null);
+
+  // Category state
   const categoryFromUrl = searchParams.get("category");
   const defaultCategoryId = categories.length > 0 ? categories[0].id : null;
 
-  // Derive selected category from URL, fallback to first category
-  const selectedCategoryId = categoryFromUrl && categories.some((c) => c.id === categoryFromUrl)
-    ? categoryFromUrl
-    : defaultCategoryId;
+  const selectedCategoryId =
+    categoryFromUrl && categories.some((c) => c.id === categoryFromUrl)
+      ? categoryFromUrl
+      : defaultCategoryId;
 
   const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<DashboardCategory | null>(null);
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId) || null;
+
+  // Menu handlers
+  const handleSelectMenu = (menuId: string) => {
+    router.replace(`/dashboard/menu?menu=${menuId}`, { scroll: false });
+  };
+
+  const handleAddMenu = () => {
+    setEditingMenu(null);
+    setIsMenuFormOpen(true);
+  };
+
+  const handleEditMenu = (menu: MenuInfo) => {
+    setEditingMenu(menu);
+    setIsMenuFormOpen(true);
+  };
+
+  const handleCloseMenuForm = () => {
+    setIsMenuFormOpen(false);
+    setEditingMenu(null);
+  };
 
   // Category handlers
   const handleAddCategory = () => {
@@ -55,28 +86,30 @@ export function MenuManagementClient({
   };
 
   const handleSelectCategory = (id: string) => {
-    router.replace(`/dashboard/menu?category=${id}`, { scroll: false });
+    router.replace(`/dashboard/menu?menu=${currentMenuId}&category=${id}`, {
+      scroll: false,
+    });
   };
 
   // Menu item handlers - navigate to separate pages
   const handleAddItem = () => {
     if (selectedCategoryId) {
-      router.push(`/dashboard/menu/items/new?categoryId=${selectedCategoryId}`);
+      router.push(`/dashboard/menu/items/new?menuId=${currentMenuId}&categoryId=${selectedCategoryId}`);
     }
   };
 
   const handleEditItem = (itemId: string) => {
-    router.push(`/dashboard/menu/items/${itemId}/edit`);
+    router.push(`/dashboard/menu/items/${itemId}/edit?menuId=${currentMenuId}`);
   };
 
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b pb-4">
+      <div className="flex items-center justify-between pb-4">
         <div>
           <h2 className="text-2xl font-bold">Menu Management</h2>
           <p className="text-sm text-gray-500">
-            Manage your menu categories and items
+            Manage your menus, categories and items
           </p>
         </div>
         <Button onClick={handleAddCategory}>
@@ -85,16 +118,34 @@ export function MenuManagementClient({
         </Button>
       </div>
 
+      {/* Menu Tabs */}
+      <MenuTabs
+        menus={menus}
+        selectedMenuId={currentMenuId}
+        onSelectMenu={handleSelectMenu}
+        onAddMenu={handleAddMenu}
+        onEditMenu={handleEditMenu}
+      />
+
       {/* Main content */}
       <div className="mt-4 flex flex-1 gap-6 overflow-hidden">
         {/* Left sidebar - Categories */}
         <div className="w-64 shrink-0 overflow-y-auto">
-          <CategoryList
-            categories={categories}
-            selectedCategoryId={selectedCategoryId}
-            onSelectCategory={handleSelectCategory}
-            onEditCategory={handleEditCategory}
-          />
+          {categories.length > 0 ? (
+            <CategoryList
+              categories={categories}
+              selectedCategoryId={selectedCategoryId}
+              onSelectCategory={handleSelectCategory}
+              onEditCategory={handleEditCategory}
+            />
+          ) : (
+            <div className="rounded-lg border border-dashed p-6 text-center text-gray-500">
+              <p className="mb-2">No categories yet</p>
+              <Button variant="link" onClick={handleAddCategory} className="p-0">
+                Add your first category
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Right panel - Menu Items */}
@@ -108,9 +159,19 @@ export function MenuManagementClient({
         </div>
       </div>
 
+      {/* Menu Form Modal */}
+      {isMenuFormOpen && (
+        <MenuForm
+          menu={editingMenu}
+          onClose={handleCloseMenuForm}
+          canDelete={menus.length > 1}
+        />
+      )}
+
       {/* Category Form Modal */}
       {isCategoryFormOpen && (
         <CategoryForm
+          menuId={currentMenuId}
           category={editingCategory}
           onClose={handleCloseCategoryForm}
         />

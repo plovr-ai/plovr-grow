@@ -5,7 +5,7 @@ import { taxConfigService } from "@/services/menu/tax-config.service";
 import { MenuItemFormPage } from "@/components/dashboard/menu/MenuItemFormPage";
 
 interface PageProps {
-  searchParams: Promise<{ categoryId?: string }>;
+  searchParams: Promise<{ menuId?: string; categoryId?: string }>;
 }
 
 export default async function NewMenuItemPage({ searchParams }: PageProps) {
@@ -17,6 +17,7 @@ export default async function NewMenuItemPage({ searchParams }: PageProps) {
 
   const { tenantId, companyId } = session.user;
   const params = await searchParams;
+  const menuId = params.menuId;
   const categoryId = params.categoryId;
 
   if (!categoryId) {
@@ -24,8 +25,9 @@ export default async function NewMenuItemPage({ searchParams }: PageProps) {
   }
 
   // Get menu data to verify category exists and get tax configs
+  // Pass menuId to get the correct menu's categories
   const [menuData, taxConfigs] = await Promise.all([
-    menuService.getMenuForDashboard(tenantId, companyId),
+    menuService.getMenuForDashboard(tenantId, companyId, menuId),
     taxConfigService.getTaxConfigs(tenantId, companyId),
   ]);
 

@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MenuManagementClient } from "../MenuManagementClient";
-import type { DashboardCategory, TaxConfigOption } from "@/services/menu/menu.types";
+import type {
+  DashboardCategory,
+  TaxConfigOption,
+  MenuInfo,
+} from "@/services/menu/menu.types";
 
 // Mock Next.js navigation hooks
 const mockPush = vi.fn();
@@ -17,6 +21,37 @@ vi.mock("next/navigation", () => ({
 }));
 
 // Mock child components to isolate MenuManagementClient logic
+vi.mock("../MenuTabs", () => ({
+  MenuTabs: ({
+    menus,
+    selectedMenuId,
+    onSelectMenu,
+    onAddMenu,
+  }: {
+    menus: MenuInfo[];
+    selectedMenuId: string;
+    onSelectMenu: (id: string) => void;
+    onAddMenu: () => void;
+    onEditMenu: (menu: MenuInfo) => void;
+  }) => (
+    <div data-testid="menu-tabs">
+      {menus.map((menu) => (
+        <button
+          key={menu.id}
+          data-testid={`menu-${menu.id}`}
+          data-selected={selectedMenuId === menu.id}
+          onClick={() => onSelectMenu(menu.id)}
+        >
+          {menu.name}
+        </button>
+      ))}
+      <button data-testid="add-menu-btn" onClick={onAddMenu}>
+        Add Menu
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock("../CategoryList", () => ({
   CategoryList: ({
     categories,
@@ -82,7 +117,28 @@ vi.mock("../CategoryForm", () => ({
   CategoryForm: () => <div data-testid="category-form">Category Form</div>,
 }));
 
+vi.mock("../MenuForm", () => ({
+  MenuForm: () => <div data-testid="menu-form">Menu Form</div>,
+}));
+
 describe("MenuManagementClient", () => {
+  const mockMenus: MenuInfo[] = [
+    {
+      id: "menu-1",
+      name: "Main Menu",
+      description: null,
+      sortOrder: 0,
+      status: "active",
+    },
+    {
+      id: "menu-2",
+      name: "Lunch Menu",
+      description: "Available 11am-3pm",
+      sortOrder: 1,
+      status: "active",
+    },
+  ];
+
   const mockCategories: DashboardCategory[] = [
     {
       id: "cat-1",
@@ -144,6 +200,8 @@ describe("MenuManagementClient", () => {
   ];
 
   const defaultProps = {
+    menus: mockMenus,
+    currentMenuId: "menu-1",
     categories: mockCategories,
     taxConfigs: mockTaxConfigs,
   };
@@ -187,7 +245,14 @@ describe("MenuManagementClient", () => {
     });
 
     it("should show no category selected when categories array is empty", () => {
-      render(<MenuManagementClient categories={[]} taxConfigs={mockTaxConfigs} />);
+      render(
+        <MenuManagementClient
+          menus={mockMenus}
+          currentMenuId="menu-1"
+          categories={[]}
+          taxConfigs={mockTaxConfigs}
+        />
+      );
 
       expect(screen.getByTestId("no-category-selected")).toBeInTheDocument();
     });
@@ -201,7 +266,7 @@ describe("MenuManagementClient", () => {
       fireEvent.click(cat2Button);
 
       expect(mockReplace).toHaveBeenCalledWith(
-        "/dashboard/menu?category=cat-2",
+        "/dashboard/menu?menu=menu-1&category=cat-2",
         { scroll: false }
       );
     });
@@ -212,7 +277,7 @@ describe("MenuManagementClient", () => {
       // Click cat-3
       fireEvent.click(screen.getByTestId("category-cat-3"));
       expect(mockReplace).toHaveBeenCalledWith(
-        "/dashboard/menu?category=cat-3",
+        "/dashboard/menu?menu=menu-1&category=cat-3",
         { scroll: false }
       );
 
@@ -221,14 +286,14 @@ describe("MenuManagementClient", () => {
       // Click cat-1
       fireEvent.click(screen.getByTestId("category-cat-1"));
       expect(mockReplace).toHaveBeenCalledWith(
-        "/dashboard/menu?category=cat-1",
+        "/dashboard/menu?menu=menu-1&category=cat-1",
         { scroll: false }
       );
     });
   });
 
   describe("Menu Item Navigation", () => {
-    it("should navigate to new item page with categoryId when clicking Add Item", () => {
+    it("should navigate to new item page with menuId and categoryId when clicking Add Item", () => {
       mockSearchParams.set("category", "cat-2");
 
       render(<MenuManagementClient {...defaultProps} />);
@@ -237,17 +302,17 @@ describe("MenuManagementClient", () => {
       fireEvent.click(addItemBtn);
 
       expect(mockPush).toHaveBeenCalledWith(
-        "/dashboard/menu/items/new?categoryId=cat-2"
+        "/dashboard/menu/items/new?menuId=menu-1&categoryId=cat-2"
       );
     });
 
-    it("should navigate to edit item page when clicking edit on an item", () => {
+    it("should navigate to edit item page with menuId when clicking edit on an item", () => {
       render(<MenuManagementClient {...defaultProps} />);
 
       const editItemBtn = screen.getByTestId("edit-item-item-1");
       fireEvent.click(editItemBtn);
 
-      expect(mockPush).toHaveBeenCalledWith("/dashboard/menu/items/item-1/edit");
+      expect(mockPush).toHaveBeenCalledWith("/dashboard/menu/items/item-1/edit?menuId=menu-1");
     });
 
     it("should use first category ID for new item when no URL parameter", () => {
@@ -257,7 +322,7 @@ describe("MenuManagementClient", () => {
       fireEvent.click(addItemBtn);
 
       expect(mockPush).toHaveBeenCalledWith(
-        "/dashboard/menu/items/new?categoryId=cat-1"
+        "/dashboard/menu/items/new?menuId=menu-1&categoryId=cat-1"
       );
     });
   });
@@ -286,8 +351,69 @@ describe("MenuManagementClient", () => {
       render(<MenuManagementClient {...defaultProps} />);
 
       expect(
-        screen.getByText("Manage your menu categories and items")
+        screen.getByText("Manage your menus, categories and items")
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("Menu Tabs", () => {
+    it("should render menu tabs with all menus", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      expect(screen.getByTestId("menu-tabs")).toBeInTheDocument();
+      expect(screen.getByTestId("menu-menu-1")).toBeInTheDocument();
+      expect(screen.getByTestId("menu-menu-2")).toBeInTheDocument();
+    });
+
+    it("should show current menu as selected", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      const menu1Button = screen.getByTestId("menu-menu-1");
+      expect(menu1Button).toHaveAttribute("data-selected", "true");
+
+      const menu2Button = screen.getByTestId("menu-menu-2");
+      expect(menu2Button).toHaveAttribute("data-selected", "false");
+    });
+
+    it("should update URL when clicking a different menu", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      const menu2Button = screen.getByTestId("menu-menu-2");
+      fireEvent.click(menu2Button);
+
+      expect(mockReplace).toHaveBeenCalledWith(
+        "/dashboard/menu?menu=menu-2",
+        { scroll: false }
+      );
+    });
+  });
+
+  describe("Menu Form Modal", () => {
+    it("should open menu form when clicking Add Menu", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      expect(screen.queryByTestId("menu-form")).not.toBeInTheDocument();
+
+      const addMenuBtn = screen.getByTestId("add-menu-btn");
+      fireEvent.click(addMenuBtn);
+
+      expect(screen.getByTestId("menu-form")).toBeInTheDocument();
+    });
+  });
+
+  describe("Empty Categories", () => {
+    it("should show empty state when no categories", () => {
+      render(
+        <MenuManagementClient
+          menus={mockMenus}
+          currentMenuId="menu-1"
+          categories={[]}
+          taxConfigs={mockTaxConfigs}
+        />
+      );
+
+      expect(screen.getByText("No categories yet")).toBeInTheDocument();
+      expect(screen.getByText("Add your first category")).toBeInTheDocument();
     });
   });
 });

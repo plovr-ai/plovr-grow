@@ -6,9 +6,10 @@ import { MenuItemFormPage } from "@/components/dashboard/menu/MenuItemFormPage";
 
 interface PageProps {
   params: Promise<{ itemId: string }>;
+  searchParams: Promise<{ menuId?: string }>;
 }
 
-export default async function EditMenuItemPage({ params }: PageProps) {
+export default async function EditMenuItemPage({ params, searchParams }: PageProps) {
   const session = await auth();
 
   if (!session?.user?.tenantId || !session?.user?.companyId) {
@@ -17,10 +18,12 @@ export default async function EditMenuItemPage({ params }: PageProps) {
 
   const { tenantId, companyId } = session.user;
   const { itemId } = await params;
+  const { menuId } = await searchParams;
 
   // Get menu data and tax configs
+  // Pass menuId to get the correct menu's categories
   const [menuData, taxConfigs] = await Promise.all([
-    menuService.getMenuForDashboard(tenantId, companyId),
+    menuService.getMenuForDashboard(tenantId, companyId, menuId),
     taxConfigService.getTaxConfigs(tenantId, companyId),
   ]);
 
