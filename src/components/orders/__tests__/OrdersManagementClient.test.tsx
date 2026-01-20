@@ -24,7 +24,6 @@ describe("OrdersManagementClient", () => {
       id: "order1",
       tenantId: "tenant1",
       merchantId: "merchant1",
-      customerId: null,
       orderNumber: "ORD-001",
       customerName: "John Doe",
       customerPhone: "+1234567890",

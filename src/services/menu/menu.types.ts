@@ -78,3 +78,38 @@ export interface ModifierGroupInput {
 
 /** @deprecated Use ModifierGroupInput instead */
 export type MenuItemOptionInput = ModifierGroupInput;
+
+// ==================== Dashboard Types ====================
+
+export interface DashboardMenuItem {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  imageUrl: string | null;
+  sortOrder: number;
+  status: "active" | "inactive" | "out_of_stock";
+  modifierGroups: ModifierGroupInput[];
+  tags: string[];
+  taxConfigIds: string[];
+}
+
+export interface DashboardCategory {
+  id: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+  sortOrder: number;
+  status: "active" | "inactive";
+  menuItems: DashboardMenuItem[];
+}
+
+export interface DashboardMenuResponse {
+  categories: DashboardCategory[];
+}
+
+export interface TaxConfigOption {
+  id: string;
+  name: string;
+  description: string | null;
+}

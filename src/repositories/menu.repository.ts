@@ -5,6 +5,29 @@ export class MenuRepository {
   // ==================== Company-scoped query methods ====================
 
   /**
+   * Get all categories with all items for dashboard (no status filter)
+   * Returns everything including inactive categories and items
+   */
+  async getCategoriesWithItemsForDashboard(tenantId: string, companyId: string) {
+    return prisma.menuCategory.findMany({
+      where: {
+        tenantId,
+        companyId,
+      },
+      include: {
+        menuItems: {
+          orderBy: {
+            sortOrder: "asc",
+          },
+        },
+      },
+      orderBy: {
+        sortOrder: "asc",
+      },
+    });
+  }
+
+  /**
    * Get all active categories with their items for a company
    * All merchants under this company share the same menu
    */
@@ -173,6 +196,63 @@ export class MenuRepository {
         status: "inactive",
       },
     });
+  }
+
+  /**
+   * Delete a category (soft delete by setting status)
+   */
+  async deleteCategory(tenantId: string, categoryId: string) {
+    return prisma.menuCategory.updateMany({
+      where: {
+        id: categoryId,
+        tenantId,
+      },
+      data: {
+        status: "inactive",
+      },
+    });
+  }
+
+  /**
+   * Batch update category sort orders
+   */
+  async updateCategorySortOrders(
+    tenantId: string,
+    updates: Array<{ id: string; sortOrder: number }>
+  ) {
+    const queries = updates.map((u) =>
+      prisma.menuCategory.updateMany({
+        where: {
+          id: u.id,
+          tenantId,
+        },
+        data: {
+          sortOrder: u.sortOrder,
+        },
+      })
+    );
+    return prisma.$transaction(queries);
+  }
+
+  /**
+   * Batch update menu item sort orders
+   */
+  async updateItemSortOrders(
+    tenantId: string,
+    updates: Array<{ id: string; sortOrder: number }>
+  ) {
+    const queries = updates.map((u) =>
+      prisma.menuItem.updateMany({
+        where: {
+          id: u.id,
+          tenantId,
+        },
+        data: {
+          sortOrder: u.sortOrder,
+        },
+      })
+    );
+    return prisma.$transaction(queries);
   }
 }
 

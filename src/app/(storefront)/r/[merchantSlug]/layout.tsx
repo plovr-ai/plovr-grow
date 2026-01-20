@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Toaster } from "sonner";
 import { merchantService } from "@/services/merchant";
 import { MerchantProvider, ThemeProvider } from "@/contexts";
 
@@ -49,6 +50,7 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
         }}
       >
         {children}
+        <Toaster position="top-center" richColors />
       </MerchantProvider>
     </ThemeProvider>
   );

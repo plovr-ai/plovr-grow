@@ -8,6 +8,7 @@ import {
   useEffect,
 } from "react";
 import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   MenuHeader,
   MenuCategoryNav,
@@ -90,6 +91,7 @@ export function MenuPageClient({
         imageUrl: menuItem.imageUrl,
         taxes: menuItem.taxes,
       });
+      toast.success(`${menuItem.name} added to cart`);
     }
   }, [searchParams, data.categories, addItem]);
 
@@ -182,9 +184,11 @@ export function MenuPageClient({
     (selectedModifiers: SelectedModifier[], quantity: number) => {
       if (!modalItem) return;
 
-      // Trigger pending animation when modal confirms
-      if (pendingAnimationRef.current) {
-        animateFlyToCart(pendingAnimationRef.current);
+      // If there's a pending animation (from in-page click), trigger it
+      // Otherwise (from external entry like featured items), show toast
+      const hasAnimation = !!pendingAnimationRef.current;
+      if (hasAnimation) {
+        animateFlyToCart(pendingAnimationRef.current!);
         pendingAnimationRef.current = null;
       }
 
@@ -197,6 +201,11 @@ export function MenuPageClient({
         imageUrl: modalItem.imageUrl,
         taxes: modalItem.taxes,
       });
+
+      // Show toast for external entry (no animation feedback)
+      if (!hasAnimation) {
+        toast.success(`${modalItem.name} added to cart`);
+      }
     },
     [modalItem, addItem]
   );

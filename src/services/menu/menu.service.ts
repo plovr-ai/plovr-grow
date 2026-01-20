@@ -4,6 +4,10 @@ import type {
   UpdateCategoryInput,
   CreateMenuItemInput,
   UpdateMenuItemInput,
+  DashboardMenuResponse,
+  DashboardCategory,
+  DashboardMenuItem,
+  ModifierGroupInput,
 } from "./menu.types";
 import type { RoundingMethod } from "./tax-config.types";
 
@@ -221,6 +225,96 @@ export class MenuService {
   async deleteMenuItem(tenantId: string, itemId: string) {
     const { menuRepository } = await getRepositories();
     return menuRepository.deleteItem(tenantId, itemId);
+  }
+
+  /**
+   * Delete (deactivate) a category
+   */
+  async deleteCategory(tenantId: string, categoryId: string) {
+    const { menuRepository } = await getRepositories();
+    return menuRepository.deleteCategory(tenantId, categoryId);
+  }
+
+  /**
+   * Batch update category sort orders
+   */
+  async updateCategorySortOrders(
+    tenantId: string,
+    updates: Array<{ id: string; sortOrder: number }>
+  ) {
+    const { menuRepository } = await getRepositories();
+    return menuRepository.updateCategorySortOrders(tenantId, updates);
+  }
+
+  /**
+   * Batch update menu item sort orders
+   */
+  async updateMenuItemSortOrders(
+    tenantId: string,
+    updates: Array<{ id: string; sortOrder: number }>
+  ) {
+    const { menuRepository } = await getRepositories();
+    return menuRepository.updateItemSortOrders(tenantId, updates);
+  }
+
+  /**
+   * Get menu for Dashboard (includes all statuses)
+   * Returns all categories and items without status filtering
+   *
+   * @param tenantId - Tenant ID for isolation
+   * @param companyId - Company ID
+   */
+  async getMenuForDashboard(
+    tenantId: string,
+    companyId: string
+  ): Promise<DashboardMenuResponse> {
+    const { menuRepository, taxConfigRepository } = await getRepositories();
+
+    // Fetch all categories with all items (no status filter)
+    const categories = await menuRepository.getCategoriesWithItemsForDashboard(
+      tenantId,
+      companyId
+    );
+
+    // Get all item IDs
+    const itemIds = categories.flatMap((c) => c.menuItems.map((i) => i.id));
+
+    // Get tax config IDs for all items
+    const itemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(itemIds);
+
+    // Transform to dashboard types
+    const dashboardCategories: DashboardCategory[] = categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      description: category.description,
+      imageUrl: category.imageUrl,
+      sortOrder: category.sortOrder,
+      status: category.status as "active" | "inactive",
+      menuItems: category.menuItems.map((item): DashboardMenuItem => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        price: Number(item.price),
+        imageUrl: item.imageUrl,
+        sortOrder: item.sortOrder,
+        status: item.status as "active" | "inactive" | "out_of_stock",
+        modifierGroups: (item.options as unknown as ModifierGroupInput[]) || [],
+        tags: (item.tags as unknown as string[]) || [],
+        taxConfigIds: itemTaxMap.get(item.id) || [],
+      })),
+    }));
+
+    return {
+      categories: dashboardCategories,
+    };
+  }
+
+  /**
+   * Set tax configs for a menu item
+   */
+  async setMenuItemTaxConfigs(itemId: string, taxConfigIds: string[]) {
+    const { taxConfigRepository } = await getRepositories();
+    return taxConfigRepository.setMenuItemTaxConfigs(itemId, taxConfigIds);
   }
 }
 
