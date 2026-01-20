@@ -28,6 +28,10 @@ export default async function ProtectedLayout({
     redirect("/dashboard/login");
   }
 
+  // Use first merchant's currency/locale as default for Dashboard
+  const defaultCurrency = merchants[0]?.currency ?? "USD";
+  const defaultLocale = merchants[0]?.locale ?? "en-US";
+
   const dashboardContext = {
     tenantId,
     companyId,
@@ -45,6 +49,8 @@ export default async function ProtectedLayout({
       city: m.city ?? null,
       status: m.status,
     })),
+    currency: defaultCurrency,
+    locale: defaultLocale,
   };
 
   return (

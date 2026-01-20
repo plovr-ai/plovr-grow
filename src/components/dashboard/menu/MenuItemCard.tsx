@@ -5,6 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useDashboardFormatPrice } from "@/hooks";
 import {
   deleteMenuItemAction,
   updateMenuItemAction,
@@ -19,6 +20,7 @@ interface MenuItemCardProps {
 
 export function MenuItemCard({ item, taxConfigs, onEdit }: MenuItemCardProps) {
   const [isPending, startTransition] = useTransition();
+  const formatPrice = useDashboardFormatPrice();
 
   const {
     attributes,
@@ -124,7 +126,7 @@ export function MenuItemCard({ item, taxConfigs, onEdit }: MenuItemCardProps) {
         )}
         <div className="mt-2 flex items-center justify-between">
           <span className="font-semibold text-gray-900">
-            ${item.price.toFixed(2)}
+            {formatPrice(item.price)}
           </span>
           {item.modifierGroups.length > 0 && (
             <span className="text-xs text-gray-500">

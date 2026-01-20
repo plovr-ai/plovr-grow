@@ -355,13 +355,47 @@ function MyComponent() {
 }
 ```
 
-### 架构
+### Storefront 架构
 ```
 /r/[merchantSlug]/layout.tsx (Server)
   └── 获取门店数据 (currency, locale)
       └── <MerchantProvider config={{ currency, locale }}>
           └── 子组件通过 useFormatPrice() 获取格式化函数
 ```
+
+### Dashboard 使用方法
+
+Dashboard 页面同样需要使用国际化，通过 `DashboardContext` 提供 `currency` 和 `locale`：
+
+```typescript
+// 在 Dashboard 组件中使用
+import { useDashboardFormatPrice, useDashboardCurrencySymbol } from "@/hooks";
+
+function DashboardComponent() {
+  const formatPrice = useDashboardFormatPrice();
+  const currencySymbol = useDashboardCurrencySymbol();
+
+  return (
+    <div>
+      <span>{formatPrice(18.99)}</span>  {/* 格式化价格显示 */}
+      <span>{currencySymbol}</span>       {/* 获取货币符号用于输入框前缀 */}
+    </div>
+  );
+}
+```
+
+### Dashboard 架构
+```
+/dashboard/(protected)/layout.tsx (Server)
+  └── 获取第一个 Merchant 的 currency/locale 作为默认值
+      └── <DashboardProvider value={{ currency, locale, ... }}>
+          └── 子组件通过 useDashboardFormatPrice() 获取格式化函数
+```
+
+**注意事项**：
+- Dashboard 中**禁止硬编码货币符号**（如 `$`、`€`）
+- 价格显示使用 `useDashboardFormatPrice()`
+- 价格输入框前缀使用 `useDashboardCurrencySymbol()`
 
 ## 常用命令
 

@@ -4,6 +4,7 @@ export {
   useMerchantInfo,
   useTipConfig,
   useFeeConfig,
+  useCompanySlug,
 } from "./MerchantContext";
 export type { MerchantConfig } from "./MerchantContext";
 
@@ -14,6 +15,8 @@ export {
   useDashboard,
   useMerchants,
   useCompany,
+  useDashboardCurrency,
+  useDashboardLocale,
 } from "./DashboardContext";
 export type {
   DashboardContextValue,

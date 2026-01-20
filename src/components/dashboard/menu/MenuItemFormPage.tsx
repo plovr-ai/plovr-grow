@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDashboardCurrencySymbol } from "@/hooks";
 import { ImageUploader } from "./ImageUploader";
 import { TaxSelector } from "./TaxSelector";
 import { ModifierGroupEditor } from "./ModifierGroupEditor";
@@ -33,6 +34,7 @@ export function MenuItemFormPage({
   taxConfigs,
 }: MenuItemFormPageProps) {
   const router = useRouter();
+  const currencySymbol = useDashboardCurrencySymbol();
   const isEditing = !!item;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -168,7 +170,7 @@ export function MenuItemFormPage({
               </Label>
               <div className="relative max-w-[200px]">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                  $
+                  {currencySymbol}
                 </span>
                 <Input
                   id="price"

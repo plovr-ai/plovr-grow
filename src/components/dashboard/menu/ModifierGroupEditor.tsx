@@ -5,6 +5,7 @@ import { Plus, Trash2, GripVertical, X, ChevronDown, ChevronRight } from "lucide
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDashboardFormatPrice, useDashboardCurrencySymbol } from "@/hooks";
 import type { ModifierGroupInput, ModifierInput } from "@/services/menu/menu.types";
 
 interface ModifierGroupEditorProps {
@@ -27,6 +28,8 @@ export function ModifierGroupEditor({
   onChange,
   disabled,
 }: ModifierGroupEditorProps) {
+  const formatPrice = useDashboardFormatPrice();
+  const currencySymbol = useDashboardCurrencySymbol();
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [editingGroup, setEditingGroup] = useState<{
     index: number;
@@ -186,7 +189,7 @@ export function ModifierGroupEditor({
                         )}
                       </span>
                       <span className="text-gray-600">
-                        {mod.price > 0 ? `+$${mod.price.toFixed(2)}` : "Free"}
+                        {mod.price > 0 ? `+${formatPrice(mod.price)}` : "Free"}
                       </span>
                     </div>
                   ))}
@@ -236,6 +239,8 @@ function ModifierGroupForm({
   onCancel,
   disabled,
 }: ModifierGroupFormProps) {
+  const formatPrice = useDashboardFormatPrice();
+  const currencySymbol = useDashboardCurrencySymbol();
   const [name, setName] = useState(initialData?.name ?? "");
   const [type, setType] = useState<"single" | "multiple">(initialData?.type ?? "single");
   const [required, setRequired] = useState(initialData?.required ?? false);
@@ -440,7 +445,7 @@ function ModifierGroupForm({
               />
               <span className="flex-1 text-sm">{mod.name}</span>
               <span className="text-sm text-gray-600">
-                {mod.price > 0 ? `+$${mod.price.toFixed(2)}` : "Free"}
+                {mod.price > 0 ? `+${formatPrice(mod.price)}` : "Free"}
               </span>
               <Button
                 type="button"
@@ -471,7 +476,7 @@ function ModifierGroupForm({
               }}
             />
             <div className="flex items-center gap-1">
-              <span className="text-sm text-gray-400">$</span>
+              <span className="text-sm text-gray-400">{currencySymbol}</span>
               <Input
                 type="number"
                 step="0.01"

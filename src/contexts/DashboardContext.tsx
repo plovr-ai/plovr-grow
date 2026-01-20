@@ -23,6 +23,8 @@ export interface DashboardContextValue {
   companyId: string;
   company: CompanyInfo;
   merchants: MerchantInfo[];
+  currency: string;
+  locale: string;
 }
 
 interface DashboardProviderProps {
@@ -56,4 +58,14 @@ export function useMerchants(): MerchantInfo[] {
 export function useCompany(): CompanyInfo {
   const { company } = useDashboard();
   return company;
+}
+
+export function useDashboardCurrency(): string {
+  const { currency } = useDashboard();
+  return currency;
+}
+
+export function useDashboardLocale(): string {
+  const { locale } = useDashboard();
+  return locale;
 }

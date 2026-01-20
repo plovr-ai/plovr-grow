@@ -4,3 +4,4 @@ export { usePhoneInput } from "./usePhoneInput";
 export { usePricing } from "./usePricing";
 export { useCurrencySymbol } from "./useCurrencySymbol";
 export { useFormatDateTime } from "./useFormatDateTime";
+export { useDashboardFormatPrice, useDashboardCurrencySymbol } from "./useDashboardFormatPrice";
