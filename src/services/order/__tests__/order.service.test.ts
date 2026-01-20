@@ -22,6 +22,7 @@ vi.mock("@/repositories/order.repository", () => ({
     getMerchantTodayOrders: vi.fn(),
     getMerchantStats: vi.fn(),
     countPendingOrders: vi.fn(),
+    updateLoyaltyMemberId: vi.fn(),
   },
 }));
 
@@ -532,6 +533,23 @@ describe("OrderService", () => {
         "merchant-1"
       );
       expect(count).toBe(5);
+    });
+  });
+
+  describe("linkLoyaltyMember()", () => {
+    it("should call repository to update loyalty member id", async () => {
+      vi.mocked(orderRepository.updateLoyaltyMemberId).mockResolvedValue({
+        id: "order-1",
+        loyaltyMemberId: "member-123",
+      } as never);
+
+      await orderService.linkLoyaltyMember("tenant-1", "order-1", "member-123");
+
+      expect(orderRepository.updateLoyaltyMemberId).toHaveBeenCalledWith(
+        "tenant-1",
+        "order-1",
+        "member-123"
+      );
     });
   });
 });

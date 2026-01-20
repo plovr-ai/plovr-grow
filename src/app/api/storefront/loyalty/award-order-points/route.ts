@@ -90,6 +90,9 @@ export async function POST(request: NextRequest) {
       description: `Earned from order #${order.orderNumber}`,
     });
 
+    // Link order to loyalty member
+    await orderService.linkLoyaltyMember(tenantId, orderId, memberId);
+
     return NextResponse.json({
       success: true,
       data: {

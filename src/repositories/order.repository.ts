@@ -541,6 +541,25 @@ export class OrderRepository {
       },
     });
   }
+
+  /**
+   * Link order to loyalty member (for post-order registration)
+   */
+  async updateLoyaltyMemberId(
+    tenantId: string,
+    orderId: string,
+    loyaltyMemberId: string
+  ) {
+    return prisma.order.update({
+      where: {
+        id: orderId,
+        tenantId,
+      },
+      data: {
+        loyaltyMember: { connect: { id: loyaltyMemberId } },
+      },
+    });
+  }
 }
 
 export const orderRepository = new OrderRepository();

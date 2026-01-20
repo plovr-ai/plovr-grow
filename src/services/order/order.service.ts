@@ -356,6 +356,18 @@ export class OrderService {
 
     return validTransitions[currentStatus]?.includes(newStatus) ?? false;
   }
+
+  /**
+   * Link an existing order to a loyalty member
+   * Used when a guest registers after placing an order
+   */
+  async linkLoyaltyMember(
+    tenantId: string,
+    orderId: string,
+    loyaltyMemberId: string
+  ) {
+    return orderRepository.updateLoyaltyMemberId(tenantId, orderId, loyaltyMemberId);
+  }
 }
 
 export const orderService = new OrderService();

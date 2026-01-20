@@ -12,6 +12,7 @@ vi.mock("@/services/merchant", () => ({
 vi.mock("@/services/order", () => ({
   orderService: {
     getOrder: vi.fn(),
+    linkLoyaltyMember: vi.fn(),
   },
 }));
 
@@ -293,6 +294,13 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
         pointsPerDollar: 1,
         description: "Earned from order #1001",
       })
+    );
+
+    // Verify order is linked to loyalty member
+    expect(orderService.linkLoyaltyMember).toHaveBeenCalledWith(
+      "tenant-1",
+      "order-123",
+      "member-123"
     );
   });
 
