@@ -20,8 +20,8 @@ export function OrderTypeSelector({
   disabled = false,
 }: OrderTypeSelectorProps) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4">
-      <h2 className="text-sm font-medium text-gray-700 mb-3">Order Type</h2>
+    <div className="bg-white rounded-xl border border-gray-100 p-3">
+      <h2 className="text-sm font-medium text-gray-700 mb-2">Order Type</h2>
       <div className="grid grid-cols-3 gap-2">
         {ORDER_TYPE_OPTIONS.map((option) => (
           <button
@@ -29,14 +29,14 @@ export function OrderTypeSelector({
             type="button"
             onClick={() => onChange(option.value)}
             disabled={disabled}
-            className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-colors ${
+            className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border-2 transition-colors ${
               value === option.value
                 ? "border-theme-primary bg-theme-primary-light text-theme-primary-hover"
                 : "border-gray-200 hover:border-gray-300 text-gray-600"
             } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             <svg
-              className="w-6 h-6"
+              className="w-4 h-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -48,7 +48,7 @@ export function OrderTypeSelector({
                 d={option.icon}
               />
             </svg>
-            <span className="text-sm font-medium">{option.label}</span>
+            <span className="text-xs font-medium">{option.label}</span>
           </button>
         ))}
       </div>
