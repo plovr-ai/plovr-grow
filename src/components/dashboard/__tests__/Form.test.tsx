@@ -552,6 +552,58 @@ describe("SelectField", () => {
 
     expect(screen.getByText("Please select a category")).toBeInTheDocument();
   });
+
+  it("shows helper text when no error", () => {
+    render(
+      <SelectField
+        id="category"
+        label="Category"
+        value=""
+        onChange={() => {}}
+        options={options}
+        helperText="Select a category for this item"
+      />
+    );
+
+    expect(screen.getByText("Select a category for this item")).toBeInTheDocument();
+  });
+
+  it("hides helper text when error is shown", () => {
+    render(
+      <SelectField
+        id="category"
+        label="Category"
+        value=""
+        onChange={() => {}}
+        options={options}
+        helperText="Select a category for this item"
+        error="Category is required"
+      />
+    );
+
+    expect(screen.queryByText("Select a category for this item")).not.toBeInTheDocument();
+    expect(screen.getByText("Category is required")).toBeInTheDocument();
+  });
+
+  it("works with readonly options array", () => {
+    const readonlyOptions = [
+      { value: "a", label: "A" },
+      { value: "b", label: "B" },
+    ] as const;
+
+    render(
+      <SelectField
+        id="test"
+        label="Test"
+        value=""
+        onChange={() => {}}
+        options={readonlyOptions}
+      />
+    );
+
+    expect(screen.getByRole("option", { name: "A" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "B" })).toBeInTheDocument();
+  });
 });
 
 // ============================================================================

@@ -7,9 +7,10 @@ import {
   useLayoutEffect,
   useEffect,
 } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   MenuHeader,
+  MenuNav,
   MenuCategoryNav,
   MenuCategorySection,
   ModifierModal,
@@ -35,6 +36,7 @@ export function MenuPageClient({
 }: MenuPageClientProps) {
   // Support both old (tenantSlug) and new (merchantSlug) props
   const slug = merchantSlug ?? tenantSlug ?? "";
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialCategory = data.categories[0]?.category.id ?? null;
   const [activeCategory, setActiveCategory] = useState<string | null>(
@@ -94,6 +96,16 @@ export function MenuPageClient({
   }, [searchParams, data.categories, addItem]);
 
   const isScrollingRef = useRef(false);
+
+  // Handle menu selection
+  const handleMenuSelect = useCallback(
+    (menuId: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("menu", menuId);
+      router.push(`/r/${slug}/menu?${params.toString()}`);
+    },
+    [slug, router, searchParams]
+  );
 
   const handleCategoryClick = useCallback((categoryId: string) => {
     setActiveCategory(categoryId);
@@ -216,6 +228,12 @@ export function MenuPageClient({
       <MenuHeader
         merchantSlug={slug}
         companySlug={data.companySlug}
+      />
+
+      <MenuNav
+        menus={data.menus}
+        currentMenuId={data.currentMenuId}
+        onMenuSelect={handleMenuSelect}
       />
 
       <MenuCategoryNav

@@ -107,6 +107,7 @@ export interface OrderItemData {
   totalPrice: number;
   taxConfigId?: string;  // Tax config ID for tax calculation
   taxes?: ItemTaxInfo[];
+  imageUrl?: string | null;  // Item image URL for display
 }
 
 export interface CreateOrderInput {

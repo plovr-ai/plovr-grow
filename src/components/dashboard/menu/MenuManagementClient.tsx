@@ -105,17 +105,11 @@ export function MenuManagementClient({
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4">
-        <div>
-          <h2 className="text-2xl font-bold">Menu Management</h2>
-          <p className="text-sm text-gray-500">
-            Manage your menus, categories and items
-          </p>
-        </div>
-        <Button onClick={handleAddCategory}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Category
-        </Button>
+      <div className="pb-4">
+        <h2 className="text-2xl font-bold">Menu Management</h2>
+        <p className="text-sm text-gray-500">
+          Manage your menus, categories and items
+        </p>
       </div>
 
       {/* Menu Tabs */}
@@ -131,6 +125,15 @@ export function MenuManagementClient({
       <div className="mt-4 flex flex-1 gap-6 overflow-hidden">
         {/* Left sidebar - Categories */}
         <div className="w-64 shrink-0 overflow-y-auto">
+          <Button
+            onClick={handleAddCategory}
+            variant="outline"
+            className="mb-3 w-full"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Category
+          </Button>
+
           {categories.length > 0 ? (
             <CategoryList
               categories={categories}
@@ -140,10 +143,7 @@ export function MenuManagementClient({
             />
           ) : (
             <div className="rounded-lg border border-dashed p-6 text-center text-gray-500">
-              <p className="mb-2">No categories yet</p>
-              <Button variant="link" onClick={handleAddCategory} className="p-0">
-                Add your first category
-              </Button>
+              <p>No categories yet</p>
             </div>
           )}
         </div>

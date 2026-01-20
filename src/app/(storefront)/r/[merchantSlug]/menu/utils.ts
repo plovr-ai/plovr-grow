@@ -9,11 +9,38 @@ import type {
 import type { Prisma } from "@prisma/client";
 
 /**
+ * Menu info with item count (for filtering empty menus)
+ */
+export interface MenuInfoWithItemCount {
+  id: string;
+  name: string;
+  itemCount: number;
+}
+
+/**
+ * Extended GetMenuResponse with itemCount for filtering
+ */
+export interface GetMenuResponseWithItemCount
+  extends Omit<GetMenuResponse, "menus"> {
+  menus: MenuInfoWithItemCount[];
+}
+
+/**
+ * Menu info for UI rendering
+ */
+export interface MenuDisplayInfo {
+  id: string;
+  name: string;
+}
+
+/**
  * Menu display data for UI rendering
  * Does not include currency/locale or merchant info (provided by MerchantProvider)
  */
 export interface MenuDisplayData {
   companySlug: string;
+  menus: MenuDisplayInfo[];
+  currentMenuId: string;
   categories: MenuCategoryWithItemsViewModel[];
 }
 
@@ -82,14 +109,15 @@ export function parseModifierGroups(
 
 /**
  * Convert GetMenuResponse (Prisma model) to MenuDisplayData (UI view model)
+ * Filters out empty categories and menus (with itemCount === 0)
  */
 export function convertToMenuDisplayData(
-  response: GetMenuResponse,
+  response: GetMenuResponseWithItemCount,
   companySlug: string
 ): MenuDisplayData {
-  return {
-    companySlug,
-    categories: response.categories.map(
+  // 1. Convert and filter empty categories
+  const filteredCategories = response.categories
+    .map(
       (category): MenuCategoryWithItemsViewModel => ({
         category: {
           id: category.id,
@@ -105,7 +133,7 @@ export function convertToMenuDisplayData(
             description: item.description,
             price: Number(item.price),
             imageUrl: item.imageUrl,
-            tags: ((item.tags as unknown as MenuItemTag[]) || []),
+            tags: (item.tags as unknown as MenuItemTag[]) || [],
             hasModifiers: modifierGroups.length > 0,
             modifierGroups,
             isAvailable: item.status === "active",
@@ -113,6 +141,18 @@ export function convertToMenuDisplayData(
           };
         }),
       })
-    ),
+    )
+    .filter((categoryData) => categoryData.items.length > 0);
+
+  // 2. Filter empty menus (itemCount === 0)
+  const filteredMenus = response.menus
+    .filter((m) => m.itemCount > 0)
+    .map((m) => ({ id: m.id, name: m.name }));
+
+  return {
+    companySlug,
+    menus: filteredMenus,
+    currentMenuId: response.currentMenuId,
+    categories: filteredCategories,
   };
 }

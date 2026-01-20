@@ -1,3 +1,10 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Dashboard | Plovr",
+  description: "Manage your restaurant business",
+};
+
 export default function DashboardLayout({
   children,
 }: {

@@ -15,8 +15,12 @@ window.IntersectionObserver = MockIntersectionObserver as unknown as typeof Inte
 
 // Mock next/navigation
 const mockSearchParams = new URLSearchParams();
+const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
   useSearchParams: () => mockSearchParams,
+  useRouter: () => ({
+    push: mockPush,
+  }),
 }));
 
 // Mock cart store
@@ -73,6 +77,8 @@ const createMenuData = (items: MenuItemViewModel[] = []): MenuDisplayData => {
   const menuItems = items.length > 0 ? items : [createMenuItem()];
   return {
     companySlug: "test-bakery",
+    menus: [{ id: "menu-1", name: "Main Menu" }],
+    currentMenuId: "menu-1",
     categories: [
       {
         category: {

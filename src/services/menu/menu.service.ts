@@ -8,26 +8,82 @@ import type {
   DashboardCategory,
   DashboardMenuItem,
   ModifierGroupInput,
+  MenuInfo,
+  CreateMenuInput,
+  UpdateMenuInput,
 } from "./menu.types";
 import type { RoundingMethod } from "./tax-config.types";
 
 // Lazy load repositories to avoid Prisma initialization at module load time
 async function getRepositories() {
-  const [{ menuRepository }, { merchantRepository }, { taxConfigRepository }] =
-    await Promise.all([
-      import("@/repositories/menu.repository"),
-      import("@/repositories/merchant.repository"),
-      import("@/repositories/tax-config.repository"),
-    ]);
-  return { menuRepository, merchantRepository, taxConfigRepository };
+  const [
+    { menuRepository },
+    { menuEntityRepository },
+    { merchantRepository },
+    { taxConfigRepository },
+  ] = await Promise.all([
+    import("@/repositories/menu.repository"),
+    import("@/repositories/menu-entity.repository"),
+    import("@/repositories/merchant.repository"),
+    import("@/repositories/tax-config.repository"),
+  ]);
+  return { menuRepository, menuEntityRepository, merchantRepository, taxConfigRepository };
 }
 
 export class MenuService {
+  // ==================== Menu CRUD ====================
+
+  /**
+   * Get all menus for a company
+   */
+  async getMenus(tenantId: string, companyId: string): Promise<MenuInfo[]> {
+    const { menuEntityRepository } = await getRepositories();
+    const menus = await menuEntityRepository.getMenusByCompany(tenantId, companyId);
+    return menus.map((m) => ({
+      id: m.id,
+      name: m.name,
+      description: m.description,
+      sortOrder: m.sortOrder,
+      status: m.status as "active" | "inactive",
+    }));
+  }
+
+  /**
+   * Create a new menu
+   */
+  async createMenu(tenantId: string, companyId: string, input: CreateMenuInput) {
+    const { menuEntityRepository } = await getRepositories();
+    return menuEntityRepository.createMenu(tenantId, companyId, input);
+  }
+
+  /**
+   * Update a menu
+   */
+  async updateMenu(tenantId: string, menuId: string, input: UpdateMenuInput) {
+    const { menuEntityRepository } = await getRepositories();
+    return menuEntityRepository.updateMenu(tenantId, menuId, input);
+  }
+
+  /**
+   * Delete (deactivate) a menu
+   */
+  async deleteMenu(tenantId: string, menuId: string) {
+    const { menuEntityRepository } = await getRepositories();
+    return menuEntityRepository.deleteMenu(tenantId, menuId);
+  }
+
+  /**
+   * Count active menus for a company
+   */
+  async countMenus(tenantId: string, companyId: string) {
+    const { menuEntityRepository } = await getRepositories();
+    return menuEntityRepository.countMenusByCompany(tenantId, companyId);
+  }
+
+  // ==================== Menu Content ====================
+
   /**
    * Get menu for customer-facing display
-   *
-   * Interface: getMenu(tenantId, merchantId) - kept for compatibility
-   * Implementation: Fetches Company-level menu via merchant's companyId
    *
    * Populates tax information for each item based on:
    * 1. Menu item's associated tax configs
@@ -35,9 +91,14 @@ export class MenuService {
    *
    * @param tenantId - Tenant ID for isolation
    * @param merchantId - Merchant ID (used to get companyId and merchant info)
+   * @param menuId - Optional menu ID (defaults to first menu)
    */
-  async getMenu(tenantId: string, merchantId: string): Promise<GetMenuResponse> {
-    const { menuRepository, merchantRepository, taxConfigRepository } =
+  async getMenu(
+    tenantId: string,
+    merchantId: string,
+    menuId?: string
+  ): Promise<GetMenuResponse> {
+    const { menuRepository, menuEntityRepository, merchantRepository, taxConfigRepository } =
       await getRepositories();
 
     // Get merchant to find companyId
@@ -46,10 +107,20 @@ export class MenuService {
       throw new Error("Merchant not found");
     }
 
-    // Fetch Company-level menu using companyId
-    const categories = await menuRepository.getCategoriesWithItemsByCompany(
+    // Get all active menus for the company
+    const menus = await menuEntityRepository.getMenusByCompany(tenantId, merchant.companyId);
+    if (menus.length === 0) {
+      throw new Error("No menus found");
+    }
+
+    // Use provided menuId or default to first menu
+    const currentMenuId =
+      menuId && menus.some((m) => m.id === menuId) ? menuId : menus[0].id;
+
+    // Fetch categories for the selected menu
+    const categories = await menuRepository.getCategoriesWithItemsByMenu(
       tenantId,
-      merchant.companyId
+      currentMenuId
     );
 
     // Get all item IDs
@@ -100,6 +171,14 @@ export class MenuService {
     }));
 
     return {
+      menus: menus.map((m) => ({
+        id: m.id,
+        name: m.name,
+        description: m.description,
+        sortOrder: m.sortOrder,
+        status: m.status as "active" | "inactive",
+      })),
+      currentMenuId,
       categories: enrichedCategories,
       merchantId,
       merchantName: merchant.name,
@@ -146,7 +225,7 @@ export class MenuService {
   }
 
   /**
-   * Create a new category at company level
+   * Create a new category under a specific menu
    */
   async createCategory(
     tenantId: string,
@@ -154,7 +233,7 @@ export class MenuService {
     input: CreateCategoryInput
   ) {
     const { menuRepository } = await getRepositories();
-    return menuRepository.createCategory(tenantId, companyId, {
+    return menuRepository.createCategory(tenantId, companyId, input.menuId, {
       name: input.name,
       description: input.description,
       imageUrl: input.imageUrl,
@@ -263,17 +342,35 @@ export class MenuService {
    *
    * @param tenantId - Tenant ID for isolation
    * @param companyId - Company ID
+   * @param menuId - Optional menu ID (defaults to first menu)
    */
   async getMenuForDashboard(
     tenantId: string,
-    companyId: string
+    companyId: string,
+    menuId?: string
   ): Promise<DashboardMenuResponse> {
-    const { menuRepository, taxConfigRepository } = await getRepositories();
+    const { menuRepository, menuEntityRepository, taxConfigRepository } = await getRepositories();
 
-    // Fetch all categories with all items (no status filter)
-    const categories = await menuRepository.getCategoriesWithItemsForDashboard(
+    // Get all menus (including inactive) for dashboard
+    const menus = await menuEntityRepository.getMenusByCompanyForDashboard(tenantId, companyId);
+
+    // If no menus exist, create a default one
+    if (menus.length === 0) {
+      const defaultMenu = await menuEntityRepository.createMenu(tenantId, companyId, {
+        name: "Main Menu",
+        sortOrder: 0,
+      });
+      menus.push(defaultMenu);
+    }
+
+    // Use provided menuId or default to first menu
+    const currentMenuId =
+      menuId && menus.some((m) => m.id === menuId) ? menuId : menus[0].id;
+
+    // Fetch categories for the selected menu
+    const categories = await menuRepository.getCategoriesWithItemsByMenuForDashboard(
       tenantId,
-      companyId
+      currentMenuId
     );
 
     // Get all item IDs
@@ -305,6 +402,14 @@ export class MenuService {
     }));
 
     return {
+      menus: menus.map((m) => ({
+        id: m.id,
+        name: m.name,
+        description: m.description,
+        sortOrder: m.sortOrder,
+        status: m.status as "active" | "inactive",
+      })),
+      currentMenuId,
       categories: dashboardCategories,
     };
   }

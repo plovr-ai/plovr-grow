@@ -11,9 +11,108 @@ interface ActionResult<T = void> {
   error?: string;
 }
 
+// ==================== Menu Actions ====================
+
+interface CreateMenuInput {
+  name: string;
+  description?: string;
+  sortOrder?: number;
+}
+
+export async function createMenuAction(
+  input: CreateMenuInput
+): Promise<ActionResult<{ id: string }>> {
+  const session = await auth();
+
+  if (!session?.user?.tenantId || !session?.user?.companyId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { tenantId, companyId } = session.user;
+
+  try {
+    const menu = await menuService.createMenu(tenantId, companyId, input);
+
+    revalidatePath("/dashboard/menu", "page");
+
+    return { success: true, data: { id: menu.id } };
+  } catch (error) {
+    console.error("Failed to create menu:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create menu",
+    };
+  }
+}
+
+interface UpdateMenuInput {
+  name?: string;
+  description?: string;
+  sortOrder?: number;
+  status?: "active" | "inactive";
+}
+
+export async function updateMenuAction(
+  id: string,
+  input: UpdateMenuInput
+): Promise<ActionResult> {
+  const session = await auth();
+
+  if (!session?.user?.tenantId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { tenantId } = session.user;
+
+  try {
+    await menuService.updateMenu(tenantId, id, input);
+
+    revalidatePath("/dashboard/menu", "page");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update menu:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update menu",
+    };
+  }
+}
+
+export async function deleteMenuAction(id: string): Promise<ActionResult> {
+  const session = await auth();
+
+  if (!session?.user?.tenantId || !session?.user?.companyId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { tenantId, companyId } = session.user;
+
+  try {
+    // Check if this is the last menu
+    const menuCount = await menuService.countMenus(tenantId, companyId);
+    if (menuCount <= 1) {
+      return { success: false, error: "Cannot delete the last menu" };
+    }
+
+    await menuService.deleteMenu(tenantId, id);
+
+    revalidatePath("/dashboard/menu", "page");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete menu:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete menu",
+    };
+  }
+}
+
 // ==================== Category Actions ====================
 
 interface CreateCategoryInput {
+  menuId: string;
   name: string;
   description?: string;
   imageUrl?: string;
@@ -33,6 +132,7 @@ export async function createCategoryAction(
 
   try {
     const category = await menuService.createCategory(tenantId, companyId, {
+      menuId: input.menuId,
       name: input.name,
       description: input.description,
       imageUrl: input.imageUrl,

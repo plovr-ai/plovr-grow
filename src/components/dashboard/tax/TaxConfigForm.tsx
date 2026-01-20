@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   TextField,
   SelectField,
@@ -189,7 +188,7 @@ export function TaxConfigForm({
 
             {/* Store Tax Rates */}
             <div className="border-t pt-4">
-              <Label className="mb-3 block">Store Tax Rates</Label>
+              <span className="mb-3 block text-sm font-medium">Store Tax Rates</span>
               <div className="space-y-3">
                 {merchants.map((merchant) => {
                   const state = merchantRates[merchant.id];

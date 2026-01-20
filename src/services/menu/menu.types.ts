@@ -1,6 +1,31 @@
 import type { MenuCategory, MenuItem } from "@prisma/client";
 import type { ItemTaxInfo } from "@/services/menu/tax-config.types";
 
+// ==================== Menu Types ====================
+
+export interface MenuInfo {
+  id: string;
+  name: string;
+  description: string | null;
+  sortOrder: number;
+  status: "active" | "inactive";
+}
+
+export interface CreateMenuInput {
+  name: string;
+  description?: string;
+  sortOrder?: number;
+}
+
+export interface UpdateMenuInput {
+  name?: string;
+  description?: string;
+  sortOrder?: number;
+  status?: "active" | "inactive";
+}
+
+// ==================== Category & Item Types ====================
+
 export interface MenuItemWithTaxes extends MenuItem {
   taxes?: ItemTaxInfo[];
 }
@@ -10,6 +35,8 @@ export interface MenuCategoryWithItems extends MenuCategory {
 }
 
 export interface GetMenuResponse {
+  menus: MenuInfo[];
+  currentMenuId: string;
   categories: MenuCategoryWithItems[];
   merchantId: string;
   merchantName: string;
@@ -17,6 +44,7 @@ export interface GetMenuResponse {
 }
 
 export interface CreateCategoryInput {
+  menuId: string;
   name: string;
   description?: string;
   imageUrl?: string;
@@ -105,6 +133,8 @@ export interface DashboardCategory {
 }
 
 export interface DashboardMenuResponse {
+  menus: MenuInfo[];
+  currentMenuId: string;
   categories: DashboardCategory[];
 }
 

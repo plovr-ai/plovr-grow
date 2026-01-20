@@ -3,42 +3,36 @@
 import { useState, useTransition } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TextField, TextareaField, RadioGroupField } from "@/components/dashboard/Form";
 import {
-  TextField,
-  RadioGroupField,
-  FormField,
-} from "@/components/dashboard/Form";
-import { ImageUploader } from "./ImageUploader";
-import {
-  createCategoryAction,
-  updateCategoryAction,
+  createMenuAction,
+  updateMenuAction,
+  deleteMenuAction,
 } from "@/app/(dashboard)/dashboard/(protected)/menu/actions";
-import type { DashboardCategory } from "@/services/menu/menu.types";
+import type { MenuInfo } from "@/services/menu/menu.types";
 
-interface CategoryFormProps {
-  menuId: string;
-  category: DashboardCategory | null;
+interface MenuFormProps {
+  menu: MenuInfo | null;
   onClose: () => void;
+  canDelete?: boolean;
 }
 
-export function CategoryForm({ menuId, category, onClose }: CategoryFormProps) {
-  const isEditing = !!category;
+export function MenuForm({ menu, onClose, canDelete = true }: MenuFormProps) {
+  const isEditing = !!menu;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   // Form state
-  const [name, setName] = useState(category?.name ?? "");
-  const [description, setDescription] = useState(category?.description ?? "");
-  const [imageUrl, setImageUrl] = useState(category?.imageUrl ?? "");
+  const [name, setName] = useState(menu?.name ?? "");
+  const [description, setDescription] = useState(menu?.description ?? "");
   const [status, setStatus] = useState<"active" | "inactive">(
-    category?.status ?? "active"
+    menu?.status ?? "active"
   );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Validate
     if (!name.trim()) {
       setError("Name is required");
       return;
@@ -46,17 +40,14 @@ export function CategoryForm({ menuId, category, onClose }: CategoryFormProps) {
 
     startTransition(async () => {
       const result = isEditing
-        ? await updateCategoryAction(category!.id, {
+        ? await updateMenuAction(menu!.id, {
             name: name.trim(),
             description: description.trim() || undefined,
-            imageUrl: imageUrl.trim() || undefined,
             status,
           })
-        : await createCategoryAction({
-            menuId,
+        : await createMenuAction({
             name: name.trim(),
             description: description.trim() || undefined,
-            imageUrl: imageUrl.trim() || undefined,
           });
 
       if (result.success) {
@@ -67,12 +58,29 @@ export function CategoryForm({ menuId, category, onClose }: CategoryFormProps) {
     });
   };
 
+  const handleDelete = () => {
+    if (!isEditing || !canDelete) return;
+
+    if (!confirm("Are you sure you want to delete this menu? All categories and items in this menu will be hidden.")) {
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await deleteMenuAction(menu!.id);
+      if (result.success) {
+        onClose();
+      } else {
+        setError(result.error || "Failed to delete menu");
+      }
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg bg-white shadow-xl">
         <div className="flex items-center justify-between border-b px-6 py-4">
           <h3 className="text-lg font-semibold">
-            {isEditing ? "Edit Category" : "Add Category"}
+            {isEditing ? "Edit Menu" : "Add Menu"}
           </h3>
           <Button variant="ghost" size="icon-sm" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -87,19 +95,17 @@ export function CategoryForm({ menuId, category, onClose }: CategoryFormProps) {
           )}
 
           <div className="space-y-5">
-            {/* Name */}
             <TextField
               id="name"
               label="Name"
               required
               value={name}
               onChange={setName}
-              placeholder="e.g., Appetizers, Main Dishes"
+              placeholder="e.g., Lunch Menu, Dinner Menu"
               disabled={isPending}
             />
 
-            {/* Description */}
-            <TextField
+            <TextareaField
               id="description"
               label="Description"
               value={description}
@@ -108,16 +114,6 @@ export function CategoryForm({ menuId, category, onClose }: CategoryFormProps) {
               disabled={isPending}
             />
 
-            {/* Image */}
-            <FormField id="image" label="Image" alignTop>
-              <ImageUploader
-                value={imageUrl}
-                onChange={setImageUrl}
-                disabled={isPending}
-              />
-            </FormField>
-
-            {/* Status (only for editing) */}
             {isEditing && (
               <RadioGroupField
                 id="status"
@@ -134,18 +130,32 @@ export function CategoryForm({ menuId, category, onClose }: CategoryFormProps) {
             )}
           </div>
 
-          <div className="mt-6 flex justify-end gap-3 border-t pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isPending}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving..." : isEditing ? "Save Changes" : "Create"}
-            </Button>
+          <div className="mt-6 flex justify-between border-t pt-4">
+            {isEditing && canDelete ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isPending}
+              >
+                Delete Menu
+              </Button>
+            ) : (
+              <div />
+            )}
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Saving..." : isEditing ? "Save Changes" : "Create"}
+              </Button>
+            </div>
           </div>
         </form>
       </div>

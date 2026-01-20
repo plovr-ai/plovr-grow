@@ -4,8 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { SelectField } from "@/components/dashboard/Form";
 import { updateCompanySettingsAction } from "@/app/(dashboard)/dashboard/(protected)/company/actions";
 import { CURRENCY_OPTIONS, LOCALE_OPTIONS } from "@/constants/i18n";
 
@@ -80,44 +79,26 @@ export function CompanySettingsForm({
           )}
 
           {/* Currency */}
-          <div className="space-y-2">
-            <Label htmlFor="currency">Currency</Label>
-            <Select
-              id="currency"
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              disabled={isPending}
-            >
-              {CURRENCY_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-            <p className="text-xs text-gray-500">
-              Currency used for menu prices and orders
-            </p>
-          </div>
+          <SelectField
+            id="currency"
+            label="Currency"
+            value={currency}
+            onChange={setCurrency}
+            options={CURRENCY_OPTIONS}
+            disabled={isPending}
+            helperText="Currency used for menu prices and orders"
+          />
 
           {/* Locale */}
-          <div className="space-y-2">
-            <Label htmlFor="locale">Locale</Label>
-            <Select
-              id="locale"
-              value={locale}
-              onChange={(e) => setLocale(e.target.value)}
-              disabled={isPending}
-            >
-              {LOCALE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-            <p className="text-xs text-gray-500">
-              Determines number and date formatting
-            </p>
-          </div>
+          <SelectField
+            id="locale"
+            label="Locale"
+            value={locale}
+            onChange={setLocale}
+            options={LOCALE_OPTIONS}
+            disabled={isPending}
+            helperText="Determines number and date formatting"
+          />
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4">

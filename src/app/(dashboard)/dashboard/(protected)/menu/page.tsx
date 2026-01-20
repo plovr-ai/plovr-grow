@@ -5,7 +5,13 @@ import { menuService } from "@/services/menu/menu.service";
 import { taxConfigService } from "@/services/menu/tax-config.service";
 import { MenuManagementClient } from "@/components/dashboard/menu/MenuManagementClient";
 
-export default async function MenuManagementPage() {
+interface MenuManagementPageProps {
+  searchParams: Promise<{ menu?: string }>;
+}
+
+export default async function MenuManagementPage({
+  searchParams,
+}: MenuManagementPageProps) {
   const session = await auth();
 
   if (!session?.user?.tenantId || !session?.user?.companyId) {
@@ -13,10 +19,11 @@ export default async function MenuManagementPage() {
   }
 
   const { tenantId, companyId } = session.user;
+  const { menu: menuId } = await searchParams;
 
   // Get menu data and tax configs in parallel
   const [menuData, taxConfigs] = await Promise.all([
-    menuService.getMenuForDashboard(tenantId, companyId),
+    menuService.getMenuForDashboard(tenantId, companyId, menuId),
     taxConfigService.getTaxConfigs(tenantId, companyId),
   ]);
 
@@ -30,6 +37,8 @@ export default async function MenuManagementPage() {
   return (
     <Suspense fallback={<div className="flex h-full items-center justify-center">Loading...</div>}>
       <MenuManagementClient
+        menus={menuData.menus}
+        currentMenuId={menuData.currentMenuId}
         categories={menuData.categories}
         taxConfigs={taxConfigOptions}
       />

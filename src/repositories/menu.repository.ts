@@ -2,11 +2,63 @@ import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 
 export class MenuRepository {
-  // ==================== Company-scoped query methods ====================
+  // ==================== Menu-scoped query methods ====================
+
+  /**
+   * Get all categories with all items for a specific menu (Dashboard)
+   * Returns everything including inactive categories and items
+   */
+  async getCategoriesWithItemsByMenuForDashboard(tenantId: string, menuId: string) {
+    return prisma.menuCategory.findMany({
+      where: {
+        tenantId,
+        menuId,
+      },
+      include: {
+        menuItems: {
+          orderBy: {
+            sortOrder: "asc",
+          },
+        },
+      },
+      orderBy: {
+        sortOrder: "asc",
+      },
+    });
+  }
+
+  /**
+   * Get all active categories with their items for a specific menu (Storefront)
+   */
+  async getCategoriesWithItemsByMenu(tenantId: string, menuId: string) {
+    return prisma.menuCategory.findMany({
+      where: {
+        tenantId,
+        menuId,
+        status: "active",
+      },
+      include: {
+        menuItems: {
+          where: {
+            status: "active",
+          },
+          orderBy: {
+            sortOrder: "asc",
+          },
+        },
+      },
+      orderBy: {
+        sortOrder: "asc",
+      },
+    });
+  }
+
+  // ==================== Company-scoped query methods (legacy) ====================
 
   /**
    * Get all categories with all items for dashboard (no status filter)
    * Returns everything including inactive categories and items
+   * @deprecated Use getCategoriesWithItemsByMenuForDashboard instead
    */
   async getCategoriesWithItemsForDashboard(tenantId: string, companyId: string) {
     return prisma.menuCategory.findMany({
@@ -30,6 +82,7 @@ export class MenuRepository {
   /**
    * Get all active categories with their items for a company
    * All merchants under this company share the same menu
+   * @deprecated Use getCategoriesWithItemsByMenu instead
    */
   async getCategoriesWithItemsByCompany(tenantId: string, companyId: string) {
     return prisma.menuCategory.findMany({
@@ -112,12 +165,13 @@ export class MenuRepository {
   // ==================== Create/Update methods ====================
 
   /**
-   * Create a new category at company level
+   * Create a new category under a specific menu
    */
   async createCategory(
     tenantId: string,
     companyId: string,
-    data: Omit<Prisma.MenuCategoryCreateInput, "id" | "tenant" | "company">
+    menuId: string,
+    data: Omit<Prisma.MenuCategoryCreateInput, "id" | "tenant" | "company" | "menu">
   ) {
     return prisma.menuCategory.create({
       data: {
@@ -125,6 +179,7 @@ export class MenuRepository {
         ...data,
         tenant: { connect: { id: tenantId } },
         company: { connect: { id: companyId } },
+        menu: { connect: { id: menuId } },
       },
     });
   }

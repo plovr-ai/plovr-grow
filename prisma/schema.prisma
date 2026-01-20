@@ -15,6 +15,7 @@ model Tenant {
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
   company            Company?
+  menus              Menu[]
   menuCategories     MenuCategory[]
   menuItems          MenuItem[]
   orders             Order[]
@@ -49,6 +50,7 @@ model Company {
   createdAt             DateTime        @default(now()) @map("created_at")
   updatedAt             DateTime        @updatedAt @map("updated_at")
   tenant                Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  menus                 Menu[]
   menuCategories        MenuCategory[]
   menuItems             MenuItem[]
   merchants             Merchant[]
@@ -62,10 +64,31 @@ model Company {
   @@map("companies")
 }
 
+model Menu {
+  id          String         @id
+  tenantId    String         @map("tenant_id")
+  companyId   String         @map("company_id")
+  name        String
+  description String?        @db.Text
+  sortOrder   Int            @default(0) @map("sort_order")
+  status      String         @default("active")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company     Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  categories  MenuCategory[]
+
+  @@index([tenantId])
+  @@index([companyId])
+  @@index([companyId, sortOrder])
+  @@map("menus")
+}
+
 model MenuCategory {
   id          String     @id
   tenantId    String     @map("tenant_id")
   companyId   String     @map("company_id")
+  menuId      String     @map("menu_id")
   name        String
   description String?    @db.Text
   imageUrl    String?    @map("image_url")
@@ -75,11 +98,13 @@ model MenuCategory {
   updatedAt   DateTime   @updatedAt @map("updated_at")
   company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  menu        Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
   menuItems   MenuItem[]
 
   @@index([companyId])
   @@index([companyId, sortOrder])
   @@index([tenantId])
+  @@index([menuId])
   @@map("menu_categories")
 }
 

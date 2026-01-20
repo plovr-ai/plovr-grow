@@ -571,6 +571,21 @@ async function main() {
 
   console.log(`Created merchant: ${bellaMerchant.name} (single location)`);
 
+  // Create menu for Bella's Bakery
+  const bellaMenu = await prisma.menu.upsert({
+    where: { id: "bella-menu-main" },
+    update: {},
+    create: {
+      id: "bella-menu-main",
+      tenantId: bellaTenant.id,
+      companyId: bellaCompany.id,
+      name: "Main Menu",
+      sortOrder: 0,
+    },
+  });
+
+  console.log(`Created menu: ${bellaMenu.name}`);
+
   // Create menu categories for Bella's Bakery (company-level menu)
   const bellaBreadCategory = await prisma.menuCategory.upsert({
     where: { id: "bella-cat-bread" },
@@ -579,6 +594,7 @@ async function main() {
       id: "bella-cat-bread",
       tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
+      menuId: bellaMenu.id,
       name: "Artisan Breads",
       description: "Handcrafted breads baked fresh daily",
       sortOrder: 1,
@@ -592,6 +608,7 @@ async function main() {
       id: "bella-cat-pastry",
       tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
+      menuId: bellaMenu.id,
       name: "Pastries",
       description: "Sweet and savory pastries",
       sortOrder: 2,
@@ -605,6 +622,7 @@ async function main() {
       id: "bella-cat-coffee",
       tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
+      menuId: bellaMenu.id,
       name: "Coffee & Drinks",
       description: "Specialty coffee and beverages",
       sortOrder: 3,
@@ -862,6 +880,21 @@ async function main() {
   console.log(`Created loyalty config for Bella's Bakery: ${bellaLoyaltyConfig.id}`);
   console.log("✅ Bella's Bakery (single location) created!");
 
+  // Create menu for Joe's Pizza
+  const joesMenu = await prisma.menu.upsert({
+    where: { id: "joes-menu-main" },
+    update: {},
+    create: {
+      id: "joes-menu-main",
+      tenantId: tenant.id,
+      companyId: company.id,
+      name: "Main Menu",
+      sortOrder: 0,
+    },
+  });
+
+  console.log(`Created menu: ${joesMenu.name}`);
+
   // Create menu categories (company-level menu)
   const pizzaCategory = await prisma.menuCategory.upsert({
     where: {
@@ -872,6 +905,7 @@ async function main() {
       id: "cat-pizza",
       tenantId: tenant.id,
       companyId: company.id,
+      menuId: joesMenu.id,
       name: "Pizza",
       description: "Our famous New York style pizzas",
       sortOrder: 1,
@@ -887,6 +921,7 @@ async function main() {
       id: "cat-sides",
       tenantId: tenant.id,
       companyId: company.id,
+      menuId: joesMenu.id,
       name: "Sides",
       description: "Appetizers and sides",
       sortOrder: 2,
@@ -902,6 +937,7 @@ async function main() {
       id: "cat-pasta",
       tenantId: tenant.id,
       companyId: company.id,
+      menuId: joesMenu.id,
       name: "Pasta",
       description: "Homemade pasta dishes",
       sortOrder: 3,
@@ -917,6 +953,7 @@ async function main() {
       id: "cat-drinks",
       tenantId: tenant.id,
       companyId: company.id,
+      menuId: joesMenu.id,
       name: "Drinks",
       description: "Beverages",
       sortOrder: 4,
