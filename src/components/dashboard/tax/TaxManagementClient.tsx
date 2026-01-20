@@ -40,7 +40,7 @@ export function TaxManagementClient({
         <div>
           <h2 className="text-2xl font-bold">Tax Configuration</h2>
           <p className="text-sm text-gray-500">
-            Manage tax types and rates for your stores
+            Manage tax table and rates for your stores
           </p>
         </div>
         <Button onClick={handleAdd}>

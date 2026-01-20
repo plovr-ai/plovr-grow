@@ -43,7 +43,7 @@ export function TaxConfigList({ taxConfigs, merchants, onEdit }: TaxConfigListPr
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-gray-500">No tax types configured yet.</p>
+          <p className="text-gray-500">No tax table configured yet.</p>
           <p className="text-sm text-gray-400">
             Click &quot;Add Tax Type&quot; to create your first tax configuration.
           </p>
@@ -55,7 +55,7 @@ export function TaxConfigList({ taxConfigs, merchants, onEdit }: TaxConfigListPr
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Tax Types</CardTitle>
+        <CardTitle>Tax Table</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
