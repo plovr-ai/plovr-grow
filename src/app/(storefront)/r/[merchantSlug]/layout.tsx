@@ -47,6 +47,7 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
           timezone: merchant?.timezone ?? "America/New_York",
           tipConfig: merchant?.settings?.tipConfig,
           feeConfig: merchant?.settings?.feeConfig,
+          companySlug: merchant?.company?.slug ?? null,
         }}
       >
         {children}

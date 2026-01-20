@@ -7,7 +7,7 @@ import {
   useLayoutEffect,
   useEffect,
 } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   MenuHeader,
@@ -37,6 +37,7 @@ export function MenuPageClient({
   // Support both old (tenantSlug) and new (merchantSlug) props
   const slug = merchantSlug ?? tenantSlug ?? "";
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialCategory = data.categories[0]?.category.id ?? null;
   const [activeCategory, setActiveCategory] = useState<string | null>(
     initialCategory
@@ -60,12 +61,10 @@ export function MenuPageClient({
   }, [slug, setTenantId]);
 
   // Handle addItem query param from FeaturedItems
-  const addItemHandledRef = useRef(false);
+  // After processing, remove the param from URL to allow future additions
   useEffect(() => {
     const addItemId = searchParams.get("addItem");
-    if (!addItemId || addItemHandledRef.current) return;
-
-    addItemHandledRef.current = true;
+    if (!addItemId) return;
 
     // Find the item in menu categories
     let menuItem: MenuItemViewModel | undefined;
@@ -74,7 +73,11 @@ export function MenuPageClient({
       if (menuItem) break;
     }
 
-    if (!menuItem) return;
+    if (!menuItem) {
+      // Item not found, clean up URL
+      router.replace(`/r/${slug}/menu`, { scroll: false });
+      return;
+    }
 
     // If item has modifiers, open the modal
     if (menuItem.hasModifiers && menuItem.modifierGroups.length > 0) {
@@ -93,7 +96,10 @@ export function MenuPageClient({
       });
       toast.success(`${menuItem.name} added to cart`);
     }
-  }, [searchParams, data.categories, addItem]);
+
+    // Clean up URL after processing (remove addItem param)
+    router.replace(`/r/${slug}/menu`, { scroll: false });
+  }, [searchParams, data.categories, addItem, router, slug]);
 
   const isScrollingRef = useRef(false);
 

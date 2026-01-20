@@ -14,9 +14,16 @@ class MockIntersectionObserver {
 window.IntersectionObserver = MockIntersectionObserver as unknown as typeof IntersectionObserver;
 
 // Mock next/navigation
-const mockSearchParams = new URLSearchParams();
+let mockSearchParams = new URLSearchParams();
+const setMockSearchParams = (params: URLSearchParams) => {
+  mockSearchParams = params;
+};
+const mockRouterReplace = vi.fn();
 vi.mock("next/navigation", () => ({
   useSearchParams: () => mockSearchParams,
+  useRouter: () => ({
+    replace: mockRouterReplace,
+  }),
 }));
 
 // Mock cart store
@@ -49,6 +56,14 @@ vi.mock("@/contexts", () => ({
 // Mock cartAnimation
 vi.mock("@storefront/lib/cartAnimation", () => ({
   animateFlyToCart: vi.fn(),
+}));
+
+// Mock sonner toast
+const mockToastSuccess = vi.fn();
+vi.mock("sonner", () => ({
+  toast: {
+    success: (message: string) => mockToastSuccess(message),
+  },
 }));
 
 // Helper to create menu item
@@ -91,7 +106,8 @@ describe("MenuPageClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset search params
-    mockSearchParams.delete("addItem");
+    setMockSearchParams(new URLSearchParams());
+    mockRouterReplace.mockClear();
   });
 
   describe("addItem query param handling", () => {
@@ -207,7 +223,9 @@ describe("MenuPageClient", () => {
     });
 
     it("should only handle addItem param once (not on re-renders)", async () => {
-      mockSearchParams.set("addItem", "item-coffee");
+      const params = new URLSearchParams();
+      params.set("addItem", "item-coffee");
+      setMockSearchParams(params);
 
       const itemWithModifiers = createMenuItem({
         id: "item-coffee",
@@ -243,6 +261,115 @@ describe("MenuPageClient", () => {
 
       // Modal should still be open (handled only once, not reopened)
       expect(screen.getByText("Size")).toBeInTheDocument();
+    });
+
+    it("should show toast when adding item without modifiers via addItem param", async () => {
+      const params = new URLSearchParams();
+      params.set("addItem", "item-bread");
+      setMockSearchParams(params);
+
+      const item = createMenuItem({
+        id: "item-bread",
+        name: "Sourdough Bread",
+        hasModifiers: false,
+        modifierGroups: [],
+      });
+
+      const data = createMenuData([item]);
+
+      render(<MenuPageClient data={data} merchantSlug="test-bakery" />);
+
+      await waitFor(() => {
+        expect(mockAddItem).toHaveBeenCalledWith(
+          expect.objectContaining({
+            menuItemId: "item-bread",
+            name: "Sourdough Bread",
+          })
+        );
+        expect(mockToastSuccess).toHaveBeenCalledWith("Sourdough Bread added to cart");
+      });
+    });
+
+    it("should clean up URL after processing addItem param", async () => {
+      const params = new URLSearchParams();
+      params.set("addItem", "item-bread");
+      setMockSearchParams(params);
+
+      const item = createMenuItem({
+        id: "item-bread",
+        name: "Sourdough Bread",
+        hasModifiers: false,
+        modifierGroups: [],
+      });
+
+      const data = createMenuData([item]);
+
+      render(<MenuPageClient data={data} merchantSlug="test-bakery" />);
+
+      await waitFor(() => {
+        expect(mockRouterReplace).toHaveBeenCalledWith(
+          "/r/test-bakery/menu",
+          { scroll: false }
+        );
+      });
+    });
+
+    it("should handle multiple different items when searchParams changes (simulating navigation)", async () => {
+      // First item
+      const item1 = createMenuItem({
+        id: "item-bread",
+        name: "Sourdough Bread",
+        hasModifiers: false,
+        modifierGroups: [],
+      });
+
+      const item2 = createMenuItem({
+        id: "item-croissant",
+        name: "Croissant",
+        hasModifiers: false,
+        modifierGroups: [],
+      });
+
+      const data = createMenuData([item1, item2]);
+
+      // First navigation: add item-bread
+      const params1 = new URLSearchParams();
+      params1.set("addItem", "item-bread");
+      setMockSearchParams(params1);
+
+      const { rerender } = render(<MenuPageClient data={data} merchantSlug="test-bakery" />);
+
+      await waitFor(() => {
+        expect(mockAddItem).toHaveBeenCalledWith(
+          expect.objectContaining({ menuItemId: "item-bread" })
+        );
+        expect(mockToastSuccess).toHaveBeenCalledWith("Sourdough Bread added to cart");
+        // URL should be cleaned up
+        expect(mockRouterReplace).toHaveBeenCalledWith(
+          "/r/test-bakery/menu",
+          { scroll: false }
+        );
+      });
+
+      // Clear mocks to verify second call
+      mockAddItem.mockClear();
+      mockToastSuccess.mockClear();
+      mockRouterReplace.mockClear();
+
+      // Second navigation: user went back to website and clicked different item
+      const params2 = new URLSearchParams();
+      params2.set("addItem", "item-croissant");
+      setMockSearchParams(params2);
+
+      // Re-render to simulate navigation (component stays mounted but searchParams changes)
+      rerender(<MenuPageClient data={data} merchantSlug="test-bakery" />);
+
+      await waitFor(() => {
+        expect(mockAddItem).toHaveBeenCalledWith(
+          expect.objectContaining({ menuItemId: "item-croissant" })
+        );
+        expect(mockToastSuccess).toHaveBeenCalledWith("Croissant added to cart");
+      });
     });
   });
 
