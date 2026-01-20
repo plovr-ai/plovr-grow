@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, GripVertical, X, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Pencil, X, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDashboardFormatPrice, useDashboardCurrencySymbol } from "@/hooks";
@@ -154,7 +154,7 @@ export function ModifierGroupEditor({
                 </span>
               </div>
               <span className="text-xs text-gray-400">
-                {group.modifiers.length} option{group.modifiers.length !== 1 ? "s" : ""}
+                {group.modifiers.length} Modifier{group.modifiers.length !== 1 ? "s" : ""}
               </span>
               <Button
                 type="button"
@@ -163,7 +163,7 @@ export function ModifierGroupEditor({
                 onClick={() => handleEditGroup(index)}
                 disabled={disabled}
               >
-                <GripVertical className="h-3.5 w-3.5" />
+                <Pencil className="h-3.5 w-3.5" />
               </Button>
               <Button
                 type="button"
@@ -206,7 +206,7 @@ export function ModifierGroupEditor({
                   disabled={disabled}
                   className="mt-2"
                 >
-                  Edit options
+                  Edit Modifiers
                 </Button>
               </div>
             )}
@@ -449,7 +449,7 @@ function ModifierGroupForm({
             <Input
               value={newModName}
               onChange={(e) => setNewModName(e.target.value)}
-              placeholder="Option name"
+              placeholder="Modifier name"
               disabled={disabled}
               className="flex-1"
               onKeyDown={(e) => {
