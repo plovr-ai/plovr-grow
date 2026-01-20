@@ -72,7 +72,7 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
     <div className="space-y-6">
       {/* Header Card - Basic Info */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent>
           <div className="flex items-start gap-6">
             {/* Logo */}
             <div className="flex-shrink-0">
@@ -124,7 +124,7 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
           <CardHeader>
             <CardTitle className="text-lg">Contact Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex-1 space-y-4">
             <InfoRow
               icon={Mail}
               label="Support Email"
@@ -158,7 +158,7 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
               Edit
             </Button>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex-1 space-y-4">
             <InfoRow
               icon={DollarSign}
               label="Currency"
