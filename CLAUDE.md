@@ -199,7 +199,6 @@ model TaxConfig {
   name            String   // "Standard Tax", "Alcohol Tax"
   description     String?
   roundingMethod  String   @default("half_up")  // half_up, half_even, always_round_up, always_round_down
-  isDefault       Boolean  @default(false)
   status          String   @default("active")
 }
 
@@ -499,6 +498,17 @@ const menuLink = `/${companySlug}/menu`;               // menu 是门店级页�
   // ✅ 或使用 const 对象
   const Status = { Active: 'active', Inactive: 'inactive' } as const;
   type Status = typeof Status[keyof typeof Status];
+  ```
+
+### 组件规范
+- **禁止使用 Next.js `<Image>` 组件**: 使用原生 `<img>` 标签代替
+  ```typescript
+  // ❌ 不要这样
+  import Image from "next/image";
+  <Image src={logo} alt="logo" width={32} height={32} />
+
+  // ✅ 使用原生 img 标签
+  <img src={logo} alt="logo" className="h-8 w-8" />
   ```
 
 ### 主题色使用规范

@@ -35,6 +35,7 @@ export default async function ProtectedLayout({
       id: company.id,
       name: company.name,
       slug: company.slug,
+      logoUrl: company.logoUrl,
     },
     merchants: merchants.map((m) => ({
       id: m.id,

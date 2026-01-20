@@ -9,7 +9,14 @@ export function Header() {
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        {company.logoUrl && (
+          <img
+            src={company.logoUrl}
+            alt={`${company.name} logo`}
+            className="h-8 w-8 rounded-md object-contain"
+          />
+        )}
         <h1 className="text-lg font-semibold text-gray-900">{company.name}</h1>
       </div>
 
