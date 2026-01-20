@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/orders/Pagination";
 import { useDashboardFormatPrice } from "@/hooks";
+import { formatPhone } from "@/lib/utils";
 import type { LoyaltyMemberData } from "@/services/loyalty/loyalty.types";
 
 interface LoyaltyMembersClientProps {
@@ -127,7 +128,7 @@ export function LoyaltyMembersClient({
               {members.map((member) => (
                 <tr key={member.id} className="hover:bg-gray-50">
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                    {member.phone}
+                    {formatPhone(member.phone)}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                     {member.name || "-"}
