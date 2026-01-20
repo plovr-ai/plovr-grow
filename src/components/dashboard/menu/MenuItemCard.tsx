@@ -120,11 +120,9 @@ export function MenuItemCard({ item, taxConfigs, onEdit }: MenuItemCardProps) {
       {/* Content */}
       <div className="p-3">
         <h4 className="font-medium text-gray-900">{item.name}</h4>
-        {item.description && (
-          <p className="mt-1 line-clamp-2 text-xs text-gray-500">
-            {item.description}
-          </p>
-        )}
+        <p className="mt-1 h-8 line-clamp-2 text-xs text-gray-500">
+          {item.description || "\u00A0"}
+        </p>
         <div className="mt-2 flex items-center justify-between">
           <span className="font-semibold text-gray-900">
             {formatPrice(item.price)}
