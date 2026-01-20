@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { useDashboardCurrencySymbol } from "@/hooks";
 
 // ============================================================================
@@ -284,9 +285,10 @@ interface SelectOption {
 interface SelectFieldProps extends BaseFieldProps {
   value: string;
   onChange: (value: string) => void;
-  options: SelectOption[];
+  options: readonly SelectOption[];
   disabled?: boolean;
   inputClassName?: string;
+  helperText?: string;
 }
 
 export function SelectField({
@@ -302,6 +304,7 @@ export function SelectField({
   options,
   disabled,
   inputClassName,
+  helperText,
 }: SelectFieldProps) {
   return (
     <FormField
@@ -313,25 +316,23 @@ export function SelectField({
       labelWidth={labelWidth}
       className={className}
     >
-      <select
+      <Select
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         aria-invalid={!!error}
-        className={cn(
-          "h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm",
-          "focus:border-theme-primary focus:outline-none focus:ring-1 focus:ring-theme-primary",
-          "disabled:bg-gray-50 disabled:cursor-not-allowed",
-          inputClassName
-        )}
+        className={inputClassName}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
         ))}
-      </select>
+      </Select>
+      {helperText && !error && (
+        <p className="mt-1 text-xs text-gray-500">{helperText}</p>
+      )}
     </FormField>
   );
 }

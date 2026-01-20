@@ -5,6 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { useDashboardFormatPrice } from "@/hooks";
 import {
   deleteMenuItemAction,
@@ -148,7 +149,7 @@ export function MenuItemCard({ item, taxConfigs, onEdit }: MenuItemCardProps) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Status dropdown */}
-        <select
+        <Select
           value={item.status}
           onChange={(e) =>
             handleStatusChange(
@@ -156,12 +157,12 @@ export function MenuItemCard({ item, taxConfigs, onEdit }: MenuItemCardProps) {
             )
           }
           disabled={isPending}
-          className="rounded border-gray-200 py-1 text-xs"
+          className="h-8 w-auto text-xs"
         >
           <option value="active">Active</option>
           <option value="out_of_stock">Out of Stock</option>
           <option value="inactive">Hidden</option>
-        </select>
+        </Select>
 
         {/* Delete button */}
         <Button
