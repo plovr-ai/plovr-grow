@@ -8,6 +8,7 @@ interface MenuCategoryNavProps {
   activeCategory: string | null;
   onCategoryClick: (categoryId: string) => void;
   layout?: "horizontal" | "vertical";
+  showMenuNav?: boolean;
 }
 
 export function MenuCategoryNav({
@@ -15,6 +16,7 @@ export function MenuCategoryNav({
   activeCategory,
   onCategoryClick,
   layout = "horizontal",
+  showMenuNav = false,
 }: MenuCategoryNavProps) {
   const navRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
@@ -46,7 +48,7 @@ export function MenuCategoryNav({
   // Horizontal layout (mobile)
   if (layout === "horizontal") {
     return (
-      <nav className="sticky top-16 z-40 bg-white border-b border-gray-200">
+      <nav className={`sticky z-40 bg-white border-b border-gray-200 ${showMenuNav ? "top-[104px]" : "top-16"}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
             ref={navRef}

@@ -329,7 +329,6 @@ model LoyaltyMember {
   totalSpent  Decimal   @default(0.00) @map("total_spent") @db.Decimal(10, 2)
   lastOrderAt DateTime? @map("last_order_at")
   enrolledAt  DateTime  @default(now()) @map("enrolled_at")
-  status      String    @default("active")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 

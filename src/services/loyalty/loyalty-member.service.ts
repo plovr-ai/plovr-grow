@@ -145,7 +145,6 @@ export class LoyaltyMemberService {
       page?: number;
       pageSize?: number;
       search?: string;
-      status?: string;
     }
   ): Promise<PaginatedMembers> {
     const result = await this.repository.getByCompany(

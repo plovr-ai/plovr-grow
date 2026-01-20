@@ -31,7 +31,6 @@ export interface LoyaltyMemberData {
   totalSpent: number;
   lastOrderAt: Date | null;
   enrolledAt: Date;
-  status: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -136,7 +135,6 @@ export function toLoyaltyMemberData(member: LoyaltyMember): LoyaltyMemberData {
     totalSpent: Number(member.totalSpent),
     lastOrderAt: member.lastOrderAt,
     enrolledAt: member.enrolledAt,
-    status: member.status,
     createdAt: member.createdAt,
     updatedAt: member.updatedAt,
   };

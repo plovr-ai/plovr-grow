@@ -222,6 +222,7 @@ export function MenuPageClient({
   }, []);
 
   const categoryViewModels = data.categories.map((c) => c.category);
+  const showMenuNav = data.menus.length > 1;
 
   return (
     <>
@@ -243,6 +244,7 @@ export function MenuPageClient({
           activeCategory={activeCategory}
           onCategoryClick={handleCategoryClick}
           layout="horizontal"
+          showMenuNav={showMenuNav}
         />
       </div>
 
@@ -251,7 +253,7 @@ export function MenuPageClient({
         <div className="lg:flex lg:gap-8">
           {/* Desktop: Vertical sidebar */}
           <aside className="hidden lg:block lg:w-56 lg:flex-shrink-0">
-            <div className="sticky top-32 pt-6">
+            <div className={`sticky pt-6 ${showMenuNav ? "top-32" : "top-20"}`}>
               <MenuCategoryNav
                 categories={categoryViewModels}
                 activeCategory={activeCategory}

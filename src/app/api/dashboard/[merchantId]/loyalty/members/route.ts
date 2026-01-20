@@ -18,7 +18,6 @@ export async function GET(
     const page = parseInt(searchParams.get("page") ?? "1", 10);
     const pageSize = parseInt(searchParams.get("pageSize") ?? "20", 10);
     const search = searchParams.get("search") ?? undefined;
-    const status = searchParams.get("status") ?? undefined;
 
     // Get merchant to find company and tenant
     const merchant = await merchantService.getMerchantById(merchantId);
@@ -35,7 +34,7 @@ export async function GET(
     const result = await loyaltyMemberService.getMembersByCompany(
       tenantId,
       companyId,
-      { page, pageSize, search, status }
+      { page, pageSize, search }
     );
 
     return NextResponse.json({
@@ -51,7 +50,6 @@ export async function GET(
           totalSpent: m.totalSpent,
           lastOrderAt: m.lastOrderAt,
           enrolledAt: m.enrolledAt,
-          status: m.status,
         })),
         pagination: {
           total: result.total,

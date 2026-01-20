@@ -139,19 +139,14 @@ export class LoyaltyMemberRepository {
       page?: number;
       pageSize?: number;
       search?: string;
-      status?: string;
     } = {}
   ) {
-    const { page = 1, pageSize = 20, search, status } = options;
+    const { page = 1, pageSize = 20, search } = options;
 
     const where: Prisma.LoyaltyMemberWhereInput = {
       tenantId,
       companyId,
     };
-
-    if (status) {
-      where.status = status;
-    }
 
     if (search) {
       where.OR = [
@@ -188,7 +183,6 @@ export class LoyaltyMemberRepository {
       where: {
         tenantId,
         companyId,
-        status: "active",
       },
     });
   }
