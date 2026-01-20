@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCartStore, useCartHydration } from "@/stores";
 import { useFormatPrice, usePricing } from "@/hooks";
-import { useFeeConfig } from "@/contexts";
+import { useFeeConfig, useLoyalty } from "@/contexts";
 import type { FeeInput } from "@/lib/pricing";
 import {
   OrderTypeSelector,
@@ -14,7 +14,6 @@ import {
   TipSelector,
   OrderSummary,
   PriceSummary,
-  LoyaltySection,
 } from "@storefront/components/checkout";
 import {
   checkoutFormSchema,
@@ -88,6 +87,31 @@ export default function CheckoutPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isOrderSuccess, setIsOrderSuccess] = useState(false);
   const [loyaltyMemberId, setLoyaltyMemberId] = useState<string | null>(null);
+
+  // Get loyalty member from context (if already logged in)
+  const { member: loyaltyMember, isLoading: loyaltyLoading } = useLoyalty();
+
+  // Sync with LoyaltyContext on mount (pre-fill if already logged in)
+  useEffect(() => {
+    if (loyaltyMember && !loyaltyLoading) {
+      setLoyaltyMemberId(loyaltyMember.id);
+      // Pre-fill name if available and not already filled
+      if (loyaltyMember.name && !formState.customerName) {
+        setFormState((prev) => ({ ...prev, customerName: loyaltyMember.name as string }));
+      }
+      // Pre-fill phone if available and not already filled
+      if (loyaltyMember.phone && !formState.customerPhone) {
+        const digits = loyaltyMember.phone.replace(/\D/g, "");
+        const formattedPhone =
+          digits.length === 11 && digits.startsWith("1")
+            ? `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
+            : digits.length === 10
+            ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+            : loyaltyMember.phone;
+        setFormState((prev) => ({ ...prev, customerPhone: formattedPhone }));
+      }
+    }
+  }, [loyaltyMember, loyaltyLoading, formState.customerName, formState.customerPhone]);
 
   // Get fee config from merchant context
   const { fees: configFees } = useFeeConfig();
@@ -169,30 +193,6 @@ export default function CheckoutPage() {
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setFormState((prev) => ({ ...prev, notes: e.target.value }));
-  };
-
-  // Loyalty member handlers
-  const handleMemberLogin = (member: { id: string; phone: string; name: string | null }) => {
-    setLoyaltyMemberId(member.id);
-    // Auto-fill phone number from member profile
-    if (member.phone) {
-      // Format phone for display (remove +1 prefix and format)
-      const digits = member.phone.replace(/\D/g, "");
-      const formattedPhone = digits.length === 11 && digits.startsWith("1")
-        ? `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
-        : digits.length === 10
-        ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
-        : member.phone;
-      setFormState((prev) => ({ ...prev, customerPhone: formattedPhone }));
-    }
-    // Auto-fill name if available
-    if (member.name) {
-      setFormState((prev) => ({ ...prev, customerName: member.name as string }));
-    }
-  };
-
-  const handleMemberLogout = () => {
-    setLoyaltyMemberId(null);
   };
 
   // Validate and submit
@@ -417,12 +417,6 @@ export default function CheckoutPage() {
               value={formState.orderType}
               onChange={handleOrderTypeChange}
               disabled={isSubmitting}
-            />
-
-            <LoyaltySection
-              subtotal={calculations.subtotal}
-              onMemberLogin={handleMemberLogin}
-              onMemberLogout={handleMemberLogout}
             />
 
             <ContactInfoForm
