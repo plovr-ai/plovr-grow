@@ -5,6 +5,8 @@ import {
   useMerchantConfig,
   useTipConfig,
   useFeeConfig,
+  useCompanySlug,
+  useTimezone,
 } from "../MerchantContext";
 import { DEFAULT_TIP_CONFIG, DEFAULT_FEE_CONFIG } from "@/types";
 import type { ReactNode } from "react";
@@ -363,6 +365,147 @@ describe("MerchantContext", () => {
 
       expect(result.current.tipConfig).toEqual(DEFAULT_TIP_CONFIG);
       expect(result.current.feeConfig.fees).toHaveLength(1);
+    });
+  });
+
+  describe("companySlug", () => {
+    it("should provide companySlug when set", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+        companySlug: "joes-pizza",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useMerchantConfig(), { wrapper });
+
+      expect(result.current.companySlug).toBe("joes-pizza");
+    });
+
+    it("should default companySlug to null when not provided", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useMerchantConfig(), { wrapper });
+
+      expect(result.current.companySlug).toBeNull();
+    });
+
+    it("should default companySlug to null when explicitly set to undefined", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+        companySlug: undefined,
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useMerchantConfig(), { wrapper });
+
+      expect(result.current.companySlug).toBeNull();
+    });
+  });
+
+  describe("useCompanySlug", () => {
+    it("should return companySlug value", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+        companySlug: "bellas-bakery",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useCompanySlug(), { wrapper });
+
+      expect(result.current).toBe("bellas-bakery");
+    });
+
+    it("should return null when companySlug is not set", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useCompanySlug(), { wrapper });
+
+      expect(result.current).toBeNull();
+    });
+
+    it("should throw error when used outside provider", () => {
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      expect(() => {
+        renderHook(() => useCompanySlug());
+      }).toThrow("useMerchantConfig must be used within MerchantProvider");
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("useTimezone", () => {
+    it("should return timezone value", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/Los_Angeles",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useTimezone(), { wrapper });
+
+      expect(result.current).toBe("America/Los_Angeles");
+    });
+
+    it("should throw error when used outside provider", () => {
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      expect(() => {
+        renderHook(() => useTimezone());
+      }).toThrow("useMerchantConfig must be used within MerchantProvider");
+
+      consoleSpy.mockRestore();
     });
   });
 });
