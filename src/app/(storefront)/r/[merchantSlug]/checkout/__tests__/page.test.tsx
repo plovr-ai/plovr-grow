@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import CheckoutPage from "../page";
-import { MerchantProvider } from "@/contexts";
+import { MerchantProvider, LoyaltyProvider } from "@/contexts";
 import { useCartStore } from "@/stores";
 import type { ReactNode } from "react";
 
@@ -27,7 +27,9 @@ function createWrapper(currency = "USD", locale = "en-US") {
           logoUrl: null,
           currency,
           locale,
-          fees: [],
+          timezone: "America/New_York",
+          companyId: "test-company-id",
+          companySlug: "test-company",
           tipConfig: {
             mode: "percentage",
             tiers: [0.15, 0.18, 0.2],
@@ -35,7 +37,7 @@ function createWrapper(currency = "USD", locale = "en-US") {
           },
         }}
       >
-        {children}
+        <LoyaltyProvider>{children}</LoyaltyProvider>
       </MerchantProvider>
     );
   };
@@ -307,14 +309,19 @@ describe("CheckoutPage", () => {
     });
 
     it("should not show empty cart page after successful order", async () => {
-      // Mock successful API response
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: { orderId: "order-123" },
-        }),
-      });
+      // Mock fetch calls: first for loyalty /me API, then for order API
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: false, error: "Not logged in" }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: { orderId: "order-123" },
+          }),
+        });
 
       render(<CheckoutPage />, {
         wrapper: createWrapper(),
@@ -344,14 +351,19 @@ describe("CheckoutPage", () => {
     });
 
     it("should show error message when order fails", async () => {
-      // Mock failed API response
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({
-          success: false,
-          error: "Failed to place order",
-        }),
-      });
+      // Mock fetch calls: first for loyalty /me API, then for failed order API
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: false, error: "Not logged in" }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          json: async () => ({
+            success: false,
+            error: "Failed to place order",
+          }),
+        });
 
       render(<CheckoutPage />, {
         wrapper: createWrapper(),
