@@ -14,7 +14,6 @@ import {
   Mail,
   Phone,
   Globe,
-  Store,
   Calendar,
   DollarSign,
   Languages,
@@ -68,9 +67,6 @@ function formatDate(date: Date | string): string {
 
 export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
   const [isEditingSettings, setIsEditingSettings] = useState(false);
-  const activeStores = company.merchants.filter(
-    (m) => m.status === "active"
-  ).length;
 
   return (
     <div className="space-y-6">
@@ -124,7 +120,7 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
       {/* Info Cards Grid */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Contact Information */}
-        <Card>
+        <Card className="h-full">
           <CardHeader>
             <CardTitle className="text-lg">Contact Information</CardTitle>
           </CardHeader>
@@ -149,7 +145,7 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
         </Card>
 
         {/* Business Information */}
-        <Card>
+        <Card className="h-full">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Business Information</CardTitle>
             <Button
@@ -172,11 +168,6 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
               icon={Languages}
               label="Locale"
               value={company.locale}
-            />
-            <InfoRow
-              icon={Store}
-              label="Stores"
-              value={`${activeStores} active / ${company.merchants.length} total`}
             />
             <InfoRow
               icon={Calendar}
