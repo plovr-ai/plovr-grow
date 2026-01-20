@@ -194,4 +194,190 @@ describe("MenuCategoryNav", () => {
       expect(screen.queryAllByRole("button")).toHaveLength(0);
     });
   });
+
+  describe("layout prop", () => {
+    describe("horizontal layout (default)", () => {
+      it("should render horizontal layout by default", () => {
+        const onCategoryClick = vi.fn();
+
+        render(
+          <MenuCategoryNav
+            categories={mockCategories}
+            activeCategory={null}
+            onCategoryClick={onCategoryClick}
+          />
+        );
+
+        const nav = screen.getByRole("navigation");
+        expect(nav).toHaveClass("sticky", "top-16", "z-40");
+      });
+
+      it("should render horizontal layout when layout prop is horizontal", () => {
+        const onCategoryClick = vi.fn();
+
+        render(
+          <MenuCategoryNav
+            categories={mockCategories}
+            activeCategory={null}
+            onCategoryClick={onCategoryClick}
+            layout="horizontal"
+          />
+        );
+
+        const nav = screen.getByRole("navigation");
+        expect(nav).toHaveClass("sticky", "top-16");
+      });
+
+      it("should use rounded-full style for horizontal buttons", () => {
+        const onCategoryClick = vi.fn();
+
+        render(
+          <MenuCategoryNav
+            categories={mockCategories}
+            activeCategory={null}
+            onCategoryClick={onCategoryClick}
+            layout="horizontal"
+          />
+        );
+
+        const button = screen.getByRole("button", { name: /Featured/i });
+        expect(button).toHaveClass("rounded-full");
+      });
+
+      it("should display item count in parentheses format for horizontal", () => {
+        const onCategoryClick = vi.fn();
+
+        render(
+          <MenuCategoryNav
+            categories={mockCategories}
+            activeCategory={null}
+            onCategoryClick={onCategoryClick}
+            layout="horizontal"
+          />
+        );
+
+        expect(screen.getAllByText("(4)")).toHaveLength(2);
+      });
+    });
+
+    describe("vertical layout", () => {
+      it("should render vertical layout when layout prop is vertical", () => {
+        const onCategoryClick = vi.fn();
+
+        render(
+          <MenuCategoryNav
+            categories={mockCategories}
+            activeCategory={null}
+            onCategoryClick={onCategoryClick}
+            layout="vertical"
+          />
+        );
+
+        const nav = screen.getByRole("navigation");
+        expect(nav).toHaveClass("flex", "flex-col");
+      });
+
+      it("should use rounded-lg style for vertical buttons", () => {
+        const onCategoryClick = vi.fn();
+
+        render(
+          <MenuCategoryNav
+            categories={mockCategories}
+            activeCategory={null}
+            onCategoryClick={onCategoryClick}
+            layout="vertical"
+          />
+        );
+
+        const button = screen.getByRole("button", { name: /Featured/i });
+        expect(button).toHaveClass("rounded-lg", "w-full", "text-left");
+      });
+
+      it("should display item count with 'items' suffix for vertical", () => {
+        const onCategoryClick = vi.fn();
+
+        render(
+          <MenuCategoryNav
+            categories={mockCategories}
+            activeCategory={null}
+            onCategoryClick={onCategoryClick}
+            layout="vertical"
+          />
+        );
+
+        expect(screen.getAllByText("4 items")).toHaveLength(2);
+        expect(screen.getAllByText("3 items")).toHaveLength(2);
+      });
+
+      it("should highlight active category with light background and left border in vertical layout", () => {
+        const onCategoryClick = vi.fn();
+
+        render(
+          <MenuCategoryNav
+            categories={mockCategories}
+            activeCategory="featured"
+            onCategoryClick={onCategoryClick}
+            layout="vertical"
+          />
+        );
+
+        const featuredButton = screen.getByRole("button", { name: /Featured/i });
+        expect(featuredButton).toHaveClass(
+          "bg-theme-primary-light",
+          "text-theme-primary-hover",
+          "border-l-4",
+          "border-theme-primary"
+        );
+      });
+
+      it("should show inactive categories without border in vertical layout", () => {
+        const onCategoryClick = vi.fn();
+
+        render(
+          <MenuCategoryNav
+            categories={mockCategories}
+            activeCategory="featured"
+            onCategoryClick={onCategoryClick}
+            layout="vertical"
+          />
+        );
+
+        const pizzaButton = screen.getByRole("button", { name: /Pizza/i });
+        expect(pizzaButton).toHaveClass("text-gray-700");
+        expect(pizzaButton).not.toHaveClass("border-l-4");
+      });
+
+      it("should call onCategoryClick when vertical button is clicked", () => {
+        const onCategoryClick = vi.fn();
+
+        render(
+          <MenuCategoryNav
+            categories={mockCategories}
+            activeCategory={null}
+            onCategoryClick={onCategoryClick}
+            layout="vertical"
+          />
+        );
+
+        fireEvent.click(screen.getByRole("button", { name: /Pizza/i }));
+        expect(onCategoryClick).toHaveBeenCalledWith("cat-pizza");
+      });
+
+      it("should have max-height constraint for scrolling in vertical layout", () => {
+        const onCategoryClick = vi.fn();
+
+        render(
+          <MenuCategoryNav
+            categories={mockCategories}
+            activeCategory={null}
+            onCategoryClick={onCategoryClick}
+            layout="vertical"
+          />
+        );
+
+        const nav = screen.getByRole("navigation");
+        expect(nav).toHaveClass("max-h-[calc(100vh-160px)]", "overflow-y-auto");
+      });
+    });
+  });
 });

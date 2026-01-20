@@ -236,23 +236,45 @@ export function MenuPageClient({
         onMenuSelect={handleMenuSelect}
       />
 
-      <MenuCategoryNav
-        categories={categoryViewModels}
-        activeCategory={activeCategory}
-        onCategoryClick={handleCategoryClick}
-      />
+      {/* Mobile: Horizontal category nav */}
+      <div className="lg:hidden">
+        <MenuCategoryNav
+          categories={categoryViewModels}
+          activeCategory={activeCategory}
+          onCategoryClick={handleCategoryClick}
+          layout="horizontal"
+        />
+      </div>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28">
-        <div className="space-y-10">
-          {data.categories.map((categoryData) => (
-            <MenuCategorySection
-              key={categoryData.category.id}
-              data={categoryData}
-              onAddItem={handleAddItem}
-            />
-          ))}
+      {/* Main content area with sidebar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="lg:flex lg:gap-8">
+          {/* Desktop: Vertical sidebar */}
+          <aside className="hidden lg:block lg:w-56 lg:flex-shrink-0">
+            <div className="sticky top-32 pt-6">
+              <MenuCategoryNav
+                categories={categoryViewModels}
+                activeCategory={activeCategory}
+                onCategoryClick={handleCategoryClick}
+                layout="vertical"
+              />
+            </div>
+          </aside>
+
+          {/* Menu content */}
+          <main className="flex-1 py-6 pb-28">
+            <div className="space-y-10">
+              {data.categories.map((categoryData) => (
+                <MenuCategorySection
+                  key={categoryData.category.id}
+                  data={categoryData}
+                  onAddItem={handleAddItem}
+                />
+              ))}
+            </div>
+          </main>
         </div>
-      </main>
+      </div>
 
       {/* Modifier Modal */}
       {modalItem && (

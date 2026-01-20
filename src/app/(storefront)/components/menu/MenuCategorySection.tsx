@@ -14,7 +14,7 @@ export function MenuCategorySection({
   const { category, items } = data;
 
   return (
-    <section id={`category-${category.id}`} className="scroll-mt-32">
+    <section id={`category-${category.id}`} className="scroll-mt-36 lg:scroll-mt-20">
       <div className="mb-4">
         <h2 className="text-xl font-bold text-gray-900">{category.name}</h2>
         {category.description && (

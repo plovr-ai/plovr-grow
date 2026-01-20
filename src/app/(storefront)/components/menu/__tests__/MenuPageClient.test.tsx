@@ -269,4 +269,105 @@ describe("MenuPageClient", () => {
       expect(mockSetTenantId).toHaveBeenCalledWith("legacy-bakery");
     });
   });
+
+  describe("responsive layout", () => {
+    it("should render mobile horizontal category nav with lg:hidden class", () => {
+      const data = createMenuData();
+
+      const { container } = render(
+        <MenuPageClient data={data} merchantSlug="test-bakery" />
+      );
+
+      // Find the mobile nav container (lg:hidden)
+      const mobileNavContainer = container.querySelector(".lg\\:hidden");
+      expect(mobileNavContainer).toBeInTheDocument();
+
+      // It should contain a nav element with horizontal layout classes
+      const mobileNav = mobileNavContainer?.querySelector("nav");
+      expect(mobileNav).toBeInTheDocument();
+      expect(mobileNav).toHaveClass("sticky", "top-16");
+    });
+
+    it("should render desktop sidebar with hidden lg:block classes", () => {
+      const data = createMenuData();
+
+      const { container } = render(
+        <MenuPageClient data={data} merchantSlug="test-bakery" />
+      );
+
+      // Find the sidebar (aside element with hidden lg:block)
+      const sidebar = container.querySelector("aside.hidden.lg\\:block");
+      expect(sidebar).toBeInTheDocument();
+      expect(sidebar).toHaveClass("lg:w-56", "lg:flex-shrink-0");
+    });
+
+    it("should render vertical category nav inside desktop sidebar", () => {
+      const data = createMenuData();
+
+      const { container } = render(
+        <MenuPageClient data={data} merchantSlug="test-bakery" />
+      );
+
+      // Find the sidebar
+      const sidebar = container.querySelector("aside.hidden.lg\\:block");
+      expect(sidebar).toBeInTheDocument();
+
+      // It should contain a nav with vertical layout classes
+      const verticalNav = sidebar?.querySelector("nav");
+      expect(verticalNav).toBeInTheDocument();
+      expect(verticalNav).toHaveClass("flex", "flex-col");
+    });
+
+    it("should have sticky positioning for desktop sidebar content", () => {
+      const data = createMenuData();
+
+      const { container } = render(
+        <MenuPageClient data={data} merchantSlug="test-bakery" />
+      );
+
+      // Find the sticky wrapper inside sidebar
+      const sidebar = container.querySelector("aside.hidden.lg\\:block");
+      const stickyWrapper = sidebar?.querySelector(".sticky.top-32");
+      expect(stickyWrapper).toBeInTheDocument();
+    });
+
+    it("should render main content area with flex-1 class", () => {
+      const data = createMenuData();
+
+      const { container } = render(
+        <MenuPageClient data={data} merchantSlug="test-bakery" />
+      );
+
+      // Find the main element with flex-1
+      const mainContent = container.querySelector("main.flex-1");
+      expect(mainContent).toBeInTheDocument();
+      expect(mainContent).toHaveClass("py-6", "pb-28");
+    });
+
+    it("should render both horizontal and vertical navs with same categories", () => {
+      const data = createMenuData([
+        createMenuItem({ id: "item-1", name: "Bread 1" }),
+        createMenuItem({ id: "item-2", name: "Bread 2" }),
+      ]);
+
+      render(<MenuPageClient data={data} merchantSlug="test-bakery" />);
+
+      // Both navs should show the category name "Breads"
+      // There should be 2 occurrences (one in mobile nav, one in desktop sidebar)
+      const categoryButtons = screen.getAllByRole("button", { name: /Breads/i });
+      expect(categoryButtons).toHaveLength(2);
+    });
+
+    it("should use lg:flex for desktop flex layout container", () => {
+      const data = createMenuData();
+
+      const { container } = render(
+        <MenuPageClient data={data} merchantSlug="test-bakery" />
+      );
+
+      // Find the flex container
+      const flexContainer = container.querySelector(".lg\\:flex.lg\\:gap-8");
+      expect(flexContainer).toBeInTheDocument();
+    });
+  });
 });
