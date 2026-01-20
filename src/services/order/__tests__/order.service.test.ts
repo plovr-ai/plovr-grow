@@ -164,11 +164,57 @@ describe("OrderService", () => {
           customerPhone: "123-456-7890",
           orderType: "pickup",
           status: "pending",
-        })
+        }),
+        undefined // loyaltyMemberId
       );
 
       expect(order.id).toBe("order-1");
       expect(order.merchantId).toBe("merchant-1");
+    });
+
+    it("should create order with loyaltyMemberId when provided", async () => {
+      const inputWithLoyalty = {
+        ...mockInput,
+        loyaltyMemberId: "loyalty-member-123",
+      };
+
+      vi.mocked(orderRepository.create).mockResolvedValue({
+        id: "order-1",
+        orderNumber: "#001",
+        tenantId: "tenant-1",
+        merchantId: "merchant-1",
+        loyaltyMemberId: "loyalty-member-123",
+        status: "pending",
+        customerName: "John Doe",
+        customerPhone: "123-456-7890",
+        customerEmail: "john@example.com",
+        orderType: "pickup",
+        items: mockInput.items,
+        subtotal: 37.98,
+        taxAmount: 3.37,
+        tipAmount: 5,
+        deliveryFee: 0,
+        discount: 0,
+        totalAmount: 46.35,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never);
+
+      const order = await orderService.createOrder("tenant-1", inputWithLoyalty);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "merchant-1",
+        expect.objectContaining({
+          orderNumber: expect.any(String),
+          customerName: "John Doe",
+          status: "pending",
+        }),
+        "loyalty-member-123"
+      );
+
+      expect(order.id).toBe("order-1");
+      expect(order.loyaltyMemberId).toBe("loyalty-member-123");
     });
 
     it("should validate menu items exist", async () => {

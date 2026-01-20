@@ -9,6 +9,7 @@ interface OrderRequestBody {
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
+  loyaltyMemberId?: string;
   deliveryAddress?: {
     street: string;
     apt?: string;
@@ -78,6 +79,7 @@ export async function POST(
     // Create order with merchantId
     const order = await orderService.createOrder(tenantId, {
       merchantId: merchant.id,
+      loyaltyMemberId: body.loyaltyMemberId,
       customerName: formValidation.data.customerName,
       customerPhone: formValidation.data.customerPhone,
       customerEmail: formValidation.data.customerEmail || undefined,

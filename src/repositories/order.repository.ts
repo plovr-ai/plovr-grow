@@ -9,7 +9,8 @@ export class OrderRepository {
   async create(
     tenantId: string,
     merchantId: string,
-    data: Omit<Prisma.OrderCreateInput, "tenant" | "merchant" | "id">
+    data: Omit<Prisma.OrderCreateInput, "tenant" | "merchant" | "loyaltyMember" | "id">,
+    loyaltyMemberId?: string
   ) {
     return prisma.order.create({
       data: {
@@ -17,6 +18,9 @@ export class OrderRepository {
         ...data,
         tenant: { connect: { id: tenantId } },
         merchant: { connect: { id: merchantId } },
+        ...(loyaltyMemberId && {
+          loyaltyMember: { connect: { id: loyaltyMemberId } },
+        }),
       },
     });
   }

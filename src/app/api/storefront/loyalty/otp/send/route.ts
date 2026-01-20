@@ -88,10 +88,13 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("[OTP Send] Error:", error);
+    console.error("[OTP Send] Stack:", error instanceof Error ? error.stack : "No stack");
     return NextResponse.json(
       {
         success: false,
-        error: "An error occurred while sending OTP",
+        error: process.env.NODE_ENV === "development"
+          ? `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+          : "An error occurred while sending OTP",
       },
       { status: 500 }
     );

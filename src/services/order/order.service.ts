@@ -41,26 +41,31 @@ export class OrderService {
     const orderNumber = generateOrderNumber(sequence);
 
     // Create the order in database
-    const order = await orderRepository.create(tenantId, merchantId, {
-      orderNumber,
-      customerName: input.customerName,
-      customerPhone: input.customerPhone,
-      customerEmail: input.customerEmail ?? null,
-      orderType: input.orderType,
-      status: "pending",
-      items: input.items as unknown as Prisma.InputJsonValue,
-      subtotal: calculation.subtotal,
-      taxAmount: calculation.taxAmount,
-      tipAmount: calculation.tipAmount,
-      deliveryFee: calculation.deliveryFee,
-      discount: calculation.discount,
-      totalAmount: calculation.totalAmount,
-      notes: input.notes ?? null,
-      deliveryAddress: input.deliveryAddress
-        ? (input.deliveryAddress as unknown as Prisma.InputJsonValue)
-        : Prisma.JsonNull,
-      scheduledAt: input.scheduledAt ?? null,
-    });
+    const order = await orderRepository.create(
+      tenantId,
+      merchantId,
+      {
+        orderNumber,
+        customerName: input.customerName,
+        customerPhone: input.customerPhone,
+        customerEmail: input.customerEmail ?? null,
+        orderType: input.orderType,
+        status: "pending",
+        items: input.items as unknown as Prisma.InputJsonValue,
+        subtotal: calculation.subtotal,
+        taxAmount: calculation.taxAmount,
+        tipAmount: calculation.tipAmount,
+        deliveryFee: calculation.deliveryFee,
+        discount: calculation.discount,
+        totalAmount: calculation.totalAmount,
+        notes: input.notes ?? null,
+        deliveryAddress: input.deliveryAddress
+          ? (input.deliveryAddress as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
+        scheduledAt: input.scheduledAt ?? null,
+      },
+      input.loyaltyMemberId
+    );
 
     // Emit order created event
     orderEventEmitter.emit("order.created", {

@@ -16,6 +16,7 @@ export interface MerchantConfig {
   timezone: string;
   tipConfig: TipConfig;
   feeConfig: FeeConfig;
+  companySlug: string | null;
 }
 
 interface MerchantProviderProps {
@@ -28,6 +29,7 @@ interface MerchantProviderProps {
     timezone: string;
     tipConfig?: TipConfig;
     feeConfig?: FeeConfig;
+    companySlug?: string | null;
   };
 }
 
@@ -43,8 +45,9 @@ export function MerchantProvider({ children, config }: MerchantProviderProps) {
       timezone: config.timezone,
       tipConfig: config.tipConfig ?? DEFAULT_TIP_CONFIG,
       feeConfig: config.feeConfig ?? DEFAULT_FEE_CONFIG,
+      companySlug: config.companySlug ?? null,
     }),
-    [config.name, config.logoUrl, config.currency, config.locale, config.timezone, config.tipConfig, config.feeConfig]
+    [config.name, config.logoUrl, config.currency, config.locale, config.timezone, config.tipConfig, config.feeConfig, config.companySlug]
   );
 
   return (
@@ -80,4 +83,9 @@ export function useMerchantInfo(): { name: string; logoUrl: string | null } {
 export function useTimezone(): string {
   const { timezone } = useMerchantConfig();
   return timezone;
+}
+
+export function useCompanySlug(): string | null {
+  const { companySlug } = useMerchantConfig();
+  return companySlug;
 }

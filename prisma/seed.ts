@@ -412,6 +412,23 @@ async function main() {
 
   console.log("Created merchant tax rates for all Joe's Pizza locations");
 
+  // ==================== Loyalty Configuration for Joe's Pizza ====================
+  console.log("\nCreating loyalty configuration for Joe's Pizza...");
+
+  const joesLoyaltyConfig = await prisma.loyaltyConfig.upsert({
+    where: { id: "loyalty-config-joes-pizza" },
+    update: {},
+    create: {
+      id: "loyalty-config-joes-pizza",
+      tenantId: tenant.id,
+      companyId: company.id,
+      pointsPerDollar: 1,
+      status: "active",
+    },
+  });
+
+  console.log(`Created loyalty config: ${joesLoyaltyConfig.id} (1 point per dollar)`);
+
   // ==================== Bella's Bakery (Single Location) ====================
   console.log("\nCreating Bella's Bakery (single location)...");
 
@@ -828,6 +845,21 @@ async function main() {
   }
 
   console.log("Created tax configuration for Bella's Bakery");
+
+  // Loyalty Configuration for Bella's Bakery
+  const bellaLoyaltyConfig = await prisma.loyaltyConfig.upsert({
+    where: { id: "loyalty-config-bellas-bakery" },
+    update: {},
+    create: {
+      id: "loyalty-config-bellas-bakery",
+      tenantId: bellaTenant.id,
+      companyId: bellaCompany.id,
+      pointsPerDollar: 2, // 2 points per dollar for bakery
+      status: "active",
+    },
+  });
+
+  console.log(`Created loyalty config for Bella's Bakery: ${bellaLoyaltyConfig.id}`);
   console.log("✅ Bella's Bakery (single location) created!");
 
   // Create menu categories (company-level menu)

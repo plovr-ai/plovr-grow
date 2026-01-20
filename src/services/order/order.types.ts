@@ -39,6 +39,7 @@ export interface OrderData {
 
 export interface CreateOrderInput {
   merchantId: string;
+  loyaltyMemberId?: string;
   customerName: string;
   customerPhone: string;
   customerEmail?: string;

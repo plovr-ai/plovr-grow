@@ -14,6 +14,7 @@ import {
   TipSelector,
   OrderSummary,
   PriceSummary,
+  LoyaltySection,
 } from "@storefront/components/checkout";
 import {
   checkoutFormSchema,
@@ -86,6 +87,7 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isOrderSuccess, setIsOrderSuccess] = useState(false);
+  const [loyaltyMemberId, setLoyaltyMemberId] = useState<string | null>(null);
 
   // Get fee config from merchant context
   const { fees: configFees } = useFeeConfig();
@@ -169,6 +171,30 @@ export default function CheckoutPage() {
     setFormState((prev) => ({ ...prev, notes: e.target.value }));
   };
 
+  // Loyalty member handlers
+  const handleMemberLogin = (member: { id: string; phone: string; name: string | null }) => {
+    setLoyaltyMemberId(member.id);
+    // Auto-fill phone number from member profile
+    if (member.phone) {
+      // Format phone for display (remove +1 prefix and format)
+      const digits = member.phone.replace(/\D/g, "");
+      const formattedPhone = digits.length === 11 && digits.startsWith("1")
+        ? `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
+        : digits.length === 10
+        ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+        : member.phone;
+      setFormState((prev) => ({ ...prev, customerPhone: formattedPhone }));
+    }
+    // Auto-fill name if available
+    if (member.name) {
+      setFormState((prev) => ({ ...prev, customerName: member.name as string }));
+    }
+  };
+
+  const handleMemberLogout = () => {
+    setLoyaltyMemberId(null);
+  };
+
   // Validate and submit
   const handleSubmit = async () => {
     setSubmitError(null);
@@ -241,6 +267,7 @@ export default function CheckoutPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          loyaltyMemberId: loyaltyMemberId || undefined,
           items: items.map((item) => ({
             menuItemId: item.menuItemId,
             name: item.name,
@@ -390,6 +417,12 @@ export default function CheckoutPage() {
               value={formState.orderType}
               onChange={handleOrderTypeChange}
               disabled={isSubmitting}
+            />
+
+            <LoyaltySection
+              subtotal={calculations.subtotal}
+              onMemberLogin={handleMemberLogin}
+              onMemberLogout={handleMemberLogout}
             />
 
             <ContactInfoForm

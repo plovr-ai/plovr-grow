@@ -32,6 +32,10 @@ export class OtpService {
    * Generate a random OTP code
    */
   private generateOtpCode(): string {
+    // Use fixed code in development for easier testing
+    if (process.env.NODE_ENV === "development") {
+      return "123456";
+    }
     // Generate a random 6-digit code
     const min = Math.pow(10, OTP_LENGTH - 1);
     const max = Math.pow(10, OTP_LENGTH) - 1;

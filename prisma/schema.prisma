@@ -39,6 +39,8 @@ model Company {
   websiteUrl            String?         @map("website_url")
   supportEmail          String?         @map("support_email")
   supportPhone          String?         @map("support_phone")
+  currency              String          @default("USD")
+  locale                String          @default("en-US")
   settings              Json?
   status                String          @default("active")
   onboardingStatus      String          @default("not_started") @map("onboarding_status")
