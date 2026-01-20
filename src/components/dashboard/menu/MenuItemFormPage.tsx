@@ -102,7 +102,7 @@ export function MenuItemFormPage({
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
         <Button variant="ghost" size="icon-sm" onClick={handleBack}>
