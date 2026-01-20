@@ -1,46 +1,58 @@
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import { orderService } from "@/services/order";
-import { merchantService } from "@/services/merchant";
 import { menuService } from "@/services/menu";
-import { OrderDetailClient } from "@storefront/components/orders";
-import type { OrderDetailData } from "@storefront/components/orders";
-import type { OrderItemData } from "@/types";
+import { DashboardOrderDetailClient } from "@/components/orders/DashboardOrderDetailClient";
+import type { OrderItemData, DeliveryAddress } from "@/types";
 
 interface PageProps {
-  params: Promise<{ merchantSlug: string; orderId: string }>;
+  params: Promise<{ orderId: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { orderId } = await params;
   return {
-    title: `Order Details | Order`,
+    title: `Order Details | Dashboard`,
     description: `View details for order ${orderId}`,
   };
 }
 
-export default async function OrderDetailPage({ params }: PageProps) {
-  const { merchantSlug, orderId } = await params;
+export default async function DashboardOrderDetailPage({ params }: PageProps) {
+  const { orderId } = await params;
+  const session = await auth();
 
-  // Get merchant by slug
-  const merchant = await merchantService.getMerchantBySlug(merchantSlug);
-  if (!merchant) {
-    notFound();
+  // Verify session
+  if (!session?.user?.tenantId || !session?.user?.companyId) {
+    redirect("/dashboard/login");
   }
 
-  // Get tenantId from merchant -> company -> tenant chain
-  const tenantId = merchant.company.tenantId;
+  const { tenantId, companyId } = session.user;
 
   // Fetch order with timeline
   const order = await orderService.getOrderWithTimeline(tenantId, orderId);
 
-  // Validate order exists and belongs to this merchant
-  if (!order || order.merchantId !== merchant.id) {
+  // Validate order exists
+  if (!order) {
+    notFound();
+  }
+
+  // Validate order belongs to this company (via merchant.companyId)
+  // We need to fetch the merchant to check companyId
+  const merchant = order.merchant;
+  if (!merchant) {
+    notFound();
+  }
+
+  // Get merchant's companyId from merchant service (use getMerchant with tenantId for proper tenant isolation)
+  const { merchantService } = await import("@/services/merchant");
+  const fullMerchant = await merchantService.getMerchant(tenantId, merchant.id);
+  if (!fullMerchant || fullMerchant.companyId !== companyId) {
     notFound();
   }
 
   // Get order items and fetch images from menu service
-  const items = order.items as unknown as OrderItemData[];
+  const items = order.items as OrderItemData[];
   const menuItemIds = items.map((item) => item.menuItemId);
   const menuItems = await menuService.getMenuItemsByIds(tenantId, merchant.id, menuItemIds);
 
@@ -51,16 +63,16 @@ export default async function OrderDetailPage({ params }: PageProps) {
   });
 
   // Transform order data for the client component
-  const orderData: OrderDetailData = {
+  const orderData = {
     id: order.id,
     orderNumber: order.orderNumber,
-    status: order.status as OrderDetailData["status"],
-    orderType: order.orderType as OrderDetailData["orderType"],
+    status: order.status,
+    orderType: order.orderType,
     items,
     customerName: order.customerName,
     customerPhone: order.customerPhone,
     customerEmail: order.customerEmail,
-    deliveryAddress: order.deliveryAddress as OrderDetailData["deliveryAddress"],
+    deliveryAddress: order.deliveryAddress as DeliveryAddress | null,
     notes: order.notes,
     subtotal: Number(order.subtotal),
     taxAmount: Number(order.taxAmount),
@@ -77,8 +89,13 @@ export default async function OrderDetailPage({ params }: PageProps) {
       status: event.status,
       timestamp: event.timestamp,
     })),
-    merchant: order.merchant,
+    merchant: {
+      id: merchant.id,
+      name: merchant.name,
+      slug: merchant.slug,
+      timezone: merchant.timezone,
+    },
   };
 
-  return <OrderDetailClient order={orderData} merchantSlug={merchantSlug} imageMap={imageMap} />;
+  return <DashboardOrderDetailClient order={orderData} imageMap={imageMap} />;
 }

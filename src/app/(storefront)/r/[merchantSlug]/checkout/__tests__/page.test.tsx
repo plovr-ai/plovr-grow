@@ -420,4 +420,77 @@ describe("CheckoutPage", () => {
       expect(priceElements.length).toBeGreaterThan(0);
     });
   });
+
+  describe("order data", () => {
+    const cartItemsWithImage = [
+      {
+        id: "1",
+        menuItemId: "item-1",
+        name: "Classic Cheese Pizza",
+        price: 18.99,
+        quantity: 2,
+        selectedModifiers: [],
+        totalPrice: 37.98,
+        imageUrl: "https://example.com/pizza.jpg", // Cart items have imageUrl
+      },
+    ];
+
+    beforeEach(() => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: cartItemsWithImage,
+      });
+    });
+
+    it("should NOT include imageUrl in order submission", async () => {
+      // Mock fetch calls: first for loyalty /me API, then for order API
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: false, error: "Not logged in" }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: { orderId: "order-123" },
+          }),
+        });
+
+      render(<CheckoutPage />, {
+        wrapper: createWrapper(),
+      });
+
+      // Fill in required form fields
+      fireEvent.change(screen.getByPlaceholderText("Your full name"), {
+        target: { value: "John Doe" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
+        target: { value: "(555) 123-4567" },
+      });
+
+      // Submit the form
+      const placeOrderButtons = screen.getAllByText("Place Order");
+      fireEvent.click(placeOrderButtons[0]);
+
+      // Wait for the submission to complete
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
+
+      // Get the order API call (second call)
+      const orderApiCall = mockFetch.mock.calls[1];
+      const requestBody = JSON.parse(orderApiCall[1].body);
+
+      // Verify items do NOT contain imageUrl
+      expect(requestBody.items).toBeDefined();
+      expect(requestBody.items[0]).not.toHaveProperty("imageUrl");
+
+      // Verify other item properties are present
+      expect(requestBody.items[0]).toHaveProperty("menuItemId", "item-1");
+      expect(requestBody.items[0]).toHaveProperty("name", "Classic Cheese Pizza");
+      expect(requestBody.items[0]).toHaveProperty("price", 18.99);
+      expect(requestBody.items[0]).toHaveProperty("quantity", 2);
+    });
+  });
 });

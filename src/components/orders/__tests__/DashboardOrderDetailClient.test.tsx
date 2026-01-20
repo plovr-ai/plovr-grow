@@ -1,0 +1,315 @@
+import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { DashboardOrderDetailClient } from "../DashboardOrderDetailClient";
+import { DashboardProvider } from "@/contexts";
+import type { ReactNode } from "react";
+
+// Mock next/link
+vi.mock("next/link", () => ({
+  default: ({ children, href }: { children: ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
+
+function createWrapper() {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <DashboardProvider
+        value={{
+          tenantId: "tenant-1",
+          companyId: "company-1",
+          company: {
+            id: "company-1",
+            name: "Test Company",
+            slug: "test-company",
+            logoUrl: null,
+          },
+          merchants: [],
+          currency: "USD",
+          locale: "en-US",
+        }}
+      >
+        {children}
+      </DashboardProvider>
+    );
+  };
+}
+
+const mockOrder = {
+  id: "order-123",
+  orderNumber: "ORD-001",
+  status: "confirmed",
+  orderType: "pickup",
+  items: [
+    {
+      menuItemId: "item-1",
+      name: "Classic Burger",
+      price: 12.99,
+      quantity: 2,
+      selectedModifiers: [],
+      totalPrice: 25.98,
+    },
+    {
+      menuItemId: "item-2",
+      name: "French Fries",
+      price: 4.99,
+      quantity: 1,
+      selectedModifiers: [
+        {
+          groupId: "group-1",
+          groupName: "Size",
+          modifierId: "mod-1",
+          modifierName: "Large",
+          price: 1.0,
+          quantity: 1,
+        },
+      ],
+      specialInstructions: "Extra crispy",
+      totalPrice: 5.99,
+    },
+  ],
+  customerName: "John Doe",
+  customerPhone: "+15551234567",
+  customerEmail: "john@example.com",
+  deliveryAddress: null,
+  notes: "Test order notes",
+  subtotal: 31.97,
+  taxAmount: 2.56,
+  tipAmount: 5.0,
+  deliveryFee: 0,
+  discount: 0,
+  totalAmount: 39.53,
+  createdAt: new Date("2024-01-15T10:30:00Z"),
+  confirmedAt: new Date("2024-01-15T10:35:00Z"),
+  completedAt: null,
+  cancelledAt: null,
+  cancelReason: null,
+  timeline: [
+    { status: "pending" as const, timestamp: "2024-01-15T10:30:00Z" },
+    { status: "confirmed" as const, timestamp: "2024-01-15T10:35:00Z" },
+  ],
+  merchant: {
+    id: "merchant-1",
+    name: "Downtown Location",
+    slug: "downtown",
+    timezone: "America/New_York",
+  },
+};
+
+const mockImageMap: Record<string, string | null> = {
+  "item-1": "https://example.com/burger.jpg",
+  "item-2": "https://example.com/fries.jpg",
+};
+
+describe("DashboardOrderDetailClient", () => {
+  describe("imageMap usage", () => {
+    it("should display images from imageMap when available", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      // Check that images are rendered with correct src
+      const images = screen.getAllByRole("img");
+      expect(images).toHaveLength(2);
+      expect(images[0]).toHaveAttribute("src", "https://example.com/burger.jpg");
+      expect(images[0]).toHaveAttribute("alt", "Classic Burger");
+      expect(images[1]).toHaveAttribute("src", "https://example.com/fries.jpg");
+      expect(images[1]).toHaveAttribute("alt", "French Fries");
+    });
+
+    it("should display placeholder when imageMap has null value", () => {
+      const imageMapWithNull: Record<string, string | null> = {
+        "item-1": null,
+        "item-2": "https://example.com/fries.jpg",
+      };
+
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={imageMapWithNull} />,
+        { wrapper: createWrapper() }
+      );
+
+      // Only one image should be rendered (for item-2)
+      const images = screen.getAllByRole("img");
+      expect(images).toHaveLength(1);
+      expect(images[0]).toHaveAttribute("src", "https://example.com/fries.jpg");
+    });
+
+    it("should display placeholder when item not in imageMap", () => {
+      const partialImageMap: Record<string, string | null> = {
+        "item-1": "https://example.com/burger.jpg",
+        // item-2 is missing
+      };
+
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={partialImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      // Only one image should be rendered (for item-1)
+      const images = screen.getAllByRole("img");
+      expect(images).toHaveLength(1);
+      expect(images[0]).toHaveAttribute("src", "https://example.com/burger.jpg");
+    });
+
+    it("should display all placeholders when imageMap is empty", () => {
+      const emptyImageMap: Record<string, string | null> = {};
+
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={emptyImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      // No images should be rendered
+      const images = screen.queryAllByRole("img");
+      expect(images).toHaveLength(0);
+
+      // Should show placeholder SVGs instead (check for the container divs)
+      const placeholders = document.querySelectorAll(".bg-gray-100.flex.items-center.justify-center");
+      expect(placeholders.length).toBe(2);
+    });
+  });
+
+  describe("order display", () => {
+    it("should display order number in header", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Order #ORD-001")).toBeInTheDocument();
+    });
+
+    it("should display order status badge", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      // "Confirmed" appears in status badge and timeline as "Order Confirmed"
+      const confirmedElements = screen.getAllByText(/Confirmed/);
+      expect(confirmedElements.length).toBeGreaterThan(0);
+    });
+
+    it("should display order type and merchant name", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      // Multiple matches due to status progress showing "Ready for Pickup"
+      const pickupElements = screen.getAllByText(/Pickup/);
+      expect(pickupElements.length).toBeGreaterThan(0);
+
+      // Downtown Location appears in header
+      const merchantElements = screen.getAllByText(/Downtown Location/);
+      expect(merchantElements.length).toBeGreaterThan(0);
+    });
+
+    it("should display item names and quantities", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Classic Burger")).toBeInTheDocument();
+      expect(screen.getByText("French Fries")).toBeInTheDocument();
+      expect(screen.getByText("2x")).toBeInTheDocument();
+      expect(screen.getByText("1x")).toBeInTheDocument();
+    });
+
+    it("should display item count in header", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      // 2 + 1 = 3 items total
+      expect(screen.getByText("Order Items (3 items)")).toBeInTheDocument();
+    });
+
+    it("should display modifiers when present", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Large")).toBeInTheDocument();
+    });
+
+    it("should display special instructions when present", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Extra crispy")).toBeInTheDocument();
+    });
+
+    it("should display customer information", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("John Doe")).toBeInTheDocument();
+      expect(screen.getByText("john@example.com")).toBeInTheDocument();
+    });
+
+    it("should display price summary", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Payment Summary")).toBeInTheDocument();
+      expect(screen.getByText("Subtotal")).toBeInTheDocument();
+      expect(screen.getByText("Tax")).toBeInTheDocument();
+      expect(screen.getByText("Tip")).toBeInTheDocument();
+      expect(screen.getByText("Total")).toBeInTheDocument();
+    });
+
+    it("should display formatted prices", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("$31.97")).toBeInTheDocument(); // Subtotal
+      expect(screen.getByText("$39.53")).toBeInTheDocument(); // Total
+    });
+
+    it("should display order timeline", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Order Timeline")).toBeInTheDocument();
+      expect(screen.getByText("Order Placed")).toBeInTheDocument();
+      expect(screen.getByText("Order Confirmed")).toBeInTheDocument();
+    });
+
+    it("should display order notes", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Order Notes")).toBeInTheDocument();
+      expect(screen.getByText("Test order notes")).toBeInTheDocument();
+    });
+  });
+
+  describe("back link", () => {
+    it("should have a link back to orders list", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      const backLink = document.querySelector('a[href="/dashboard/orders"]');
+      expect(backLink).toBeInTheDocument();
+    });
+  });
+});

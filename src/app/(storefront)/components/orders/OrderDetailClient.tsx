@@ -15,6 +15,7 @@ import type { OrderStatus, OrderType, OrderItemData } from "@/types";
 interface Props {
   order: OrderDetailData;
   merchantSlug: string;
+  imageMap: Record<string, string | null>;
 }
 
 interface SSEMessage {
@@ -24,7 +25,7 @@ interface SSEMessage {
   timestamp?: string;
 }
 
-export function OrderDetailClient({ order: initialOrder, merchantSlug }: Props) {
+export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap }: Props) {
   const [order, setOrder] = useState<OrderDetailData>(initialOrder);
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "connected" | "disconnected"
@@ -170,7 +171,7 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug }: Props) 
         />
 
         {/* Order Items */}
-        <OrderItemsList items={items} />
+        <OrderItemsList items={items} imageMap={imageMap} />
 
         {/* Price Summary */}
         <OrderPriceSummary
