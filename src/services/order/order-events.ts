@@ -2,6 +2,7 @@ import type {
   OrderEventType,
   OrderCreatedEvent,
   OrderStatusChangedEvent,
+  OrderCompletedEvent,
   OrderEventHandler,
 } from "./order-events.types";
 
@@ -10,7 +11,7 @@ type EventMap = {
   "order.confirmed": OrderStatusChangedEvent;
   "order.preparing": OrderStatusChangedEvent;
   "order.ready": OrderStatusChangedEvent;
-  "order.completed": OrderStatusChangedEvent;
+  "order.completed": OrderCompletedEvent;
   "order.cancelled": OrderStatusChangedEvent;
 };
 

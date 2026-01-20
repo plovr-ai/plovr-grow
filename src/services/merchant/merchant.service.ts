@@ -41,6 +41,16 @@ export class MerchantService {
   }
 
   /**
+   * 通过 ID 获取 Merchant (公开访问，无需认证)
+   * 用于 API routes 中需要从 merchantId 反查 tenantId 的场景
+   */
+  async getMerchantById(merchantId: string): Promise<MerchantWithCompany | null> {
+    const data = await merchantRepository.getByIdWithCompany(merchantId);
+    if (!data) return null;
+    return toMerchantWithCompany(data);
+  }
+
+  /**
    * 通过 Slug 获取 Company 及其所有 Merchants (公开访问)
    * 用于品牌官网门店列表
    */

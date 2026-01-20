@@ -13,7 +13,6 @@ export interface OrderData {
   id: string;
   tenantId: string;
   merchantId: string | null;
-  customerId: string | null;
   orderNumber: string;
   customerName: string;
   customerPhone: string;
@@ -151,5 +150,4 @@ export interface OrderWithTimeline extends OrderData {
     slug: string;
     timezone: string;
   } | null;
-  customer: unknown | null;
 }

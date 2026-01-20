@@ -32,6 +32,15 @@ export interface OrderStatusChangedEvent extends OrderEventPayload {
   cancelReason?: string;
 }
 
+// Extended event for order completion with customer and amount info
+export interface OrderCompletedEvent extends OrderStatusChangedEvent {
+  companyId: string;
+  customerPhone: string;
+  customerName?: string;
+  customerEmail?: string;
+  totalAmount: number;
+}
+
 export type OrderEventHandler<T extends OrderEventPayload = OrderEventPayload> = (
   event: T
 ) => void | Promise<void>;

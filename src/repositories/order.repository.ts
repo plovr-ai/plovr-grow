@@ -30,9 +30,6 @@ export class OrderRepository {
         id: orderId,
         tenantId,
       },
-      include: {
-        customer: true,
-      },
     });
   }
 
@@ -46,7 +43,6 @@ export class OrderRepository {
         tenantId,
       },
       include: {
-        customer: true,
         merchant: {
           select: {
             id: true,
@@ -67,9 +63,6 @@ export class OrderRepository {
       where: {
         orderNumber,
         tenantId,
-      },
-      include: {
-        customer: true,
       },
     });
   }
@@ -292,9 +285,6 @@ export class OrderRepository {
         orderBy: { [orderBy]: orderDirection },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        include: {
-          customer: true,
-        },
       }),
       prisma.order.count({ where }),
     ]);
@@ -490,7 +480,6 @@ export class OrderRepository {
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
-          customer: true,
           merchant: {
             select: {
               id: true,

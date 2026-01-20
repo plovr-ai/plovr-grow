@@ -9,7 +9,6 @@ export interface MockOrder {
   id: string;
   tenantId: string;
   merchantId: string;
-  customerId: string | null;
   orderNumber: string;
   customerName: string;
   customerPhone: string;
@@ -37,7 +36,6 @@ export interface MockOrder {
     name: string;
     slug: string;
   } | null;
-  customer: null;
 }
 
 // ==================== In-Memory Storage ====================
@@ -69,7 +67,7 @@ function getMerchantSequenceKey(tenantId: string, merchantId: string): string {
 export function mockCreateOrder(
   tenantId: string,
   merchantId: string,
-  data: Omit<MockOrder, "id" | "tenantId" | "merchantId" | "customerId" | "createdAt" | "updatedAt" | "merchant" | "customer">,
+  data: Omit<MockOrder, "id" | "tenantId" | "merchantId" | "createdAt" | "updatedAt" | "merchant">,
   merchantInfo?: { id: string; name: string; slug: string }
 ): MockOrder {
   const now = new Date();
@@ -77,12 +75,10 @@ export function mockCreateOrder(
     id: generateOrderId(),
     tenantId,
     merchantId,
-    customerId: null, // Guest checkout, no customer ID
     ...data,
     createdAt: now,
     updatedAt: now,
     merchant: merchantInfo ?? null,
-    customer: null,
   };
 
   orderStore.set(order.id, order);

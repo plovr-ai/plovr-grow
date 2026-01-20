@@ -1,0 +1,273 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { PointsService } from "../points.service";
+
+// Mock repositories
+vi.mock("@/repositories/point-transaction.repository", () => ({
+  pointTransactionRepository: {
+    create: vi.fn(),
+    getByMember: vi.fn(),
+    hasEarnedForOrder: vi.fn(),
+    getTotalPointsEarned: vi.fn(),
+  },
+}));
+
+vi.mock("@/repositories/loyalty-member.repository", () => ({
+  loyaltyMemberRepository: {
+    getById: vi.fn(),
+    updatePoints: vi.fn(),
+  },
+}));
+
+import { pointTransactionRepository } from "@/repositories/point-transaction.repository";
+import { loyaltyMemberRepository } from "@/repositories/loyalty-member.repository";
+
+describe("PointsService", () => {
+  let service: PointsService;
+
+  const mockMember = {
+    id: "member-1",
+    tenantId: "tenant-1",
+    companyId: "company-1",
+    phone: "+12025551234",
+    name: "John Doe",
+    email: "john@example.com",
+    points: 100,
+    totalOrders: 5,
+    totalSpent: 150.0,
+    lastOrderAt: new Date(),
+    enrolledAt: new Date(),
+    status: "active",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const mockTransaction = {
+    id: "tx-1",
+    tenantId: "tenant-1",
+    memberId: "member-1",
+    merchantId: "merchant-1",
+    orderId: "order-1",
+    type: "earn",
+    points: 25,
+    balanceBefore: 100,
+    balanceAfter: 125,
+    description: "Earned 25 points from order",
+    createdAt: new Date(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new PointsService();
+  });
+
+  describe("calculatePointsForOrder", () => {
+    it("should calculate points correctly with integer result", () => {
+      const result = service.calculatePointsForOrder(100, 1);
+      expect(result).toBe(100);
+    });
+
+    it("should calculate points correctly with decimal result (rounds down)", () => {
+      const result = service.calculatePointsForOrder(25.5, 1);
+      expect(result).toBe(25);
+    });
+
+    it("should calculate points with custom pointsPerDollar", () => {
+      const result = service.calculatePointsForOrder(100, 2);
+      expect(result).toBe(200);
+    });
+
+    it("should calculate points with fractional pointsPerDollar", () => {
+      const result = service.calculatePointsForOrder(100, 0.5);
+      expect(result).toBe(50);
+    });
+
+    it("should return 0 for zero amount", () => {
+      const result = service.calculatePointsForOrder(0, 1);
+      expect(result).toBe(0);
+    });
+
+    it("should handle small amounts that round to 0", () => {
+      const result = service.calculatePointsForOrder(0.5, 1);
+      expect(result).toBe(0);
+    });
+  });
+
+  describe("awardPoints", () => {
+    it("should award points successfully", async () => {
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(pointTransactionRepository.create).mockResolvedValue(mockTransaction);
+      vi.mocked(loyaltyMemberRepository.updatePoints).mockResolvedValue();
+
+      const result = await service.awardPoints("tenant-1", "member-1", {
+        orderAmount: 25,
+        pointsPerDollar: 1,
+        merchantId: "merchant-1",
+        orderId: "order-1",
+      });
+
+      expect(result.pointsEarned).toBe(25);
+      expect(result.newBalance).toBe(125);
+      expect(result.transactionId).toBe("tx-1");
+
+      expect(pointTransactionRepository.create).toHaveBeenCalledWith("tenant-1", {
+        memberId: "member-1",
+        merchantId: "merchant-1",
+        orderId: "order-1",
+        type: "earn",
+        points: 25,
+        balanceBefore: 100,
+        balanceAfter: 125,
+        description: "Earned 25 points from order",
+      });
+
+      expect(loyaltyMemberRepository.updatePoints).toHaveBeenCalledWith(
+        "tenant-1",
+        "member-1",
+        25
+      );
+    });
+
+    it("should throw error if points already awarded for order", async () => {
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(true);
+
+      await expect(
+        service.awardPoints("tenant-1", "member-1", {
+          orderAmount: 25,
+          pointsPerDollar: 1,
+          orderId: "order-1",
+        })
+      ).rejects.toThrow("Points already awarded for this order");
+    });
+
+    it("should throw error if member not found", async () => {
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(null);
+
+      await expect(
+        service.awardPoints("tenant-1", "member-1", {
+          orderAmount: 25,
+          pointsPerDollar: 1,
+        })
+      ).rejects.toThrow("Loyalty member not found");
+    });
+
+    it("should return 0 points for small amounts", async () => {
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(false);
+
+      const result = await service.awardPoints("tenant-1", "member-1", {
+        orderAmount: 0.5,
+        pointsPerDollar: 1,
+      });
+
+      expect(result.pointsEarned).toBe(0);
+      expect(result.newBalance).toBe(100);
+      expect(pointTransactionRepository.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("adjustPoints", () => {
+    it("should add points successfully", async () => {
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+      vi.mocked(pointTransactionRepository.create).mockResolvedValue({
+        ...mockTransaction,
+        type: "adjust",
+        points: 50,
+        balanceAfter: 150,
+      });
+      vi.mocked(loyaltyMemberRepository.updatePoints).mockResolvedValue();
+
+      const result = await service.adjustPoints(
+        "tenant-1",
+        "member-1",
+        50,
+        "Bonus points"
+      );
+
+      expect(result.pointsEarned).toBe(50);
+      expect(result.newBalance).toBe(150);
+    });
+
+    it("should deduct points successfully", async () => {
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+      vi.mocked(pointTransactionRepository.create).mockResolvedValue({
+        ...mockTransaction,
+        type: "adjust",
+        points: -50,
+        balanceAfter: 50,
+      });
+      vi.mocked(loyaltyMemberRepository.updatePoints).mockResolvedValue();
+
+      const result = await service.adjustPoints(
+        "tenant-1",
+        "member-1",
+        -50,
+        "Points correction"
+      );
+
+      expect(result.pointsEarned).toBe(-50);
+      expect(result.newBalance).toBe(50);
+    });
+
+    it("should throw error if adjustment would result in negative balance", async () => {
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+
+      await expect(
+        service.adjustPoints("tenant-1", "member-1", -150, "Too many points")
+      ).rejects.toThrow("Adjustment would result in negative balance");
+    });
+
+    it("should throw error if member not found", async () => {
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(null);
+
+      await expect(
+        service.adjustPoints("tenant-1", "member-1", 50, "Bonus")
+      ).rejects.toThrow("Loyalty member not found");
+    });
+  });
+
+  describe("getTransactionHistory", () => {
+    it("should return paginated transaction history", async () => {
+      const mockResult = {
+        items: [mockTransaction],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+        totalPages: 1,
+      };
+      vi.mocked(pointTransactionRepository.getByMember).mockResolvedValue(mockResult);
+
+      const result = await service.getTransactionHistory("tenant-1", "member-1", {
+        page: 1,
+        pageSize: 20,
+      });
+
+      expect(result.items).toHaveLength(1);
+      expect(result.total).toBe(1);
+      expect(pointTransactionRepository.getByMember).toHaveBeenCalledWith(
+        "tenant-1",
+        "member-1",
+        { page: 1, pageSize: 20 }
+      );
+    });
+  });
+
+  describe("hasEarnedForOrder", () => {
+    it("should return true if points already earned", async () => {
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(true);
+
+      const result = await service.hasEarnedForOrder("tenant-1", "order-1");
+
+      expect(result).toBe(true);
+    });
+
+    it("should return false if points not earned", async () => {
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(false);
+
+      const result = await service.hasEarnedForOrder("tenant-1", "order-1");
+
+      expect(result).toBe(false);
+    });
+  });
+});
