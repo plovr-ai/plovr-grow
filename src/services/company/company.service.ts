@@ -42,6 +42,8 @@ export class CompanyService {
           websiteUrl: input.companyWebsiteUrl,
           supportEmail: input.companySupportEmail,
           supportPhone: input.companySupportPhone,
+          currency: input.companyCurrency ?? "USD",
+          locale: input.companyLocale ?? "en-US",
         },
       });
 
@@ -68,6 +70,8 @@ export class CompanyService {
       websiteUrl: input.websiteUrl,
       supportEmail: input.supportEmail,
       supportPhone: input.supportPhone,
+      currency: input.currency ?? "USD",
+      locale: input.locale ?? "en-US",
       settings: input.settings as Prisma.InputJsonValue,
     });
   }
@@ -146,6 +150,8 @@ export class CompanyService {
       data.supportEmail = input.supportEmail;
     if (input.supportPhone !== undefined)
       data.supportPhone = input.supportPhone;
+    if (input.currency !== undefined) data.currency = input.currency;
+    if (input.locale !== undefined) data.locale = input.locale;
     if (input.settings !== undefined)
       data.settings = input.settings as Prisma.InputJsonValue;
     if (input.status !== undefined) data.status = input.status;

@@ -12,6 +12,8 @@ import {
   Globe,
   Store,
   Calendar,
+  DollarSign,
+  Languages,
 } from "lucide-react";
 
 interface MerchantSummary {
@@ -33,6 +35,8 @@ interface CompanyData {
   websiteUrl: string | null;
   supportEmail: string | null;
   supportPhone: string | null;
+  currency: string;
+  locale: string;
   status: string;
   createdAt: Date;
   merchants: MerchantSummary[];
@@ -143,6 +147,16 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
             <CardTitle className="text-lg">Business Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <InfoRow
+              icon={DollarSign}
+              label="Currency"
+              value={company.currency}
+            />
+            <InfoRow
+              icon={Languages}
+              label="Locale"
+              value={company.locale}
+            />
             <InfoRow
               icon={Store}
               label="Stores"

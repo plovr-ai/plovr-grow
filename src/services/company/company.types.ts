@@ -33,4 +33,6 @@ export interface CreateTenantWithCompanyInput {
   companyWebsiteUrl?: string;
   companySupportEmail?: string;
   companySupportPhone?: string;
+  companyCurrency?: string;
+  companyLocale?: string;
 }

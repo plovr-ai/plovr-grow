@@ -12,6 +12,8 @@ const mockCompany = {
   websiteUrl: "https://joespizza.com",
   supportEmail: "support@joespizza.com",
   supportPhone: "555-123-4567",
+  currency: "USD",
+  locale: "en-US",
   status: "active",
   createdAt: new Date("2024-01-15"),
   merchants: [
@@ -114,6 +116,16 @@ describe("CompanyInfoCard", () => {
   });
 
   describe("Business Information", () => {
+    it("should render currency", () => {
+      render(<CompanyInfoCard company={mockCompany} />);
+      expect(screen.getByText("USD")).toBeInTheDocument();
+    });
+
+    it("should render locale", () => {
+      render(<CompanyInfoCard company={mockCompany} />);
+      expect(screen.getByText("en-US")).toBeInTheDocument();
+    });
+
     it("should render store count", () => {
       render(<CompanyInfoCard company={mockCompany} />);
       expect(screen.getByText("2 active / 3 total")).toBeInTheDocument();

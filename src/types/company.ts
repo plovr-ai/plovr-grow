@@ -17,6 +17,8 @@ export interface CompanyInfo {
   websiteUrl: string | null;
   supportEmail: string | null;
   supportPhone: string | null;
+  currency: string;
+  locale: string;
   status: CompanyStatus;
 
   // Onboarding fields
@@ -90,6 +92,8 @@ export interface CreateCompanyInput {
   websiteUrl?: string;
   supportEmail?: string;
   supportPhone?: string;
+  currency?: string;
+  locale?: string;
   settings?: CompanySettings;
 }
 
@@ -101,6 +105,8 @@ export interface UpdateCompanyInput {
   websiteUrl?: string;
   supportEmail?: string;
   supportPhone?: string;
+  currency?: string;
+  locale?: string;
   settings?: CompanySettings;
   status?: CompanyStatus;
 }
