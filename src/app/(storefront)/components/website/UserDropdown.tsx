@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { LoyaltyMember } from "@/contexts";
+import { useFormatPhone } from "@/hooks";
 
 interface UserDropdownProps {
   member: LoyaltyMember;
@@ -11,6 +12,7 @@ interface UserDropdownProps {
 
 export function UserDropdown({ member, onLogout, onClose }: UserDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const formatPhone = useFormatPhone();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -42,7 +44,7 @@ export function UserDropdown({ member, onLogout, onClose }: UserDropdownProps) {
       {/* Member Info */}
       <div className="px-4 py-3 border-b border-gray-100">
         <div className="text-sm font-medium text-gray-900 truncate">
-          {member.name || member.phone}
+          {member.name || formatPhone(member.phone)}
         </div>
         <div className="flex items-center gap-1 mt-1">
           <svg

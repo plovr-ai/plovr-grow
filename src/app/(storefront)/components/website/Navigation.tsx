@@ -51,9 +51,7 @@ export function Navigation({
   // Get display name for logged-in member
   const getDisplayName = () => {
     if (!member) return "";
-    if (member.name) return member.name;
-    // Show last 4 digits of phone
-    return `****${member.phone.slice(-4)}`;
+    return member.name || "Member";
   };
 
   // Render auth section for desktop
