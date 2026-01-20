@@ -3,8 +3,11 @@
 import { useState, useTransition } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  TextField,
+  RadioGroupField,
+  FormField,
+} from "@/components/dashboard/Form";
 import { ImageUploader } from "./ImageUploader";
 import {
   createCategoryAction,
@@ -83,74 +86,49 @@ export function CategoryForm({ category, onClose }: CategoryFormProps) {
 
           <div className="space-y-5">
             {/* Name */}
-            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Appetizers, Main Dishes"
-                disabled={isPending}
-              />
-            </div>
+            <TextField
+              id="name"
+              label="Name"
+              required
+              value={name}
+              onChange={setName}
+              placeholder="e.g., Appetizers, Main Dishes"
+              disabled={isPending}
+            />
 
             {/* Description */}
-            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-              <Label htmlFor="description" className="text-right">
-                Description
-              </Label>
-              <Input
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional description"
-                disabled={isPending}
-              />
-            </div>
+            <TextField
+              id="description"
+              label="Description"
+              value={description}
+              onChange={setDescription}
+              placeholder="Optional description"
+              disabled={isPending}
+            />
 
             {/* Image */}
-            <div className="grid grid-cols-[120px_1fr] items-start gap-4">
-              <Label className="pt-2 text-right">Image</Label>
+            <FormField id="image" label="Image" alignTop>
               <ImageUploader
                 value={imageUrl}
                 onChange={setImageUrl}
                 disabled={isPending}
               />
-            </div>
+            </FormField>
 
             {/* Status (only for editing) */}
             {isEditing && (
-              <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                <Label className="text-right">Status</Label>
-                <div className="flex gap-6">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="status"
-                      value="active"
-                      checked={status === "active"}
-                      onChange={() => setStatus("active")}
-                      disabled={isPending}
-                      className="h-4 w-4 text-theme-primary"
-                    />
-                    <span className="text-sm">Active</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="status"
-                      value="inactive"
-                      checked={status === "inactive"}
-                      onChange={() => setStatus("inactive")}
-                      disabled={isPending}
-                      className="h-4 w-4 text-theme-primary"
-                    />
-                    <span className="text-sm">Hidden</span>
-                  </label>
-                </div>
-              </div>
+              <RadioGroupField
+                id="status"
+                name="status"
+                label="Status"
+                value={status}
+                onChange={(value) => setStatus(value as "active" | "inactive")}
+                options={[
+                  { value: "active", label: "Active" },
+                  { value: "inactive", label: "Hidden" },
+                ]}
+                disabled={isPending}
+              />
             )}
           </div>
 

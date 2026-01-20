@@ -4,8 +4,12 @@ import { useState } from "react";
 import { Plus, Trash2, GripVertical, X, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useDashboardFormatPrice, useDashboardCurrencySymbol } from "@/hooks";
+import {
+  TextField,
+  RadioGroupField,
+  FormField,
+} from "@/components/dashboard/Form";
 import type { ModifierGroupInput, ModifierInput } from "@/services/menu/menu.types";
 
 interface ModifierGroupEditorProps {
@@ -343,18 +347,16 @@ function ModifierGroupForm({
       )}
 
       {/* Group name */}
-      <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-        <Label htmlFor="groupName" className="text-right">
-          Name <span className="text-red-500">*</span>
-        </Label>
-        <Input
-          id="groupName"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g., Size, Toppings"
-          disabled={disabled}
-        />
-      </div>
+      <TextField
+        id="groupName"
+        label="Name"
+        required
+        value={name}
+        onChange={setName}
+        placeholder="e.g., Size, Toppings"
+        disabled={disabled}
+        labelWidth={100}
+      />
 
       {/* Type */}
       <div className="grid grid-cols-[100px_1fr] items-center gap-4">

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { otpService } from "@/services/otp";
 import { loyaltyService, loyaltyMemberService } from "@/services/loyalty";
 import { merchantService } from "@/services/merchant";
+import { setLoyaltySession } from "@/lib/loyalty-session";
 
 const verifyOtpSchema = z.object({
   phone: z.string().min(1, "Phone number is required"),

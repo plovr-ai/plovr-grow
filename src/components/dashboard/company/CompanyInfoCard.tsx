@@ -1,10 +1,14 @@
+"use client";
+
 /* eslint-disable @next/next/no-img-element */
+import { useState } from "react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Building2,
   Mail,
@@ -14,7 +18,9 @@ import {
   Calendar,
   DollarSign,
   Languages,
+  Pencil,
 } from "lucide-react";
+import { CompanySettingsForm } from "./CompanySettingsForm";
 
 interface MerchantSummary {
   id: string;
@@ -61,6 +67,7 @@ function formatDate(date: Date): string {
 }
 
 export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
+  const [isEditingSettings, setIsEditingSettings] = useState(false);
   const activeStores = company.merchants.filter(
     (m) => m.status === "active"
   ).length;
@@ -143,8 +150,17 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
 
         {/* Business Information */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Business Information</CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditingSettings(true)}
+              className="h-8 px-2"
+            >
+              <Pencil className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             <InfoRow
@@ -219,6 +235,15 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Settings Edit Modal */}
+      {isEditingSettings && (
+        <CompanySettingsForm
+          currency={company.currency}
+          locale={company.locale}
+          onClose={() => setIsEditingSettings(false)}
+        />
       )}
     </div>
   );

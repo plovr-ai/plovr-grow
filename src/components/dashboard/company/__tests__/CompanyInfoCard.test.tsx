@@ -1,6 +1,18 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { CompanyInfoCard } from "../CompanyInfoCard";
+
+// Mock Next.js navigation
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    refresh: vi.fn(),
+  }),
+}));
+
+// Mock server actions
+vi.mock("@/app/(dashboard)/dashboard/(protected)/company/actions", () => ({
+  updateCompanySettingsAction: vi.fn().mockResolvedValue({ success: true }),
+}));
 
 const mockCompany = {
   id: "company-1",
@@ -209,6 +221,44 @@ describe("CompanyInfoCard", () => {
       render(<CompanyInfoCard company={suspendedCompany} />);
       const badge = screen.getByText("Suspended");
       expect(badge).toHaveClass("bg-red-100", "text-red-800");
+    });
+  });
+
+  describe("Edit Settings", () => {
+    it("should render edit button", () => {
+      render(<CompanyInfoCard company={mockCompany} />);
+      const editButton = screen.getByRole("button", { name: /edit/i });
+      expect(editButton).toBeInTheDocument();
+    });
+
+    it("should open settings modal when edit button is clicked", () => {
+      render(<CompanyInfoCard company={mockCompany} />);
+      const editButton = screen.getByRole("button", { name: /edit/i });
+      fireEvent.click(editButton);
+      expect(screen.getByText("Edit Regional Settings")).toBeInTheDocument();
+    });
+
+    it("should close settings modal when cancel is clicked", () => {
+      render(<CompanyInfoCard company={mockCompany} />);
+      const editButton = screen.getByRole("button", { name: /edit/i });
+      fireEvent.click(editButton);
+
+      const cancelButton = screen.getByRole("button", { name: /cancel/i });
+      fireEvent.click(cancelButton);
+
+      expect(screen.queryByText("Edit Regional Settings")).not.toBeInTheDocument();
+    });
+
+    it("should display current currency and locale in modal", () => {
+      render(<CompanyInfoCard company={mockCompany} />);
+      const editButton = screen.getByRole("button", { name: /edit/i });
+      fireEvent.click(editButton);
+
+      const currencySelect = screen.getByLabelText("Currency") as HTMLSelectElement;
+      const localeSelect = screen.getByLabelText("Locale") as HTMLSelectElement;
+
+      expect(currencySelect.value).toBe("USD");
+      expect(localeSelect.value).toBe("en-US");
     });
   });
 });

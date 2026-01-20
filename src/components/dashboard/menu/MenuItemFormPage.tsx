@@ -4,9 +4,14 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useDashboardCurrencySymbol } from "@/hooks";
+import {
+  TextField,
+  TextareaField,
+  PriceField,
+  RadioGroupField,
+  FormField,
+} from "@/components/dashboard/Form";
 import { ImageUploader } from "./ImageUploader";
 import { TaxSelector } from "./TaxSelector";
 import { ModifierGroupEditor } from "./ModifierGroupEditor";
@@ -34,7 +39,6 @@ export function MenuItemFormPage({
   taxConfigs,
 }: MenuItemFormPageProps) {
   const router = useRouter();
-  const currencySymbol = useDashboardCurrencySymbol();
   const isEditing = !!item;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -134,111 +138,64 @@ export function MenuItemFormPage({
             <h4 className="font-medium text-gray-900">Basic Information</h4>
 
             {/* Name */}
-            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Classic Burger"
-                disabled={isPending}
-              />
-            </div>
+            <TextField
+              id="name"
+              label="Name"
+              required
+              value={name}
+              onChange={setName}
+              placeholder="e.g., Classic Burger"
+              disabled={isPending}
+            />
 
             {/* Description */}
-            <div className="grid grid-cols-[120px_1fr] items-start gap-4">
-              <Label htmlFor="description" className="pt-2 text-right">
-                Description
-              </Label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe your menu item..."
-                disabled={isPending}
-                rows={3}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-theme-primary focus:outline-none focus:ring-1 focus:ring-theme-primary disabled:bg-gray-50"
-              />
-            </div>
+            <TextareaField
+              id="description"
+              label="Description"
+              value={description}
+              onChange={setDescription}
+              placeholder="Describe your menu item..."
+              disabled={isPending}
+              rows={3}
+            />
 
             {/* Price */}
-            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-              <Label htmlFor="price" className="text-right">
-                Price <span className="text-red-500">*</span>
-              </Label>
-              <div className="relative max-w-[200px]">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                  {currencySymbol}
-                </span>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
-                  disabled={isPending}
-                  className="pl-7"
-                />
-              </div>
-            </div>
+            <PriceField
+              id="price"
+              label="Price"
+              required
+              value={price}
+              onChange={setPrice}
+              placeholder="0.00"
+              disabled={isPending}
+            />
 
             {/* Image */}
-            <div className="grid grid-cols-[120px_1fr] items-start gap-4">
-              <Label className="pt-2 text-right">Image</Label>
+            <FormField id="image" label="Image" alignTop>
               <ImageUploader
                 value={imageUrl}
                 onChange={setImageUrl}
                 disabled={isPending}
               />
-            </div>
+            </FormField>
 
             {/* Status (only for editing) */}
             {isEditing && (
-              <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                <Label className="text-right">Status</Label>
-                <div className="flex gap-6">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="status"
-                      value="active"
-                      checked={status === "active"}
-                      onChange={() => setStatus("active")}
-                      disabled={isPending}
-                      className="h-4 w-4 text-theme-primary"
-                    />
-                    <span className="text-sm">Active</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="status"
-                      value="out_of_stock"
-                      checked={status === "out_of_stock"}
-                      onChange={() => setStatus("out_of_stock")}
-                      disabled={isPending}
-                      className="h-4 w-4 text-theme-primary"
-                    />
-                    <span className="text-sm">Out of Stock</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="status"
-                      value="inactive"
-                      checked={status === "inactive"}
-                      onChange={() => setStatus("inactive")}
-                      disabled={isPending}
-                      className="h-4 w-4 text-theme-primary"
-                    />
-                    <span className="text-sm">Hidden</span>
-                  </label>
-                </div>
-              </div>
+              <RadioGroupField
+                id="status"
+                name="status"
+                label="Status"
+                value={status}
+                onChange={(value) =>
+                  setStatus(value as "active" | "inactive" | "out_of_stock")
+                }
+                options={[
+                  { value: "active", label: "Active" },
+                  { value: "out_of_stock", label: "Out of Stock" },
+                  { value: "inactive", label: "Hidden" },
+                ]}
+                disabled={isPending}
+              />
             )}
           </div>
 
