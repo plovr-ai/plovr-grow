@@ -44,7 +44,7 @@ interface CompanyData {
   currency: string;
   locale: string;
   status: string;
-  createdAt: Date;
+  createdAt: Date | string;
   merchants: MerchantSummary[];
 }
 
@@ -58,7 +58,7 @@ const statusColors: Record<string, string> = {
   suspended: "bg-red-100 text-red-800",
 };
 
-function formatDate(date: Date): string {
+function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",

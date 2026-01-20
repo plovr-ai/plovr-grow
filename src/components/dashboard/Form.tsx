@@ -41,6 +41,16 @@ export function FormField({
   className,
   children,
 }: FormFieldProps) {
+  // If label is empty, render without label structure
+  if (!label) {
+    return (
+      <div className={className}>
+        {children}
+        {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+      </div>
+    );
+  }
+
   if (layout === "horizontal") {
     return (
       <div
@@ -93,6 +103,7 @@ interface TextFieldProps extends BaseFieldProps {
   max?: string | number;
   disabled?: boolean;
   inputClassName?: string;
+  helperText?: string;
 }
 
 export function TextField({
@@ -112,6 +123,7 @@ export function TextField({
   max,
   disabled,
   inputClassName,
+  helperText,
 }: TextFieldProps) {
   return (
     <FormField
@@ -136,6 +148,9 @@ export function TextField({
         aria-invalid={!!error}
         className={inputClassName}
       />
+      {helperText && !error && (
+        <p className="mt-1 text-xs text-gray-500">{helperText}</p>
+      )}
     </FormField>
   );
 }

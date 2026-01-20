@@ -2,15 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { usePhoneInput } from "@/hooks";
-import { useCompanySlug } from "@/contexts";
+import { useCompanySlug, useLoyalty, type LoyaltyMember } from "@/contexts";
 import { OtpModal } from "./OtpModal";
-
-interface LoyaltyMember {
-  id: string;
-  phone: string;
-  name: string | null;
-  points: number;
-}
 
 interface LoyaltySectionProps {
   subtotal: number;
@@ -24,12 +17,8 @@ export function LoyaltySection({
   onMemberLogout,
 }: LoyaltySectionProps) {
   const companySlug = useCompanySlug();
+  const { member, isLoading, pointsPerDollar, login, logout } = useLoyalty();
   const { format: formatPhone } = usePhoneInput();
-
-  // Login state
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [member, setMember] = useState<LoyaltyMember | null>(null);
-  const [pointsPerDollar, setPointsPerDollar] = useState(1);
 
   // UI state
   const [isExpanded, setIsExpanded] = useState(false);
@@ -44,8 +33,14 @@ export function LoyaltySection({
   const [sendError, setSendError] = useState("");
   const [verifyError, setVerifyError] = useState("");
 
+  // Local pointsPerDollar for pre-login display (before context has the value)
+  const [localPointsPerDollar, setLocalPointsPerDollar] = useState(1);
+
+  // Use context's pointsPerDollar when logged in, local value when not
+  const effectivePointsPerDollar = member ? pointsPerDollar : localPointsPerDollar;
+
   // Calculate estimated points
-  const estimatedPoints = Math.floor(subtotal * pointsPerDollar);
+  const estimatedPoints = Math.floor(subtotal * effectivePointsPerDollar);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhone(e.target.value);
@@ -95,7 +90,7 @@ export function LoyaltySection({
         );
         const statusData = await statusRes.json();
         if (statusData.success && statusData.data?.config?.pointsPerDollar) {
-          setPointsPerDollar(statusData.data.config.pointsPerDollar);
+          setLocalPointsPerDollar(statusData.data.config.pointsPerDollar);
         }
       } catch {
         // Ignore status fetch errors, use default
@@ -134,7 +129,8 @@ export function LoyaltySection({
           return;
         }
 
-        // Login successful
+        // Login successful - update context state
+        // Cookie is already set by the API
         const memberData: LoyaltyMember = {
           id: data.data.member.id,
           phone: data.data.member.phone,
@@ -142,8 +138,7 @@ export function LoyaltySection({
           points: data.data.member.points,
         };
 
-        setMember(memberData);
-        setIsLoggedIn(true);
+        login(memberData, localPointsPerDollar);
         setShowOtpModal(false);
         setIsExpanded(false);
         onMemberLogin?.(memberData);
@@ -153,7 +148,7 @@ export function LoyaltySection({
         setIsVerifying(false);
       }
     },
-    [companySlug, phone, onMemberLogin]
+    [companySlug, phone, localPointsPerDollar, login, onMemberLogin]
   );
 
   const handleResendOtp = useCallback(async () => {
@@ -174,9 +169,8 @@ export function LoyaltySection({
     }
   }, [companySlug, phone]);
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setMember(null);
+  const handleLogout = async () => {
+    await logout();
     setPhone("");
     setIsExpanded(false);
     onMemberLogout?.();
@@ -187,8 +181,17 @@ export function LoyaltySection({
     return null;
   }
 
+  // Show loading state while checking session
+  if (isLoading) {
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6 animate-pulse">
+        <div className="h-5 bg-gray-200 rounded w-48"></div>
+      </div>
+    );
+  }
+
   // Logged in state - show member card
-  if (isLoggedIn && member) {
+  if (member) {
     return (
       <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
         <div className="flex items-center justify-between mb-3">

@@ -359,39 +359,22 @@ function ModifierGroupForm({
       />
 
       {/* Type */}
-      <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-        <Label className="text-right">Type</Label>
-        <div className="flex gap-6">
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="type"
-              value="single"
-              checked={type === "single"}
-              onChange={() => setType("single")}
-              disabled={disabled}
-              className="h-4 w-4"
-            />
-            <span className="text-sm">Single select</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="type"
-              value="multiple"
-              checked={type === "multiple"}
-              onChange={() => setType("multiple")}
-              disabled={disabled}
-              className="h-4 w-4"
-            />
-            <span className="text-sm">Multiple select</span>
-          </label>
-        </div>
-      </div>
+      <RadioGroupField
+        id="type"
+        name="type"
+        label="Type"
+        value={type}
+        onChange={(value) => setType(value as "single" | "multiple")}
+        options={[
+          { value: "single", label: "Single select" },
+          { value: "multiple", label: "Multiple select" },
+        ]}
+        disabled={disabled}
+        labelWidth={100}
+      />
 
       {/* Required & Allow quantity */}
-      <div className="grid grid-cols-[100px_1fr] items-start gap-4">
-        <Label className="pt-0.5 text-right">Options</Label>
+      <FormField id="options" label="Options" alignTop labelWidth={100}>
         <div className="space-y-2">
           <label className="flex items-center gap-2">
             <input
@@ -427,11 +410,10 @@ function ModifierGroupForm({
             </div>
           )}
         </div>
-      </div>
+      </FormField>
 
       {/* Modifiers list */}
-      <div className="grid grid-cols-[100px_1fr] items-start gap-4">
-        <Label className="pt-2 text-right">Modifiers</Label>
+      <FormField id="modifiers" label="Modifiers" alignTop labelWidth={100}>
         <div className="space-y-2">
           {modifiers.map((mod) => (
             <div
@@ -507,7 +489,7 @@ function ModifierGroupForm({
             </Button>
           </div>
         </div>
-      </div>
+      </FormField>
 
       {/* Actions */}
       <div className="flex justify-end gap-2 border-t pt-4">

@@ -5,7 +5,10 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import {
+  TextField,
+  SelectField,
+} from "@/components/dashboard/Form";
 import {
   createTaxConfigAction,
   updateTaxConfigAction,
@@ -154,45 +157,35 @@ export function TaxConfigForm({
 
           <div className="space-y-4">
             {/* Name */}
-            <div>
-              <Label htmlFor="name">Tax Name *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Standard Tax, Alcohol Tax"
-                disabled={isPending}
-              />
-            </div>
+            <TextField
+              id="name"
+              label="Tax Name"
+              required
+              value={name}
+              onChange={setName}
+              placeholder="e.g., Standard Tax, Alcohol Tax"
+              disabled={isPending}
+            />
 
             {/* Description */}
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Input
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional description"
-                disabled={isPending}
-              />
-            </div>
+            <TextField
+              id="description"
+              label="Description"
+              value={description}
+              onChange={setDescription}
+              placeholder="Optional description"
+              disabled={isPending}
+            />
 
             {/* Rounding Method */}
-            <div>
-              <Label htmlFor="roundingMethod">Rounding Method</Label>
-              <Select
-                id="roundingMethod"
-                value={roundingMethod}
-                onChange={(e) => setRoundingMethod(e.target.value as RoundingMethod)}
-                disabled={isPending}
-              >
-                {ROUNDING_METHODS.map((method) => (
-                  <option key={method.value} value={method.value}>
-                    {method.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
+            <SelectField
+              id="roundingMethod"
+              label="Rounding Method"
+              value={roundingMethod}
+              onChange={(value) => setRoundingMethod(value as RoundingMethod)}
+              options={ROUNDING_METHODS}
+              disabled={isPending}
+            />
 
             {/* Store Tax Rates */}
             <div className="border-t pt-4">

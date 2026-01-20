@@ -75,6 +75,9 @@ export async function POST(request: NextRequest) {
       { name }
     );
 
+    // Set HTTP-only cookie for session persistence
+    await setLoyaltySession(companyId, member.id, member.phone);
+
     return NextResponse.json({
       success: true,
       data: {
@@ -85,8 +88,6 @@ export async function POST(request: NextRequest) {
           points: member.points,
           isNewEnrollment: isNew,
         },
-        // TODO: Generate JWT token for authenticated requests
-        // token: generateToken(member.id),
       },
     });
   } catch (error) {

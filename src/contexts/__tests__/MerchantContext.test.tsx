@@ -6,6 +6,7 @@ import {
   useTipConfig,
   useFeeConfig,
   useCompanySlug,
+  useCompanyId,
   useTimezone,
 } from "../MerchantContext";
 import { DEFAULT_TIP_CONFIG, DEFAULT_FEE_CONFIG } from "@/types";
@@ -474,6 +475,142 @@ describe("MerchantContext", () => {
       }).toThrow("useMerchantConfig must be used within MerchantProvider");
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe("companyId", () => {
+    it("should provide companyId when set", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+        companyId: "comp-123-abc",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useMerchantConfig(), { wrapper });
+
+      expect(result.current.companyId).toBe("comp-123-abc");
+    });
+
+    it("should default companyId to null when not provided", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useMerchantConfig(), { wrapper });
+
+      expect(result.current.companyId).toBeNull();
+    });
+
+    it("should default companyId to null when explicitly set to undefined", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+        companyId: undefined,
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useMerchantConfig(), { wrapper });
+
+      expect(result.current.companyId).toBeNull();
+    });
+  });
+
+  describe("useCompanyId", () => {
+    it("should return companyId value", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+        companyId: "comp-456-def",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useCompanyId(), { wrapper });
+
+      expect(result.current).toBe("comp-456-def");
+    });
+
+    it("should return null when companyId is not set", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useCompanyId(), { wrapper });
+
+      expect(result.current).toBeNull();
+    });
+
+    it("should throw error when used outside provider", () => {
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      expect(() => {
+        renderHook(() => useCompanyId());
+      }).toThrow("useMerchantConfig must be used within MerchantProvider");
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("companySlug and companyId together", () => {
+    it("should provide both companySlug and companyId when set", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+        companySlug: "joes-pizza",
+        companyId: "comp-789-xyz",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result: configResult } = renderHook(() => useMerchantConfig(), { wrapper });
+      const { result: slugResult } = renderHook(() => useCompanySlug(), { wrapper });
+      const { result: idResult } = renderHook(() => useCompanyId(), { wrapper });
+
+      expect(configResult.current.companySlug).toBe("joes-pizza");
+      expect(configResult.current.companyId).toBe("comp-789-xyz");
+      expect(slugResult.current).toBe("joes-pizza");
+      expect(idResult.current).toBe("comp-789-xyz");
     });
   });
 

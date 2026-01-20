@@ -3,8 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -14,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TextField } from "@/components/dashboard/Form";
 import { forgotPasswordSchema } from "@/lib/validations/auth";
 
 export default function ForgotPasswordPage() {
@@ -110,24 +109,19 @@ export default function ForgotPasswordPage() {
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setFieldError(null);
-                }}
-                disabled={isLoading}
-                className={fieldError ? "border-red-500" : ""}
-              />
-              {fieldError && (
-                <p className="text-sm text-red-500">{fieldError}</p>
-              )}
-            </div>
+            <TextField
+              id="email"
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(value) => {
+                setEmail(value);
+                setFieldError(null);
+              }}
+              disabled={isLoading}
+              error={fieldError ?? undefined}
+            />
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">

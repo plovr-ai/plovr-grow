@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { merchantService } from "@/services/merchant";
-import { MerchantProvider, ThemeProvider } from "@/contexts";
+import { MerchantProvider, ThemeProvider, LoyaltyProvider } from "@/contexts";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -50,7 +50,7 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
           companyId: merchant?.company?.id ?? null,
         }}
       >
-        {children}
+        <LoyaltyProvider>{children}</LoyaltyProvider>
       </MerchantProvider>
     </ThemeProvider>
   );

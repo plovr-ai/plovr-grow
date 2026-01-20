@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -16,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TextField } from "@/components/dashboard/Form";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
 export default function RegisterPage() {
@@ -110,92 +109,59 @@ export default function RegisterPage() {
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Your Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="John Doe"
-                value={formData.name}
-                onChange={(e) => handleChange("name", e.target.value)}
-                disabled={isLoading}
-                className={fieldErrors.name ? "border-red-500" : ""}
-              />
-              {fieldErrors.name && (
-                <p className="text-sm text-red-500">{fieldErrors.name}</p>
-              )}
-            </div>
+            <TextField
+              id="name"
+              label="Your Name"
+              placeholder="John Doe"
+              value={formData.name}
+              onChange={(value) => handleChange("name", value)}
+              disabled={isLoading}
+              error={fieldErrors.name}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Restaurant/Company Name</Label>
-              <Input
-                id="companyName"
-                type="text"
-                placeholder="Joe's Pizza"
-                value={formData.companyName}
-                onChange={(e) => handleChange("companyName", e.target.value)}
-                disabled={isLoading}
-                className={fieldErrors.companyName ? "border-red-500" : ""}
-              />
-              {fieldErrors.companyName && (
-                <p className="text-sm text-red-500">{fieldErrors.companyName}</p>
-              )}
-            </div>
+            <TextField
+              id="companyName"
+              label="Restaurant/Company Name"
+              placeholder="Joe's Pizza"
+              value={formData.companyName}
+              onChange={(value) => handleChange("companyName", value)}
+              disabled={isLoading}
+              error={fieldErrors.companyName}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={formData.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                disabled={isLoading}
-                className={fieldErrors.email ? "border-red-500" : ""}
-              />
-              {fieldErrors.email && (
-                <p className="text-sm text-red-500">{fieldErrors.email}</p>
-              )}
-            </div>
+            <TextField
+              id="email"
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={(value) => handleChange("email", value)}
+              disabled={isLoading}
+              error={fieldErrors.email}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="At least 8 characters"
-                value={formData.password}
-                onChange={(e) => handleChange("password", e.target.value)}
-                disabled={isLoading}
-                className={fieldErrors.password ? "border-red-500" : ""}
-              />
-              {fieldErrors.password && (
-                <p className="text-sm text-red-500">{fieldErrors.password}</p>
-              )}
-              <p className="text-xs text-gray-500">
-                Must contain uppercase, lowercase, and number
-              </p>
-            </div>
+            <TextField
+              id="password"
+              label="Password"
+              type="password"
+              placeholder="At least 8 characters"
+              value={formData.password}
+              onChange={(value) => handleChange("password", value)}
+              disabled={isLoading}
+              error={fieldErrors.password}
+              helperText="Must contain uppercase, lowercase, and number"
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm your password"
-                value={formData.confirmPassword}
-                onChange={(e) =>
-                  handleChange("confirmPassword", e.target.value)
-                }
-                disabled={isLoading}
-                className={fieldErrors.confirmPassword ? "border-red-500" : ""}
-              />
-              {fieldErrors.confirmPassword && (
-                <p className="text-sm text-red-500">
-                  {fieldErrors.confirmPassword}
-                </p>
-              )}
-            </div>
+            <TextField
+              id="confirmPassword"
+              label="Confirm Password"
+              type="password"
+              placeholder="Confirm your password"
+              value={formData.confirmPassword}
+              onChange={(value) => handleChange("confirmPassword", value)}
+              disabled={isLoading}
+              error={fieldErrors.confirmPassword}
+            />
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">

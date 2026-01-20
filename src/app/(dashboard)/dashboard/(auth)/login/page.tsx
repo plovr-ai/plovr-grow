@@ -5,8 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -16,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TextField } from "@/components/dashboard/Form";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 
 export default function LoginPage() {
@@ -119,25 +118,20 @@ function LoginForm() {
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={formData.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                disabled={isLoading}
-                className={fieldErrors.email ? "border-red-500" : ""}
-              />
-              {fieldErrors.email && (
-                <p className="text-sm text-red-500">{fieldErrors.email}</p>
-              )}
-            </div>
+            <TextField
+              id="email"
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={(value) => handleChange("email", value)}
+              disabled={isLoading}
+              error={fieldErrors.email}
+            />
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <span className="text-sm font-medium">Password</span>
                 <Link
                   href="/dashboard/forgot-password"
                   className="text-sm text-blue-600 hover:underline"
@@ -145,18 +139,16 @@ function LoginForm() {
                   Forgot password?
                 </Link>
               </div>
-              <Input
+              <TextField
                 id="password"
+                label=""
                 type="password"
                 placeholder="Enter your password"
                 value={formData.password}
-                onChange={(e) => handleChange("password", e.target.value)}
+                onChange={(value) => handleChange("password", value)}
                 disabled={isLoading}
-                className={fieldErrors.password ? "border-red-500" : ""}
+                error={fieldErrors.password}
               />
-              {fieldErrors.password && (
-                <p className="text-sm text-red-500">{fieldErrors.password}</p>
-              )}
             </div>
           </CardContent>
 

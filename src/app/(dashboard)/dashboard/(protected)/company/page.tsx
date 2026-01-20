@@ -12,11 +12,14 @@ export default async function CompanyPage() {
 
   const { companyId } = session.user;
 
-  const company = await companyService.getCompanyWithMerchants(companyId);
+  const companyData = await companyService.getCompanyWithMerchants(companyId);
 
-  if (!company) {
+  if (!companyData) {
     redirect("/dashboard/login");
   }
+
+  // Serialize to plain object (converts Decimal to number, Date to string)
+  const company = JSON.parse(JSON.stringify(companyData));
 
   return (
     <div className="space-y-6">

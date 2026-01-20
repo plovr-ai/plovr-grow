@@ -5,8 +5,17 @@ export {
   useTipConfig,
   useFeeConfig,
   useCompanySlug,
+  useCompanyId,
 } from "./MerchantContext";
 export type { MerchantConfig } from "./MerchantContext";
+
+export {
+  LoyaltyProvider,
+  useLoyalty,
+  useLoyaltyMember,
+  useIsLoyaltyLoading,
+} from "./LoyaltyContext";
+export type { LoyaltyMember } from "./LoyaltyContext";
 
 export { ThemeProvider, useTheme } from "./ThemeContext";
 

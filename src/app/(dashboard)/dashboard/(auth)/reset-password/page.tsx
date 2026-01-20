@@ -4,8 +4,6 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -15,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TextField } from "@/components/dashboard/Form";
 import { resetPasswordSchema } from "@/lib/validations/auth";
 
 function ResetPasswordContent() {
@@ -170,41 +169,27 @@ function ResetPasswordContent() {
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="At least 8 characters"
-                value={formData.password}
-                onChange={(e) => handleChange("password", e.target.value)}
-                disabled={isLoading}
-                className={fieldErrors.password ? "border-red-500" : ""}
-              />
-              {fieldErrors.password && (
-                <p className="text-sm text-red-500">{fieldErrors.password}</p>
-              )}
-            </div>
+            <TextField
+              id="password"
+              label="New Password"
+              type="password"
+              placeholder="At least 8 characters"
+              value={formData.password}
+              onChange={(value) => handleChange("password", value)}
+              disabled={isLoading}
+              error={fieldErrors.password}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm your password"
-                value={formData.confirmPassword}
-                onChange={(e) =>
-                  handleChange("confirmPassword", e.target.value)
-                }
-                disabled={isLoading}
-                className={fieldErrors.confirmPassword ? "border-red-500" : ""}
-              />
-              {fieldErrors.confirmPassword && (
-                <p className="text-sm text-red-500">
-                  {fieldErrors.confirmPassword}
-                </p>
-              )}
-            </div>
+            <TextField
+              id="confirmPassword"
+              label="Confirm New Password"
+              type="password"
+              placeholder="Confirm your password"
+              value={formData.confirmPassword}
+              onChange={(value) => handleChange("confirmPassword", value)}
+              disabled={isLoading}
+              error={fieldErrors.confirmPassword}
+            />
           </CardContent>
 
           <CardFooter>
