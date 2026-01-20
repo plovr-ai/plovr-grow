@@ -10,7 +10,6 @@ import {
   Mail,
   Phone,
   Globe,
-  FileText,
   Store,
   Calendar,
 } from "lucide-react";
@@ -34,7 +33,6 @@ interface CompanyData {
   websiteUrl: string | null;
   supportEmail: string | null;
   supportPhone: string | null;
-  taxId: string | null;
   status: string;
   createdAt: Date;
   merchants: MerchantSummary[];
@@ -145,11 +143,6 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
             <CardTitle className="text-lg">Business Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <InfoRow
-              icon={FileText}
-              label="Tax ID"
-              value={company.taxId}
-            />
             <InfoRow
               icon={Store}
               label="Stores"

@@ -12,7 +12,6 @@ const mockCompany = {
   websiteUrl: "https://joespizza.com",
   supportEmail: "support@joespizza.com",
   supportPhone: "555-123-4567",
-  taxId: "12-3456789",
   status: "active",
   createdAt: new Date("2024-01-15"),
   merchants: [
@@ -115,11 +114,6 @@ describe("CompanyInfoCard", () => {
   });
 
   describe("Business Information", () => {
-    it("should render tax ID", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
-      expect(screen.getByText("12-3456789")).toBeInTheDocument();
-    });
-
     it("should render store count", () => {
       render(<CompanyInfoCard company={mockCompany} />);
       expect(screen.getByText("2 active / 3 total")).toBeInTheDocument();

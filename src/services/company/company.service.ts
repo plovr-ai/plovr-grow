@@ -42,7 +42,6 @@ export class CompanyService {
           websiteUrl: input.companyWebsiteUrl,
           supportEmail: input.companySupportEmail,
           supportPhone: input.companySupportPhone,
-          taxId: input.companyTaxId,
         },
       });
 
@@ -69,7 +68,6 @@ export class CompanyService {
       websiteUrl: input.websiteUrl,
       supportEmail: input.supportEmail,
       supportPhone: input.supportPhone,
-      taxId: input.taxId,
       settings: input.settings as Prisma.InputJsonValue,
     });
   }
@@ -148,7 +146,6 @@ export class CompanyService {
       data.supportEmail = input.supportEmail;
     if (input.supportPhone !== undefined)
       data.supportPhone = input.supportPhone;
-    if (input.taxId !== undefined) data.taxId = input.taxId;
     if (input.settings !== undefined)
       data.settings = input.settings as Prisma.InputJsonValue;
     if (input.status !== undefined) data.status = input.status;

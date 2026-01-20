@@ -39,7 +39,6 @@ model Company {
   websiteUrl            String?         @map("website_url")
   supportEmail          String?         @map("support_email")
   supportPhone          String?         @map("support_phone")
-  taxId                 String?         @map("tax_id")
   settings              Json?
   status                String          @default("active")
   onboardingStatus      String          @default("not_started") @map("onboarding_status")
@@ -150,6 +149,7 @@ model Order {
   id                String             @id
   tenantId          String             @map("tenant_id")
   merchantId        String?            @map("merchant_id")
+  loyaltyMemberId   String?            @map("loyalty_member_id")
   orderNumber       String             @map("order_number")
   customerName      String             @map("customer_name")
   customerPhone     String             @map("customer_phone")
@@ -174,10 +174,12 @@ model Order {
   updatedAt         DateTime           @updatedAt @map("updated_at")
   merchant          Merchant?          @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  loyaltyMember     LoyaltyMember?     @relation(fields: [loyaltyMemberId], references: [id], onDelete: SetNull)
   pointTransactions PointTransaction[]
 
   @@unique([tenantId, orderNumber])
   @@index([merchantId])
+  @@index([loyaltyMemberId])
   @@index([tenantId, createdAt])
   @@index([tenantId])
   @@index([tenantId, status])
@@ -307,6 +309,7 @@ model LoyaltyMember {
   company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   pointTransactions PointTransaction[]
+  orders            Order[]
 
   @@unique([tenantId, companyId, phone])
   @@index([phone])

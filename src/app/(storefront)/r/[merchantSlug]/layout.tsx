@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Toaster } from "sonner";
 import { merchantService } from "@/services/merchant";
 import { MerchantProvider, ThemeProvider } from "@/contexts";
 
@@ -44,14 +43,11 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
           logoUrl: merchant?.logoUrl ?? null,
           currency: merchant?.currency ?? "USD",
           locale: merchant?.locale ?? "en-US",
-          timezone: merchant?.timezone ?? "America/New_York",
           tipConfig: merchant?.settings?.tipConfig,
           feeConfig: merchant?.settings?.feeConfig,
-          companySlug: merchant?.company?.slug ?? null,
         }}
       >
         {children}
-        <Toaster position="top-center" richColors />
       </MerchantProvider>
     </ThemeProvider>
   );

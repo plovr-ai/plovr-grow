@@ -7,8 +7,7 @@ import {
   useLayoutEffect,
   useEffect,
 } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 import {
   MenuHeader,
   MenuCategoryNav,
@@ -37,7 +36,6 @@ export function MenuPageClient({
   // Support both old (tenantSlug) and new (merchantSlug) props
   const slug = merchantSlug ?? tenantSlug ?? "";
   const searchParams = useSearchParams();
-  const router = useRouter();
   const initialCategory = data.categories[0]?.category.id ?? null;
   const [activeCategory, setActiveCategory] = useState<string | null>(
     initialCategory
@@ -61,10 +59,12 @@ export function MenuPageClient({
   }, [slug, setTenantId]);
 
   // Handle addItem query param from FeaturedItems
-  // After processing, remove the param from URL to allow future additions
+  const addItemHandledRef = useRef(false);
   useEffect(() => {
     const addItemId = searchParams.get("addItem");
-    if (!addItemId) return;
+    if (!addItemId || addItemHandledRef.current) return;
+
+    addItemHandledRef.current = true;
 
     // Find the item in menu categories
     let menuItem: MenuItemViewModel | undefined;
@@ -73,11 +73,7 @@ export function MenuPageClient({
       if (menuItem) break;
     }
 
-    if (!menuItem) {
-      // Item not found, clean up URL
-      router.replace(`/r/${slug}/menu`, { scroll: false });
-      return;
-    }
+    if (!menuItem) return;
 
     // If item has modifiers, open the modal
     if (menuItem.hasModifiers && menuItem.modifierGroups.length > 0) {
@@ -94,12 +90,8 @@ export function MenuPageClient({
         imageUrl: menuItem.imageUrl,
         taxes: menuItem.taxes,
       });
-      toast.success(`${menuItem.name} added to cart`);
     }
-
-    // Clean up URL after processing (remove addItem param)
-    router.replace(`/r/${slug}/menu`, { scroll: false });
-  }, [searchParams, data.categories, addItem, router, slug]);
+  }, [searchParams, data.categories, addItem]);
 
   const isScrollingRef = useRef(false);
 
@@ -190,11 +182,9 @@ export function MenuPageClient({
     (selectedModifiers: SelectedModifier[], quantity: number) => {
       if (!modalItem) return;
 
-      // If there's a pending animation (from in-page click), trigger it
-      // Otherwise (from external entry like featured items), show toast
-      const hasAnimation = !!pendingAnimationRef.current;
-      if (hasAnimation) {
-        animateFlyToCart(pendingAnimationRef.current!);
+      // Trigger pending animation when modal confirms
+      if (pendingAnimationRef.current) {
+        animateFlyToCart(pendingAnimationRef.current);
         pendingAnimationRef.current = null;
       }
 
@@ -207,11 +197,6 @@ export function MenuPageClient({
         imageUrl: modalItem.imageUrl,
         taxes: modalItem.taxes,
       });
-
-      // Show toast for external entry (no animation feedback)
-      if (!hasAnimation) {
-        toast.success(`${modalItem.name} added to cart`);
-      }
     },
     [modalItem, addItem]
   );
