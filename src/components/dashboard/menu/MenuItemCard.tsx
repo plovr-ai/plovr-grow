@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Trash2, ImageIcon } from "lucide-react";
+import { GripVertical, Trash2, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   deleteMenuItemAction,
@@ -82,7 +82,8 @@ export function MenuItemCard({ item, taxConfigs, onEdit }: MenuItemCardProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative overflow-hidden rounded-lg border bg-white shadow-sm transition-shadow hover:shadow-md ${
+      onClick={onEdit}
+      className={`group relative cursor-pointer overflow-hidden rounded-lg border bg-white shadow-sm transition-shadow hover:shadow-md ${
         isDragging ? "opacity-50" : ""
       } ${item.status === "inactive" ? "opacity-60" : ""}`}
     >
@@ -90,6 +91,7 @@ export function MenuItemCard({ item, taxConfigs, onEdit }: MenuItemCardProps) {
       <button
         {...attributes}
         {...listeners}
+        onClick={(e) => e.stopPropagation()}
         className="absolute left-2 top-2 z-10 cursor-grab rounded bg-white/80 p-1 text-gray-400 opacity-0 shadow-sm transition-opacity hover:text-gray-600 group-hover:opacity-100"
       >
         <GripVertical className="h-4 w-4" />
@@ -139,7 +141,10 @@ export function MenuItemCard({ item, taxConfigs, onEdit }: MenuItemCardProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-between border-t px-3 py-2">
+      <div
+        className="flex items-center justify-between border-t px-3 py-2"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Status dropdown */}
         <select
           value={item.status}
@@ -156,21 +161,16 @@ export function MenuItemCard({ item, taxConfigs, onEdit }: MenuItemCardProps) {
           <option value="inactive">Hidden</option>
         </select>
 
-        {/* Edit/Delete buttons */}
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon-sm" onClick={onEdit}>
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={handleDelete}
-            disabled={isPending}
-            className="text-red-500 hover:text-red-600"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        {/* Delete button */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={handleDelete}
+          disabled={isPending}
+          className="text-red-500 hover:text-red-600"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
       </div>
     </div>
   );
