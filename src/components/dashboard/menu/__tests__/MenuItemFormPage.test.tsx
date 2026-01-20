@@ -1,7 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { type ReactNode } from "react";
+import { DashboardProvider } from "@/contexts";
 import { MenuItemFormPage } from "../MenuItemFormPage";
 import type { DashboardMenuItem, TaxConfigOption } from "@/services/menu/menu.types";
+
+// Helper wrapper with DashboardContext
+function Wrapper({ children }: { children: ReactNode }) {
+  return (
+    <DashboardProvider
+      value={{
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        company: {
+          id: "company-1",
+          name: "Test Company",
+          slug: "test-company",
+          logoUrl: null,
+        },
+        merchants: [],
+        currency: "USD",
+        locale: "en-US",
+      }}
+    >
+      {children}
+    </DashboardProvider>
+  );
+}
 
 // Mock Next.js navigation
 const mockPush = vi.fn();
@@ -108,19 +133,19 @@ describe("MenuItemFormPage", () => {
 
   describe("Create Mode (item is null)", () => {
     it("should display 'Add Menu Item' title", () => {
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       expect(screen.getByText("Add Menu Item")).toBeInTheDocument();
     });
 
     it("should display category name", () => {
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       expect(screen.getByText("Category: Appetizers")).toBeInTheDocument();
     });
 
     it("should have empty form fields", () => {
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       const nameInput = screen.getByLabelText(/name/i) as HTMLInputElement;
       const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
@@ -130,13 +155,13 @@ describe("MenuItemFormPage", () => {
     });
 
     it("should display 'Create Item' button", () => {
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       expect(screen.getByRole("button", { name: /create item/i })).toBeInTheDocument();
     });
 
     it("should not display status options in create mode", () => {
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       expect(screen.queryByText("Active")).not.toBeInTheDocument();
       expect(screen.queryByText("Out of Stock")).not.toBeInTheDocument();
@@ -145,7 +170,7 @@ describe("MenuItemFormPage", () => {
     it("should call createMenuItemAction on submit", async () => {
       mockCreateMenuItemAction.mockResolvedValue({ success: true });
 
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       // Fill in required fields
       fireEvent.change(screen.getByLabelText(/name/i), {
@@ -172,7 +197,7 @@ describe("MenuItemFormPage", () => {
     it("should navigate back to menu page on successful create", async () => {
       mockCreateMenuItemAction.mockResolvedValue({ success: true });
 
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       fireEvent.change(screen.getByLabelText(/name/i), {
         target: { value: "New Item" },
@@ -196,13 +221,13 @@ describe("MenuItemFormPage", () => {
     };
 
     it("should display 'Edit Menu Item' title", () => {
-      render(<MenuItemFormPage {...editProps} />);
+      render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
 
       expect(screen.getByText("Edit Menu Item")).toBeInTheDocument();
     });
 
     it("should populate form with item data", () => {
-      render(<MenuItemFormPage {...editProps} />);
+      render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
 
       const nameInput = screen.getByLabelText(/name/i) as HTMLInputElement;
       const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
@@ -212,13 +237,13 @@ describe("MenuItemFormPage", () => {
     });
 
     it("should display 'Save Changes' button", () => {
-      render(<MenuItemFormPage {...editProps} />);
+      render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
 
       expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
     });
 
     it("should display status options in edit mode", () => {
-      render(<MenuItemFormPage {...editProps} />);
+      render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
 
       expect(screen.getByLabelText("Active")).toBeInTheDocument();
       expect(screen.getByLabelText("Out of Stock")).toBeInTheDocument();
@@ -228,7 +253,7 @@ describe("MenuItemFormPage", () => {
     it("should call updateMenuItemAction on submit", async () => {
       mockUpdateMenuItemAction.mockResolvedValue({ success: true });
 
-      render(<MenuItemFormPage {...editProps} />);
+      render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
 
       // Change name
       fireEvent.change(screen.getByLabelText(/name/i), {
@@ -251,7 +276,7 @@ describe("MenuItemFormPage", () => {
 
   describe("Form Validation", () => {
     it("should show error when name is empty", async () => {
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       // Set price but leave name empty
       fireEvent.change(screen.getByLabelText(/price/i), {
@@ -268,7 +293,7 @@ describe("MenuItemFormPage", () => {
     });
 
     it("should show error when price is empty", async () => {
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       fireEvent.change(screen.getByLabelText(/name/i), {
         target: { value: "Test Item" },
@@ -287,7 +312,7 @@ describe("MenuItemFormPage", () => {
     });
 
     it("should show error when price is not a number", async () => {
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       fireEvent.change(screen.getByLabelText(/name/i), {
         target: { value: "Test Item" },
@@ -308,7 +333,7 @@ describe("MenuItemFormPage", () => {
 
   describe("Navigation", () => {
     it("should navigate back to menu page when clicking Cancel", () => {
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
 
@@ -316,7 +341,7 @@ describe("MenuItemFormPage", () => {
     });
 
     it("should navigate back to menu page when clicking back button", () => {
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       // Find the back button (ArrowLeft icon button)
       const backButton = screen.getByRole("button", { name: "" });
@@ -333,7 +358,7 @@ describe("MenuItemFormPage", () => {
         error: "Server error occurred",
       });
 
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       fireEvent.change(screen.getByLabelText(/name/i), {
         target: { value: "Test Item" },
@@ -359,7 +384,7 @@ describe("MenuItemFormPage", () => {
         () => new Promise(() => {})
       );
 
-      render(<MenuItemFormPage {...defaultProps} />);
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
 
       fireEvent.change(screen.getByLabelText(/name/i), {
         target: { value: "Test Item" },
