@@ -23,6 +23,7 @@ vi.mock("@/repositories/order.repository", () => ({
     getMerchantStats: vi.fn(),
     countPendingOrders: vi.fn(),
     updateLoyaltyMemberId: vi.fn(),
+    getOrdersByLoyaltyMember: vi.fn(),
   },
 }));
 
@@ -550,6 +551,127 @@ describe("OrderService", () => {
         "order-1",
         "member-123"
       );
+    });
+  });
+
+  describe("getMemberOrders()", () => {
+    it("should return paginated orders for a loyalty member", async () => {
+      const mockResult = {
+        items: [
+          {
+            id: "order-1",
+            tenantId: "tenant-1",
+            loyaltyMemberId: "member-1",
+            orderNumber: "#001",
+            status: "completed",
+            orderType: "pickup",
+            totalAmount: 45.99,
+            createdAt: new Date("2024-01-15"),
+            merchant: {
+              id: "merchant-1",
+              name: "Downtown Store",
+              slug: "downtown",
+              timezone: "America/New_York",
+            },
+          },
+          {
+            id: "order-2",
+            tenantId: "tenant-1",
+            loyaltyMemberId: "member-1",
+            orderNumber: "#002",
+            status: "pending",
+            orderType: "delivery",
+            totalAmount: 78.5,
+            createdAt: new Date("2024-01-20"),
+            merchant: {
+              id: "merchant-2",
+              name: "Uptown Store",
+              slug: "uptown",
+              timezone: "America/New_York",
+            },
+          },
+        ],
+        total: 2,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
+      };
+
+      vi.mocked(orderRepository.getOrdersByLoyaltyMember).mockResolvedValue(
+        mockResult as never
+      );
+
+      const result = await orderService.getMemberOrders("tenant-1", "member-1");
+
+      expect(orderRepository.getOrdersByLoyaltyMember).toHaveBeenCalledWith(
+        "tenant-1",
+        "member-1",
+        undefined
+      );
+
+      expect(result.items).toHaveLength(2);
+      expect(result.total).toBe(2);
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(10);
+      expect(result.totalPages).toBe(1);
+    });
+
+    it("should pass pagination options to repository", async () => {
+      vi.mocked(orderRepository.getOrdersByLoyaltyMember).mockResolvedValue({
+        items: [],
+        total: 0,
+        page: 2,
+        pageSize: 5,
+        totalPages: 0,
+      } as never);
+
+      await orderService.getMemberOrders("tenant-1", "member-1", {
+        page: 2,
+        pageSize: 5,
+      });
+
+      expect(orderRepository.getOrdersByLoyaltyMember).toHaveBeenCalledWith(
+        "tenant-1",
+        "member-1",
+        {
+          page: 2,
+          pageSize: 5,
+        }
+      );
+    });
+
+    it("should return empty results when member has no orders", async () => {
+      vi.mocked(orderRepository.getOrdersByLoyaltyMember).mockResolvedValue({
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 10,
+        totalPages: 0,
+      } as never);
+
+      const result = await orderService.getMemberOrders("tenant-1", "member-1");
+
+      expect(result.items).toHaveLength(0);
+      expect(result.total).toBe(0);
+    });
+
+    it("should handle multiple pages of orders", async () => {
+      vi.mocked(orderRepository.getOrdersByLoyaltyMember).mockResolvedValue({
+        items: [],
+        total: 25,
+        page: 2,
+        pageSize: 10,
+        totalPages: 3,
+      } as never);
+
+      const result = await orderService.getMemberOrders("tenant-1", "member-1", {
+        page: 2,
+        pageSize: 10,
+      });
+
+      expect(result.page).toBe(2);
+      expect(result.totalPages).toBe(3);
+      expect(result.total).toBe(25);
     });
   });
 });

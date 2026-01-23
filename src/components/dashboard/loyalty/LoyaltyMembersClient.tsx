@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/orders/Pagination";
@@ -128,22 +129,52 @@ export function LoyaltyMembersClient({
               {members.map((member) => (
                 <tr key={member.id} className="hover:bg-gray-50">
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                    {formatPhone(member.phone)}
+                    <Link
+                      href={`/dashboard/loyalty/members/${member.id}`}
+                      className="block hover:text-blue-600"
+                    >
+                      {formatPhone(member.phone)}
+                    </Link>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                    {member.name || "-"}
+                    <Link
+                      href={`/dashboard/loyalty/members/${member.id}`}
+                      className="block hover:text-blue-600"
+                    >
+                      {member.name || "-"}
+                    </Link>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-gray-900">
-                    {member.points.toLocaleString()}
+                    <Link
+                      href={`/dashboard/loyalty/members/${member.id}`}
+                      className="block hover:text-blue-600"
+                    >
+                      {member.points.toLocaleString()}
+                    </Link>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-900">
-                    {member.totalOrders}
+                    <Link
+                      href={`/dashboard/loyalty/members/${member.id}`}
+                      className="block hover:text-blue-600"
+                    >
+                      {member.totalOrders}
+                    </Link>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-900">
-                    {formatPrice(member.totalSpent)}
+                    <Link
+                      href={`/dashboard/loyalty/members/${member.id}`}
+                      className="block hover:text-blue-600"
+                    >
+                      {formatPrice(member.totalSpent)}
+                    </Link>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                    {formatDate(member.enrolledAt)}
+                    <Link
+                      href={`/dashboard/loyalty/members/${member.id}`}
+                      className="block hover:text-blue-600"
+                    >
+                      {formatDate(member.enrolledAt)}
+                    </Link>
                   </td>
                 </tr>
               ))}

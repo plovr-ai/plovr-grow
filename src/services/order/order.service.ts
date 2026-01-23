@@ -4,6 +4,7 @@
 import { Prisma } from "@prisma/client";
 import { menuService } from "@/services/menu";
 import { orderRepository } from "@/repositories/order.repository";
+import { pointTransactionRepository } from "@/repositories/point-transaction.repository";
 import { generateOrderNumber } from "@/lib/utils";
 import { calculateOrderPricing, type PricingItem, type TipInput } from "@/lib/pricing";
 import { orderEventEmitter } from "./order-events";
@@ -164,7 +165,13 @@ export class OrderService {
     if (!order) return null;
 
     const timeline = this.buildTimeline(order);
-    return { ...order, timeline };
+
+    // Fetch points earned for this order (if any)
+    const pointTransaction = await pointTransactionRepository.getByOrderId(tenantId, orderId);
+    const pointsEarned =
+      pointTransaction && pointTransaction.type === "earn" ? pointTransaction.points : undefined;
+
+    return { ...order, timeline, pointsEarned };
   }
 
   /**
@@ -367,6 +374,20 @@ export class OrderService {
     loyaltyMemberId: string
   ) {
     return orderRepository.updateLoyaltyMemberId(tenantId, orderId, loyaltyMemberId);
+  }
+
+  /**
+   * Get orders for a loyalty member with pagination
+   */
+  async getMemberOrders(
+    tenantId: string,
+    loyaltyMemberId: string,
+    options?: {
+      page?: number;
+      pageSize?: number;
+    }
+  ) {
+    return orderRepository.getOrdersByLoyaltyMember(tenantId, loyaltyMemberId, options);
   }
 }
 

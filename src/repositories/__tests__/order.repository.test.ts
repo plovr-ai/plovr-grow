@@ -66,7 +66,6 @@ describe("OrderRepository", () => {
         skip: 0,
         take: 20,
         include: {
-          customer: true,
           merchant: {
             select: {
               id: true,
@@ -268,7 +267,6 @@ describe("OrderRepository", () => {
         skip: 5,
         take: 5,
         include: {
-          customer: true,
           merchant: {
             select: {
               id: true,
@@ -279,6 +277,181 @@ describe("OrderRepository", () => {
           },
         },
       });
+    });
+  });
+
+  describe("getOrdersByLoyaltyMember", () => {
+    it("should return paginated orders for a loyalty member", async () => {
+      const mockOrders = [
+        {
+          id: "order-1",
+          tenantId: "tenant-1",
+          loyaltyMemberId: "member-1",
+          orderNumber: "#001",
+          status: "completed",
+          orderType: "pickup",
+          totalAmount: 45.99,
+          createdAt: new Date("2024-01-15"),
+          merchant: {
+            id: "merchant-1",
+            name: "Downtown Store",
+            slug: "downtown",
+            timezone: "America/New_York",
+          },
+        },
+        {
+          id: "order-2",
+          tenantId: "tenant-1",
+          loyaltyMemberId: "member-1",
+          orderNumber: "#002",
+          status: "pending",
+          orderType: "delivery",
+          totalAmount: 78.5,
+          createdAt: new Date("2024-01-20"),
+          merchant: {
+            id: "merchant-2",
+            name: "Uptown Store",
+            slug: "uptown",
+            timezone: "America/New_York",
+          },
+        },
+      ];
+
+      vi.mocked(prisma.order.findMany).mockResolvedValue(mockOrders as never);
+      vi.mocked(prisma.order.count).mockResolvedValue(2);
+
+      const result = await repository.getOrdersByLoyaltyMember(
+        "tenant-1",
+        "member-1"
+      );
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith({
+        where: {
+          tenantId: "tenant-1",
+          loyaltyMemberId: "member-1",
+        },
+        orderBy: { createdAt: "desc" },
+        skip: 0,
+        take: 10,
+        include: {
+          merchant: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              timezone: true,
+            },
+          },
+        },
+      });
+
+      expect(result.items).toHaveLength(2);
+      expect(result.total).toBe(2);
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(10);
+      expect(result.totalPages).toBe(1);
+    });
+
+    it("should handle pagination correctly", async () => {
+      vi.mocked(prisma.order.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.order.count).mockResolvedValue(25);
+
+      const result = await repository.getOrdersByLoyaltyMember(
+        "tenant-1",
+        "member-1",
+        {
+          page: 2,
+          pageSize: 10,
+        }
+      );
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 10, // (page - 1) * pageSize = (2 - 1) * 10
+          take: 10,
+        })
+      );
+
+      expect(result.page).toBe(2);
+      expect(result.pageSize).toBe(10);
+      expect(result.totalPages).toBe(3); // Math.ceil(25 / 10)
+    });
+
+    it("should use default pagination values when not provided", async () => {
+      vi.mocked(prisma.order.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.order.count).mockResolvedValue(0);
+
+      await repository.getOrdersByLoyaltyMember("tenant-1", "member-1");
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 0,
+          take: 10, // default pageSize
+        })
+      );
+    });
+
+    it("should return empty results when member has no orders", async () => {
+      vi.mocked(prisma.order.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.order.count).mockResolvedValue(0);
+
+      const result = await repository.getOrdersByLoyaltyMember(
+        "tenant-1",
+        "member-1"
+      );
+
+      expect(result.items).toHaveLength(0);
+      expect(result.total).toBe(0);
+      expect(result.totalPages).toBe(0);
+    });
+
+    it("should filter by tenantId and loyaltyMemberId", async () => {
+      vi.mocked(prisma.order.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.order.count).mockResolvedValue(0);
+
+      await repository.getOrdersByLoyaltyMember("tenant-1", "member-1");
+
+      expect(prisma.order.count).toHaveBeenCalledWith({
+        where: {
+          tenantId: "tenant-1",
+          loyaltyMemberId: "member-1",
+        },
+      });
+    });
+
+    it("should order by createdAt descending", async () => {
+      vi.mocked(prisma.order.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.order.count).mockResolvedValue(0);
+
+      await repository.getOrdersByLoyaltyMember("tenant-1", "member-1");
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: { createdAt: "desc" },
+        })
+      );
+    });
+
+    it("should include merchant information", async () => {
+      vi.mocked(prisma.order.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.order.count).mockResolvedValue(0);
+
+      await repository.getOrdersByLoyaltyMember("tenant-1", "member-1");
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: {
+            merchant: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                timezone: true,
+              },
+            },
+          },
+        })
+      );
     });
   });
 });

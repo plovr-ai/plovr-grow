@@ -560,6 +560,53 @@ export class OrderRepository {
       },
     });
   }
+
+  /**
+   * Get orders for a loyalty member with pagination
+   */
+  async getOrdersByLoyaltyMember(
+    tenantId: string,
+    loyaltyMemberId: string,
+    options: {
+      page?: number;
+      pageSize?: number;
+    } = {}
+  ) {
+    const { page = 1, pageSize = 10 } = options;
+
+    const where: Prisma.OrderWhereInput = {
+      tenantId,
+      loyaltyMemberId,
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          merchant: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              timezone: true,
+            },
+          },
+        },
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  }
 }
 
 export const orderRepository = new OrderRepository();
