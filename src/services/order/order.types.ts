@@ -151,4 +151,5 @@ export interface OrderWithTimeline extends OrderData {
     slug: string;
     timezone: string;
   } | null;
+  pointsEarned?: number; // Points earned from this order (if loyalty member)
 }

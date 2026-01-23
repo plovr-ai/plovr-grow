@@ -33,4 +33,5 @@ export interface OrderDetailData {
     name: string;
     slug: string;
   } | null;
+  pointsEarned?: number; // Points earned from this order (if loyalty member)
 }

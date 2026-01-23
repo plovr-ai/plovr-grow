@@ -9,6 +9,7 @@ import { OrderPriceSummary } from "./OrderPriceSummary";
 import { CustomerInfo } from "./CustomerInfo";
 import { OrderTimeline } from "./OrderTimeline";
 import { LoyaltyRegistrationCTA } from "./LoyaltyRegistrationCTA";
+import { useLoyalty } from "@/contexts/LoyaltyContext";
 import type { OrderDetailData, TimelineEvent } from "./order-detail.types";
 import type { OrderStatus, OrderType, OrderItemData } from "@/types";
 
@@ -30,6 +31,7 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "connected" | "disconnected"
   >("connecting");
+  const { member } = useLoyalty();
 
   // SSE connection for real-time updates
   useEffect(() => {
@@ -182,6 +184,8 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
           deliveryFee={Number(order.deliveryFee)}
           discount={Number(order.discount)}
           totalAmount={Number(order.totalAmount)}
+          pointsEarned={order.pointsEarned}
+          member={member}
         />
 
         {/* Customer Info */}

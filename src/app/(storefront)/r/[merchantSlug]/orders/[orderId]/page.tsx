@@ -78,6 +78,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
       timestamp: event.timestamp,
     })),
     merchant: order.merchant,
+    pointsEarned: order.pointsEarned,
   };
 
   return <OrderDetailClient order={orderData} merchantSlug={merchantSlug} imageMap={imageMap} />;
