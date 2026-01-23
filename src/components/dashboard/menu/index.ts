@@ -7,3 +7,7 @@ export { MenuItemFormPage } from "./MenuItemFormPage";
 export { ModifierGroupEditor } from "./ModifierGroupEditor";
 export { TaxSelector } from "./TaxSelector";
 export { ImageUploader } from "./ImageUploader";
+export { MenuItemRow } from "./MenuItemRow";
+export { MenuItemSearchList } from "./MenuItemSearchList";
+export { FeaturedItemsClient } from "./FeaturedItemsClient";
+export { AddExistingItemModal } from "./AddExistingItemModal";
