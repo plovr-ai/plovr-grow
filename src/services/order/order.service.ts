@@ -50,7 +50,8 @@ export class OrderService {
         customerName: input.customerName,
         customerPhone: input.customerPhone,
         customerEmail: input.customerEmail ?? null,
-        orderType: input.orderType,
+        orderMode: input.orderMode,
+        salesChannel: input.salesChannel ?? "online_order",
         status: "pending",
         items: input.items as unknown as Prisma.InputJsonValue,
         subtotal: calculation.subtotal,
@@ -78,7 +79,8 @@ export class OrderService {
       timestamp: new Date(),
       customerName: input.customerName,
       customerPhone: input.customerPhone,
-      orderType: input.orderType,
+      orderMode: input.orderMode,
+      salesChannel: input.salesChannel ?? "online_order",
       totalAmount: calculation.totalAmount,
       items: input.items,
     });
@@ -93,7 +95,7 @@ export class OrderService {
   async calculateOrderTotals(
     _tenantId: string,
     merchantId: string,
-    input: Pick<CreateOrderInput, "items" | "orderType" | "tipAmount" | "discountCode">
+    input: Pick<CreateOrderInput, "items" | "orderMode" | "tipAmount" | "discountCode">
   ): Promise<OrderCalculation> {
     // Convert to PricingItem using taxes from cart items directly
     // Frontend already passes complete tax info (rate, roundingMethod)
@@ -118,7 +120,7 @@ export class OrderService {
     // Calculate delivery fee (TODO: get from merchant settings)
     // merchantId can be used to fetch merchant-specific delivery fee configuration
     void merchantId; // Reserved for future merchant-specific fee configuration
-    const deliveryFee = input.orderType === "delivery" ? 3.99 : 0;
+    const deliveryFee = input.orderMode === "delivery" ? 3.99 : 0;
 
     // Calculate discount (TODO: implement discount service)
     // When implemented, discountCode will be validated and discount calculated

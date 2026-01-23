@@ -4,7 +4,7 @@ import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { StatusBadge } from "./StatusBadge";
 import { formatPrice } from "@/lib/utils";
 import { formatDate, formatTime, getTimezoneAbbr } from "@/lib/datetime";
-import type { OrderType, OrderStatus } from "@/types";
+import type { OrderMode, OrderStatus, SalesChannel } from "@/types";
 
 // Serialized order type with Decimal fields converted to numbers
 type SerializedOrder = Omit<Order, "tenant" | "subtotal" | "taxAmount" | "tipAmount" | "deliveryFee" | "discount" | "totalAmount"> & {
@@ -26,10 +26,16 @@ interface OrderCardProps {
   order: SerializedOrder;
 }
 
-const orderTypeLabels: Record<OrderType, string> = {
+const orderModeLabels: Record<OrderMode, string> = {
   pickup: "Pickup",
   delivery: "Delivery",
   dine_in: "Dine In",
+};
+
+const salesChannelLabels: Record<SalesChannel, string> = {
+  online_order: "Online Order",
+  catering: "Catering",
+  giftcard: "Gift Card",
 };
 
 export function OrderCard({ order }: OrderCardProps) {
@@ -69,9 +75,12 @@ export function OrderCard({ order }: OrderCardProps) {
           <div className="font-medium">{order.customerName}</div>
           <div className="text-gray-600">{order.customerPhone}</div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
-              {orderTypeLabels[order.orderType as OrderType]}
+              {orderModeLabels[order.orderMode as OrderMode]}
+            </span>
+            <span className="inline-flex items-center rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+              {salesChannelLabels[order.salesChannel as SalesChannel] || order.salesChannel}
             </span>
             <span className="text-gray-600">{itemCount} item{itemCount !== 1 ? "s" : ""}</span>
           </div>

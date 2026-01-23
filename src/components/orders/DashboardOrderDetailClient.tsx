@@ -5,7 +5,7 @@ import { ArrowLeft, User, Phone, Mail, MapPin, FileText } from "lucide-react";
 import { useDashboardFormatPrice, useDashboardFormatDateTime } from "@/hooks";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "./StatusBadge";
-import type { OrderStatus, OrderType, OrderItemData, DeliveryAddress } from "@/types";
+import type { OrderStatus, OrderMode, OrderItemData, DeliveryAddress, SalesChannel } from "@/types";
 
 // Types for Dashboard Order Detail
 interface TimelineEvent {
@@ -17,7 +17,8 @@ interface DashboardOrderDetailData {
   id: string;
   orderNumber: string;
   status: string;
-  orderType: string;
+  orderMode: string;
+  salesChannel: string;
   items: OrderItemData[];
   customerName: string;
   customerPhone: string;
@@ -49,10 +50,16 @@ interface Props {
   imageMap: Record<string, string | null>;
 }
 
-const orderTypeLabels: Record<OrderType, string> = {
+const orderModeLabels: Record<OrderMode, string> = {
   pickup: "Pickup",
   delivery: "Delivery",
   dine_in: "Dine In",
+};
+
+const salesChannelLabels: Record<SalesChannel, string> = {
+  online_order: "Online Order",
+  catering: "Catering",
+  giftcard: "Gift Card",
 };
 
 // ==================== Order Status Progress ====================
@@ -80,10 +87,10 @@ const STATUS_ORDER: Record<OrderStatus, number> = {
 
 function OrderStatusProgress({
   currentStatus,
-  orderType,
+  orderMode,
 }: {
   currentStatus: OrderStatus;
-  orderType: OrderType;
+  orderMode: OrderMode;
 }) {
   const currentIndex = STATUS_ORDER[currentStatus];
   const isCancelled = currentStatus === "cancelled";
@@ -118,7 +125,7 @@ function OrderStatusProgress({
     );
   }
 
-  const readyLabel = orderType === "delivery" ? "Out for Delivery" : "Ready for Pickup";
+  const readyLabel = orderMode === "delivery" ? "Out for Delivery" : "Ready for Pickup";
   const stepsWithLabels = STEPS.map((step) =>
     step.status === "ready" ? { ...step, label: readyLabel } : step
   );
@@ -354,14 +361,14 @@ function CustomerInfo({
   customerName,
   customerPhone,
   customerEmail,
-  orderType,
+  orderMode,
   deliveryAddress,
   notes,
 }: {
   customerName: string;
   customerPhone: string;
   customerEmail: string | null;
-  orderType: OrderType;
+  orderMode: OrderMode;
   deliveryAddress: DeliveryAddress | null;
   notes: string | null;
 }) {
@@ -390,7 +397,7 @@ function CustomerInfo({
         </div>
 
         {/* Delivery Address */}
-        {orderType === "delivery" && deliveryAddress && (
+        {orderMode === "delivery" && deliveryAddress && (
           <div className="pt-3 border-t border-gray-100">
             <h4 className="text-sm font-medium text-gray-700 mb-2">Delivery Address</h4>
             <div className="flex items-start gap-2 text-gray-600">
@@ -544,7 +551,7 @@ export function DashboardOrderDetailClient({ order, imageMap }: Props) {
             <StatusBadge status={order.status as OrderStatus} />
           </div>
           <p className="text-sm text-gray-500 mt-1">
-            {orderTypeLabels[order.orderType as OrderType]} &bull; {order.merchant.name}
+            {orderModeLabels[order.orderMode as OrderMode]} &bull; {salesChannelLabels[order.salesChannel as SalesChannel]} &bull; {order.merchant.name}
           </p>
         </div>
       </div>
@@ -552,7 +559,7 @@ export function DashboardOrderDetailClient({ order, imageMap }: Props) {
       {/* Status Progress */}
       <OrderStatusProgress
         currentStatus={order.status as OrderStatus}
-        orderType={order.orderType as OrderType}
+        orderMode={order.orderMode as OrderMode}
       />
 
       {/* Two Column Layout for Items and Summary */}
@@ -579,7 +586,7 @@ export function DashboardOrderDetailClient({ order, imageMap }: Props) {
           customerName={order.customerName}
           customerPhone={order.customerPhone}
           customerEmail={order.customerEmail}
-          orderType={order.orderType as OrderType}
+          orderMode={order.orderMode as OrderMode}
           deliveryAddress={order.deliveryAddress}
           notes={order.notes}
         />

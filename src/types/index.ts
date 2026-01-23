@@ -87,7 +87,7 @@ export interface Cart {
 
 // ==================== Order Types ====================
 
-export type OrderType = "pickup" | "delivery" | "dine_in";
+export type OrderMode = "pickup" | "delivery" | "dine_in";
 
 export type OrderStatus =
   | "pending"
@@ -96,6 +96,8 @@ export type OrderStatus =
   | "ready"
   | "completed"
   | "cancelled";
+
+export type SalesChannel = "online_order" | "catering" | "giftcard";
 
 export interface OrderItemData {
   menuItemId: string;
@@ -115,7 +117,7 @@ export interface CreateOrderInput {
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
-  orderType: OrderType;
+  orderMode: OrderMode;
   items: OrderItemData[];
   notes?: string;
   deliveryAddress?: DeliveryAddress;

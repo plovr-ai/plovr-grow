@@ -6,7 +6,7 @@ import { checkoutFormSchema } from "@storefront/lib/validations/checkout";
 import type { OrderItemData } from "@/types";
 
 interface OrderRequestBody {
-  orderType: string;
+  orderMode: string;
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
@@ -48,7 +48,7 @@ export async function POST(
 
     // Validate form data with Zod
     const formValidation = checkoutFormSchema.safeParse({
-      orderType: body.orderType,
+      orderMode: body.orderMode,
       customerName: body.customerName,
       customerPhone: body.customerPhone,
       customerEmail: body.customerEmail,
@@ -84,7 +84,8 @@ export async function POST(
       customerName: formValidation.data.customerName,
       customerPhone: formValidation.data.customerPhone,
       customerEmail: formValidation.data.customerEmail || undefined,
-      orderType: formValidation.data.orderType,
+      orderMode: formValidation.data.orderMode,
+      salesChannel: "online_order",
       items: body.items,
       notes: formValidation.data.notes || undefined,
       deliveryAddress: formValidation.data.deliveryAddress,

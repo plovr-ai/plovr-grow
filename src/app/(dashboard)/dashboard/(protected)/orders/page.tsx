@@ -3,13 +3,14 @@ import { redirect } from "next/navigation";
 import { companyService } from "@/services/company";
 import { orderService } from "@/services/order";
 import { OrdersManagementClient, type SerializedOrder } from "@/components/orders/OrdersManagementClient";
-import type { OrderStatus, OrderType } from "@/types";
+import type { OrderStatus, OrderMode, SalesChannel } from "@/types";
 
 interface OrdersManagementProps {
   searchParams: Promise<{
     page?: string;
     status?: string;
-    type?: string;
+    mode?: string;
+    salesChannel?: string;
     merchantId?: string;
     dateFrom?: string;
     dateTo?: string;
@@ -36,7 +37,8 @@ export default async function OrdersManagementPage({
   // Parse filter parameters
   const currentPage = parseInt(search.page ?? "1", 10);
   const statusFilter = search.status as OrderStatus | undefined;
-  const typeFilter = search.type as OrderType | undefined;
+  const modeFilter = search.mode as OrderMode | undefined;
+  const salesChannelFilter = search.salesChannel as SalesChannel | undefined;
   const merchantFilter = search.merchantId;
   const dateFrom = search.dateFrom ? new Date(search.dateFrom) : undefined;
   const dateTo = search.dateTo ? new Date(search.dateTo) : undefined;
@@ -46,7 +48,8 @@ export default async function OrdersManagementPage({
   const ordersData = await orderService.getCompanyOrders(tenantId, companyId, {
     merchantId: merchantFilter && merchantFilter !== "all" ? merchantFilter : undefined,
     status: statusFilter,
-    orderType: typeFilter,
+    orderMode: modeFilter,
+    salesChannel: salesChannelFilter,
     dateFrom,
     dateTo,
     page: currentPage,
@@ -74,7 +77,8 @@ export default async function OrdersManagementPage({
       initialFilters={{
         merchantId: merchantFilter ?? "all",
         status: statusFilter ?? "all",
-        orderType: typeFilter ?? "all",
+        orderMode: modeFilter ?? "all",
+        salesChannel: salesChannelFilter ?? "all",
         dateFrom: search.dateFrom ?? "",
         dateTo: search.dateTo ?? "",
       }}

@@ -31,7 +31,8 @@ interface OrdersManagementClientProps {
   initialFilters: {
     merchantId: string;
     status: string;
-    orderType: string;
+    orderMode: string;
+    salesChannel: string;
     dateFrom: string;
     dateTo: string;
   };
@@ -52,9 +53,10 @@ export function OrdersManagementClient({
 
     // Map internal filter names to URL parameter names
     const paramKeyMap: Record<string, string> = {
-      orderType: "type",
+      orderMode: "mode",
       merchantId: "merchantId",
       status: "status",
+      salesChannel: "salesChannel",
       dateFrom: "dateFrom",
       dateTo: "dateTo",
     };
@@ -98,7 +100,8 @@ export function OrdersManagementClient({
       <OrderFilters
         filters={{
           status: initialFilters.status,
-          orderType: initialFilters.orderType,
+          orderMode: initialFilters.orderMode,
+          salesChannel: initialFilters.salesChannel,
           dateFrom: initialFilters.dateFrom,
           dateTo: initialFilters.dateTo,
         }}

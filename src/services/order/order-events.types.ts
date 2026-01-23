@@ -1,4 +1,4 @@
-import type { OrderStatus, OrderType, OrderItemData } from "@/types";
+import type { OrderStatus, OrderMode, OrderItemData, SalesChannel } from "@/types";
 
 export type OrderEventType =
   | "order.created"
@@ -22,7 +22,8 @@ export interface OrderEventPayload {
 export interface OrderCreatedEvent extends OrderEventPayload {
   customerName: string;
   customerPhone: string;
-  orderType: OrderType;
+  orderMode: OrderMode;
+  salesChannel: SalesChannel;
   totalAmount: number;
   items: OrderItemData[];
 }

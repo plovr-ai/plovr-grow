@@ -1,10 +1,11 @@
 import type { Order } from "@prisma/client";
 import type {
-  OrderType,
+  OrderMode,
   OrderStatus,
   OrderItemData,
   DeliveryAddress,
   TaxBreakdownItem,
+  SalesChannel,
 } from "@/types";
 import type { FeeBreakdownItem } from "@/lib/pricing";
 
@@ -17,7 +18,8 @@ export interface OrderData {
   customerName: string;
   customerPhone: string;
   customerEmail: string | null;
-  orderType: string;
+  orderMode: string;
+  salesChannel: string;
   status: string;
   items: OrderItemData[] | unknown;
   subtotal: number | unknown;
@@ -43,7 +45,8 @@ export interface CreateOrderInput {
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
-  orderType: OrderType;
+  orderMode: OrderMode;
+  salesChannel?: SalesChannel;
   items: OrderItemData[];
   notes?: string;
   deliveryAddress?: DeliveryAddress;
@@ -76,7 +79,8 @@ export interface UpdateOrderStatusInput {
 export interface OrderListOptions {
   merchantId?: string;
   status?: OrderStatus;
-  orderType?: OrderType;
+  orderMode?: OrderMode;
+  salesChannel?: SalesChannel;
   dateFrom?: Date;
   dateTo?: Date;
   search?: string;
@@ -88,7 +92,8 @@ export interface OrderListOptions {
 
 export interface MerchantOrderListOptions {
   status?: OrderStatus;
-  orderType?: OrderType;
+  orderMode?: OrderMode;
+  salesChannel?: SalesChannel;
   dateFrom?: Date;
   dateTo?: Date;
   search?: string;
@@ -101,7 +106,8 @@ export interface MerchantOrderListOptions {
 export interface CompanyOrderListOptions {
   merchantId?: string;
   status?: OrderStatus;
-  orderType?: OrderType;
+  orderMode?: OrderMode;
+  salesChannel?: SalesChannel;
   dateFrom?: Date;
   dateTo?: Date;
   search?: string;
@@ -125,7 +131,7 @@ export interface OrderStats {
   totalRevenue: number;
   averageOrderValue: number;
   ordersByStatus: Partial<Record<OrderStatus, number>>;
-  ordersByType: Partial<Record<OrderType, number>>;
+  ordersByMode: Partial<Record<OrderMode, number>>;
 }
 
 export interface PaginatedOrders {

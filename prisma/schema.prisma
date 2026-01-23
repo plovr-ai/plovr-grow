@@ -25,6 +25,8 @@ model Tenant {
   loyaltyMembers     LoyaltyMember[]
   pointTransactions  PointTransaction[]
   otpVerifications   OtpVerification[]
+  featuredItems      FeaturedItem[]
+  cateringLeads      CateringLead[]
 
   @@map("tenants")
 }
@@ -58,6 +60,7 @@ model Company {
   taxConfigs            TaxConfig[]
   loyaltyConfig         LoyaltyConfig?
   loyaltyMembers        LoyaltyMember[]
+  featuredItems         FeaturedItem[]
 
   @@index([slug])
   @@index([tenantId])
@@ -85,21 +88,21 @@ model Menu {
 }
 
 model MenuCategory {
-  id          String     @id
-  tenantId    String     @map("tenant_id")
-  companyId   String     @map("company_id")
-  menuId      String     @map("menu_id")
-  name        String
-  description String?    @db.Text
-  imageUrl    String?    @map("image_url")
-  sortOrder   Int        @default(0) @map("sort_order")
-  status      String     @default("active")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  menu        Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
-  menuItems   MenuItem[]
+  id            String             @id
+  tenantId      String             @map("tenant_id")
+  companyId     String             @map("company_id")
+  menuId        String             @map("menu_id")
+  name          String
+  description   String?            @db.Text
+  imageUrl      String?            @map("image_url")
+  sortOrder     Int                @default(0) @map("sort_order")
+  status        String             @default("active")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  company       Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  menu          Menu               @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  categoryItems MenuCategoryItem[]
 
   @@index([companyId])
   @@index([companyId, sortOrder])
@@ -109,32 +112,44 @@ model MenuCategory {
 }
 
 model MenuItem {
-  id            String        @id
-  tenantId      String        @map("tenant_id")
-  companyId     String        @map("company_id")
-  categoryId    String        @map("category_id")
+  id            String             @id
+  tenantId      String             @map("tenant_id")
+  companyId     String             @map("company_id")
   name          String
-  description   String?       @db.Text
-  price         Decimal       @db.Decimal(10, 2)
-  imageUrl      String?       @map("image_url")
-  sortOrder     Int           @default(0) @map("sort_order")
-  status        String        @default("active")
+  description   String?            @db.Text
+  price         Decimal            @db.Decimal(10, 2)
+  imageUrl      String?            @map("image_url")
+  status        String             @default("active")
   options       Json?
   nutrition     Json?
   tags          Json?
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-  category      MenuCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  company       Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   menuItemTaxes MenuItemTax[]
+  categories    MenuCategoryItem[]
+  featuredItems FeaturedItem[]
 
-  @@index([categoryId], map: "menu_items_category_id_fkey")
-  @@index([companyId, categoryId])
   @@index([companyId])
   @@index([companyId, status])
   @@index([tenantId])
   @@map("menu_items")
+}
+
+model MenuCategoryItem {
+  id         String       @id
+  categoryId String       @map("category_id")
+  menuItemId String       @map("menu_item_id")
+  sortOrder  Int          @default(0) @map("sort_order")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  category   MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  menuItem   MenuItem     @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, menuItemId])
+  @@index([categoryId])
+  @@index([menuItemId])
+  @@map("menu_category_items")
 }
 
 model Merchant {
@@ -165,6 +180,7 @@ model Merchant {
   orders            Order[]
   merchantTaxRates  MerchantTaxRate[]
   pointTransactions PointTransaction[]
+  cateringLeads     CateringLead[]
 
   @@index([companyId])
   @@index([slug])
@@ -181,7 +197,8 @@ model Order {
   customerName      String             @map("customer_name")
   customerPhone     String             @map("customer_phone")
   customerEmail     String?            @map("customer_email")
-  orderType         String             @map("order_type")
+  orderMode         String             @map("order_mode")
+  salesChannel      String             @default("online_order") @map("sales_channel")
   status            String             @default("pending")
   items             Json
   subtotal          Decimal            @db.Decimal(10, 2)
@@ -210,6 +227,7 @@ model Order {
   @@index([tenantId, createdAt])
   @@index([tenantId])
   @@index([tenantId, status])
+  @@index([tenantId, salesChannel])
   @@map("orders")
 }
 
@@ -385,4 +403,49 @@ model OtpVerification {
   @@index([tenantId])
   @@index([expiresAt])
   @@map("otp_verifications")
+}
+
+// ==================== Featured Items ====================
+
+model FeaturedItem {
+  id         String   @id @default(cuid())
+  tenantId   String   @map("tenant_id")
+  companyId  String   @map("company_id")
+  menuItemId String   @map("menu_item_id")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, menuItemId])
+  @@index([tenantId])
+  @@index([companyId])
+  @@map("featured_items")
+}
+
+// ==================== Catering ====================
+
+model CateringLead {
+  id         String   @id
+  tenantId   String   @map("tenant_id")
+  merchantId String   @map("merchant_id")
+  name       String
+  phone      String
+  email      String?
+  notes      String?  @db.Text
+  status     String   @default("pending")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([merchantId])
+  @@index([merchantId, status])
+  @@index([merchantId, createdAt])
+  @@map("catering_leads")
 }

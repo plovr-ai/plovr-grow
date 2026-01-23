@@ -1,6 +1,6 @@
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import type { OrderStatus, OrderType } from "@/types";
+import type { OrderStatus, OrderMode, SalesChannel } from "@/types";
 
 export class OrderRepository {
   /**
@@ -79,7 +79,8 @@ export class OrderRepository {
     options: {
       status?: OrderStatus;
       merchantId?: string;
-      orderType?: OrderType;
+      orderMode?: OrderMode;
+      salesChannel?: SalesChannel;
       dateFrom?: Date;
       dateTo?: Date;
       page?: number;
@@ -91,7 +92,8 @@ export class OrderRepository {
     const {
       status,
       merchantId,
-      orderType,
+      orderMode,
+      salesChannel,
       dateFrom,
       dateTo,
       page = 1,
@@ -104,7 +106,8 @@ export class OrderRepository {
       tenantId,
       ...(status && { status }),
       ...(merchantId && { merchantId }),
-      ...(orderType && { orderType }),
+      ...(orderMode && { orderMode }),
+      ...(salesChannel && { salesChannel }),
       ...(dateFrom && dateTo && {
         createdAt: {
           gte: dateFrom,
@@ -240,7 +243,8 @@ export class OrderRepository {
     merchantId: string,
     options: {
       status?: OrderStatus;
-      orderType?: string;
+      orderMode?: string;
+      salesChannel?: SalesChannel;
       dateFrom?: Date;
       dateTo?: Date;
       search?: string;
@@ -252,7 +256,8 @@ export class OrderRepository {
   ) {
     const {
       status,
-      orderType,
+      orderMode,
+      salesChannel,
       dateFrom,
       dateTo,
       search,
@@ -266,7 +271,8 @@ export class OrderRepository {
       tenantId,
       merchantId,
       ...(status && { status }),
-      ...(orderType && { orderType }),
+      ...(orderMode && { orderMode }),
+      ...(salesChannel && { salesChannel }),
       ...(dateFrom &&
         dateTo && {
           createdAt: {
@@ -349,7 +355,7 @@ export class OrderRepository {
       select: {
         totalAmount: true,
         status: true,
-        orderType: true,
+        orderMode: true,
       },
     });
 
@@ -369,7 +375,7 @@ export class OrderRepository {
 
     const ordersByType = completedOrders.reduce(
       (acc, order) => {
-        acc[order.orderType] = (acc[order.orderType] || 0) + 1;
+        acc[order.orderMode] = (acc[order.orderMode] || 0) + 1;
         return acc;
       },
       {} as Record<string, number>
@@ -430,7 +436,8 @@ export class OrderRepository {
     options: {
       status?: OrderStatus;
       merchantId?: string;
-      orderType?: OrderType;
+      orderMode?: OrderMode;
+      salesChannel?: SalesChannel;
       dateFrom?: Date;
       dateTo?: Date;
       search?: string;
@@ -443,7 +450,8 @@ export class OrderRepository {
     const {
       status,
       merchantId,
-      orderType,
+      orderMode,
+      salesChannel,
       dateFrom,
       dateTo,
       search,
@@ -460,7 +468,8 @@ export class OrderRepository {
         ...(merchantId && { id: merchantId }),
       },
       ...(status && { status }),
-      ...(orderType && { orderType }),
+      ...(orderMode && { orderMode }),
+      ...(salesChannel && { salesChannel }),
       ...(dateFrom &&
         dateTo && {
           createdAt: {
