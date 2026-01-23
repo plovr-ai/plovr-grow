@@ -22,7 +22,7 @@ describe("OrderEventEmitter", () => {
         timestamp: new Date(),
         customerName: "John Doe",
         customerPhone: "123-456-7890",
-        orderType: "pickup",
+        orderMode: "pickup",
         totalAmount: 25.99,
         items: [],
       };
@@ -51,7 +51,7 @@ describe("OrderEventEmitter", () => {
         timestamp: new Date(),
         customerName: "John Doe",
         customerPhone: "123-456-7890",
-        orderType: "pickup",
+        orderMode: "pickup",
         totalAmount: 25.99,
         items: [],
       };
@@ -104,7 +104,7 @@ describe("OrderEventEmitter", () => {
         timestamp: new Date(),
         customerName: "John Doe",
         customerPhone: "123-456-7890",
-        orderType: "pickup",
+        orderMode: "pickup",
         totalAmount: 25.99,
         items: [],
       };
@@ -144,7 +144,7 @@ describe("OrderEventEmitter", () => {
         timestamp: new Date(),
         customerName: "John Doe",
         customerPhone: "123-456-7890",
-        orderType: "pickup",
+        orderMode: "pickup",
         totalAmount: 25.99,
         items: [],
       };

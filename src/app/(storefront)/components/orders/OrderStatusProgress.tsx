@@ -1,10 +1,10 @@
 "use client";
 
-import type { OrderStatus, OrderType } from "@/types";
+import type { OrderStatus, OrderMode } from "@/types";
 
 interface Props {
   currentStatus: OrderStatus;
-  orderType: OrderType;
+  orderMode: OrderMode;
 }
 
 interface StatusStep {
@@ -29,7 +29,7 @@ const STATUS_ORDER: Record<OrderStatus, number> = {
   cancelled: -1,
 };
 
-export function OrderStatusProgress({ currentStatus, orderType }: Props) {
+export function OrderStatusProgress({ currentStatus, orderMode }: Props) {
   const currentIndex = STATUS_ORDER[currentStatus];
   const isCancelled = currentStatus === "cancelled";
 
@@ -63,7 +63,7 @@ export function OrderStatusProgress({ currentStatus, orderType }: Props) {
     );
   }
 
-  const readyLabel = orderType === "delivery" ? "Out for Delivery" : "Ready for Pickup";
+  const readyLabel = orderMode === "delivery" ? "Out for Delivery" : "Ready for Pickup";
   const stepsWithLabels = STEPS.map((step) =>
     step.status === "ready" ? { ...step, label: readyLabel } : step
   );

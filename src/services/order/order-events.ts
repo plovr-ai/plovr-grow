@@ -107,3 +107,9 @@ if (process.env.NODE_ENV === "development") {
     });
   });
 }
+
+// Register loyalty event handlers to process order completions
+// Use dynamic import to avoid circular dependency
+import("@/services/loyalty/loyalty-event-handler").then(({ registerLoyaltyEventHandlers }) => {
+  registerLoyaltyEventHandlers();
+});

@@ -127,13 +127,13 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
       await repository.getCompanyOrders("tenant-1", "company-1", {
-        orderType: "pickup",
+        orderMode: "pickup",
       });
 
       expect(prisma.order.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            orderType: "pickup",
+            orderMode: "pickup",
           }),
         })
       );
@@ -242,7 +242,7 @@ describe("OrderRepository", () => {
       await repository.getCompanyOrders("tenant-1", "company-1", {
         merchantId: "merchant-1",
         status: "completed",
-        orderType: "delivery",
+        orderMode: "delivery",
         dateFrom,
         dateTo,
         page: 2,
@@ -257,7 +257,7 @@ describe("OrderRepository", () => {
             id: "merchant-1",
           },
           status: "completed",
-          orderType: "delivery",
+          orderMode: "delivery",
           createdAt: {
             gte: dateFrom,
             lte: dateTo,
@@ -289,7 +289,7 @@ describe("OrderRepository", () => {
           loyaltyMemberId: "member-1",
           orderNumber: "#001",
           status: "completed",
-          orderType: "pickup",
+          orderMode: "pickup",
           totalAmount: 45.99,
           createdAt: new Date("2024-01-15"),
           merchant: {
@@ -305,7 +305,7 @@ describe("OrderRepository", () => {
           loyaltyMemberId: "member-1",
           orderNumber: "#002",
           status: "pending",
-          orderType: "delivery",
+          orderMode: "delivery",
           totalAmount: 78.5,
           createdAt: new Date("2024-01-20"),
           merchant: {

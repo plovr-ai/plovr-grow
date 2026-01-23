@@ -39,7 +39,7 @@ const mockOrder = {
   id: "order-123",
   orderNumber: "ORD-001",
   status: "confirmed",
-  orderType: "pickup",
+  orderMode: "pickup",
   items: [
     {
       menuItemId: "item-1",

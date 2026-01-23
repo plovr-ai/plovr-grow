@@ -1,4 +1,4 @@
-import type { OrderStatus, OrderType, OrderItemData, DeliveryAddress } from "@/types";
+import type { OrderStatus, OrderMode, OrderItemData, DeliveryAddress } from "@/types";
 
 export interface TimelineEvent {
   status: OrderStatus;
@@ -9,7 +9,7 @@ export interface OrderDetailData {
   id: string;
   orderNumber: string;
   status: OrderStatus;
-  orderType: OrderType;
+  orderMode: OrderMode;
   items: OrderItemData[];
   customerName: string;
   customerPhone: string;

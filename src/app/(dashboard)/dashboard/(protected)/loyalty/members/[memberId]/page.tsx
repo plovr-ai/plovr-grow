@@ -91,7 +91,7 @@ export default async function LoyaltyMemberDetailPage({
           id: order.id,
           orderNumber: order.orderNumber,
           status: order.status,
-          orderType: order.orderType,
+          orderMode: order.orderMode,
           totalAmount: Number(order.totalAmount),
           createdAt: order.createdAt,
           merchant: order.merchant

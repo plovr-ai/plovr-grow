@@ -18,12 +18,12 @@ import {
 import {
   checkoutFormSchema,
   deliveryAddressSchema,
-  type OrderType,
+  type OrderMode,
 } from "@storefront/lib/validations/checkout";
 import type { TipInput } from "@/lib/pricing";
 
 interface FormState {
-  orderType: OrderType;
+  orderMode: OrderMode;
   customerName: string;
   customerPhone: string;
   customerEmail: string;
@@ -55,7 +55,7 @@ interface FormErrors {
 }
 
 const initialFormState: FormState = {
-  orderType: "pickup",
+  orderMode: "pickup",
   customerName: "",
   customerPhone: "",
   customerEmail: "",
@@ -141,7 +141,7 @@ export default function CheckoutPage() {
   }, [configFees, pricing.feesBreakdown]);
 
   const calculations = useMemo(() => {
-    const deliveryFee = formState.orderType === "delivery" ? 3.99 : 0;
+    const deliveryFee = formState.orderMode === "delivery" ? 3.99 : 0;
     const totalAmount = Math.round((pricing.totalAmount + deliveryFee) * 100) / 100;
 
     return {
@@ -152,7 +152,7 @@ export default function CheckoutPage() {
       tipAmount: pricing.tipAmount,
       totalAmount,
     };
-  }, [pricing, formState.orderType, displayFees]);
+  }, [pricing, formState.orderMode, displayFees]);
 
   // Handle form field changes
   const handleContactChange = (
@@ -179,10 +179,10 @@ export default function CheckoutPage() {
     }));
   };
 
-  const handleOrderTypeChange = (type: OrderType) => {
-    setFormState((prev) => ({ ...prev, orderType: type }));
+  const handleOrderModeChange = (mode: OrderMode) => {
+    setFormState((prev) => ({ ...prev, orderMode: mode }));
     // Clear delivery address errors when switching away from delivery
-    if (type !== "delivery") {
+    if (mode !== "delivery") {
       setErrors((prev) => ({ ...prev, deliveryAddress: undefined }));
     }
   };
@@ -201,14 +201,14 @@ export default function CheckoutPage() {
 
     // Prepare data for validation
     const formData = {
-      orderType: formState.orderType,
+      orderMode: formState.orderMode,
       customerName: formState.customerName,
       customerPhone: formState.customerPhone,
       customerEmail: formState.customerEmail || undefined,
       tipAmount: pricing.tipAmount, // Send calculated tip amount
       notes: formState.notes || undefined,
       deliveryAddress:
-        formState.orderType === "delivery"
+        formState.orderMode === "delivery"
           ? {
               street: formState.deliveryAddress.street,
               apt: formState.deliveryAddress.apt || undefined,
@@ -239,7 +239,7 @@ export default function CheckoutPage() {
       }
 
       // Handle delivery address errors
-      if (formState.orderType === "delivery") {
+      if (formState.orderMode === "delivery") {
         const addressResult = deliveryAddressSchema.safeParse(
           formState.deliveryAddress
         );
@@ -375,7 +375,7 @@ export default function CheckoutPage() {
   }
 
   const paymentLabel =
-    formState.orderType === "delivery" ? "Pay at delivery" : "Pay at pickup";
+    formState.orderMode === "delivery" ? "Pay at delivery" : "Pay at pickup";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -414,8 +414,8 @@ export default function CheckoutPage() {
           {/* Left: Form sections */}
           <div className="lg:col-span-2 space-y-4">
             <OrderTypeSelector
-              value={formState.orderType}
-              onChange={handleOrderTypeChange}
+              value={formState.orderMode}
+              onChange={handleOrderModeChange}
               disabled={isSubmitting}
             />
 
@@ -434,7 +434,7 @@ export default function CheckoutPage() {
               disabled={isSubmitting}
             />
 
-            {formState.orderType === "delivery" && (
+            {formState.orderMode === "delivery" && (
               <DeliveryAddressForm
                 values={formState.deliveryAddress}
                 errors={errors.deliveryAddress || {}}

@@ -1,7 +1,7 @@
 // ==================== Mock Data for Order Service ====================
 // In-memory storage for development without database
 
-import type { OrderStatus, OrderType, OrderItemData, DeliveryAddress } from "@/types";
+import type { OrderStatus, OrderMode, OrderItemData, DeliveryAddress } from "@/types";
 
 // ==================== Mock Order Type ====================
 
@@ -13,7 +13,7 @@ export interface MockOrder {
   customerName: string;
   customerPhone: string;
   customerEmail: string | null;
-  orderType: OrderType;
+  orderMode: OrderMode;
   status: OrderStatus;
   items: OrderItemData[];
   subtotal: number;
@@ -231,7 +231,7 @@ export function mockGetMerchantStats(
   }
 
   for (const order of completedOrders) {
-    ordersByType[order.orderType] = (ordersByType[order.orderType] || 0) + 1;
+    ordersByType[order.orderMode] = (ordersByType[order.orderMode] || 0) + 1;
   }
 
   return {

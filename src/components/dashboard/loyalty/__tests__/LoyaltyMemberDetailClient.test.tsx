@@ -66,7 +66,7 @@ describe("LoyaltyMemberDetailClient", () => {
         id: "order-1",
         orderNumber: "001",
         status: "completed",
-        orderType: "pickup",
+        orderMode: "pickup",
         totalAmount: 45.99,
         createdAt: new Date("2024-01-15"),
         merchant: {
@@ -80,7 +80,7 @@ describe("LoyaltyMemberDetailClient", () => {
         id: "order-2",
         orderNumber: "002",
         status: "pending",
-        orderType: "delivery",
+        orderMode: "delivery",
         totalAmount: 78.5,
         createdAt: new Date("2024-01-20"),
         merchant: {

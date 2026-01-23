@@ -11,7 +11,7 @@ import { OrderTimeline } from "./OrderTimeline";
 import { LoyaltyRegistrationCTA } from "./LoyaltyRegistrationCTA";
 import { useLoyalty } from "@/contexts/LoyaltyContext";
 import type { OrderDetailData, TimelineEvent } from "./order-detail.types";
-import type { OrderStatus, OrderType, OrderItemData } from "@/types";
+import type { OrderStatus, OrderMode, OrderItemData } from "@/types";
 
 interface Props {
   order: OrderDetailData;
@@ -103,7 +103,7 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
     ? order.items
     : JSON.parse(order.items as unknown as string);
 
-  const orderTypeLabelMap: Record<OrderType, string> = {
+  const orderModeLabelMap: Record<OrderMode, string> = {
     pickup: "Pickup",
     delivery: "Delivery",
     dine_in: "Dine In",
@@ -127,7 +127,7 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
                   Order #{order.orderNumber}
                 </h1>
                 <p className="text-sm text-gray-500">
-                  {orderTypeLabelMap[order.orderType as OrderType]}
+                  {orderModeLabelMap[order.orderMode as OrderMode]}
                 </p>
               </div>
             </div>
@@ -161,7 +161,7 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
         {/* Status Progress */}
         <OrderStatusProgress
           currentStatus={order.status as OrderStatus}
-          orderType={order.orderType as OrderType}
+          orderMode={order.orderMode as OrderMode}
         />
 
         {/* Loyalty Registration CTA (for non-members) */}
@@ -193,7 +193,7 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
           customerName={order.customerName}
           customerPhone={order.customerPhone}
           customerEmail={order.customerEmail}
-          orderType={order.orderType as OrderType}
+          orderMode={order.orderMode as OrderMode}
           deliveryAddress={order.deliveryAddress}
           notes={order.notes}
         />

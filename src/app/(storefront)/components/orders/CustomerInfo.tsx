@@ -1,13 +1,13 @@
 "use client";
 
 import { useFormatPhone } from "@/hooks";
-import type { OrderType, DeliveryAddress } from "@/types";
+import type { OrderMode, DeliveryAddress } from "@/types";
 
 interface Props {
   customerName: string;
   customerPhone: string;
   customerEmail: string | null;
-  orderType: OrderType;
+  orderMode: OrderMode;
   deliveryAddress: DeliveryAddress | null;
   notes: string | null;
 }
@@ -16,7 +16,7 @@ export function CustomerInfo({
   customerName,
   customerPhone,
   customerEmail,
-  orderType,
+  orderMode,
   deliveryAddress,
   notes,
 }: Props) {
@@ -84,7 +84,7 @@ export function CustomerInfo({
       </div>
 
       {/* Delivery Address */}
-      {orderType === "delivery" && deliveryAddress && (
+      {orderMode === "delivery" && deliveryAddress && (
         <div>
           <h2 className="text-sm font-medium text-gray-700 mb-2">
             Delivery Address

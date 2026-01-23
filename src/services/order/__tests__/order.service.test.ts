@@ -100,7 +100,7 @@ describe("OrderService", () => {
       customerName: "John Doe",
       customerPhone: "123-456-7890",
       customerEmail: "john@example.com",
-      orderType: "pickup" as const,
+      orderMode: "pickup" as const,
       items: [
         {
           menuItemId: "item-1",
@@ -141,7 +141,7 @@ describe("OrderService", () => {
         customerName: "John Doe",
         customerPhone: "123-456-7890",
         customerEmail: "john@example.com",
-        orderType: "pickup",
+        orderMode: "pickup",
         items: mockInput.items,
         subtotal: 37.98,
         taxAmount: 3.37,
@@ -164,7 +164,7 @@ describe("OrderService", () => {
           orderNumber: expect.any(String),
           customerName: "John Doe",
           customerPhone: "123-456-7890",
-          orderType: "pickup",
+          orderMode: "pickup",
           status: "pending",
         }),
         undefined // loyaltyMemberId
@@ -190,7 +190,7 @@ describe("OrderService", () => {
         customerName: "John Doe",
         customerPhone: "123-456-7890",
         customerEmail: "john@example.com",
-        orderType: "pickup",
+        orderMode: "pickup",
         items: mockInput.items,
         subtotal: 37.98,
         taxAmount: 3.37,
@@ -564,7 +564,7 @@ describe("OrderService", () => {
             loyaltyMemberId: "member-1",
             orderNumber: "#001",
             status: "completed",
-            orderType: "pickup",
+            orderMode: "pickup",
             totalAmount: 45.99,
             createdAt: new Date("2024-01-15"),
             merchant: {
@@ -580,7 +580,7 @@ describe("OrderService", () => {
             loyaltyMemberId: "member-1",
             orderNumber: "#002",
             status: "pending",
-            orderType: "delivery",
+            orderMode: "delivery",
             totalAmount: 78.5,
             createdAt: new Date("2024-01-20"),
             merchant: {

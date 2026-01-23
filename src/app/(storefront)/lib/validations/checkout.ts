@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-// Order types
-export const ORDER_TYPES = ["pickup", "delivery", "dine_in"] as const;
-export type OrderType = (typeof ORDER_TYPES)[number];
+// Order modes
+export const ORDER_MODES = ["pickup", "delivery", "dine_in"] as const;
+export type OrderMode = (typeof ORDER_MODES)[number];
 
 // US phone regex (flexible format)
 const phoneRegex = /^\+?1?\s*\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$/;
@@ -61,7 +61,7 @@ export const deliveryAddressSchema = z.object({
 // Checkout form schema
 export const checkoutFormSchema = z
   .object({
-    orderType: z.enum(ORDER_TYPES),
+    orderMode: z.enum(ORDER_MODES),
     customerName: contactInfoSchema.shape.customerName,
     customerPhone: contactInfoSchema.shape.customerPhone,
     customerEmail: contactInfoSchema.shape.customerEmail,
@@ -71,7 +71,7 @@ export const checkoutFormSchema = z
   })
   .refine(
     (data) => {
-      if (data.orderType === "delivery") {
+      if (data.orderMode === "delivery") {
         return data.deliveryAddress !== undefined;
       }
       return true;

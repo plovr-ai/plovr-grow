@@ -1,9 +1,85 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient({
   log: ["error", "warn"],
 });
+
+/**
+ * Sync loyalty member stats from point transactions
+ * Uses point transactions (type='earn') to calculate totalOrders and totalSpent
+ * This is more accurate as it tracks exactly which orders earned points
+ */
+async function syncLoyaltyMemberStats() {
+  console.log("\nSyncing loyalty member stats from point transactions...");
+
+  // Get all loyalty members
+  const members = await prisma.loyaltyMember.findMany({
+    select: {
+      id: true,
+      phone: true,
+    },
+  });
+
+  if (members.length === 0) {
+    console.log("No loyalty members found");
+    return;
+  }
+
+  let updatedCount = 0;
+
+  for (const member of members) {
+    // Get all "earn" transactions for this member (each represents an order)
+    const earnTransactions = await prisma.pointTransaction.findMany({
+      where: {
+        memberId: member.id,
+        type: "earn",
+        orderId: { not: null },
+      },
+      select: {
+        orderId: true,
+        createdAt: true,
+      },
+    });
+
+    if (earnTransactions.length === 0) continue;
+
+    // Get unique order IDs (in case of duplicates)
+    const orderIds = [...new Set(earnTransactions.map((t) => t.orderId).filter((id): id is string => id !== null))];
+
+    // Get order details for totalSpent calculation
+    const orders = await prisma.order.findMany({
+      where: { id: { in: orderIds } },
+      select: {
+        id: true,
+        totalAmount: true,
+        createdAt: true,
+      },
+    });
+
+    const totalOrders = orders.length;
+    const totalSpent = orders.reduce(
+      (sum, order) => sum.add(order.totalAmount),
+      new Prisma.Decimal(0)
+    );
+    const lastOrderAt = orders
+      .map((o) => o.createdAt)
+      .sort((a, b) => b.getTime() - a.getTime())[0] || null;
+
+    await prisma.loyaltyMember.update({
+      where: { id: member.id },
+      data: {
+        totalOrders,
+        totalSpent,
+        lastOrderAt,
+      },
+    });
+    updatedCount++;
+    console.log(`  Updated ${member.phone}: ${totalOrders} orders, $${totalSpent}`);
+  }
+
+  console.log(`Synced ${updatedCount} loyalty members`);
+}
 
 async function main() {
   console.log("Seeding database...");
@@ -638,11 +714,10 @@ async function main() {
       id: "bella-item-sourdough",
       tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
-      categoryId: bellaBreadCategory.id,
       name: "Sourdough Loaf",
       description: "Our signature 24-hour fermented sourdough with a crispy crust and soft interior",
       price: 8.99,
-      sortOrder: 1,
+      imageUrl: "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=800&h=600&fit=crop",
       tags: ["vegetarian", "vegan"],
       options: [],
     },
@@ -650,11 +725,10 @@ async function main() {
       id: "bella-item-baguette",
       tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
-      categoryId: bellaBreadCategory.id,
       name: "French Baguette",
       description: "Traditional French baguette with a golden crust",
       price: 4.49,
-      sortOrder: 2,
+      imageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&h=600&fit=crop",
       tags: ["vegetarian", "vegan"],
       options: [],
     },
@@ -662,11 +736,10 @@ async function main() {
       id: "bella-item-focaccia",
       tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
-      categoryId: bellaBreadCategory.id,
       name: "Rosemary Focaccia",
       description: "Italian flatbread with fresh rosemary and sea salt",
       price: 6.99,
-      sortOrder: 3,
+      imageUrl: "https://images.unsplash.com/photo-1621583441131-ec7572d5e6ae?w=800&h=600&fit=crop",
       tags: ["vegetarian", "vegan"],
       options: [],
     },
@@ -675,11 +748,10 @@ async function main() {
       id: "bella-item-croissant",
       tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
-      categoryId: bellaPastryCategory.id,
       name: "Butter Croissant",
       description: "Flaky, golden layers of French butter perfection",
       price: 4.49,
-      sortOrder: 1,
+      imageUrl: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
       options: [],
     },
@@ -687,11 +759,10 @@ async function main() {
       id: "bella-item-almond-danish",
       tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
-      categoryId: bellaPastryCategory.id,
       name: "Almond Danish",
       description: "Sweet almond cream in a buttery Danish pastry",
       price: 5.29,
-      sortOrder: 2,
+      imageUrl: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
       options: [],
     },
@@ -699,11 +770,10 @@ async function main() {
       id: "bella-item-chocolate-croissant",
       tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
-      categoryId: bellaPastryCategory.id,
       name: "Chocolate Croissant",
       description: "Buttery croissant filled with rich dark chocolate",
       price: 4.99,
-      sortOrder: 3,
+      imageUrl: "https://images.unsplash.com/photo-1623334044303-241021148842?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
       options: [],
     },
@@ -711,11 +781,10 @@ async function main() {
       id: "bella-item-cinnamon-roll",
       tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
-      categoryId: bellaPastryCategory.id,
       name: "Cinnamon Roll",
       description: "Warm, gooey cinnamon roll with cream cheese frosting",
       price: 5.49,
-      sortOrder: 4,
+      imageUrl: "https://images.unsplash.com/photo-1619985632461-f33748ef8df3?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
       options: [],
     },
@@ -724,11 +793,10 @@ async function main() {
       id: "bella-item-cappuccino",
       tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
-      categoryId: bellaCoffeeCategory.id,
       name: "Cappuccino",
       description: "Rich espresso with perfectly steamed milk and foam",
       price: 4.99,
-      sortOrder: 1,
+      imageUrl: "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
       options: [
         {
@@ -758,11 +826,10 @@ async function main() {
       id: "bella-item-latte",
       tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
-      categoryId: bellaCoffeeCategory.id,
       name: "Café Latte",
       description: "Smooth espresso with steamed milk",
       price: 5.49,
-      sortOrder: 2,
+      imageUrl: "https://images.unsplash.com/photo-1561882468-9110e03e0f78?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
       options: [
         {
@@ -781,11 +848,10 @@ async function main() {
       id: "bella-item-drip-coffee",
       tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
-      categoryId: bellaCoffeeCategory.id,
       name: "Drip Coffee",
       description: "House blend drip coffee",
       price: 2.99,
-      sortOrder: 3,
+      imageUrl: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&h=600&fit=crop",
       tags: ["vegetarian", "vegan"],
       options: [
         {
@@ -803,14 +869,82 @@ async function main() {
   ];
 
   for (const item of bellaMenuItems) {
+    const { id, tenantId, companyId, ...updateData } = item;
     await prisma.menuItem.upsert({
       where: { id: item.id },
-      update: {},
+      update: updateData,
       create: item,
     });
   }
 
   console.log(`Created ${bellaMenuItems.length} menu items for Bella's Bakery`);
+
+  // Create menu category item associations for Bella's Bakery
+  const bellaCategoryItemLinks = [
+    // Breads
+    { categoryId: bellaBreadCategory.id, menuItemId: "bella-item-sourdough", sortOrder: 1 },
+    { categoryId: bellaBreadCategory.id, menuItemId: "bella-item-baguette", sortOrder: 2 },
+    { categoryId: bellaBreadCategory.id, menuItemId: "bella-item-focaccia", sortOrder: 3 },
+    // Pastries
+    { categoryId: bellaPastryCategory.id, menuItemId: "bella-item-croissant", sortOrder: 1 },
+    { categoryId: bellaPastryCategory.id, menuItemId: "bella-item-almond-danish", sortOrder: 2 },
+    { categoryId: bellaPastryCategory.id, menuItemId: "bella-item-chocolate-croissant", sortOrder: 3 },
+    { categoryId: bellaPastryCategory.id, menuItemId: "bella-item-cinnamon-roll", sortOrder: 4 },
+    // Coffee & Drinks
+    { categoryId: bellaCoffeeCategory.id, menuItemId: "bella-item-cappuccino", sortOrder: 1 },
+    { categoryId: bellaCoffeeCategory.id, menuItemId: "bella-item-latte", sortOrder: 2 },
+    { categoryId: bellaCoffeeCategory.id, menuItemId: "bella-item-drip-coffee", sortOrder: 3 },
+  ];
+
+  for (const link of bellaCategoryItemLinks) {
+    await prisma.menuCategoryItem.upsert({
+      where: {
+        categoryId_menuItemId: {
+          categoryId: link.categoryId,
+          menuItemId: link.menuItemId,
+        },
+      },
+      update: { sortOrder: link.sortOrder },
+      create: {
+        id: `mci-${link.menuItemId}`,
+        categoryId: link.categoryId,
+        menuItemId: link.menuItemId,
+        sortOrder: link.sortOrder,
+      },
+    });
+  }
+
+  console.log("Created menu category item associations for Bella's Bakery");
+
+  // Create featured items for Bella's Bakery
+  const bellaFeaturedItemIds = [
+    "bella-item-sourdough",
+    "bella-item-croissant",
+    "bella-item-almond-danish",
+    "bella-item-cappuccino",
+  ];
+
+  for (let i = 0; i < bellaFeaturedItemIds.length; i++) {
+    const menuItemId = bellaFeaturedItemIds[i];
+    await prisma.featuredItem.upsert({
+      where: {
+        companyId_menuItemId: {
+          companyId: bellaCompany.id,
+          menuItemId,
+        },
+      },
+      update: { sortOrder: i + 1 },
+      create: {
+        id: `featured-bella-${menuItemId}`,
+        tenantId: bellaTenant.id,
+        companyId: bellaCompany.id,
+        menuItemId,
+        sortOrder: i + 1,
+      },
+    });
+  }
+
+  console.log(`Created ${bellaFeaturedItemIds.length} featured items for Bella's Bakery`);
 
   // Create tax config for Bella's Bakery
   const bellaTax = await prisma.taxConfig.upsert({
@@ -969,12 +1103,10 @@ async function main() {
       id: "item-cheese-pizza",
       tenantId: tenant.id,
       companyId: company.id,
-      categoryId: pizzaCategory.id,
       name: "Classic Cheese Pizza",
       description: "Our signature pizza with fresh mozzarella and house-made tomato sauce",
       price: 18.99,
       imageUrl: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop",
-      sortOrder: 1,
       tags: ["vegetarian", "popular"],
       options: [
         {
@@ -1009,12 +1141,10 @@ async function main() {
       id: "item-pepperoni-pizza",
       tenantId: tenant.id,
       companyId: company.id,
-      categoryId: pizzaCategory.id,
       name: "Pepperoni Pizza",
       description: "Classic pepperoni with premium mozzarella cheese",
       price: 21.99,
       imageUrl: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop",
-      sortOrder: 2,
       tags: ["popular"],
       options: [
         {
@@ -1034,12 +1164,10 @@ async function main() {
       id: "item-margherita-pizza",
       tenantId: tenant.id,
       companyId: company.id,
-      categoryId: pizzaCategory.id,
       name: "Margherita Pizza",
       description: "Fresh tomatoes, mozzarella, basil, and olive oil",
       price: 19.99,
       imageUrl: "https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=400&h=300&fit=crop",
-      sortOrder: 3,
       tags: ["vegetarian"],
       options: [
         {
@@ -1059,12 +1187,10 @@ async function main() {
       id: "item-supreme-pizza",
       tenantId: tenant.id,
       companyId: company.id,
-      categoryId: pizzaCategory.id,
       name: "Supreme Pizza",
       description: "Pepperoni, sausage, peppers, onions, and mushrooms",
       price: 24.99,
       imageUrl: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop",
-      sortOrder: 4,
       tags: [],
       options: [
         {
@@ -1085,12 +1211,10 @@ async function main() {
       id: "item-spaghetti-meatballs",
       tenantId: tenant.id,
       companyId: company.id,
-      categoryId: pastaCategory.id,
       name: "Spaghetti & Meatballs",
       description: "Classic spaghetti with house-made meatballs and marinara sauce",
       price: 16.99,
       imageUrl: "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=300&fit=crop",
-      sortOrder: 1,
       tags: [],
       options: [],
     },
@@ -1098,12 +1222,10 @@ async function main() {
       id: "item-fettuccine-alfredo",
       tenantId: tenant.id,
       companyId: company.id,
-      categoryId: pastaCategory.id,
       name: "Fettuccine Alfredo",
       description: "Creamy parmesan alfredo sauce over fettuccine",
       price: 15.99,
       imageUrl: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=400&h=300&fit=crop",
-      sortOrder: 2,
       tags: ["vegetarian"],
       options: [
         {
@@ -1123,12 +1245,10 @@ async function main() {
       id: "item-baked-ziti",
       tenantId: tenant.id,
       companyId: company.id,
-      categoryId: pastaCategory.id,
       name: "Baked Ziti",
       description: "Ziti pasta baked with ricotta, mozzarella, and marinara",
       price: 14.99,
       imageUrl: "https://images.unsplash.com/photo-1629115916087-7e8c114a24ed?w=400&h=300&fit=crop",
-      sortOrder: 3,
       tags: ["vegetarian"],
       options: [],
     },
@@ -1137,12 +1257,10 @@ async function main() {
       id: "item-garlic-knots",
       tenantId: tenant.id,
       companyId: company.id,
-      categoryId: sidesCategory.id,
       name: "Garlic Knots",
       description: "Fresh baked knots with garlic butter (6 pieces)",
       price: 5.99,
       imageUrl: "https://images.unsplash.com/photo-1619531040576-f9416740661b?w=400&h=300&fit=crop",
-      sortOrder: 1,
       tags: ["vegetarian", "popular"],
       options: [],
     },
@@ -1150,12 +1268,10 @@ async function main() {
       id: "item-mozzarella-sticks",
       tenantId: tenant.id,
       companyId: company.id,
-      categoryId: sidesCategory.id,
       name: "Mozzarella Sticks",
       description: "Crispy fried mozzarella served with marinara (6 pieces)",
       price: 7.99,
       imageUrl: "https://images.unsplash.com/photo-1531749668029-2db88e4276c7?w=400&h=300&fit=crop",
-      sortOrder: 2,
       tags: ["vegetarian"],
       options: [],
     },
@@ -1163,12 +1279,10 @@ async function main() {
       id: "item-caesar-salad",
       tenantId: tenant.id,
       companyId: company.id,
-      categoryId: sidesCategory.id,
       name: "Caesar Salad",
       description: "Crisp romaine, parmesan, croutons, and caesar dressing",
       price: 8.99,
       imageUrl: "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400&h=300&fit=crop",
-      sortOrder: 3,
       tags: ["vegetarian"],
       options: [
         {
@@ -1201,11 +1315,9 @@ async function main() {
       id: "item-fountain-drink",
       tenantId: tenant.id,
       companyId: company.id,
-      categoryId: drinksCategory.id,
       name: "Fountain Drink",
       description: "Coca-Cola, Sprite, Fanta, or Lemonade",
       price: 2.99,
-      sortOrder: 1,
       tags: [],
       options: [
         {
@@ -1225,11 +1337,9 @@ async function main() {
       id: "item-italian-soda",
       tenantId: tenant.id,
       companyId: company.id,
-      categoryId: drinksCategory.id,
       name: "Italian Soda",
       description: "Sparkling water with your choice of flavor",
       price: 3.99,
-      sortOrder: 2,
       tags: [],
       options: [
         {
@@ -1249,11 +1359,9 @@ async function main() {
       id: "item-water",
       tenantId: tenant.id,
       companyId: company.id,
-      categoryId: drinksCategory.id,
       name: "Bottled Water",
       description: "Purified spring water",
       price: 1.99,
-      sortOrder: 3,
       tags: [],
       options: [],
     },
@@ -1268,6 +1376,77 @@ async function main() {
   }
 
   console.log(`Created ${menuItems.length} menu items`);
+
+  // Create menu category item associations for Joe's Pizza
+  const joesCategoryItemLinks = [
+    // Pizzas
+    { categoryId: pizzaCategory.id, menuItemId: "item-cheese-pizza", sortOrder: 1 },
+    { categoryId: pizzaCategory.id, menuItemId: "item-pepperoni-pizza", sortOrder: 2 },
+    { categoryId: pizzaCategory.id, menuItemId: "item-margherita-pizza", sortOrder: 3 },
+    { categoryId: pizzaCategory.id, menuItemId: "item-supreme-pizza", sortOrder: 4 },
+    // Pasta
+    { categoryId: pastaCategory.id, menuItemId: "item-spaghetti-meatballs", sortOrder: 1 },
+    { categoryId: pastaCategory.id, menuItemId: "item-fettuccine-alfredo", sortOrder: 2 },
+    { categoryId: pastaCategory.id, menuItemId: "item-baked-ziti", sortOrder: 3 },
+    // Sides
+    { categoryId: sidesCategory.id, menuItemId: "item-garlic-knots", sortOrder: 1 },
+    { categoryId: sidesCategory.id, menuItemId: "item-mozzarella-sticks", sortOrder: 2 },
+    { categoryId: sidesCategory.id, menuItemId: "item-caesar-salad", sortOrder: 3 },
+    // Drinks
+    { categoryId: drinksCategory.id, menuItemId: "item-fountain-drink", sortOrder: 1 },
+    { categoryId: drinksCategory.id, menuItemId: "item-italian-soda", sortOrder: 2 },
+    { categoryId: drinksCategory.id, menuItemId: "item-water", sortOrder: 3 },
+  ];
+
+  for (const link of joesCategoryItemLinks) {
+    await prisma.menuCategoryItem.upsert({
+      where: {
+        categoryId_menuItemId: {
+          categoryId: link.categoryId,
+          menuItemId: link.menuItemId,
+        },
+      },
+      update: { sortOrder: link.sortOrder },
+      create: {
+        id: `mci-${link.menuItemId}`,
+        categoryId: link.categoryId,
+        menuItemId: link.menuItemId,
+        sortOrder: link.sortOrder,
+      },
+    });
+  }
+
+  console.log("Created menu category item associations for Joe's Pizza");
+
+  // Create featured items for Joe's Pizza
+  const joesFeaturedItemIds = [
+    "item-cheese-pizza",
+    "item-pepperoni-pizza",
+    "item-margherita-pizza",
+    "item-garlic-knots",
+  ];
+
+  for (let i = 0; i < joesFeaturedItemIds.length; i++) {
+    const menuItemId = joesFeaturedItemIds[i];
+    await prisma.featuredItem.upsert({
+      where: {
+        companyId_menuItemId: {
+          companyId: company.id,
+          menuItemId,
+        },
+      },
+      update: { sortOrder: i + 1 },
+      create: {
+        id: `featured-joes-${menuItemId}`,
+        tenantId: tenant.id,
+        companyId: company.id,
+        menuItemId,
+        sortOrder: i + 1,
+      },
+    });
+  }
+
+  console.log(`Created ${joesFeaturedItemIds.length} featured items for Joe's Pizza`);
 
   // Associate Joe's Pizza menu items with standard tax
   for (const item of menuItems) {
@@ -1381,7 +1560,10 @@ async function main() {
   console.log("🏪 Merchant URL: /dashboard/merchant-onboarding-test");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-  console.log("Seeding completed!");
+  // Sync loyalty member stats from historical orders
+  await syncLoyaltyMemberStats();
+
+  console.log("\nSeeding completed!");
 }
 
 main()

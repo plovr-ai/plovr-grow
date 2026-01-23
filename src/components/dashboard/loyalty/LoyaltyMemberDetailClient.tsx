@@ -18,7 +18,7 @@ import {
   useDashboardFormatDateTime,
 } from "@/hooks";
 import { formatPhone } from "@/lib/utils";
-import type { OrderStatus, OrderType } from "@/types";
+import type { OrderStatus, OrderMode } from "@/types";
 
 // ==================== Types ====================
 
@@ -39,7 +39,7 @@ interface LoyaltyMemberDetailClientProps {
       id: string;
       orderNumber: string;
       status: string;
-      orderType: string;
+      orderMode: string;
       totalAmount: number;
       createdAt: Date | string;
       merchant: {
@@ -79,7 +79,7 @@ interface LoyaltyMemberDetailClientProps {
 
 // ==================== Constants ====================
 
-const orderTypeLabels: Record<OrderType, string> = {
+const orderModeLabels: Record<OrderMode, string> = {
   pickup: "Pickup",
   delivery: "Delivery",
   dine_in: "Dine In",
@@ -287,7 +287,7 @@ function OrdersTab({
                       <StatusBadge status={order.status as OrderStatus} />
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                      {orderTypeLabels[order.orderType as OrderType]}
+                      {orderModeLabels[order.orderMode as OrderMode]}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                       {order.merchant?.name || "-"}

@@ -28,7 +28,7 @@ describe("OrdersManagementClient", () => {
       customerName: "John Doe",
       customerPhone: "+1234567890",
       customerEmail: "john@example.com",
-      orderType: "pickup",
+      orderMode: "pickup",
       status: "pending",
       items: [{ name: "Test Item", quantity: 1 }],
       subtotal: 10.0,
@@ -63,7 +63,7 @@ describe("OrdersManagementClient", () => {
     initialFilters: {
       merchantId: "all",
       status: "all",
-      orderType: "all",
+      orderMode: "all",
       dateFrom: "",
       dateTo: "",
     },
@@ -75,14 +75,14 @@ describe("OrdersManagementClient", () => {
   });
 
   describe("URL Parameter Mapping", () => {
-    it("should map orderType to 'type' URL parameter", () => {
+    it("should map orderMode to 'mode' URL parameter", () => {
       render(<OrdersManagementClient {...defaultProps} />);
 
-      const orderTypeSelect = screen.getByLabelText("Order Type");
-      fireEvent.change(orderTypeSelect, { target: { value: "pickup" } });
+      const orderModeSelect = screen.getByLabelText("Order Type");
+      fireEvent.change(orderModeSelect, { target: { value: "pickup" } });
 
-      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("type=pickup"));
-      expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining("orderType="));
+      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("mode=pickup"));
+      expect(mockPush).not.toHaveBeenCalledWith(expect.stringContaining("orderMode="));
     });
 
     it("should map status to 'status' URL parameter", () => {
@@ -157,7 +157,7 @@ describe("OrdersManagementClient", () => {
         ...defaultProps,
         initialFilters: {
           ...defaultProps.initialFilters,
-          orderType: "delivery",
+          orderMode: "delivery",
         },
       };
 
@@ -235,7 +235,7 @@ describe("OrdersManagementClient", () => {
 
     it("should preserve existing filters when changing page", () => {
       mockSearchParams.set("status", "pending");
-      mockSearchParams.set("type", "delivery");
+      mockSearchParams.set("mode", "delivery");
 
       const props = {
         ...defaultProps,
@@ -250,7 +250,7 @@ describe("OrdersManagementClient", () => {
 
       const lastCall = mockPush.mock.calls[0][0];
       expect(lastCall).toContain("status=pending");
-      expect(lastCall).toContain("type=delivery");
+      expect(lastCall).toContain("mode=delivery");
       expect(lastCall).toContain("page=2");
     });
   });
@@ -301,8 +301,8 @@ describe("OrdersManagementClient", () => {
       const lastCall = mockPush.mock.calls[0][0];
       // Should preserve existing status filter
       expect(lastCall).toContain("status=pending");
-      // Should add new type filter
-      expect(lastCall).toContain("type=delivery");
+      // Should add new mode filter
+      expect(lastCall).toContain("mode=delivery");
     });
   });
 

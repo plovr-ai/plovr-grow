@@ -55,7 +55,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
     id: order.id,
     orderNumber: order.orderNumber,
     status: order.status as OrderDetailData["status"],
-    orderType: order.orderType as OrderDetailData["orderType"],
+    orderMode: order.orderMode as OrderDetailData["orderMode"],
     items,
     customerName: order.customerName,
     customerPhone: order.customerPhone,
