@@ -9,6 +9,7 @@ interface LoyaltyRegistrationCTAProps {
   orderId: string;
   customerPhone: string;
   customerName: string | null;
+  customerEmail: string | null;
   subtotal: number;
 }
 
@@ -16,6 +17,7 @@ export function LoyaltyRegistrationCTA({
   orderId,
   customerPhone,
   customerName,
+  customerEmail,
   subtotal,
 }: LoyaltyRegistrationCTAProps) {
   const companySlug = useCompanySlug();
@@ -164,6 +166,7 @@ export function LoyaltyRegistrationCTA({
           code,
           companySlug,
           name: customerName,
+          email: customerEmail,
         }),
       });
 

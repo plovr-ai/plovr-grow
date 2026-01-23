@@ -167,6 +167,7 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
           orderId={order.id}
           customerPhone={order.customerPhone}
           customerName={order.customerName}
+          customerEmail={order.customerEmail}
           subtotal={Number(order.subtotal)}
         />
 

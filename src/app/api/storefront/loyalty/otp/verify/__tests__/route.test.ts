@@ -1,0 +1,354 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { POST } from "../route";
+import { NextRequest } from "next/server";
+
+// Mock services
+vi.mock("@/services/otp", () => ({
+  otpService: {
+    verifyOtp: vi.fn(),
+  },
+}));
+
+vi.mock("@/services/loyalty", () => ({
+  loyaltyService: {
+    enrollCustomer: vi.fn(),
+  },
+  loyaltyMemberService: {
+    getMemberByPhone: vi.fn(),
+  },
+}));
+
+vi.mock("@/services/merchant", () => ({
+  merchantService: {
+    getCompanyBySlug: vi.fn(),
+  },
+}));
+
+vi.mock("@/lib/loyalty-session", () => ({
+  setLoyaltySession: vi.fn(),
+}));
+
+import { otpService } from "@/services/otp";
+import { loyaltyService, loyaltyMemberService } from "@/services/loyalty";
+import { merchantService } from "@/services/merchant";
+
+describe("POST /api/storefront/loyalty/otp/verify", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should accept and process email parameter", async () => {
+    // Mock company lookup
+    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+      id: "company-1",
+      tenantId: "tenant-1",
+      slug: "test-company",
+      name: "Test Company",
+    } as any);
+
+    // Mock existing member check
+    vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue(null);
+
+    // Mock OTP verification
+    vi.mocked(otpService.verifyOtp).mockResolvedValue({
+      verified: true,
+      error: null,
+      reason: null,
+    });
+
+    // Mock member enrollment
+    vi.mocked(loyaltyService.enrollCustomer).mockResolvedValue({
+      member: {
+        id: "member-1",
+        phone: "+15551234567",
+        name: "John Doe",
+        email: "john@example.com",
+        points: 0,
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        totalOrders: 0,
+        totalSpent: 0,
+        lastOrderAt: null,
+        enrolledAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      isNew: true,
+    });
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/storefront/loyalty/otp/verify",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          phone: "+15551234567",
+          code: "123456",
+          companySlug: "test-company",
+          name: "John Doe",
+          email: "john@example.com",
+        }),
+      }
+    );
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.data.member).toBeDefined();
+
+    // Verify that enrollCustomer was called with email
+    expect(loyaltyService.enrollCustomer).toHaveBeenCalledWith(
+      "tenant-1",
+      "company-1",
+      "+15551234567",
+      {
+        name: "John Doe",
+        email: "john@example.com",
+      }
+    );
+  });
+
+  it("should handle empty email string", async () => {
+    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+      id: "company-1",
+      tenantId: "tenant-1",
+      slug: "test-company",
+      name: "Test Company",
+    } as any);
+
+    vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue(null);
+
+    vi.mocked(otpService.verifyOtp).mockResolvedValue({
+      verified: true,
+      error: null,
+      reason: null,
+    });
+
+    vi.mocked(loyaltyService.enrollCustomer).mockResolvedValue({
+      member: {
+        id: "member-1",
+        phone: "+15551234567",
+        name: "John Doe",
+        email: null,
+        points: 0,
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        totalOrders: 0,
+        totalSpent: 0,
+        lastOrderAt: null,
+        enrolledAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      isNew: true,
+    });
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/storefront/loyalty/otp/verify",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          phone: "+15551234567",
+          code: "123456",
+          companySlug: "test-company",
+          name: "John Doe",
+          email: "",
+        }),
+      }
+    );
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+
+    // Verify that enrollCustomer was called with undefined for empty email
+    expect(loyaltyService.enrollCustomer).toHaveBeenCalledWith(
+      "tenant-1",
+      "company-1",
+      "+15551234567",
+      {
+        name: "John Doe",
+        email: undefined,
+      }
+    );
+  });
+
+  it("should reject invalid email format", async () => {
+    const request = new NextRequest(
+      "http://localhost:3000/api/storefront/loyalty/otp/verify",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          phone: "+15551234567",
+          code: "123456",
+          companySlug: "test-company",
+          name: "John Doe",
+          email: "invalid-email",
+        }),
+      }
+    );
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.error).toContain("email");
+  });
+
+  it("should reject null email (Zod validation)", async () => {
+    const request = new NextRequest(
+      "http://localhost:3000/api/storefront/loyalty/otp/verify",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          phone: "+15551234567",
+          code: "123456",
+          companySlug: "test-company",
+          name: "John Doe",
+          email: null,
+        }),
+      }
+    );
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    // Null is not allowed by Zod schema
+    expect(response.status).toBe(400);
+    expect(data.success).toBe(false);
+  });
+
+  it("should work without email parameter (backward compatibility)", async () => {
+    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+      id: "company-1",
+      tenantId: "tenant-1",
+      slug: "test-company",
+      name: "Test Company",
+    } as any);
+
+    vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue(null);
+
+    vi.mocked(otpService.verifyOtp).mockResolvedValue({
+      verified: true,
+      error: null,
+      reason: null,
+    });
+
+    vi.mocked(loyaltyService.enrollCustomer).mockResolvedValue({
+      member: {
+        id: "member-1",
+        phone: "+15551234567",
+        name: "John Doe",
+        email: null,
+        points: 0,
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        totalOrders: 0,
+        totalSpent: 0,
+        lastOrderAt: null,
+        enrolledAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      isNew: true,
+    });
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/storefront/loyalty/otp/verify",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          phone: "+15551234567",
+          code: "123456",
+          companySlug: "test-company",
+          name: "John Doe",
+          // No email parameter
+        }),
+      }
+    );
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+
+    // Email should be undefined when not provided
+    expect(loyaltyService.enrollCustomer).toHaveBeenCalledWith(
+      "tenant-1",
+      "company-1",
+      "+15551234567",
+      {
+        name: "John Doe",
+        email: undefined,
+      }
+    );
+  });
+
+  it("should return error when company not found", async () => {
+    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(null);
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/storefront/loyalty/otp/verify",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          phone: "+15551234567",
+          code: "123456",
+          companySlug: "non-existent",
+          name: "John Doe",
+          email: "john@example.com",
+        }),
+      }
+    );
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(data.success).toBe(false);
+    expect(data.error).toBe("Company not found");
+  });
+
+  it("should return error when OTP verification fails", async () => {
+    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+      id: "company-1",
+      tenantId: "tenant-1",
+      slug: "test-company",
+      name: "Test Company",
+    } as any);
+
+    vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue(null);
+
+    vi.mocked(otpService.verifyOtp).mockResolvedValue({
+      verified: false,
+      error: "Invalid or expired code",
+      reason: "expired",
+    });
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/storefront/loyalty/otp/verify",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          phone: "+15551234567",
+          code: "999999",
+          companySlug: "test-company",
+          name: "John Doe",
+          email: "john@example.com",
+        }),
+      }
+    );
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.error).toBe("Invalid or expired code");
+  });
+});

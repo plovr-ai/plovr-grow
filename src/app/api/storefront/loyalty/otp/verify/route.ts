@@ -10,6 +10,7 @@ const verifyOtpSchema = z.object({
   code: z.string().length(6, "Verification code must be 6 digits"),
   companySlug: z.string().min(1, "Company slug is required"),
   name: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
 });
 
 export async function POST(request: NextRequest) {
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { phone, code, companySlug, name } = validation.data;
+    const { phone, code, companySlug, name, email } = validation.data;
 
     // Get company by slug
     const company = await merchantService.getCompanyBySlug(companySlug);
@@ -72,7 +73,10 @@ export async function POST(request: NextRequest) {
       tenantId,
       companyId,
       phone,
-      { name }
+      {
+        name,
+        email: email || undefined,
+      }
     );
 
     // Set HTTP-only cookie for session persistence
