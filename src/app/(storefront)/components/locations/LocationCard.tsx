@@ -59,12 +59,10 @@ export function LocationCard({
   const menuLink = addItem
     ? `/r/${slug}/menu?addItem=${addItem}`
     : `/r/${slug}/menu`;
+  const cateringLink = `/r/${slug}/catering`;
 
   return (
-    <Link
-      href={menuLink}
-      className="block border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow bg-white"
-    >
+    <div className="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow bg-white">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h3 className="text-xl font-bold text-gray-900 truncate">{name}</h3>
@@ -147,22 +145,47 @@ export function LocationCard({
         )}
       </div>
 
-      <div className="mt-4 flex items-center text-theme-primary text-sm font-medium">
-        <span>View Menu</span>
-        <svg
-          className="w-4 h-4 ml-1"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+      {/* Action Buttons */}
+      <div className="mt-4 flex gap-3">
+        <Link
+          href={menuLink}
+          className="flex-1 flex items-center justify-center gap-1 text-theme-primary hover:text-theme-primary-hover border border-theme-primary hover:border-theme-primary-hover px-4 py-2 rounded-lg text-sm font-medium transition-colors"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 5l7 7-7 7"
-          />
-        </svg>
+          <span>View Menu</span>
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </Link>
+        <Link
+          href={cateringLink}
+          className="flex-1 flex items-center justify-center gap-1 text-gray-600 hover:text-gray-900 border border-gray-300 hover:border-gray-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+          <span>Catering</span>
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </Link>
       </div>
-    </Link>
+    </div>
   );
 }

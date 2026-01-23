@@ -12,6 +12,11 @@ import {
   Receipt,
   ChevronDown,
   Building2,
+  Gift,
+  Sparkles,
+  Users,
+  Star,
+  Utensils,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +48,12 @@ const navigation: NavItem[] = [
         pattern: /^\/dashboard\/menu$/,
       },
       {
+        label: "Featured",
+        href: "/dashboard/menu/featured",
+        icon: Star,
+        pattern: /^\/dashboard\/menu\/featured/,
+      },
+      {
         label: "Tax",
         href: "/dashboard/menu/tax",
         icon: Receipt,
@@ -55,6 +66,40 @@ const navigation: NavItem[] = [
     href: "/dashboard/orders",
     icon: ShoppingCart,
     pattern: /^\/dashboard\/orders/,
+  },
+  {
+    label: "Loyalty",
+    href: "/dashboard/loyalty",
+    icon: Gift,
+    pattern: /^\/dashboard\/loyalty/,
+    children: [
+      {
+        label: "Rules",
+        href: "/dashboard/loyalty/rules",
+        icon: Sparkles,
+        pattern: /^\/dashboard\/loyalty\/rules/,
+      },
+      {
+        label: "Members",
+        href: "/dashboard/loyalty/members",
+        icon: Users,
+        pattern: /^\/dashboard\/loyalty\/members/,
+      },
+    ],
+  },
+  {
+    label: "Catering",
+    href: "/dashboard/catering",
+    icon: Utensils,
+    pattern: /^\/dashboard\/catering/,
+    children: [
+      {
+        label: "Leads",
+        href: "/dashboard/catering/leads",
+        icon: List,
+        pattern: /^\/dashboard\/catering\/leads/,
+      },
+    ],
   },
   {
     label: "Company",

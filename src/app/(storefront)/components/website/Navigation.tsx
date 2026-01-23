@@ -16,6 +16,8 @@ interface NavigationProps {
   companySlug?: string;
   /** Custom menu link (for single vs multi-store logic) */
   menuLink?: string;
+  /** Custom catering link (for single vs multi-store logic) */
+  cateringLink?: string;
   /** Whether loyalty is enabled for this company */
   isLoyaltyEnabled?: boolean;
 }
@@ -26,6 +28,7 @@ export function Navigation({
   tenantSlug,
   companySlug,
   menuLink,
+  cateringLink,
   isLoyaltyEnabled = false,
 }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -37,12 +40,14 @@ export function Navigation({
   // Support both old (tenantSlug) and new (companySlug) props
   const slug = companySlug ?? tenantSlug ?? "";
   const orderLink = menuLink ?? `/r/${slug}/menu`;
+  const cateringHref = cateringLink ?? `/${slug}/locations`;
   // Locations and home are always brand-level pages
   const locationsLink = `/${slug}/locations`;
   const homeLink = `/${slug}`;
 
   const navLinks: NavigationLink[] = [
     { label: "Menu", href: orderLink },
+    { label: "Catering", href: cateringHref },
     { label: "Locations", href: locationsLink },
     { label: "Our Story", href: "#story" },
     { label: "Contact", href: "#location" },

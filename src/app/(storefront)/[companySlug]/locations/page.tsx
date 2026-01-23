@@ -62,6 +62,7 @@ export default async function LocationsPage({ params, searchParams }: PageProps)
         restaurantName={company.name}
         companySlug={companySlug}
         menuLink={`/${companySlug}/locations`}
+        cateringLink={`/${companySlug}/locations`}
       />
 
       <div className="pt-20 md:pt-24 bg-gray-50">

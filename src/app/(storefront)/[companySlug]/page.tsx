@@ -33,13 +33,16 @@ export default async function CompanyHomePage({ params }: PageProps) {
     company.id
   );
 
-  // Determine the menu link:
-  // - If single merchant, link directly to that merchant's menu
+  // Determine the menu and catering links:
+  // - If single merchant, link directly to that merchant's menu/catering
   // - If multiple merchants, link to locations page
   const locationCount = company.merchants.length;
   const hasSingleMerchant = locationCount === 1;
   const menuLink = hasSingleMerchant
     ? `/r/${company.merchants[0].slug}/menu`
+    : `/${companySlug}/locations`;
+  const cateringLink = hasSingleMerchant
+    ? `/r/${company.merchants[0].slug}/catering`
     : `/${companySlug}/locations`;
 
   // Get single location info for hero banner
@@ -81,6 +84,7 @@ export default async function CompanyHomePage({ params }: PageProps) {
         restaurantName={company.name}
         companySlug={companySlug}
         menuLink={menuLink}
+        cateringLink={cateringLink}
         isLoyaltyEnabled={isLoyaltyEnabled}
       />
       <HeroBanner

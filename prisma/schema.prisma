@@ -434,7 +434,7 @@ model CateringLead {
   merchantId String   @map("merchant_id")
   name       String
   phone      String
-  email      String?
+  email      String
   notes      String?  @db.Text
   status     String   @default("pending")
   createdAt  DateTime @default(now()) @map("created_at")
