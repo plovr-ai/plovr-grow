@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Pagination } from "@/components/orders/Pagination";
 import { formatPhone } from "@/lib/utils";
 import type { CateringLeadWithMerchant } from "@/services/catering/catering.types";
@@ -111,10 +112,9 @@ export function CateringLeadsClient({
         </form>
 
         {merchants.length > 1 && (
-          <select
+          <Select
             value={initialFilters.merchantId}
             onChange={(e) => updateFilters({ merchantId: e.target.value })}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Locations</option>
             {merchants.map((merchant) => (
@@ -122,20 +122,19 @@ export function CateringLeadsClient({
                 {merchant.name}
               </option>
             ))}
-          </select>
+          </Select>
         )}
 
-        <select
+        <Select
           value={initialFilters.status}
           onChange={(e) => updateFilters({ status: e.target.value })}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           {STATUS_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {/* Leads Table */}
