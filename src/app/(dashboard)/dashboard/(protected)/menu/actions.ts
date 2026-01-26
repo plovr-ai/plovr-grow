@@ -265,12 +265,11 @@ export async function updateCategorySortOrderAction(
 // ==================== Menu Item Actions ====================
 
 interface CreateMenuItemInput {
-  categoryId: string;
+  categoryIds: string[];
   name: string;
   description?: string;
   price: number;
   imageUrl?: string;
-  sortOrder?: number;
   modifierGroups?: ModifierGroupInput[];
   tags?: string[];
   taxConfigIds?: string[];
@@ -289,12 +288,11 @@ export async function createMenuItemAction(
 
   try {
     const item = await menuService.createMenuItem(tenantId, companyId, {
-      categoryId: input.categoryId,
+      categoryIds: input.categoryIds,
       name: input.name,
       description: input.description,
       price: input.price,
       imageUrl: input.imageUrl,
-      sortOrder: input.sortOrder,
       modifierGroups: input.modifierGroups,
       tags: input.tags,
     });
@@ -321,11 +319,11 @@ interface UpdateMenuItemInput {
   description?: string;
   price?: number;
   imageUrl?: string;
-  sortOrder?: number;
   status?: "active" | "inactive" | "out_of_stock";
   modifierGroups?: ModifierGroupInput[];
   tags?: string[];
   taxConfigIds?: string[];
+  categoryIds?: string[];
 }
 
 export async function updateMenuItemAction(
@@ -341,7 +339,7 @@ export async function updateMenuItemAction(
   const { tenantId } = session.user;
 
   try {
-    // Update menu item fields
+    // Update menu item fields (including categoryIds if provided)
     const { taxConfigIds, ...updateData } = input;
     await menuService.updateMenuItem(tenantId, id, updateData);
 
@@ -362,7 +360,15 @@ export async function updateMenuItemAction(
   }
 }
 
-export async function deleteMenuItemAction(id: string): Promise<ActionResult> {
+/**
+ * Delete or unlink a menu item
+ * If categoryId is provided: only remove from that category (item stays in other categories)
+ * If categoryId is not provided: permanently delete the item
+ */
+export async function deleteMenuItemAction(
+  id: string,
+  options?: { categoryId?: string }
+): Promise<ActionResult> {
   const session = await auth();
 
   if (!session?.user?.tenantId) {
@@ -372,7 +378,13 @@ export async function deleteMenuItemAction(id: string): Promise<ActionResult> {
   const { tenantId } = session.user;
 
   try {
-    await menuService.deleteMenuItem(tenantId, id);
+    if (options?.categoryId) {
+      // Just remove from this category
+      await menuService.unlinkItemFromCategory(tenantId, options.categoryId, id);
+    } else {
+      // Permanently delete the item
+      await menuService.deleteMenuItem(tenantId, id);
+    }
 
     revalidatePath("/dashboard/menu", "page");
 
@@ -386,8 +398,40 @@ export async function deleteMenuItemAction(id: string): Promise<ActionResult> {
   }
 }
 
+/**
+ * Update sort orders for items within a category
+ */
 export async function updateMenuItemSortOrderAction(
+  categoryId: string,
   updates: Array<{ id: string; sortOrder: number }>
+): Promise<ActionResult> {
+  const session = await auth();
+
+  if (!session?.user?.tenantId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    await menuService.updateMenuItemSortOrders(categoryId, updates);
+
+    revalidatePath("/dashboard/menu", "page");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update menu item sort order:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update menu item sort order",
+    };
+  }
+}
+
+/**
+ * Link an existing item to a category
+ */
+export async function linkItemToCategoryAction(
+  categoryId: string,
+  itemId: string
 ): Promise<ActionResult> {
   const session = await auth();
 
@@ -398,16 +442,184 @@ export async function updateMenuItemSortOrderAction(
   const { tenantId } = session.user;
 
   try {
-    await menuService.updateMenuItemSortOrders(tenantId, updates);
+    await menuService.linkItemToCategory(tenantId, categoryId, itemId);
 
     revalidatePath("/dashboard/menu", "page");
 
     return { success: true };
   } catch (error) {
-    console.error("Failed to update menu item sort order:", error);
+    console.error("Failed to link item to category:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update menu item sort order",
+      error: error instanceof Error ? error.message : "Failed to link item to category",
+    };
+  }
+}
+
+/**
+ * Get items available to add to a category (not already in that category)
+ */
+export async function getAvailableItemsAction(
+  categoryId: string
+): Promise<ActionResult<import("@/services/menu/menu.types").AvailableItem[]>> {
+  const session = await auth();
+
+  if (!session?.user?.tenantId || !session?.user?.companyId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { tenantId, companyId } = session.user;
+
+  try {
+    const items = await menuService.getAvailableItems(tenantId, companyId, categoryId);
+    return { success: true, data: items };
+  } catch (error) {
+    console.error("Failed to get available items:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get available items",
+    };
+  }
+}
+
+/**
+ * Get count of categories an item belongs to
+ */
+export async function getItemCategoryCountAction(
+  itemId: string
+): Promise<ActionResult<number>> {
+  const session = await auth();
+
+  if (!session?.user?.tenantId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    const count = await menuService.countItemCategories(itemId);
+    return { success: true, data: count };
+  } catch (error) {
+    console.error("Failed to get item category count:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get item category count",
+    };
+  }
+}
+
+// ==================== Featured Items Actions ====================
+
+/**
+ * Set featured items for a company (replace all)
+ */
+export async function setFeaturedItemsAction(
+  menuItemIds: string[]
+): Promise<ActionResult> {
+  const session = await auth();
+
+  if (!session?.user?.tenantId || !session?.user?.companyId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { tenantId, companyId } = session.user;
+
+  try {
+    await menuService.setFeaturedItems(tenantId, companyId, menuItemIds);
+
+    revalidatePath("/dashboard/menu/featured", "page");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to set featured items:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to set featured items",
+    };
+  }
+}
+
+/**
+ * Add a single featured item
+ */
+export async function addFeaturedItemAction(
+  menuItemId: string
+): Promise<ActionResult> {
+  const session = await auth();
+
+  if (!session?.user?.tenantId || !session?.user?.companyId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { tenantId, companyId } = session.user;
+
+  try {
+    await menuService.addFeaturedItem(tenantId, companyId, menuItemId);
+
+    revalidatePath("/dashboard/menu/featured", "page");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to add featured item:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to add featured item",
+    };
+  }
+}
+
+/**
+ * Remove a single featured item
+ */
+export async function removeFeaturedItemAction(
+  menuItemId: string
+): Promise<ActionResult> {
+  const session = await auth();
+
+  if (!session?.user?.tenantId || !session?.user?.companyId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { tenantId, companyId } = session.user;
+
+  try {
+    await menuService.removeFeaturedItem(tenantId, companyId, menuItemId);
+
+    revalidatePath("/dashboard/menu/featured", "page");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to remove featured item:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to remove featured item",
+    };
+  }
+}
+
+/**
+ * Reorder featured items
+ */
+export async function reorderFeaturedItemsAction(
+  orderedMenuItemIds: string[]
+): Promise<ActionResult> {
+  const session = await auth();
+
+  if (!session?.user?.tenantId || !session?.user?.companyId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { tenantId, companyId } = session.user;
+
+  try {
+    await menuService.reorderFeaturedItems(tenantId, companyId, orderedMenuItemIds);
+
+    revalidatePath("/dashboard/menu/featured", "page");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to reorder featured items:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to reorder featured items",
     };
   }
 }

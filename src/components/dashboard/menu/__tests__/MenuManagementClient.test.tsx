@@ -82,11 +82,13 @@ vi.mock("../MenuItemList", () => ({
   MenuItemList: ({
     category,
     onAddItem,
+    onAddExistingItem,
     onEditItem,
   }: {
     category: DashboardCategory | null;
     taxConfigs: TaxConfigOption[];
     onAddItem: () => void;
+    onAddExistingItem: () => void;
     onEditItem: (itemId: string) => void;
   }) => (
     <div data-testid="menu-item-list">
@@ -95,6 +97,9 @@ vi.mock("../MenuItemList", () => ({
           <span data-testid="selected-category-name">{category.name}</span>
           <button data-testid="add-item-btn" onClick={onAddItem}>
             Add Item
+          </button>
+          <button data-testid="add-existing-item-btn" onClick={onAddExistingItem}>
+            Add Existing Item
           </button>
           {category.menuItems.map((item) => (
             <button
@@ -119,6 +124,26 @@ vi.mock("../CategoryForm", () => ({
 
 vi.mock("../MenuForm", () => ({
   MenuForm: () => <div data-testid="menu-form">Menu Form</div>,
+}));
+
+vi.mock("../AddExistingItemModal", () => ({
+  AddExistingItemModal: ({
+    categoryId,
+    categoryName,
+    onClose,
+  }: {
+    categoryId: string;
+    categoryName: string;
+    onClose: () => void;
+  }) => (
+    <div data-testid="add-existing-item-modal">
+      <span data-testid="modal-category-id">{categoryId}</span>
+      <span data-testid="modal-category-name">{categoryName}</span>
+      <button data-testid="close-modal-btn" onClick={onClose}>
+        Close
+      </button>
+    </div>
+  ),
 }));
 
 describe("MenuManagementClient", () => {
@@ -159,6 +184,7 @@ describe("MenuManagementClient", () => {
           modifierGroups: [],
           tags: [],
           taxConfigIds: [],
+          categoryIds: ["cat-1"],
         },
       ],
     },
@@ -181,6 +207,7 @@ describe("MenuManagementClient", () => {
           modifierGroups: [],
           tags: [],
           taxConfigIds: [],
+          categoryIds: ["cat-2"],
         },
       ],
     },
@@ -414,6 +441,82 @@ describe("MenuManagementClient", () => {
 
       expect(screen.getByText("No categories yet")).toBeInTheDocument();
       expect(screen.getByText("Add your first category")).toBeInTheDocument();
+    });
+  });
+
+  describe("Add Existing Item Modal", () => {
+    it("should NOT show modal initially", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      expect(screen.queryByTestId("add-existing-item-modal")).not.toBeInTheDocument();
+    });
+
+    it("should open modal when clicking Add Existing Item", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      const addExistingBtn = screen.getByTestId("add-existing-item-btn");
+      fireEvent.click(addExistingBtn);
+
+      expect(screen.getByTestId("add-existing-item-modal")).toBeInTheDocument();
+    });
+
+    it("should pass correct categoryId to modal", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      const addExistingBtn = screen.getByTestId("add-existing-item-btn");
+      fireEvent.click(addExistingBtn);
+
+      // First category (Appetizers, cat-1) is selected by default
+      expect(screen.getByTestId("modal-category-id")).toHaveTextContent("cat-1");
+    });
+
+    it("should pass correct categoryName to modal", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      const addExistingBtn = screen.getByTestId("add-existing-item-btn");
+      fireEvent.click(addExistingBtn);
+
+      expect(screen.getByTestId("modal-category-name")).toHaveTextContent("Appetizers");
+    });
+
+    it("should pass correct categoryId when different category is selected", () => {
+      mockSearchParams.set("category", "cat-2");
+
+      render(<MenuManagementClient {...defaultProps} />);
+
+      const addExistingBtn = screen.getByTestId("add-existing-item-btn");
+      fireEvent.click(addExistingBtn);
+
+      expect(screen.getByTestId("modal-category-id")).toHaveTextContent("cat-2");
+      expect(screen.getByTestId("modal-category-name")).toHaveTextContent("Main Dishes");
+    });
+
+    it("should close modal when onClose is called", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      const addExistingBtn = screen.getByTestId("add-existing-item-btn");
+      fireEvent.click(addExistingBtn);
+
+      expect(screen.getByTestId("add-existing-item-modal")).toBeInTheDocument();
+
+      const closeBtn = screen.getByTestId("close-modal-btn");
+      fireEvent.click(closeBtn);
+
+      expect(screen.queryByTestId("add-existing-item-modal")).not.toBeInTheDocument();
+    });
+
+    it("should NOT open modal when no category is selected", () => {
+      render(
+        <MenuManagementClient
+          menus={mockMenus}
+          currentMenuId="menu-1"
+          categories={[]}
+          taxConfigs={mockTaxConfigs}
+        />
+      );
+
+      // The add-existing-item-btn won't exist when there's no category
+      expect(screen.queryByTestId("add-existing-item-btn")).not.toBeInTheDocument();
     });
   });
 });

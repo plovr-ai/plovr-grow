@@ -60,12 +60,11 @@ export interface UpdateCategoryInput {
 }
 
 export interface CreateMenuItemInput {
-  categoryId: string;
+  categoryIds: string[];
   name: string;
   description?: string;
   price: number;
   imageUrl?: string;
-  sortOrder?: number;
   modifierGroups?: ModifierGroupInput[];
   tags?: string[];
   taxConfigId?: string;
@@ -76,11 +75,11 @@ export interface UpdateMenuItemInput {
   description?: string;
   price?: number;
   imageUrl?: string;
-  sortOrder?: number;
   status?: "active" | "inactive" | "out_of_stock";
   modifierGroups?: ModifierGroupInput[];
   tags?: string[];
   taxConfigId?: string | null;
+  categoryIds?: string[];
 }
 
 // Modifier 输入类型
@@ -120,6 +119,16 @@ export interface DashboardMenuItem {
   modifierGroups: ModifierGroupInput[];
   tags: string[];
   taxConfigIds: string[];
+  categoryIds: string[];
+}
+
+export interface AvailableItem {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  imageUrl: string | null;
+  categoryNames: string[];
 }
 
 export interface DashboardCategory {
@@ -142,4 +151,20 @@ export interface TaxConfigOption {
   id: string;
   name: string;
   description: string | null;
+}
+
+// ==================== Featured Items Types ====================
+
+export interface FeaturedItemData {
+  id: string;
+  menuItemId: string;
+  sortOrder: number;
+  menuItem: {
+    id: string;
+    name: string;
+    description: string | null;
+    price: number;
+    imageUrl: string | null;
+    status: string;
+  };
 }

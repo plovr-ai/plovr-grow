@@ -111,27 +111,27 @@ export class MerchantService {
     const companySettings = company.settings as CompanySettings | undefined;
     const companyWebsite = companySettings?.website;
 
-    // Fetch featured items from menu database
+    // Fetch featured items from the dedicated featured_items table
     let featuredItems: WebsiteMerchantData["featuredItems"] = [];
-    const featuredItemIds = companyWebsite?.featuredItemIds;
-    if (featuredItemIds && featuredItemIds.length > 0) {
-      const menuItems = await menuService.getMenuItemsByCompanyId(
-        company.tenantId,
-        company.id,
-        featuredItemIds
-      );
+    const featuredItemsData = await menuService.getFeaturedItems(
+      company.tenantId,
+      company.id
+    );
 
-      // Map menu items to FeaturedItem format
-      featuredItems = menuItems.map((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description || "",
-        price: Number(item.price),
-        image: item.imageUrl || "",
-        category: undefined, // Category info not needed for display
-        menuItemId: item.id,
-        hasModifiers: item.options != null && Array.isArray(item.options) && item.options.length > 0,
-      }));
+    if (featuredItemsData.length > 0) {
+      // Filter only active items
+      featuredItems = featuredItemsData
+        .filter((fi) => fi.menuItem.status === "active")
+        .map((fi) => ({
+          id: fi.id,
+          name: fi.menuItem.name,
+          description: fi.menuItem.description || "",
+          price: fi.menuItem.price,
+          image: fi.menuItem.imageUrl || "",
+          category: undefined, // Category info not needed for display
+          menuItemId: fi.menuItemId,
+          hasModifiers: false, // Would need to fetch options separately if needed
+        }));
     }
 
     // For single-merchant companies, include merchant contact info and business hours

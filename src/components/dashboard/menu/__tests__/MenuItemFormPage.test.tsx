@@ -115,6 +115,7 @@ describe("MenuItemFormPage", () => {
     modifierGroups: [],
     tags: [],
     taxConfigIds: ["tax-1"],
+    categoryIds: ["cat-1"],
   };
 
   const defaultProps = {
@@ -186,7 +187,7 @@ describe("MenuItemFormPage", () => {
       await waitFor(() => {
         expect(mockCreateMenuItemAction).toHaveBeenCalledWith(
           expect.objectContaining({
-            categoryId: "cat-1",
+            categoryIds: ["cat-1"],
             name: "New Item",
             price: 15.99,
           })

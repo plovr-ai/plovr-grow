@@ -9,6 +9,7 @@ import { MenuForm } from "./MenuForm";
 import { CategoryList } from "./CategoryList";
 import { CategoryForm } from "./CategoryForm";
 import { MenuItemList } from "./MenuItemList";
+import { AddExistingItemModal } from "./AddExistingItemModal";
 import { updateMenuSortOrderAction } from "@/app/(dashboard)/dashboard/(protected)/menu/actions";
 import type {
   MenuInfo,
@@ -48,6 +49,7 @@ export function MenuManagementClient({
 
   const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<DashboardCategory | null>(null);
+  const [isAddExistingItemOpen, setIsAddExistingItemOpen] = useState(false);
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId) || null;
 
@@ -108,6 +110,12 @@ export function MenuManagementClient({
     }
   };
 
+  const handleAddExistingItem = () => {
+    if (selectedCategoryId) {
+      setIsAddExistingItemOpen(true);
+    }
+  };
+
   const handleEditItem = (itemId: string) => {
     router.push(`/dashboard/menu/items/${itemId}/edit?menuId=${currentMenuId}`);
   };
@@ -138,7 +146,6 @@ export function MenuManagementClient({
         <div className="w-64 shrink-0 overflow-y-auto">
           <Button
             onClick={handleAddCategory}
-            variant="outline"
             className="mb-3 w-full"
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -165,6 +172,7 @@ export function MenuManagementClient({
             category={selectedCategory}
             taxConfigs={taxConfigs}
             onAddItem={handleAddItem}
+            onAddExistingItem={handleAddExistingItem}
             onEditItem={handleEditItem}
           />
         </div>
@@ -185,6 +193,15 @@ export function MenuManagementClient({
           menuId={currentMenuId}
           category={editingCategory}
           onClose={handleCloseCategoryForm}
+        />
+      )}
+
+      {/* Add Existing Item Modal */}
+      {isAddExistingItemOpen && selectedCategory && (
+        <AddExistingItemModal
+          categoryId={selectedCategory.id}
+          categoryName={selectedCategory.name}
+          onClose={() => setIsAddExistingItemOpen(false)}
         />
       )}
     </div>

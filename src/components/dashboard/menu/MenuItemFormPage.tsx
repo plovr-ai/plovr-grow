@@ -90,7 +90,7 @@ export function MenuItemFormPage({
             taxConfigIds,
           })
         : await createMenuItemAction({
-            categoryId,
+            categoryIds: [categoryId],
             name: name.trim(),
             description: description.trim() || undefined,
             price: priceNum,

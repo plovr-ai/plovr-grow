@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, ImageIcon } from "lucide-react";
+import { GripVertical, Trash2, ImageIcon, FolderTree } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useDashboardFormatPrice } from "@/hooks";
@@ -16,12 +16,14 @@ import type { DashboardMenuItem, TaxConfigOption } from "@/services/menu/menu.ty
 interface MenuItemCardProps {
   item: DashboardMenuItem;
   taxConfigs: TaxConfigOption[];
+  categoryId: string;
   onEdit: () => void;
 }
 
-export function MenuItemCard({ item, taxConfigs, onEdit }: MenuItemCardProps) {
+export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemCardProps) {
   const [isPending, startTransition] = useTransition();
   const formatPrice = useDashboardFormatPrice();
+  const isInMultipleCategories = item.categoryIds.length > 1;
 
   const {
     attributes,
@@ -38,13 +40,25 @@ export function MenuItemCard({ item, taxConfigs, onEdit }: MenuItemCardProps) {
   };
 
   const handleDelete = () => {
-    if (!confirm("Are you sure you want to delete this item?")) {
-      return;
+    if (isInMultipleCategories) {
+      // Item is in multiple categories - ask what to do
+      const confirmMessage = `This item is in ${item.categoryIds.length} categories.\n\nClick OK to remove from this category only.\nClick Cancel to keep it.`;
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+      // Remove from this category only
+      startTransition(async () => {
+        await deleteMenuItemAction(item.id, { categoryId });
+      });
+    } else {
+      // Item is only in this category - deleting will remove it entirely
+      if (!confirm("Are you sure you want to delete this item?")) {
+        return;
+      }
+      startTransition(async () => {
+        await deleteMenuItemAction(item.id);
+      });
     }
-
-    startTransition(async () => {
-      await deleteMenuItemAction(item.id);
-    });
   };
 
   const handleStatusChange = (newStatus: "active" | "inactive" | "out_of_stock") => {
@@ -113,8 +127,16 @@ export function MenuItemCard({ item, taxConfigs, onEdit }: MenuItemCardProps) {
             <ImageIcon className="h-12 w-12 text-gray-300" />
           </div>
         )}
-        {/* Status badge overlay */}
-        <div className="absolute right-2 top-2">{getStatusBadge()}</div>
+        {/* Status and multi-category badges overlay */}
+        <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
+          {getStatusBadge()}
+          {isInMultipleCategories && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+              <FolderTree className="h-3 w-3" />
+              {item.categoryIds.length}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Content */}

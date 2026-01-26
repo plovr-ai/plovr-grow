@@ -11,6 +11,8 @@ import type {
   MenuInfo,
   CreateMenuInput,
   UpdateMenuInput,
+  AvailableItem,
+  FeaturedItemData,
 } from "./menu.types";
 import type { RoundingMethod } from "./tax-config.types";
 
@@ -21,13 +23,17 @@ async function getRepositories() {
     { menuEntityRepository },
     { merchantRepository },
     { taxConfigRepository },
+    { menuCategoryItemRepository },
+    { featuredItemRepository },
   ] = await Promise.all([
     import("@/repositories/menu.repository"),
     import("@/repositories/menu-entity.repository"),
     import("@/repositories/merchant.repository"),
     import("@/repositories/tax-config.repository"),
+    import("@/repositories/menu-category-item.repository"),
+    import("@/repositories/featured-item.repository"),
   ]);
-  return { menuRepository, menuEntityRepository, merchantRepository, taxConfigRepository };
+  return { menuRepository, menuEntityRepository, merchantRepository, taxConfigRepository, menuCategoryItemRepository, featuredItemRepository };
 }
 
 export class MenuService {
@@ -98,7 +104,7 @@ export class MenuService {
     merchantId: string,
     menuId?: string
   ): Promise<GetMenuResponse> {
-    const { menuRepository, menuEntityRepository, merchantRepository, taxConfigRepository } =
+    const { menuRepository, menuEntityRepository, merchantRepository, taxConfigRepository, featuredItemRepository } =
       await getRepositories();
 
     // Get merchant to find companyId
@@ -117,15 +123,15 @@ export class MenuService {
     const currentMenuId =
       menuId && menus.some((m) => m.id === menuId) ? menuId : menus[0].id;
 
-    // Fetch categories for the selected menu
+    // Fetch categories for the selected menu (with junction table)
     const categories = await menuRepository.getCategoriesWithItemsByMenu(
       tenantId,
       currentMenuId
     );
 
-    // Get all item IDs
-    const itemIds = categories.flatMap((c: { menuItems: { id: string }[] }) =>
-      c.menuItems.map((i: { id: string }) => i.id)
+    // Get all item IDs from junction table structure
+    const itemIds = categories.flatMap((c: { categoryItems: { menuItem: { id: string } }[] }) =>
+      c.categoryItems.map((ci: { menuItem: { id: string } }) => ci.menuItem.id)
     );
 
     // Get tax config IDs for all items
@@ -143,13 +149,14 @@ export class MenuService {
     // Build tax config lookup map
     const taxConfigMap = new Map(taxConfigs.map((c) => [c.id, c]));
 
-    // Enrich categories with tax info
+    // Enrich categories with tax info (flatten junction table structure)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const enrichedCategories = categories.map((category: any) => ({
       ...category,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      menuItems: category.menuItems.map((item: any) => {
-        const taxConfigIds = itemTaxMap.get(item.id) || [];
+      // Transform categoryItems to menuItems for API compatibility
+      menuItems: category.categoryItems.map((ci: { menuItem: Record<string, unknown>; sortOrder: number }) => {
+        const item = ci.menuItem;
+        const taxConfigIds = itemTaxMap.get(item.id as string) || [];
         const taxes = taxConfigIds
           .map((taxId) => {
             const config = taxConfigMap.get(taxId);
@@ -165,10 +172,99 @@ export class MenuService {
 
         return {
           ...item,
+          sortOrder: ci.sortOrder,
           taxes,
         };
       }),
     }));
+
+    // Remove categoryItems from response (already flattened to menuItems)
+    enrichedCategories.forEach((c: { categoryItems?: unknown }) => delete c.categoryItems);
+
+    // Add Featured category as first category (only for first menu)
+    const isFirstMenu = currentMenuId === menus[0].id;
+    let finalCategories = enrichedCategories;
+
+    if (isFirstMenu) {
+      const featuredItems = await featuredItemRepository.getByCompanyId(tenantId, merchant.companyId);
+
+      // Only add Featured category if there are active featured items
+      const activeFeaturedItems = featuredItems.filter(
+        (fi) => fi.menuItem.status === "active"
+      );
+
+      if (activeFeaturedItems.length > 0) {
+        // Get tax info for featured items
+        const featuredItemIds = activeFeaturedItems.map((fi) => fi.menuItem.id);
+        const featuredItemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(featuredItemIds);
+        const featuredTaxConfigIds = [...new Set([...featuredItemTaxMap.values()].flat())];
+
+        // Get any missing tax configs (not already fetched)
+        const missingTaxConfigIds = featuredTaxConfigIds.filter(
+          (id) => !taxConfigMap.has(id)
+        );
+        if (missingTaxConfigIds.length > 0) {
+          const missingTaxConfigs = await taxConfigRepository.getTaxConfigsByIds(
+            tenantId,
+            missingTaxConfigIds
+          );
+          missingTaxConfigs.forEach((c) => taxConfigMap.set(c.id, c));
+        }
+
+        // Build featured menu items with tax info
+        const featuredMenuItems = activeFeaturedItems.map((fi, index) => {
+          const itemTaxConfigIds = featuredItemTaxMap.get(fi.menuItem.id) || [];
+          const taxes = itemTaxConfigIds
+            .map((taxId) => {
+              const config = taxConfigMap.get(taxId);
+              if (!config) return null;
+              return {
+                taxConfigId: taxId,
+                name: config.name,
+                rate: merchantTaxRateMap.get(taxId) || 0,
+                roundingMethod: config.roundingMethod as RoundingMethod,
+              };
+            })
+            .filter((t) => t !== null);
+
+          return {
+            id: fi.menuItem.id,
+            tenantId,
+            companyId: merchant.companyId,
+            name: fi.menuItem.name,
+            description: fi.menuItem.description,
+            price: fi.menuItem.price,
+            imageUrl: fi.menuItem.imageUrl,
+            status: fi.menuItem.status,
+            options: null,
+            nutrition: null,
+            tags: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            sortOrder: index,
+            taxes,
+          };
+        });
+
+        // Create Featured category
+        const featuredCategory = {
+          id: "featured",
+          tenantId,
+          companyId: merchant.companyId,
+          menuId: currentMenuId,
+          name: "Featured",
+          description: null,
+          imageUrl: null,
+          sortOrder: -1, // Ensures it's first
+          status: "active",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          menuItems: featuredMenuItems,
+        };
+
+        finalCategories = [featuredCategory, ...enrichedCategories];
+      }
+    }
 
     return {
       menus: menus.map((m) => ({
@@ -179,7 +275,7 @@ export class MenuService {
         status: m.status as "active" | "inactive",
       })),
       currentMenuId,
-      categories: enrichedCategories,
+      categories: finalCategories,
       merchantId,
       merchantName: merchant.name,
       merchantLogo: merchant.logoUrl || null,
@@ -254,48 +350,62 @@ export class MenuService {
   }
 
   /**
-   * Create a new menu item at company level
+   * Create a new menu item at company level and link to categories
    */
   async createMenuItem(
     tenantId: string,
     companyId: string,
     input: CreateMenuItemInput
   ) {
-    const { menuRepository } = await getRepositories();
-    return menuRepository.createItem(tenantId, companyId, input.categoryId, {
+    const { menuRepository, menuCategoryItemRepository } = await getRepositories();
+
+    // Create the menu item (without category association)
+    const item = await menuRepository.createItem(tenantId, companyId, {
       name: input.name,
       description: input.description,
       price: input.price,
       imageUrl: input.imageUrl,
-      sortOrder: input.sortOrder ?? 0,
       options: input.modifierGroups ? JSON.parse(JSON.stringify(input.modifierGroups)) : null,
       tags: input.tags ? JSON.parse(JSON.stringify(input.tags)) : null,
     });
+
+    // Link item to categories via junction table
+    for (const categoryId of input.categoryIds) {
+      const sortOrder = await menuCategoryItemRepository.getNextSortOrder(categoryId);
+      await menuCategoryItemRepository.linkItemToCategory(categoryId, item.id, sortOrder);
+    }
+
+    return item;
   }
 
   /**
-   * Update a menu item
+   * Update a menu item and optionally its category associations
    */
   async updateMenuItem(
     tenantId: string,
     itemId: string,
     input: UpdateMenuItemInput
   ) {
-    const { menuRepository } = await getRepositories();
+    const { menuRepository, menuCategoryItemRepository } = await getRepositories();
     const data: Record<string, unknown> = {};
 
     if (input.name !== undefined) data.name = input.name;
     if (input.description !== undefined) data.description = input.description;
     if (input.price !== undefined) data.price = input.price;
     if (input.imageUrl !== undefined) data.imageUrl = input.imageUrl;
-    if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder;
     if (input.status !== undefined) data.status = input.status;
     if (input.modifierGroups !== undefined)
       data.options = JSON.parse(JSON.stringify(input.modifierGroups));
     if (input.tags !== undefined)
       data.tags = JSON.parse(JSON.stringify(input.tags));
 
-    return menuRepository.updateItem(tenantId, itemId, data);
+    // Update item properties
+    await menuRepository.updateItem(tenantId, itemId, data);
+
+    // Update category associations if provided
+    if (input.categoryIds !== undefined) {
+      await menuCategoryItemRepository.setItemCategories(itemId, input.categoryIds);
+    }
   }
 
   /**
@@ -326,14 +436,15 @@ export class MenuService {
   }
 
   /**
-   * Batch update menu item sort orders
+   * Batch update menu item sort orders within a category
+   * Sort orders are stored in the junction table
    */
   async updateMenuItemSortOrders(
-    tenantId: string,
+    categoryId: string,
     updates: Array<{ id: string; sortOrder: number }>
   ) {
     const { menuRepository } = await getRepositories();
-    return menuRepository.updateItemSortOrders(tenantId, updates);
+    return menuRepository.updateItemSortOrders(categoryId, updates);
   }
 
   /**
@@ -360,7 +471,7 @@ export class MenuService {
     companyId: string,
     menuId?: string
   ): Promise<DashboardMenuResponse> {
-    const { menuRepository, menuEntityRepository, taxConfigRepository } = await getRepositories();
+    const { menuRepository, menuEntityRepository, taxConfigRepository, menuCategoryItemRepository } = await getRepositories();
 
     // Get all menus (including inactive) for dashboard
     const menus = await menuEntityRepository.getMenusByCompanyForDashboard(tenantId, companyId);
@@ -378,19 +489,22 @@ export class MenuService {
     const currentMenuId =
       menuId && menus.some((m) => m.id === menuId) ? menuId : menus[0].id;
 
-    // Fetch categories for the selected menu
+    // Fetch categories for the selected menu (with junction table)
     const categories = await menuRepository.getCategoriesWithItemsByMenuForDashboard(
       tenantId,
       currentMenuId
     );
 
-    // Get all item IDs
-    const itemIds = categories.flatMap((c) => c.menuItems.map((i) => i.id));
+    // Get all item IDs from junction table structure
+    const itemIds = categories.flatMap((c) => c.categoryItems.map((ci) => ci.menuItem.id));
 
-    // Get tax config IDs for all items
-    const itemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(itemIds);
+    // Get tax config IDs and category IDs for all items
+    const [itemTaxMap, itemCategoryMap] = await Promise.all([
+      taxConfigRepository.getMenuItemsTaxConfigIds(itemIds),
+      menuCategoryItemRepository.getItemsCategoryIds(itemIds),
+    ]);
 
-    // Transform to dashboard types
+    // Transform to dashboard types (flatten junction table structure)
     const dashboardCategories: DashboardCategory[] = categories.map((category) => ({
       id: category.id,
       name: category.name,
@@ -398,18 +512,22 @@ export class MenuService {
       imageUrl: category.imageUrl,
       sortOrder: category.sortOrder,
       status: category.status as "active" | "inactive",
-      menuItems: category.menuItems.map((item): DashboardMenuItem => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        price: Number(item.price),
-        imageUrl: item.imageUrl,
-        sortOrder: item.sortOrder,
-        status: item.status as "active" | "inactive" | "out_of_stock",
-        modifierGroups: (item.options as unknown as ModifierGroupInput[]) || [],
-        tags: (item.tags as unknown as string[]) || [],
-        taxConfigIds: itemTaxMap.get(item.id) || [],
-      })),
+      menuItems: category.categoryItems.map((ci): DashboardMenuItem => {
+        const item = ci.menuItem;
+        return {
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          price: Number(item.price),
+          imageUrl: item.imageUrl,
+          sortOrder: ci.sortOrder,
+          status: item.status as "active" | "inactive" | "out_of_stock",
+          modifierGroups: (item.options as unknown as ModifierGroupInput[]) || [],
+          tags: (item.tags as unknown as string[]) || [],
+          taxConfigIds: itemTaxMap.get(item.id) || [],
+          categoryIds: itemCategoryMap.get(item.id) || [],
+        };
+      }),
     }));
 
     return {
@@ -431,6 +549,138 @@ export class MenuService {
   async setMenuItemTaxConfigs(itemId: string, taxConfigIds: string[]) {
     const { taxConfigRepository } = await getRepositories();
     return taxConfigRepository.setMenuItemTaxConfigs(itemId, taxConfigIds);
+  }
+
+  /**
+   * Link an existing item to a category
+   */
+  async linkItemToCategory(
+    tenantId: string,
+    categoryId: string,
+    itemId: string
+  ) {
+    const { menuCategoryItemRepository } = await getRepositories();
+    const sortOrder = await menuCategoryItemRepository.getNextSortOrder(categoryId);
+    return menuCategoryItemRepository.linkItemToCategory(categoryId, itemId, sortOrder);
+  }
+
+  /**
+   * Unlink an item from a category (remove association only, not delete item)
+   */
+  async unlinkItemFromCategory(
+    tenantId: string,
+    categoryId: string,
+    itemId: string
+  ) {
+    const { menuCategoryItemRepository } = await getRepositories();
+    return menuCategoryItemRepository.unlinkItemFromCategory(categoryId, itemId);
+  }
+
+  /**
+   * Get items available to add to a category (not currently in that category)
+   */
+  async getAvailableItems(
+    tenantId: string,
+    companyId: string,
+    excludeCategoryId: string
+  ): Promise<AvailableItem[]> {
+    const { menuCategoryItemRepository } = await getRepositories();
+    const items = await menuCategoryItemRepository.getItemsNotInCategory(
+      tenantId,
+      companyId,
+      excludeCategoryId
+    );
+
+    return items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      price: Number(item.price),
+      imageUrl: item.imageUrl,
+      categoryNames: item.categories.map((ci) => ci.category.name),
+    }));
+  }
+
+  /**
+   * Count how many categories an item belongs to
+   */
+  async countItemCategories(itemId: string): Promise<number> {
+    const { menuCategoryItemRepository } = await getRepositories();
+    return menuCategoryItemRepository.countItemCategories(itemId);
+  }
+
+  // ==================== Featured Items ====================
+
+  /**
+   * Get featured items for a company
+   */
+  async getFeaturedItems(
+    tenantId: string,
+    companyId: string
+  ): Promise<FeaturedItemData[]> {
+    const { featuredItemRepository } = await getRepositories();
+    const items = await featuredItemRepository.getByCompanyId(tenantId, companyId);
+    return items.map((item) => ({
+      id: item.id,
+      menuItemId: item.menuItemId,
+      sortOrder: item.sortOrder,
+      menuItem: {
+        id: item.menuItem.id,
+        name: item.menuItem.name,
+        description: item.menuItem.description,
+        price: Number(item.menuItem.price),
+        imageUrl: item.menuItem.imageUrl,
+        status: item.menuItem.status,
+      },
+    }));
+  }
+
+  /**
+   * Set featured items for a company (replace all)
+   */
+  async setFeaturedItems(
+    tenantId: string,
+    companyId: string,
+    menuItemIds: string[]
+  ): Promise<void> {
+    const { featuredItemRepository } = await getRepositories();
+    await featuredItemRepository.setFeaturedItems(tenantId, companyId, menuItemIds);
+  }
+
+  /**
+   * Add a single featured item
+   */
+  async addFeaturedItem(
+    tenantId: string,
+    companyId: string,
+    menuItemId: string
+  ): Promise<void> {
+    const { featuredItemRepository } = await getRepositories();
+    await featuredItemRepository.addFeaturedItem(tenantId, companyId, menuItemId);
+  }
+
+  /**
+   * Remove a single featured item
+   */
+  async removeFeaturedItem(
+    tenantId: string,
+    companyId: string,
+    menuItemId: string
+  ): Promise<void> {
+    const { featuredItemRepository } = await getRepositories();
+    await featuredItemRepository.removeFeaturedItem(tenantId, companyId, menuItemId);
+  }
+
+  /**
+   * Reorder featured items
+   */
+  async reorderFeaturedItems(
+    tenantId: string,
+    companyId: string,
+    orderedMenuItemIds: string[]
+  ): Promise<void> {
+    const { featuredItemRepository } = await getRepositories();
+    await featuredItemRepository.reorderFeaturedItems(tenantId, companyId, orderedMenuItemIds);
   }
 }
 

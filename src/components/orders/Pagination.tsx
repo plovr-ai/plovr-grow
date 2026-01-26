@@ -12,8 +12,6 @@ export function Pagination({
   totalPages,
   onPageChange,
 }: PaginationProps) {
-  if (totalPages <= 1) return null;
-
   return (
     <div className="flex items-center justify-between">
       <div className="text-sm text-gray-600">

@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 vi.mock("@/repositories/menu.repository", () => ({
   menuRepository: {
     getCategoriesWithItemsByCompany: vi.fn(),
+    getCategoriesWithItemsByMenu: vi.fn(),
     getItemById: vi.fn(),
     getItemsByIdsByCompany: vi.fn(),
     createCategory: vi.fn(),
@@ -42,11 +43,34 @@ vi.mock("@/repositories/tax-config.repository", () => ({
   },
 }));
 
+vi.mock("@/repositories/menu-category-item.repository", () => ({
+  menuCategoryItemRepository: {
+    getNextSortOrder: vi.fn(),
+    linkItemToCategory: vi.fn(),
+    unlinkItemFromCategory: vi.fn(),
+    setItemCategories: vi.fn(),
+    getItemsCategoryIds: vi.fn(),
+    getItemsNotInCategory: vi.fn(),
+    countItemCategories: vi.fn(),
+  },
+}));
+
+vi.mock("@/repositories/featured-item.repository", () => ({
+  featuredItemRepository: {
+    getByCompanyId: vi.fn(),
+    setFeaturedItems: vi.fn(),
+    addFeaturedItem: vi.fn(),
+    removeFeaturedItem: vi.fn(),
+    reorderFeaturedItems: vi.fn(),
+  },
+}));
+
 // Import mocked modules
 import { menuRepository } from "@/repositories/menu.repository";
 import { menuEntityRepository } from "@/repositories/menu-entity.repository";
 import { merchantRepository } from "@/repositories/merchant.repository";
 import { taxConfigRepository } from "@/repositories/tax-config.repository";
+import { featuredItemRepository } from "@/repositories/featured-item.repository";
 
 describe("MenuService", () => {
   let menuService: MenuService;
@@ -60,11 +84,28 @@ describe("MenuService", () => {
     logoUrl: "https://example.com/logo.png",
   };
 
-  const mockCategories = [
+  // Mock menus
+  const mockMenus = [
+    {
+      id: "menu-1",
+      tenantId: "tenant-1",
+      companyId: "company-1",
+      name: "Main Menu",
+      description: null,
+      sortOrder: 0,
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ];
+
+  // Mock categories with junction table structure (categoryItems)
+  const mockCategoriesWithJunction = [
     {
       id: "cat-pizza",
       tenantId: "tenant-1",
       companyId: "company-1",
+      menuId: "menu-1",
       name: "Pizza",
       description: "Our famous pizzas",
       imageUrl: null,
@@ -72,40 +113,42 @@ describe("MenuService", () => {
       status: "active",
       createdAt: new Date(),
       updatedAt: new Date(),
-      menuItems: [
+      categoryItems: [
         {
-          id: "item-cheese-pizza",
-          tenantId: "tenant-1",
-          companyId: "company-1",
-          categoryId: "cat-pizza",
-          name: "Classic Cheese Pizza",
-          description: "Fresh mozzarella and tomato sauce",
-          price: new Prisma.Decimal(18.99),
-          imageUrl: "https://example.com/pizza.jpg",
           sortOrder: 1,
-          status: "active",
-          options: null,
-          nutrition: null,
-          tags: ["vegetarian"],
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          menuItem: {
+            id: "item-cheese-pizza",
+            tenantId: "tenant-1",
+            companyId: "company-1",
+            name: "Classic Cheese Pizza",
+            description: "Fresh mozzarella and tomato sauce",
+            price: new Prisma.Decimal(18.99),
+            imageUrl: "https://example.com/pizza.jpg",
+            status: "active",
+            options: null,
+            nutrition: null,
+            tags: ["vegetarian"],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
         },
         {
-          id: "item-pepperoni-pizza",
-          tenantId: "tenant-1",
-          companyId: "company-1",
-          categoryId: "cat-pizza",
-          name: "Pepperoni Pizza",
-          description: "Classic pepperoni with mozzarella",
-          price: new Prisma.Decimal(21.99),
-          imageUrl: "https://example.com/pepperoni.jpg",
           sortOrder: 2,
-          status: "active",
-          options: null,
-          nutrition: null,
-          tags: ["popular"],
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          menuItem: {
+            id: "item-pepperoni-pizza",
+            tenantId: "tenant-1",
+            companyId: "company-1",
+            name: "Pepperoni Pizza",
+            description: "Classic pepperoni with mozzarella",
+            price: new Prisma.Decimal(21.99),
+            imageUrl: "https://example.com/pepperoni.jpg",
+            status: "active",
+            options: null,
+            nutrition: null,
+            tags: ["popular"],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
         },
       ],
     },
@@ -113,6 +156,7 @@ describe("MenuService", () => {
       id: "cat-sides",
       tenantId: "tenant-1",
       companyId: "company-1",
+      menuId: "menu-1",
       name: "Sides",
       description: "Perfect additions",
       imageUrl: null,
@@ -120,23 +164,24 @@ describe("MenuService", () => {
       status: "active",
       createdAt: new Date(),
       updatedAt: new Date(),
-      menuItems: [
+      categoryItems: [
         {
-          id: "item-garlic-knots",
-          tenantId: "tenant-1",
-          companyId: "company-1",
-          categoryId: "cat-sides",
-          name: "Garlic Knots",
-          description: "Fresh baked knots with garlic butter",
-          price: new Prisma.Decimal(5.99),
-          imageUrl: null,
           sortOrder: 1,
-          status: "active",
-          options: null,
-          nutrition: null,
-          tags: ["vegetarian"],
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          menuItem: {
+            id: "item-garlic-knots",
+            tenantId: "tenant-1",
+            companyId: "company-1",
+            name: "Garlic Knots",
+            description: "Fresh baked knots with garlic butter",
+            price: new Prisma.Decimal(5.99),
+            imageUrl: null,
+            status: "active",
+            options: null,
+            nutrition: null,
+            tags: ["vegetarian"],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
         },
       ],
     },
@@ -226,9 +271,11 @@ describe("MenuService", () => {
 
     beforeEach(() => {
       vi.mocked(merchantRepository.getById).mockResolvedValue(mockMerchant as never);
-      vi.mocked(menuRepository.getCategoriesWithItemsByCompany).mockResolvedValue(
-        mockCategories as never
+      vi.mocked(menuEntityRepository.getMenusByCompany).mockResolvedValue(mockMenus as never);
+      vi.mocked(menuRepository.getCategoriesWithItemsByMenu).mockResolvedValue(
+        mockCategoriesWithJunction as never
       );
+      vi.mocked(featuredItemRepository.getByCompanyId).mockResolvedValue([] as never);
       // Default tax mocks
       vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(mockItemTaxMap);
       vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue(mockTaxConfigs as never);
@@ -259,12 +306,12 @@ describe("MenuService", () => {
       expect(merchantRepository.getById).toHaveBeenCalledWith("merchant-1");
     });
 
-    it("should call menuRepository.getCategoriesWithItemsByCompany with correct params", async () => {
+    it("should call menuRepository.getCategoriesWithItemsByMenu with correct params", async () => {
       await menuService.getMenu("tenant-1", "merchant-1");
 
-      expect(menuRepository.getCategoriesWithItemsByCompany).toHaveBeenCalledWith(
+      expect(menuRepository.getCategoriesWithItemsByMenu).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1"
+        "menu-1"
       );
     });
 
@@ -288,7 +335,7 @@ describe("MenuService", () => {
     });
 
     it("should return empty categories when no menu data exists", async () => {
-      vi.mocked(menuRepository.getCategoriesWithItemsByCompany).mockResolvedValue([] as never);
+      vi.mocked(menuRepository.getCategoriesWithItemsByMenu).mockResolvedValue([] as never);
 
       const result = await menuService.getMenu("tenant-1", "merchant-1");
 

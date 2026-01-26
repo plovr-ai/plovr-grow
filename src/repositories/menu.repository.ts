@@ -7,6 +7,7 @@ export class MenuRepository {
   /**
    * Get all categories with all items for a specific menu (Dashboard)
    * Returns everything including inactive categories and items
+   * Uses junction table for N:M relationship
    */
   async getCategoriesWithItemsByMenuForDashboard(tenantId: string, menuId: string) {
     return prisma.menuCategory.findMany({
@@ -15,7 +16,10 @@ export class MenuRepository {
         menuId,
       },
       include: {
-        menuItems: {
+        categoryItems: {
+          include: {
+            menuItem: true,
+          },
           orderBy: {
             sortOrder: "asc",
           },
@@ -29,6 +33,7 @@ export class MenuRepository {
 
   /**
    * Get all active categories with their items for a specific menu (Storefront)
+   * Uses junction table for N:M relationship
    */
   async getCategoriesWithItemsByMenu(tenantId: string, menuId: string) {
     return prisma.menuCategory.findMany({
@@ -38,9 +43,16 @@ export class MenuRepository {
         status: "active",
       },
       include: {
-        menuItems: {
+        categoryItems: {
           where: {
-            status: "active",
+            menuItem: {
+              is: {
+                status: "active",
+              },
+            },
+          },
+          include: {
+            menuItem: true,
           },
           orderBy: {
             sortOrder: "asc",
@@ -67,7 +79,10 @@ export class MenuRepository {
         companyId,
       },
       include: {
-        menuItems: {
+        categoryItems: {
+          include: {
+            menuItem: true,
+          },
           orderBy: {
             sortOrder: "asc",
           },
@@ -92,9 +107,16 @@ export class MenuRepository {
         status: "active",
       },
       include: {
-        menuItems: {
+        categoryItems: {
           where: {
-            status: "active",
+            menuItem: {
+              is: {
+                status: "active",
+              },
+            },
+          },
+          include: {
+            menuItem: true,
           },
           orderBy: {
             sortOrder: "asc",
@@ -108,7 +130,7 @@ export class MenuRepository {
   }
 
   /**
-   * Get a single category by ID
+   * Get a single category by ID with its items
    */
   async getCategoryById(tenantId: string, categoryId: string) {
     return prisma.menuCategory.findFirst({
@@ -117,9 +139,16 @@ export class MenuRepository {
         tenantId,
       },
       include: {
-        menuItems: {
+        categoryItems: {
           where: {
-            status: "active",
+            menuItem: {
+              is: {
+                status: "active",
+              },
+            },
+          },
+          include: {
+            menuItem: true,
           },
           orderBy: {
             sortOrder: "asc",
@@ -130,7 +159,7 @@ export class MenuRepository {
   }
 
   /**
-   * Get a single menu item by ID
+   * Get a single menu item by ID with its category associations
    */
   async getItemById(tenantId: string, itemId: string) {
     return prisma.menuItem.findFirst({
@@ -139,7 +168,11 @@ export class MenuRepository {
         tenantId,
       },
       include: {
-        category: true,
+        categories: {
+          include: {
+            category: true,
+          },
+        },
       },
     });
   }
@@ -203,12 +236,12 @@ export class MenuRepository {
 
   /**
    * Create a new menu item at company level
+   * Note: Item-category associations are managed separately via MenuCategoryItemRepository
    */
   async createItem(
     tenantId: string,
     companyId: string,
-    categoryId: string,
-    data: Omit<Prisma.MenuItemCreateInput, "id" | "tenant" | "company" | "category">
+    data: Omit<Prisma.MenuItemCreateInput, "id" | "tenant" | "company">
   ) {
     return prisma.menuItem.create({
       data: {
@@ -216,7 +249,6 @@ export class MenuRepository {
         ...data,
         tenant: { connect: { id: tenantId } },
         company: { connect: { id: companyId } },
-        category: { connect: { id: categoryId } },
       },
     });
   }
@@ -290,17 +322,18 @@ export class MenuRepository {
   }
 
   /**
-   * Batch update menu item sort orders
+   * Batch update menu item sort orders within a category
+   * Sort orders are now stored in the junction table (MenuCategoryItem)
    */
   async updateItemSortOrders(
-    tenantId: string,
+    categoryId: string,
     updates: Array<{ id: string; sortOrder: number }>
   ) {
     const queries = updates.map((u) =>
-      prisma.menuItem.updateMany({
+      prisma.menuCategoryItem.updateMany({
         where: {
-          id: u.id,
-          tenantId,
+          categoryId,
+          menuItemId: u.id,
         },
         data: {
           sortOrder: u.sortOrder,
@@ -308,6 +341,29 @@ export class MenuRepository {
       })
     );
     return prisma.$transaction(queries);
+  }
+
+  /**
+   * Get all active items for a company (item pool for "Add Existing" feature)
+   */
+  async getAllItemsByCompany(tenantId: string, companyId: string) {
+    return prisma.menuItem.findMany({
+      where: {
+        tenantId,
+        companyId,
+        status: "active",
+      },
+      include: {
+        categories: {
+          include: {
+            category: {
+              select: { id: true, name: true },
+            },
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
   }
 }
 
