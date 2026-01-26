@@ -18,7 +18,9 @@ import {
   DollarSign,
   Languages,
   Pencil,
+  ChevronRight,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { CompanySettingsForm } from "./CompanySettingsForm";
 
 interface MerchantSummary {
@@ -66,6 +68,7 @@ function formatDate(date: Date | string): string {
 }
 
 export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
+  const router = useRouter();
   const [isEditingSettings, setIsEditingSettings] = useState(false);
 
   return (
@@ -203,7 +206,8 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
               {company.merchants.map((merchant) => (
                 <div
                   key={merchant.id}
-                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0 cursor-pointer hover:bg-gray-50 -mx-4 px-4 rounded-md transition-colors"
+                  onClick={() => router.push(`/dashboard/locations/${merchant.id}`)}
                 >
                   <div>
                     <p className="font-medium text-gray-900">{merchant.name}</p>
@@ -215,12 +219,15 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
                       </p>
                     )}
                   </div>
-                  <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[merchant.status] || statusColors.inactive}`}
-                  >
-                    {merchant.status.charAt(0).toUpperCase() +
-                      merchant.status.slice(1)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[merchant.status] || statusColors.inactive}`}
+                    >
+                      {merchant.status.charAt(0).toUpperCase() +
+                        merchant.status.slice(1)}
+                    </span>
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
                 </div>
               ))}
             </div>
