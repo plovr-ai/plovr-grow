@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, Trash2, Pencil, X, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useDashboardFormatPrice, useDashboardCurrencySymbol } from "@/hooks";
 import {
   TextField,
@@ -40,6 +41,8 @@ export function ModifierGroupEditor({
     data: ModifierGroupFormData;
   } | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [groupIndexToDelete, setGroupIndexToDelete] = useState<number | null>(null);
 
   const toggleExpand = (id: string) => {
     setExpandedGroups((prev) => {
@@ -75,12 +78,18 @@ export function ModifierGroupEditor({
   };
 
   const handleDeleteGroup = (index: number) => {
-    if (!confirm("Are you sure you want to delete this modifier group?")) {
-      return;
-    }
+    setGroupIndexToDelete(index);
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (groupIndexToDelete === null) return;
+
+    setShowConfirmDialog(false);
     const newGroups = [...groups];
-    newGroups.splice(index, 1);
+    newGroups.splice(groupIndexToDelete, 1);
     onChange(newGroups);
+    setGroupIndexToDelete(null);
   };
 
   const handleSaveGroup = (data: ModifierGroupFormData) => {
@@ -225,6 +234,19 @@ export function ModifierGroupEditor({
         <Plus className="mr-2 h-4 w-4" />
         Add Modifier Group
       </Button>
+
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={() => {
+          setShowConfirmDialog(false);
+          setGroupIndexToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Delete Modifier Group"
+        message="Are you sure you want to delete this modifier group?"
+        confirmText="Delete"
+        variant="destructive"
+      />
     </div>
   );
 }

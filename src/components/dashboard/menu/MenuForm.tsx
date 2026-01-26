@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { TextField, TextareaField, RadioGroupField } from "@/components/dashboard/Form";
 import {
   createMenuAction,
@@ -21,6 +22,7 @@ export function MenuForm({ menu, onClose, canDelete = true }: MenuFormProps) {
   const isEditing = !!menu;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Form state
   const [name, setName] = useState(menu?.name ?? "");
@@ -60,10 +62,11 @@ export function MenuForm({ menu, onClose, canDelete = true }: MenuFormProps) {
 
   const handleDelete = () => {
     if (!isEditing || !canDelete) return;
+    setShowConfirmDialog(true);
+  };
 
-    if (!confirm("Are you sure you want to delete this menu? All categories and items in this menu will be hidden.")) {
-      return;
-    }
+  const handleConfirmDelete = () => {
+    setShowConfirmDialog(false);
 
     startTransition(async () => {
       const result = await deleteMenuAction(menu!.id);
@@ -159,6 +162,16 @@ export function MenuForm({ menu, onClose, canDelete = true }: MenuFormProps) {
           </div>
         </form>
       </div>
+
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Menu"
+        message="Are you sure you want to delete this menu? All categories and items in this menu will be hidden."
+        confirmText="Delete"
+        variant="destructive"
+      />
     </div>
   );
 }

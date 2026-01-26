@@ -1,11 +1,12 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, ImageIcon, FolderTree } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useDashboardFormatPrice } from "@/hooks";
 import {
   deleteMenuItemAction,
@@ -20,10 +21,13 @@ interface MenuItemCardProps {
   onEdit: () => void;
 }
 
+type ConfirmDialogType = "remove-from-category" | "delete-item";
+
 export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemCardProps) {
   const [isPending, startTransition] = useTransition();
   const formatPrice = useDashboardFormatPrice();
   const isInMultipleCategories = item.categoryIds.length > 1;
+  const [confirmDialogType, setConfirmDialogType] = useState<ConfirmDialogType | null>(null);
 
   const {
     attributes,
@@ -42,22 +46,46 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
   const handleDelete = () => {
     if (isInMultipleCategories) {
       // Item is in multiple categories - ask what to do
-      const confirmMessage = `This item is in ${item.categoryIds.length} categories.\n\nClick OK to remove from this category only.\nClick Cancel to keep it.`;
-      if (!confirm(confirmMessage)) {
-        return;
-      }
+      setConfirmDialogType("remove-from-category");
+    } else {
+      // Item is only in this category - deleting will remove it entirely
+      setConfirmDialogType("delete-item");
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (!confirmDialogType) return;
+
+    setConfirmDialogType(null);
+
+    if (confirmDialogType === "remove-from-category") {
       // Remove from this category only
       startTransition(async () => {
         await deleteMenuItemAction(item.id, { categoryId });
       });
     } else {
-      // Item is only in this category - deleting will remove it entirely
-      if (!confirm("Are you sure you want to delete this item?")) {
-        return;
-      }
+      // Delete item entirely
       startTransition(async () => {
         await deleteMenuItemAction(item.id);
       });
+    }
+  };
+
+  const getConfirmDialogProps = () => {
+    if (confirmDialogType === "remove-from-category") {
+      return {
+        title: "Remove from Category",
+        message: `This item is in ${item.categoryIds.length} categories.\n\nClick Confirm to remove from this category only.\nClick Cancel to keep it.`,
+        confirmText: "Remove",
+        variant: "default" as const,
+      };
+    } else {
+      return {
+        title: "Delete Item",
+        message: "Are you sure you want to delete this item?",
+        confirmText: "Delete",
+        variant: "destructive" as const,
+      };
     }
   };
 
@@ -195,6 +223,15 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
+
+      {confirmDialogType && (
+        <ConfirmDialog
+          isOpen={true}
+          onClose={() => setConfirmDialogType(null)}
+          onConfirm={handleConfirmDelete}
+          {...getConfirmDialogProps()}
+        />
+      )}
     </div>
   );
 }

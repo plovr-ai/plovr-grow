@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteTaxConfigAction } from "@/app/(dashboard)/dashboard/(protected)/menu/tax/actions";
 import type { TaxConfigWithRates } from "@/services/menu/tax-config.types";
 
@@ -23,19 +24,26 @@ const ROUNDING_METHOD_LABELS: Record<string, string> = {
 export function TaxConfigList({ taxConfigs, merchants, onEdit }: TaxConfigListProps) {
   const [isPending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [taxConfigToDelete, setTaxConfigToDelete] = useState<string | null>(null);
 
   const handleDelete = (id: string) => {
-    if (!confirm("Are you sure you want to delete this tax type?")) {
-      return;
-    }
+    setTaxConfigToDelete(id);
+    setShowConfirmDialog(true);
+  };
 
-    setDeletingId(id);
+  const handleConfirmDelete = () => {
+    if (!taxConfigToDelete) return;
+
+    setShowConfirmDialog(false);
+    setDeletingId(taxConfigToDelete);
     startTransition(async () => {
-      const result = await deleteTaxConfigAction(id);
+      const result = await deleteTaxConfigAction(taxConfigToDelete);
       if (!result.success) {
         alert(result.error || "Failed to delete tax type");
       }
       setDeletingId(null);
+      setTaxConfigToDelete(null);
     });
   };
 
@@ -53,66 +61,81 @@ export function TaxConfigList({ taxConfigs, merchants, onEdit }: TaxConfigListPr
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Tax Table</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b text-left text-sm text-gray-500">
-                <th className="pb-3 pr-4 font-medium">Name</th>
-                <th className="pb-3 pr-4 font-medium">Rounding</th>
-                <th className="pb-3 pr-4 font-medium">Store Rates</th>
-                <th className="pb-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {taxConfigs.map((config) => (
-                <tr key={config.id} className="border-b last:border-0">
-                  <td className="py-4 pr-4">
-                    <div className="font-medium">{config.name}</div>
-                    {config.description && (
-                      <div className="text-sm text-gray-500">{config.description}</div>
-                    )}
-                  </td>
-                  <td className="py-4 pr-4 text-sm">
-                    {ROUNDING_METHOD_LABELS[config.roundingMethod] || config.roundingMethod}
-                  </td>
-                  <td className="py-4 pr-4">
-                    <StoreRatesSummary
-                      rates={config.merchantRates}
-                      totalMerchants={merchants.length}
-                    />
-                  </td>
-                  <td className="py-4">
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => onEdit(config)}
-                        disabled={isPending}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => handleDelete(config.id)}
-                        disabled={isPending && deletingId === config.id}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </td>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Tax Table</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b text-left text-sm text-gray-500">
+                  <th className="pb-3 pr-4 font-medium">Name</th>
+                  <th className="pb-3 pr-4 font-medium">Rounding</th>
+                  <th className="pb-3 pr-4 font-medium">Store Rates</th>
+                  <th className="pb-3 font-medium">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+              </thead>
+              <tbody>
+                {taxConfigs.map((config) => (
+                  <tr key={config.id} className="border-b last:border-0">
+                    <td className="py-4 pr-4">
+                      <div className="font-medium">{config.name}</div>
+                      {config.description && (
+                        <div className="text-sm text-gray-500">{config.description}</div>
+                      )}
+                    </td>
+                    <td className="py-4 pr-4 text-sm">
+                      {ROUNDING_METHOD_LABELS[config.roundingMethod] || config.roundingMethod}
+                    </td>
+                    <td className="py-4 pr-4">
+                      <StoreRatesSummary
+                        rates={config.merchantRates}
+                        totalMerchants={merchants.length}
+                      />
+                    </td>
+                    <td className="py-4">
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => onEdit(config)}
+                          disabled={isPending}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => handleDelete(config.id)}
+                          disabled={isPending && deletingId === config.id}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={() => {
+          setShowConfirmDialog(false);
+          setTaxConfigToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Delete Tax Type"
+        message="Are you sure you want to delete this tax type?"
+        confirmText="Delete"
+        variant="destructive"
+      />
+    </>
   );
 }
 

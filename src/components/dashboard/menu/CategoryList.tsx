@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   DndContext,
   closestCenter,
@@ -20,6 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   deleteCategoryAction,
   updateCategorySortOrderAction,
@@ -143,6 +144,8 @@ export function CategoryList({
   onEditCategory,
 }: CategoryListProps) {
   const [isPending, startTransition] = useTransition();
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -173,12 +176,17 @@ export function CategoryList({
   };
 
   const handleDelete = (categoryId: string) => {
-    if (!confirm("Are you sure you want to delete this category?")) {
-      return;
-    }
+    setCategoryToDelete(categoryId);
+    setShowConfirmDialog(true);
+  };
 
+  const handleConfirmDelete = () => {
+    if (!categoryToDelete) return;
+
+    setShowConfirmDialog(false);
     startTransition(async () => {
-      await deleteCategoryAction(categoryId);
+      await deleteCategoryAction(categoryToDelete);
+      setCategoryToDelete(null);
     });
   };
 
@@ -194,29 +202,44 @@ export function CategoryList({
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext
-        items={categories.map((c) => c.id)}
-        strategy={verticalListSortingStrategy}
+    <>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
       >
-        <div className="space-y-2">
-          {categories.map((category) => (
-            <SortableCategoryItem
-              key={category.id}
-              category={category}
-              isSelected={category.id === selectedCategoryId}
-              onSelect={() => onSelectCategory(category.id)}
-              onEdit={() => onEditCategory(category)}
-              onDelete={() => handleDelete(category.id)}
-              isDeleting={isPending}
-            />
-          ))}
-        </div>
-      </SortableContext>
-    </DndContext>
+        <SortableContext
+          items={categories.map((c) => c.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2">
+            {categories.map((category) => (
+              <SortableCategoryItem
+                key={category.id}
+                category={category}
+                isSelected={category.id === selectedCategoryId}
+                onSelect={() => onSelectCategory(category.id)}
+                onEdit={() => onEditCategory(category)}
+                onDelete={() => handleDelete(category.id)}
+                isDeleting={isPending}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={() => {
+          setShowConfirmDialog(false);
+          setCategoryToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Delete Category"
+        message="Are you sure you want to delete this category?"
+        confirmText="Delete"
+        variant="destructive"
+      />
+    </>
   );
 }
