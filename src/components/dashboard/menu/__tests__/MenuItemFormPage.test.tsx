@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { type ReactNode } from "react";
 import { DashboardProvider } from "@/contexts";
 import { MenuItemFormPage } from "../MenuItemFormPage";
-import type { DashboardMenuItem, TaxConfigOption } from "@/services/menu/menu.types";
+import type { DashboardMenuItem, DashboardCategory, TaxConfigOption } from "@/services/menu/menu.types";
 
 // Helper wrapper with DashboardContext
 function Wrapper({ children }: { children: ReactNode }) {
@@ -104,6 +104,36 @@ describe("MenuItemFormPage", () => {
     { id: "tax-2", name: "Alcohol Tax", description: "10%" },
   ];
 
+  const mockCategories: DashboardCategory[] = [
+    {
+      id: "cat-1",
+      name: "Appetizers",
+      description: null,
+      imageUrl: null,
+      sortOrder: 0,
+      status: "active",
+      menuItems: [],
+    },
+    {
+      id: "cat-2",
+      name: "Main Dishes",
+      description: null,
+      imageUrl: null,
+      sortOrder: 1,
+      status: "active",
+      menuItems: [],
+    },
+    {
+      id: "cat-3",
+      name: "Lunch Specials",
+      description: null,
+      imageUrl: null,
+      sortOrder: 2,
+      status: "active",
+      menuItems: [],
+    },
+  ];
+
   const mockMenuItem: DashboardMenuItem = {
     id: "item-1",
     name: "Spring Rolls",
@@ -122,6 +152,7 @@ describe("MenuItemFormPage", () => {
     item: null,
     categoryId: "cat-1",
     categoryName: "Appetizers",
+    categories: mockCategories,
     taxConfigs: mockTaxConfigs,
   };
 
@@ -399,6 +430,93 @@ describe("MenuItemFormPage", () => {
       await waitFor(() => {
         expect(screen.getByText("Saving...")).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("Category Display", () => {
+    it("should not display categories field in create mode", () => {
+      render(<MenuItemFormPage {...defaultProps} />, { wrapper: Wrapper });
+
+      expect(screen.queryByText("Categories")).not.toBeInTheDocument();
+    });
+
+    it("should display single category in edit mode", () => {
+      const editProps = {
+        ...defaultProps,
+        item: mockMenuItem,
+      };
+
+      render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
+
+      expect(screen.getByText("Categories")).toBeInTheDocument();
+      expect(screen.getByText("Appetizers")).toBeInTheDocument();
+    });
+
+    it("should display multiple categories in edit mode", () => {
+      const itemWithMultipleCategories: DashboardMenuItem = {
+        ...mockMenuItem,
+        categoryIds: ["cat-1", "cat-2", "cat-3"],
+      };
+
+      const editProps = {
+        ...defaultProps,
+        item: itemWithMultipleCategories,
+      };
+
+      render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
+
+      expect(screen.getByText("Categories")).toBeInTheDocument();
+      expect(screen.getByText("Appetizers")).toBeInTheDocument();
+      expect(screen.getByText("Main Dishes")).toBeInTheDocument();
+      expect(screen.getByText("Lunch Specials")).toBeInTheDocument();
+    });
+
+    it("should display 'No category assigned' when item has no categories", () => {
+      const itemWithNoCategories: DashboardMenuItem = {
+        ...mockMenuItem,
+        categoryIds: [],
+      };
+
+      const editProps = {
+        ...defaultProps,
+        item: itemWithNoCategories,
+      };
+
+      render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
+
+      expect(screen.getByText("Categories")).toBeInTheDocument();
+      expect(screen.getByText("No category assigned")).toBeInTheDocument();
+    });
+
+    it("should filter out missing categories", () => {
+      const itemWithMissingCategory: DashboardMenuItem = {
+        ...mockMenuItem,
+        categoryIds: ["cat-1", "nonexistent-cat", "cat-2"],
+      };
+
+      const editProps = {
+        ...defaultProps,
+        item: itemWithMissingCategory,
+      };
+
+      render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
+
+      expect(screen.getByText("Categories")).toBeInTheDocument();
+      expect(screen.getByText("Appetizers")).toBeInTheDocument();
+      expect(screen.getByText("Main Dishes")).toBeInTheDocument();
+      expect(screen.queryByText("nonexistent-cat")).not.toBeInTheDocument();
+    });
+
+    it("should render categories as badges with proper styling", () => {
+      const editProps = {
+        ...defaultProps,
+        item: mockMenuItem,
+      };
+
+      const { container } = render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
+
+      const categoryBadge = screen.getByText("Appetizers");
+      expect(categoryBadge).toHaveClass("rounded-full", "bg-gray-100", "px-3", "py-1", "text-sm", "text-gray-700");
     });
   });
 });

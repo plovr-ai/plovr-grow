@@ -55,6 +55,7 @@ export default async function EditMenuItemPage({ params, searchParams }: PagePro
       item={foundItem}
       categoryId={foundCategory.id}
       categoryName={foundCategory.name}
+      categories={menuData.categories}
       taxConfigs={taxConfigOptions}
     />
   );

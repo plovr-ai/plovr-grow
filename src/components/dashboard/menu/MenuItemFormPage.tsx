@@ -21,6 +21,7 @@ import {
 } from "@/app/(dashboard)/dashboard/(protected)/menu/actions";
 import type {
   DashboardMenuItem,
+  DashboardCategory,
   TaxConfigOption,
   ModifierGroupInput,
 } from "@/services/menu/menu.types";
@@ -29,6 +30,7 @@ interface MenuItemFormPageProps {
   item: DashboardMenuItem | null;
   categoryId: string;
   categoryName: string;
+  categories: DashboardCategory[];
   taxConfigs: TaxConfigOption[];
 }
 
@@ -36,6 +38,7 @@ export function MenuItemFormPage({
   item,
   categoryId,
   categoryName,
+  categories,
   taxConfigs,
 }: MenuItemFormPageProps) {
   const router = useRouter();
@@ -196,6 +199,29 @@ export function MenuItemFormPage({
                 ]}
                 disabled={isPending}
               />
+            )}
+
+            {/* Categories (only for editing) */}
+            {isEditing && item && (
+              <FormField id="categories" label="Categories">
+                {item.categoryIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {item.categoryIds.map((catId) => {
+                      const category = categories.find((c) => c.id === catId);
+                      return category ? (
+                        <span
+                          key={catId}
+                          className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700"
+                        >
+                          {category.name}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                ) : (
+                  <span className="text-sm text-gray-500">No category assigned</span>
+                )}
+              </FormField>
             )}
           </div>
 
