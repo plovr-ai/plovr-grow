@@ -50,6 +50,13 @@ export interface CustomerReview {
   avatarUrl?: string;
 }
 
+export interface GiftcardConfig {
+  enabled: boolean;
+  denominations: number[]; // e.g., [30, 50, 100]
+  imageUrl?: string;
+  description?: string;
+}
+
 export interface CompanySettings {
   // Brand-level default settings (can be overridden by merchants)
   defaultCurrency?: string;
@@ -66,6 +73,9 @@ export interface CompanySettings {
     featuredItemIds?: FeaturedItemRef[]; // Menu item IDs for featured items
     reviews?: CustomerReview[]; // Customer reviews for homepage
   };
+
+  // Giftcard configuration (Company-level)
+  giftcard?: GiftcardConfig;
 }
 
 export interface MerchantSummary {

@@ -21,30 +21,39 @@ import type { OrderStatus } from "@/types";
 
 export class OrderService {
   /**
-   * Create a new order for a merchant
+   * Create a new order for a merchant or Company (giftcards)
    */
   async createOrder(tenantId: string, input: CreateOrderInput) {
     const { merchantId } = input;
 
-    // Validate menu items exist and are available
-    const itemIds = input.items.map((item) => item.menuItemId);
-    const menuItems = await menuService.getMenuItemsByIds(tenantId, merchantId, itemIds);
+    // Skip menu item validation for giftcards (virtual items)
+    if (input.salesChannel !== "giftcard") {
+      if (!merchantId) {
+        throw new Error("merchantId is required for non-giftcard orders");
+      }
 
-    if (menuItems.length !== itemIds.length) {
-      throw new Error("Some menu items are not available");
+      // Validate menu items exist and are available
+      const itemIds = input.items.map((item) => item.menuItemId);
+      const menuItems = await menuService.getMenuItemsByIds(tenantId, merchantId, itemIds);
+
+      if (menuItems.length !== itemIds.length) {
+        throw new Error("Some menu items are not available");
+      }
     }
 
     // Calculate order totals
     const calculation = await this.calculateOrderTotals(tenantId, merchantId, input);
 
-    // Generate order number (merchant-specific sequence)
-    const sequence = await orderRepository.getNextMerchantOrderSequence(tenantId, merchantId);
+    // Generate order number (merchant-specific sequence for regular orders, tenant-level for giftcards)
+    const sequence = merchantId
+      ? await orderRepository.getNextMerchantOrderSequence(tenantId, merchantId)
+      : await orderRepository.getNextMerchantOrderSequence(tenantId, "global"); // Use "global" as fallback for Company-level orders
     const orderNumber = generateOrderNumber(sequence);
 
     // Create the order in database
     const order = await orderRepository.create(
       tenantId,
-      merchantId,
+      merchantId ?? null,
       {
         orderNumber,
         customerName: input.customerName,
@@ -69,21 +78,23 @@ export class OrderService {
       input.loyaltyMemberId
     );
 
-    // Emit order created event
-    orderEventEmitter.emit("order.created", {
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      merchantId,
-      tenantId,
-      status: "pending",
-      timestamp: new Date(),
-      customerName: input.customerName,
-      customerPhone: input.customerPhone,
-      orderMode: input.orderMode,
-      salesChannel: input.salesChannel ?? "online_order",
-      totalAmount: calculation.totalAmount,
-      items: input.items,
-    });
+    // Emit order created event (only for merchant orders for now)
+    if (merchantId) {
+      orderEventEmitter.emit("order.created", {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        merchantId,
+        tenantId,
+        status: "pending",
+        timestamp: new Date(),
+        customerName: input.customerName,
+        customerPhone: input.customerPhone,
+        orderMode: input.orderMode,
+        salesChannel: input.salesChannel ?? "online_order",
+        totalAmount: calculation.totalAmount,
+        items: input.items,
+      });
+    }
 
     return order;
   }

@@ -4,11 +4,11 @@ import type { OrderStatus, OrderMode, SalesChannel } from "@/types";
 
 export class OrderRepository {
   /**
-   * Create a new order with merchantId
+   * Create a new order with optional merchantId (for Company-level orders like giftcards)
    */
   async create(
     tenantId: string,
-    merchantId: string,
+    merchantId: string | null,
     data: Omit<Prisma.OrderCreateInput, "tenant" | "merchant" | "loyaltyMember" | "id">,
     loyaltyMemberId?: string
   ) {
@@ -17,7 +17,7 @@ export class OrderRepository {
         id: crypto.randomUUID(),
         ...data,
         tenant: { connect: { id: tenantId } },
-        merchant: { connect: { id: merchantId } },
+        ...(merchantId && { merchant: { connect: { id: merchantId } } }),
         ...(loyaltyMemberId && {
           loyaltyMember: { connect: { id: loyaltyMemberId } },
         }),

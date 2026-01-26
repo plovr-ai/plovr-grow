@@ -45,9 +45,12 @@ export function Navigation({
   const locationsLink = `/${slug}/locations`;
   const homeLink = `/${slug}`;
 
+  const giftcardLink = `/${slug}/giftcard`;
+
   const navLinks: NavigationLink[] = [
     { label: "Menu", href: orderLink },
     { label: "Catering", href: cateringHref },
+    { label: "Gift Cards", href: giftcardLink },
     { label: "Locations", href: locationsLink },
     { label: "Our Story", href: "#story" },
     { label: "Contact", href: "#location" },

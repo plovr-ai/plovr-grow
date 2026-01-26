@@ -1,0 +1,1 @@
+export { GiftcardPageClient } from "./GiftcardPageClient";

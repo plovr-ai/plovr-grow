@@ -14,18 +14,17 @@ export function LocationFilter({
   value,
   onChange,
 }: LocationFilterProps) {
-  // Only render if multiple merchants exist
-  if (merchants.length <= 1) return null;
-
+  // Always show location filter (removed conditional render)
   return (
     <div className="w-full sm:w-[200px]">
-      <Label htmlFor="location-filter" className="mb-2 block">Location</Label>
+      <Label htmlFor="location-filter" className="mb-2 block">
+        Location
+      </Label>
       <Select
         id="location-filter"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
-        <option value="all">All Locations</option>
         {merchants.map((merchant) => (
           <option key={merchant.id} value={merchant.id}>
             {merchant.name}

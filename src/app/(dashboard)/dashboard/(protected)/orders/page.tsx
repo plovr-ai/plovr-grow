@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { companyService } from "@/services/company";
 import { orderService } from "@/services/order";
+import { getTodayInTimezone, getDateRangeInTimezone } from "@/lib/timezone";
 import { OrdersManagementClient, type SerializedOrder } from "@/components/orders/OrdersManagementClient";
 import type { OrderStatus, OrderMode, SalesChannel } from "@/types";
 
@@ -34,19 +35,41 @@ export default async function OrdersManagementPage({
   const company = await companyService.getCompanyWithMerchants(companyId);
   const merchants = company?.merchants ?? [];
 
-  // Parse filter parameters
+  // Default to first merchant if not specified
+  const merchantFilter = search.merchantId || merchants[0]?.id;
+
+  // Get selected merchant and its timezone
+  const selectedMerchant = merchants.find((m) => m.id === merchantFilter);
+  const merchantTimezone = selectedMerchant?.timezone || "America/New_York";
+
+  // Get today's date in merchant's timezone
+  const todayString = getTodayInTimezone(merchantTimezone);
+
+  // Default to today's date if not specified
+  const dateFromString = search.dateFrom || todayString;
+  const dateToString = search.dateTo || todayString;
+
+  // Convert dates to UTC range based on merchant timezone
+  let dateFrom: Date | undefined;
+  let dateTo: Date | undefined;
+
+  if (dateFromString && dateToString) {
+    const fromRange = getDateRangeInTimezone(dateFromString, merchantTimezone);
+    const toRange = getDateRangeInTimezone(dateToString, merchantTimezone);
+    dateFrom = fromRange.start;
+    dateTo = toRange.end;
+  }
+
+  // Parse other filter parameters
   const currentPage = parseInt(search.page ?? "1", 10);
   const statusFilter = search.status as OrderStatus | undefined;
   const modeFilter = search.mode as OrderMode | undefined;
   const salesChannelFilter = search.salesChannel as SalesChannel | undefined;
-  const merchantFilter = search.merchantId;
-  const dateFrom = search.dateFrom ? new Date(search.dateFrom) : undefined;
-  const dateTo = search.dateTo ? new Date(search.dateTo) : undefined;
 
   // Get orders data from database
-  // Use merchantFilter if specified, otherwise get all company orders
+  // Always filter by specific merchant (no "all" option)
   const ordersData = await orderService.getCompanyOrders(tenantId, companyId, {
-    merchantId: merchantFilter && merchantFilter !== "all" ? merchantFilter : undefined,
+    merchantId: merchantFilter,
     status: statusFilter,
     orderMode: modeFilter,
     salesChannel: salesChannelFilter,
@@ -75,12 +98,12 @@ export default async function OrdersManagementPage({
       totalPages={ordersData.totalPages}
       currentPage={currentPage}
       initialFilters={{
-        merchantId: merchantFilter ?? "all",
+        merchantId: merchantFilter,
         status: statusFilter ?? "all",
         orderMode: modeFilter ?? "all",
         salesChannel: salesChannelFilter ?? "all",
-        dateFrom: search.dateFrom ?? "",
-        dateTo: search.dateTo ?? "",
+        dateFrom: dateFromString,
+        dateTo: dateToString,
       }}
     />
   );

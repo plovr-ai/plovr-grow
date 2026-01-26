@@ -98,6 +98,29 @@ export function CateringLeadsClient({
 
       {/* Search and Filters */}
       <div className="flex flex-wrap gap-4">
+        <Select
+          value={initialFilters.merchantId}
+          onChange={(e) => updateFilters({ merchantId: e.target.value })}
+        >
+          <option value="all">All Locations</option>
+          {merchants.map((merchant) => (
+            <option key={merchant.id} value={merchant.id}>
+              {merchant.name}
+            </option>
+          ))}
+        </Select>
+
+        <Select
+          value={initialFilters.status}
+          onChange={(e) => updateFilters({ status: e.target.value })}
+        >
+          {STATUS_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+
         <form onSubmit={handleSearchSubmit} className="flex-1 min-w-[300px]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -110,31 +133,6 @@ export function CateringLeadsClient({
             />
           </div>
         </form>
-
-        {merchants.length > 1 && (
-          <Select
-            value={initialFilters.merchantId}
-            onChange={(e) => updateFilters({ merchantId: e.target.value })}
-          >
-            <option value="all">All Locations</option>
-            {merchants.map((merchant) => (
-              <option key={merchant.id} value={merchant.id}>
-                {merchant.name}
-              </option>
-            ))}
-          </Select>
-        )}
-
-        <Select
-          value={initialFilters.status}
-          onChange={(e) => updateFilters({ status: e.target.value })}
-        >
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </Select>
       </div>
 
       {/* Leads Table */}
@@ -160,11 +158,9 @@ export function CateringLeadsClient({
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Notes
                   </th>
-                  {merchants.length > 1 && (
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Location
-                    </th>
-                  )}
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Location
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Status
                   </th>
@@ -188,11 +184,9 @@ export function CateringLeadsClient({
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                       {lead.notes || "-"}
                     </td>
-                    {merchants.length > 1 && (
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                        {lead.merchant.name}
-                      </td>
-                    )}
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                      {lead.merchant.name}
+                    </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm">
                       <span
                         className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
