@@ -206,7 +206,7 @@ export function FeaturedItemsClient({
   const formatPrice = useDashboardFormatPrice();
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
+    <div>
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">Featured Items</h1>
         <p className="mt-1 text-sm text-gray-500">
