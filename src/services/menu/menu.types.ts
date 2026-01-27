@@ -75,7 +75,7 @@ export interface UpdateMenuItemInput {
   description?: string;
   price?: number;
   imageUrl?: string;
-  status?: "active" | "inactive" | "out_of_stock";
+  status?: "active" | "inactive" | "out_of_stock" | "archived";
   modifierGroups?: ModifierGroupInput[];
   tags?: string[];
   taxConfigId?: string | null;
@@ -115,7 +115,7 @@ export interface DashboardMenuItem {
   price: number;
   imageUrl: string | null;
   sortOrder: number;
-  status: "active" | "inactive" | "out_of_stock";
+  status: "active" | "inactive" | "out_of_stock" | "archived";
   modifierGroups: ModifierGroupInput[];
   tags: string[];
   taxConfigIds: string[];

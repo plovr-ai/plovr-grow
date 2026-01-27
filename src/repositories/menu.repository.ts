@@ -9,7 +9,11 @@ export class MenuRepository {
    * Returns everything including inactive categories and items
    * Uses junction table for N:M relationship
    */
-  async getCategoriesWithItemsByMenuForDashboard(tenantId: string, menuId: string) {
+  async getCategoriesWithItemsByMenuForDashboard(
+    tenantId: string,
+    menuId: string,
+    showArchived: boolean = false
+  ) {
     return prisma.menuCategory.findMany({
       where: {
         tenantId,
@@ -17,6 +21,13 @@ export class MenuRepository {
       },
       include: {
         categoryItems: {
+          where: {
+            menuItem: {
+              is: showArchived
+                ? { status: "archived" }
+                : { status: { not: "archived" } },
+            },
+          },
           include: {
             menuItem: true,
           },
@@ -47,7 +58,7 @@ export class MenuRepository {
           where: {
             menuItem: {
               is: {
-                status: "active",
+                status: { in: ["active", "out_of_stock"] },
               },
             },
           },
@@ -280,7 +291,7 @@ export class MenuRepository {
         tenantId,
       },
       data: {
-        status: "inactive",
+        status: "archived",
       },
     });
   }
@@ -351,7 +362,7 @@ export class MenuRepository {
       where: {
         tenantId,
         companyId,
-        status: "active",
+        status: { in: ["active", "out_of_stock"] },
       },
       include: {
         categories: {

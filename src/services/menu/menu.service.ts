@@ -469,7 +469,8 @@ export class MenuService {
   async getMenuForDashboard(
     tenantId: string,
     companyId: string,
-    menuId?: string
+    menuId?: string,
+    showArchived: boolean = false
   ): Promise<DashboardMenuResponse> {
     const { menuRepository, menuEntityRepository, taxConfigRepository, menuCategoryItemRepository } = await getRepositories();
 
@@ -492,7 +493,8 @@ export class MenuService {
     // Fetch categories for the selected menu (with junction table)
     const categories = await menuRepository.getCategoriesWithItemsByMenuForDashboard(
       tenantId,
-      currentMenuId
+      currentMenuId,
+      showArchived
     );
 
     // Get all item IDs from junction table structure
@@ -521,7 +523,7 @@ export class MenuService {
           price: Number(item.price),
           imageUrl: item.imageUrl,
           sortOrder: ci.sortOrder,
-          status: item.status as "active" | "inactive" | "out_of_stock",
+          status: item.status as "active" | "inactive" | "out_of_stock" | "archived",
           modifierGroups: (item.options as unknown as ModifierGroupInput[]) || [],
           tags: (item.tags as unknown as string[]) || [],
           taxConfigIds: itemTaxMap.get(item.id) || [],

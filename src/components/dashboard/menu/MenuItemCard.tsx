@@ -3,16 +3,83 @@
 import { useState, useTransition } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, ImageIcon, FolderTree } from "lucide-react";
+import { GripVertical, Trash2, ImageIcon, FolderTree, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useDashboardFormatPrice } from "@/hooks";
 import {
   deleteMenuItemAction,
   updateMenuItemAction,
 } from "@/app/(dashboard)/dashboard/(protected)/menu/actions";
 import type { DashboardMenuItem, TaxConfigOption } from "@/services/menu/menu.types";
+
+// Custom three-button dialog for delete action
+interface ActionChoiceDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onRemove: () => void;
+  onArchive: () => void;
+  isMultiCategory: boolean;
+  categoryCount: number;
+}
+
+function ActionChoiceDialog({
+  isOpen,
+  onClose,
+  onRemove,
+  onArchive,
+  isMultiCategory,
+  categoryCount,
+}: ActionChoiceDialogProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-md rounded-lg bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Remove or Archive Item?
+          </h2>
+          <Button variant="ghost" size="icon-sm" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-4">
+          <p className="text-sm text-gray-600">
+            {isMultiCategory
+              ? `This item is in ${categoryCount} categories.`
+              : "This item is only in this category."}
+          </p>
+          <p className="mt-2 text-sm text-gray-600">
+            What would you like to do?
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 border-t px-6 py-4">
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="outline" onClick={onRemove}>
+            Remove from Category
+          </Button>
+          <Button variant="destructive" onClick={onArchive}>
+            Archive Item
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface MenuItemCardProps {
   item: DashboardMenuItem;
@@ -21,13 +88,11 @@ interface MenuItemCardProps {
   onEdit: () => void;
 }
 
-type ConfirmDialogType = "remove-from-category" | "delete-item";
-
 export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemCardProps) {
   const [isPending, startTransition] = useTransition();
   const formatPrice = useDashboardFormatPrice();
   const isInMultipleCategories = item.categoryIds.length > 1;
-  const [confirmDialogType, setConfirmDialogType] = useState<ConfirmDialogType | null>(null);
+  const [showActionDialog, setShowActionDialog] = useState(false);
 
   const {
     attributes,
@@ -44,52 +109,26 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
   };
 
   const handleDelete = () => {
-    if (isInMultipleCategories) {
-      // Item is in multiple categories - ask what to do
-      setConfirmDialogType("remove-from-category");
-    } else {
-      // Item is only in this category - deleting will remove it entirely
-      setConfirmDialogType("delete-item");
-    }
+    setShowActionDialog(true);
   };
 
-  const handleConfirmDelete = () => {
-    if (!confirmDialogType) return;
-
-    setConfirmDialogType(null);
-
-    if (confirmDialogType === "remove-from-category") {
-      // Remove from this category only
-      startTransition(async () => {
-        await deleteMenuItemAction(item.id, { categoryId });
-      });
-    } else {
-      // Delete item entirely
-      startTransition(async () => {
-        await deleteMenuItemAction(item.id);
-      });
-    }
+  const handleRemoveFromCategory = () => {
+    setShowActionDialog(false);
+    startTransition(async () => {
+      await deleteMenuItemAction(item.id, { categoryId });
+    });
   };
 
-  const getConfirmDialogProps = () => {
-    if (confirmDialogType === "remove-from-category") {
-      return {
-        title: "Remove from Category",
-        message: `This item is in ${item.categoryIds.length} categories.\n\nClick Confirm to remove from this category only.\nClick Cancel to keep it.`,
-        confirmText: "Remove",
-        variant: "default" as const,
-      };
-    } else {
-      return {
-        title: "Delete Item",
-        message: "Are you sure you want to delete this item?",
-        confirmText: "Delete",
-        variant: "destructive" as const,
-      };
-    }
+  const handleArchiveItem = () => {
+    setShowActionDialog(false);
+    startTransition(async () => {
+      await deleteMenuItemAction(item.id);
+    });
   };
 
-  const handleStatusChange = (newStatus: "active" | "inactive" | "out_of_stock") => {
+  const handleStatusChange = (
+    newStatus: "active" | "inactive" | "out_of_stock" | "archived"
+  ) => {
     startTransition(async () => {
       await updateMenuItemAction(item.id, { status: newStatus });
     });
@@ -113,6 +152,12 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
         return (
           <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
             Out of Stock
+          </span>
+        );
+      case "archived":
+        return (
+          <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+            Archived
           </span>
         );
     }
@@ -201,7 +246,7 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
           value={item.status}
           onChange={(e) =>
             handleStatusChange(
-              e.target.value as "active" | "inactive" | "out_of_stock"
+              e.target.value as "active" | "inactive" | "out_of_stock" | "archived"
             )
           }
           disabled={isPending}
@@ -210,6 +255,7 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
           <option value="active">Active</option>
           <option value="out_of_stock">Out of Stock</option>
           <option value="inactive">Hidden</option>
+          <option value="archived">Archived</option>
         </Select>
 
         {/* Delete button */}
@@ -224,14 +270,14 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
         </Button>
       </div>
 
-      {confirmDialogType && (
-        <ConfirmDialog
-          isOpen={true}
-          onClose={() => setConfirmDialogType(null)}
-          onConfirm={handleConfirmDelete}
-          {...getConfirmDialogProps()}
-        />
-      )}
+      <ActionChoiceDialog
+        isOpen={showActionDialog}
+        onClose={() => setShowActionDialog(false)}
+        onRemove={handleRemoveFromCategory}
+        onArchive={handleArchiveItem}
+        isMultiCategory={isInMultipleCategories}
+        categoryCount={item.categoryIds.length}
+      />
     </div>
   );
 }

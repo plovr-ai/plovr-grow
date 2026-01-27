@@ -22,6 +22,7 @@ interface MenuManagementClientProps {
   currentMenuId: string;
   categories: DashboardCategory[];
   taxConfigs: TaxConfigOption[];
+  showArchived: boolean;
 }
 
 export function MenuManagementClient({
@@ -29,6 +30,7 @@ export function MenuManagementClient({
   currentMenuId,
   categories,
   taxConfigs,
+  showArchived,
 }: MenuManagementClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -55,7 +57,12 @@ export function MenuManagementClient({
 
   // Menu handlers
   const handleSelectMenu = (menuId: string) => {
-    router.replace(`/dashboard/menu?menu=${menuId}`, { scroll: false });
+    const params = new URLSearchParams();
+    params.set("menu", menuId);
+    if (showArchived) {
+      params.set("archived", "true");
+    }
+    router.replace(`/dashboard/menu?${params.toString()}`, { scroll: false });
   };
 
   const handleAddMenu = () => {
@@ -81,6 +88,19 @@ export function MenuManagementClient({
     });
   };
 
+  // Archived tab handler
+  const handleToggleArchived = (show: boolean) => {
+    const params = new URLSearchParams();
+    params.set("menu", currentMenuId);
+    if (selectedCategoryId) {
+      params.set("category", selectedCategoryId);
+    }
+    if (show) {
+      params.set("archived", "true");
+    }
+    router.replace(`/dashboard/menu?${params.toString()}`, { scroll: false });
+  };
+
   // Category handlers
   const handleAddCategory = () => {
     setEditingCategory(null);
@@ -98,9 +118,13 @@ export function MenuManagementClient({
   };
 
   const handleSelectCategory = (id: string) => {
-    router.replace(`/dashboard/menu?menu=${currentMenuId}&category=${id}`, {
-      scroll: false,
-    });
+    const params = new URLSearchParams();
+    params.set("menu", currentMenuId);
+    params.set("category", id);
+    if (showArchived) {
+      params.set("archived", "true");
+    }
+    router.replace(`/dashboard/menu?${params.toString()}`, { scroll: false });
   };
 
   // Menu item handlers - navigate to separate pages
@@ -139,6 +163,32 @@ export function MenuManagementClient({
         onEditMenu={handleEditMenu}
         onReorderMenus={handleReorderMenus}
       />
+
+      {/* Archived Tab */}
+      <div className="mt-4 flex items-center justify-between border-b pb-2">
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleToggleArchived(false)}
+            className={`px-4 py-2 font-medium transition-colors ${
+              !showArchived
+                ? "border-b-2 border-theme-primary text-theme-primary-hover"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Menu Items
+          </button>
+          <button
+            onClick={() => handleToggleArchived(true)}
+            className={`px-4 py-2 font-medium transition-colors ${
+              showArchived
+                ? "border-b-2 border-theme-primary text-theme-primary-hover"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Archived
+          </button>
+        </div>
+      </div>
 
       {/* Main content */}
       <div className="mt-4 flex flex-1 gap-6 overflow-hidden">

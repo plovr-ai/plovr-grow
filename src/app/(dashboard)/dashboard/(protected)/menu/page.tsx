@@ -6,7 +6,10 @@ import { taxConfigService } from "@/services/menu/tax-config.service";
 import { MenuManagementClient } from "@/components/dashboard/menu/MenuManagementClient";
 
 interface MenuManagementPageProps {
-  searchParams: Promise<{ menu?: string }>;
+  searchParams: Promise<{
+    menu?: string;
+    archived?: string;
+  }>;
 }
 
 export default async function MenuManagementPage({
@@ -19,11 +22,12 @@ export default async function MenuManagementPage({
   }
 
   const { tenantId, companyId } = session.user;
-  const { menu: menuId } = await searchParams;
+  const { menu: menuId, archived } = await searchParams;
+  const showArchived = archived === "true";
 
   // Get menu data and tax configs in parallel
   const [menuData, taxConfigs] = await Promise.all([
-    menuService.getMenuForDashboard(tenantId, companyId, menuId),
+    menuService.getMenuForDashboard(tenantId, companyId, menuId, showArchived),
     taxConfigService.getTaxConfigs(tenantId, companyId),
   ]);
 
@@ -41,6 +45,7 @@ export default async function MenuManagementPage({
         currentMenuId={menuData.currentMenuId}
         categories={menuData.categories}
         taxConfigs={taxConfigOptions}
+        showArchived={showArchived}
       />
     </Suspense>
   );

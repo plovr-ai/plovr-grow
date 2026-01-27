@@ -319,7 +319,7 @@ interface UpdateMenuItemInput {
   description?: string;
   price?: number;
   imageUrl?: string;
-  status?: "active" | "inactive" | "out_of_stock";
+  status?: "active" | "inactive" | "out_of_stock" | "archived";
   modifierGroups?: ModifierGroupInput[];
   tags?: string[];
   taxConfigIds?: string[];
