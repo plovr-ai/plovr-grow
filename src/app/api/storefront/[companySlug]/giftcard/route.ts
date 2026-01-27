@@ -50,6 +50,7 @@ export async function POST(
 
     // Create order with salesChannel="giftcard"
     const order = await orderService.createOrder(company.tenantId, {
+      companyId: company.id,
       merchantId: undefined, // Company-level order
       customerName: data.buyerName,
       customerPhone: data.buyerPhone,

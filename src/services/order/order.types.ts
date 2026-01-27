@@ -40,6 +40,7 @@ export interface OrderData {
 }
 
 export interface CreateOrderInput {
+  companyId: string;
   merchantId?: string; // Optional for Company-level orders (e.g., giftcards)
   loyaltyMemberId?: string;
   customerName: string;

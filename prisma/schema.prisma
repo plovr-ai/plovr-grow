@@ -61,6 +61,7 @@ model Company {
   loyaltyConfig         LoyaltyConfig?
   loyaltyMembers        LoyaltyMember[]
   featuredItems         FeaturedItem[]
+  orders                Order[]
 
   @@index([slug])
   @@index([tenantId])
@@ -191,6 +192,7 @@ model Merchant {
 model Order {
   id                String             @id
   tenantId          String             @map("tenant_id")
+  companyId         String             @map("company_id")
   merchantId        String?            @map("merchant_id")
   loyaltyMemberId   String?            @map("loyalty_member_id")
   orderNumber       String             @map("order_number")
@@ -216,12 +218,14 @@ model Order {
   cancelReason      String?            @map("cancel_reason")
   createdAt         DateTime           @default(now()) @map("created_at")
   updatedAt         DateTime           @updatedAt @map("updated_at")
+  company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   merchant          Merchant?          @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   loyaltyMember     LoyaltyMember?     @relation(fields: [loyaltyMemberId], references: [id], onDelete: SetNull)
   pointTransactions PointTransaction[]
 
   @@unique([tenantId, orderNumber])
+  @@index([companyId])
   @@index([merchantId])
   @@index([loyaltyMemberId])
   @@index([tenantId, createdAt])

@@ -96,6 +96,7 @@ describe("OrderService", () => {
 
   describe("createOrder()", () => {
     const mockInput = {
+      companyId: "company-1",
       merchantId: "merchant-1",
       customerName: "John Doe",
       customerPhone: "123-456-7890",
@@ -159,6 +160,7 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
+        "company-1",
         "merchant-1",
         expect.objectContaining({
           orderNumber: expect.any(String),
@@ -206,6 +208,7 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
+        "company-1",
         "merchant-1",
         expect.objectContaining({
           orderNumber: expect.any(String),

@@ -79,6 +79,7 @@ export async function POST(
 
     // Create order with merchantId
     const order = await orderService.createOrder(tenantId, {
+      companyId: merchant.company.id,
       merchantId: merchant.id,
       loyaltyMemberId: body.loyaltyMemberId,
       customerName: formValidation.data.customerName,

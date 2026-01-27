@@ -8,8 +8,9 @@ export class OrderRepository {
    */
   async create(
     tenantId: string,
+    companyId: string,
     merchantId: string | null,
-    data: Omit<Prisma.OrderCreateInput, "tenant" | "merchant" | "loyaltyMember" | "id">,
+    data: Omit<Prisma.OrderCreateInput, "tenant" | "company" | "merchant" | "loyaltyMember" | "id">,
     loyaltyMemberId?: string
   ) {
     return prisma.order.create({
@@ -17,6 +18,7 @@ export class OrderRepository {
         id: crypto.randomUUID(),
         ...data,
         tenant: { connect: { id: tenantId } },
+        company: { connect: { id: companyId } },
         ...(merchantId && { merchant: { connect: { id: merchantId } } }),
         ...(loyaltyMemberId && {
           loyaltyMember: { connect: { id: loyaltyMemberId } },
@@ -463,10 +465,8 @@ export class OrderRepository {
 
     const where: Prisma.OrderWhereInput = {
       tenantId,
-      merchant: {
-        companyId,
-        ...(merchantId && { id: merchantId }),
-      },
+      companyId,
+      ...(merchantId && { merchantId }),
       ...(status && { status }),
       ...(orderMode && { orderMode }),
       ...(salesChannel && { salesChannel }),

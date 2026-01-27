@@ -24,7 +24,7 @@ export class OrderService {
    * Create a new order for a merchant or Company (giftcards)
    */
   async createOrder(tenantId: string, input: CreateOrderInput) {
-    const { merchantId } = input;
+    const { companyId, merchantId } = input;
 
     // Skip menu item validation for giftcards (virtual items)
     if (input.salesChannel !== "giftcard") {
@@ -53,6 +53,7 @@ export class OrderService {
     // Create the order in database
     const order = await orderRepository.create(
       tenantId,
+      companyId,
       merchantId ?? null,
       {
         orderNumber,
