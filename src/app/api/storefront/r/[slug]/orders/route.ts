@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { orderService } from "@/services/order";
 import { merchantService } from "@/services/merchant";
 import { pointsService, loyaltyConfigService } from "@/services/loyalty";
+import { giftCardService } from "@/services/giftcard";
 import { checkoutFormSchema } from "@storefront/lib/validations/checkout";
 import type { OrderItemData } from "@/types";
 
 interface OrderRequestBody {
   orderMode: string;
-  customerName: string;
+  customerFirstName: string;
+  customerLastName: string;
   customerPhone: string;
   customerEmail?: string;
   loyaltyMemberId?: string;
@@ -22,6 +24,11 @@ interface OrderRequestBody {
   tipAmount?: number;
   notes?: string;
   items: OrderItemData[];
+  // Gift card payment
+  giftCardPayment?: {
+    giftCardId: string;
+    amount: number;
+  };
 }
 
 export async function POST(
@@ -49,7 +56,8 @@ export async function POST(
     // Validate form data with Zod
     const formValidation = checkoutFormSchema.safeParse({
       orderMode: body.orderMode,
-      customerName: body.customerName,
+      customerFirstName: body.customerFirstName,
+      customerLastName: body.customerLastName,
       customerPhone: body.customerPhone,
       customerEmail: body.customerEmail,
       deliveryAddress: body.deliveryAddress,
@@ -77,12 +85,48 @@ export async function POST(
       );
     }
 
-    // Create order with merchantId
+    // Validate gift card if provided
+    let validatedGiftCard: { id: string; balance: number } | null = null;
+    if (body.giftCardPayment) {
+      const giftCard = await giftCardService.getGiftCard(
+        tenantId,
+        body.giftCardPayment.giftCardId
+      );
+
+      if (!giftCard) {
+        return NextResponse.json(
+          { success: false, error: "Gift card not found" },
+          { status: 400 }
+        );
+      }
+
+      if (giftCard.status !== "active") {
+        return NextResponse.json(
+          { success: false, error: `Gift card is ${giftCard.status}` },
+          { status: 400 }
+        );
+      }
+
+      if (giftCard.currentBalance < body.giftCardPayment.amount) {
+        return NextResponse.json(
+          { success: false, error: "Insufficient gift card balance" },
+          { status: 400 }
+        );
+      }
+
+      validatedGiftCard = {
+        id: giftCard.id,
+        balance: giftCard.currentBalance,
+      };
+    }
+
+    // Create order with merchantId and payment breakdown
     const order = await orderService.createOrder(tenantId, {
       companyId: merchant.company.id,
       merchantId: merchant.id,
       loyaltyMemberId: body.loyaltyMemberId,
-      customerName: formValidation.data.customerName,
+      customerFirstName: formValidation.data.customerFirstName,
+      customerLastName: formValidation.data.customerLastName,
       customerPhone: formValidation.data.customerPhone,
       customerEmail: formValidation.data.customerEmail || undefined,
       orderMode: formValidation.data.orderMode,
@@ -91,9 +135,26 @@ export async function POST(
       notes: formValidation.data.notes || undefined,
       deliveryAddress: formValidation.data.deliveryAddress,
       tipAmount: formValidation.data.tipAmount,
+      giftCardPayment: body.giftCardPayment?.amount,
     });
 
+    // Process gift card redemption after order is created
+    if (validatedGiftCard && body.giftCardPayment) {
+      try {
+        await giftCardService.redeemGiftCard(
+          tenantId,
+          validatedGiftCard.id,
+          order.id,
+          body.giftCardPayment.amount
+        );
+      } catch (error) {
+        console.error("Failed to redeem gift card:", error);
+        // Note: Order is already created. In production, consider rolling back or marking order for review.
+      }
+    }
+
     // Award loyalty points if member is logged in
+    // Gift card payment portion earns DOUBLE points (2x)
     if (body.loyaltyMemberId) {
       try {
         const companyId = merchant.company.id;
@@ -108,13 +169,34 @@ export async function POST(
             companyId
           );
 
-          await pointsService.awardPoints(tenantId, body.loyaltyMemberId, {
-            merchantId: merchant.id,
-            orderId: order.id,
-            orderAmount: Number(order.totalAmount),
-            pointsPerDollar,
-            description: `Earned from order #${order.orderNumber}`,
-          });
+          const giftCardPortion = Number(order.giftCardPayment) || 0;
+          const cashPortion = Number(order.cashPayment) || 0;
+
+          // Calculate points with double multiplier for gift card portion
+          const giftCardPoints = Math.floor(giftCardPortion * pointsPerDollar * 2);
+          const cashPoints = Math.floor(cashPortion * pointsPerDollar);
+          const totalPoints = giftCardPoints + cashPoints;
+
+          if (totalPoints > 0) {
+            // Build description
+            let description = `Earned from order #${order.orderNumber}`;
+            if (giftCardPortion > 0 && cashPortion > 0) {
+              description += ` (${giftCardPoints} pts from gift card at 2x, ${cashPoints} pts from cash)`;
+            } else if (giftCardPortion > 0) {
+              description += ` (2x bonus on gift card payment)`;
+            }
+
+            await pointsService.awardPointsWithCustomAmount(
+              tenantId,
+              body.loyaltyMemberId,
+              {
+                merchantId: merchant.id,
+                orderId: order.id,
+                points: totalPoints,
+                description,
+              }
+            );
+          }
         }
       } catch (error) {
         // Log but don't fail the order if points awarding fails

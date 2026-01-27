@@ -25,7 +25,8 @@ export interface LoyaltyMemberData {
   companyId: string;
   phone: string;
   email: string | null;
-  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
   points: number;
   totalOrders: number;
   totalSpent: number;
@@ -38,13 +39,15 @@ export interface LoyaltyMemberData {
 export interface CreateMemberInput {
   phone: string;
   email?: string | null;
-  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
 }
 
 export interface LoyaltyStatus {
   memberId: string;
   phone: string;
-  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
   points: number;
   totalOrders: number;
   totalSpent: number;
@@ -59,6 +62,16 @@ export interface AwardPointsInput {
   orderId?: string;
   orderAmount: number;
   pointsPerDollar: number;
+  description?: string;
+}
+
+/**
+ * Input for awarding a custom points amount (e.g., for gift card double points)
+ */
+export interface AwardCustomPointsInput {
+  merchantId?: string;
+  orderId?: string;
+  points: number;
   description?: string;
 }
 
@@ -129,7 +142,8 @@ export function toLoyaltyMemberData(member: LoyaltyMember): LoyaltyMemberData {
     companyId: member.companyId,
     phone: member.phone,
     email: member.email,
-    name: member.name,
+    firstName: member.firstName,
+    lastName: member.lastName,
     points: member.points,
     totalOrders: member.totalOrders,
     totalSpent: Number(member.totalSpent),

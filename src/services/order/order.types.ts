@@ -15,7 +15,8 @@ export interface OrderData {
   tenantId: string;
   merchantId: string | null;
   orderNumber: string;
-  customerName: string;
+  customerFirstName: string;
+  customerLastName: string;
   customerPhone: string;
   customerEmail: string | null;
   orderMode: string;
@@ -27,6 +28,8 @@ export interface OrderData {
   tipAmount: number | unknown;
   deliveryFee: number | unknown;
   discount: number | unknown;
+  giftCardPayment: number | unknown;
+  cashPayment: number | unknown;
   totalAmount: number | unknown;
   notes: string | null;
   deliveryAddress: DeliveryAddress | unknown | null;
@@ -43,7 +46,8 @@ export interface CreateOrderInput {
   companyId: string;
   merchantId?: string; // Optional for Company-level orders (e.g., giftcards)
   loyaltyMemberId?: string;
-  customerName: string;
+  customerFirstName: string;
+  customerLastName: string;
   customerPhone: string;
   customerEmail?: string;
   orderMode: OrderMode;
@@ -54,6 +58,7 @@ export interface CreateOrderInput {
   scheduledAt?: Date;
   tipAmount?: number;
   discountCode?: string;
+  giftCardPayment?: number; // Amount paid with gift card
 }
 
 export interface OrderCalculation {

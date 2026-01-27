@@ -18,6 +18,7 @@ export type {
   CreateMemberInput,
   LoyaltyStatus,
   AwardPointsInput,
+  AwardCustomPointsInput,
   PointsEarnResult,
   PointTransactionData,
   PaginatedTransactions,

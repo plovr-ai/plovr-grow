@@ -44,6 +44,10 @@ export class OrderService {
     // Calculate order totals
     const calculation = await this.calculateOrderTotals(tenantId, merchantId, input);
 
+    // Calculate payment breakdown
+    const giftCardPayment = input.giftCardPayment ?? 0;
+    const cashPayment = Math.max(0, calculation.totalAmount - giftCardPayment);
+
     // Generate order number (merchant-specific sequence for regular orders, tenant-level for giftcards)
     const sequence = merchantId
       ? await orderRepository.getNextMerchantOrderSequence(tenantId, merchantId)
@@ -57,7 +61,8 @@ export class OrderService {
       merchantId ?? null,
       {
         orderNumber,
-        customerName: input.customerName,
+        customerFirstName: input.customerFirstName,
+        customerLastName: input.customerLastName,
         customerPhone: input.customerPhone,
         customerEmail: input.customerEmail ?? null,
         orderMode: input.orderMode,
@@ -69,6 +74,8 @@ export class OrderService {
         tipAmount: calculation.tipAmount,
         deliveryFee: calculation.deliveryFee,
         discount: calculation.discount,
+        giftCardPayment: Math.round(giftCardPayment * 100) / 100,
+        cashPayment: Math.round(cashPayment * 100) / 100,
         totalAmount: calculation.totalAmount,
         notes: input.notes ?? null,
         deliveryAddress: input.deliveryAddress
@@ -88,7 +95,8 @@ export class OrderService {
         tenantId,
         status: "pending",
         timestamp: new Date(),
-        customerName: input.customerName,
+        customerFirstName: input.customerFirstName,
+        customerLastName: input.customerLastName,
         customerPhone: input.customerPhone,
         orderMode: input.orderMode,
         salesChannel: input.salesChannel ?? "online_order",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { orderService } from "@/services/order";
 import { merchantService } from "@/services/merchant";
+import { giftCardService } from "@/services/giftcard";
 import { giftcardFormSchema } from "@storefront/lib/validations/giftcard";
 import type { OrderItemData } from "@/types";
 
@@ -52,7 +53,8 @@ export async function POST(
     const order = await orderService.createOrder(company.tenantId, {
       companyId: company.id,
       merchantId: undefined, // Company-level order
-      customerName: data.buyerName,
+      customerFirstName: data.buyerFirstName,
+      customerLastName: data.buyerLastName,
       customerPhone: data.buyerPhone,
       customerEmail: data.buyerEmail,
       orderMode: "pickup", // Generic fulfillment (actual: digital delivery)
@@ -62,12 +64,23 @@ export async function POST(
       tipAmount: 0,
     });
 
+    // Create the gift card record with generated card number
+    const giftCard = await giftCardService.createGiftCard(
+      company.tenantId,
+      company.id,
+      {
+        purchaseOrderId: order.id,
+        amount: data.amount,
+      }
+    );
+
     return NextResponse.json(
       {
         success: true,
         data: {
           orderId: order.id,
           orderNumber: order.orderNumber,
+          cardNumber: giftCard.cardNumber,
         },
       },
       { status: 201 }

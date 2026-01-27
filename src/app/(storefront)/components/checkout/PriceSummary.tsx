@@ -15,6 +15,8 @@ interface PriceSummaryProps {
   deliveryFee: number;
   tipAmount: number;
   totalAmount: number;
+  giftCardPayment?: number;
+  orderMode?: string;
 }
 
 export function PriceSummary({
@@ -24,8 +26,12 @@ export function PriceSummary({
   deliveryFee,
   tipAmount,
   totalAmount,
+  giftCardPayment = 0,
+  orderMode,
 }: PriceSummaryProps) {
   const formatPrice = useFormatPrice();
+
+  const cashPayment = Math.max(0, totalAmount - giftCardPayment);
 
   return (
     <div className="space-y-2">
@@ -59,6 +65,22 @@ export function PriceSummary({
         <span>Total</span>
         <span>{formatPrice(totalAmount)}</span>
       </div>
+
+      {/* Gift Card Payment Section */}
+      {giftCardPayment > 0 && (
+        <>
+          <div className="flex justify-between text-green-600 pt-2 border-t border-gray-100">
+            <span>Gift Card</span>
+            <span>-{formatPrice(giftCardPayment)}</span>
+          </div>
+          <div className="flex justify-between text-lg font-semibold text-gray-900">
+            <span>
+              {orderMode === "delivery" ? "Due at Delivery" : "Due at Pickup"}
+            </span>
+            <span>{formatPrice(cashPayment)}</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }

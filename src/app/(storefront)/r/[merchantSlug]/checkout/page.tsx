@@ -14,6 +14,8 @@ import {
   TipSelector,
   OrderSummary,
   PriceSummary,
+  GiftCardInput,
+  type AppliedGiftCard,
 } from "@storefront/components/checkout";
 import {
   checkoutFormSchema,
@@ -24,7 +26,8 @@ import type { TipInput } from "@/lib/pricing";
 
 interface FormState {
   orderMode: OrderMode;
-  customerName: string;
+  customerFirstName: string;
+  customerLastName: string;
   customerPhone: string;
   customerEmail: string;
   deliveryAddress: {
@@ -40,7 +43,8 @@ interface FormState {
 }
 
 interface FormErrors {
-  customerName?: string;
+  customerFirstName?: string;
+  customerLastName?: string;
   customerPhone?: string;
   customerEmail?: string;
   deliveryAddress?: {
@@ -56,7 +60,8 @@ interface FormErrors {
 
 const initialFormState: FormState = {
   orderMode: "pickup",
-  customerName: "",
+  customerFirstName: "",
+  customerLastName: "",
   customerPhone: "",
   customerEmail: "",
   deliveryAddress: {
@@ -87,6 +92,7 @@ export default function CheckoutPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isOrderSuccess, setIsOrderSuccess] = useState(false);
   const [loyaltyMemberId, setLoyaltyMemberId] = useState<string | null>(null);
+  const [appliedGiftCard, setAppliedGiftCard] = useState<AppliedGiftCard | null>(null);
 
   // Get loyalty member from context (if already logged in)
   const { member: loyaltyMember, isLoading: loyaltyLoading } = useLoyalty();
@@ -96,8 +102,12 @@ export default function CheckoutPage() {
     if (loyaltyMember && !loyaltyLoading) {
       setLoyaltyMemberId(loyaltyMember.id);
       // Pre-fill name if available and not already filled
-      if (loyaltyMember.name && !formState.customerName) {
-        setFormState((prev) => ({ ...prev, customerName: loyaltyMember.name as string }));
+      if (loyaltyMember.firstName && !formState.customerFirstName) {
+        setFormState((prev) => ({
+          ...prev,
+          customerFirstName: loyaltyMember.firstName || "",
+          customerLastName: loyaltyMember.lastName || ""
+        }));
       }
       // Pre-fill phone if available and not already filled
       if (loyaltyMember.phone && !formState.customerPhone) {
@@ -111,7 +121,7 @@ export default function CheckoutPage() {
         setFormState((prev) => ({ ...prev, customerPhone: formattedPhone }));
       }
     }
-  }, [loyaltyMember, loyaltyLoading, formState.customerName, formState.customerPhone]);
+  }, [loyaltyMember, loyaltyLoading, formState.customerFirstName, formState.customerPhone]);
 
   // Get fee config from merchant context
   const { fees: configFees } = useFeeConfig();
@@ -156,7 +166,7 @@ export default function CheckoutPage() {
 
   // Handle form field changes
   const handleContactChange = (
-    field: "customerName" | "customerPhone" | "customerEmail",
+    field: "customerFirstName" | "customerLastName" | "customerPhone" | "customerEmail",
     value: string
   ) => {
     setFormState((prev) => ({ ...prev, [field]: value }));
@@ -195,6 +205,32 @@ export default function CheckoutPage() {
     setFormState((prev) => ({ ...prev, notes: e.target.value }));
   };
 
+  // Gift Card handlers
+  const handleGiftCardApply = (giftCard: AppliedGiftCard) => {
+    // Recalculate amount to apply based on current total
+    const amountToApply = Math.min(giftCard.availableBalance, calculations.totalAmount);
+    setAppliedGiftCard({
+      ...giftCard,
+      amountToApply,
+    });
+  };
+
+  const handleGiftCardRemove = () => {
+    setAppliedGiftCard(null);
+  };
+
+  // Update gift card amountToApply when total changes
+  useEffect(() => {
+    if (appliedGiftCard) {
+      const newAmountToApply = Math.min(appliedGiftCard.availableBalance, calculations.totalAmount);
+      if (newAmountToApply !== appliedGiftCard.amountToApply) {
+        setAppliedGiftCard((prev) =>
+          prev ? { ...prev, amountToApply: newAmountToApply } : null
+        );
+      }
+    }
+  }, [calculations.totalAmount, appliedGiftCard]);
+
   // Validate and submit
   const handleSubmit = async () => {
     setSubmitError(null);
@@ -202,7 +238,8 @@ export default function CheckoutPage() {
     // Prepare data for validation
     const formData = {
       orderMode: formState.orderMode,
-      customerName: formState.customerName,
+      customerFirstName: formState.customerFirstName,
+      customerLastName: formState.customerLastName,
       customerPhone: formState.customerPhone,
       customerEmail: formState.customerEmail || undefined,
       tipAmount: pricing.tipAmount, // Send calculated tip amount
@@ -228,8 +265,11 @@ export default function CheckoutPage() {
       const fieldErrors: FormErrors = {};
       const flatErrors = result.error.flatten().fieldErrors;
 
-      if (flatErrors.customerName) {
-        fieldErrors.customerName = flatErrors.customerName[0];
+      if (flatErrors.customerFirstName) {
+        fieldErrors.customerFirstName = flatErrors.customerFirstName[0];
+      }
+      if (flatErrors.customerLastName) {
+        fieldErrors.customerLastName = flatErrors.customerLastName[0];
       }
       if (flatErrors.customerPhone) {
         fieldErrors.customerPhone = flatErrors.customerPhone[0];
@@ -278,6 +318,13 @@ export default function CheckoutPage() {
             specialInstructions: item.specialInstructions,
             taxes: item.taxes,
           })),
+          // Gift card payment
+          giftCardPayment: appliedGiftCard
+            ? {
+                giftCardId: appliedGiftCard.giftCardId,
+                amount: appliedGiftCard.amountToApply,
+              }
+            : undefined,
         }),
       });
 
@@ -421,12 +468,14 @@ export default function CheckoutPage() {
 
             <ContactInfoForm
               values={{
-                customerName: formState.customerName,
+                customerFirstName: formState.customerFirstName,
+                customerLastName: formState.customerLastName,
                 customerPhone: formState.customerPhone,
                 customerEmail: formState.customerEmail,
               }}
               errors={{
-                customerName: errors.customerName,
+                customerFirstName: errors.customerFirstName,
+                customerLastName: errors.customerLastName,
                 customerPhone: errors.customerPhone,
                 customerEmail: errors.customerEmail,
               }}
@@ -447,6 +496,15 @@ export default function CheckoutPage() {
               subtotal={calculations.subtotal}
               value={formState.tip}
               onChange={handleTipChange}
+              disabled={isSubmitting}
+            />
+
+            {/* Gift Card */}
+            <GiftCardInput
+              totalAmount={calculations.totalAmount}
+              appliedGiftCard={appliedGiftCard}
+              onApply={handleGiftCardApply}
+              onRemove={handleGiftCardRemove}
               disabled={isSubmitting}
             />
 
@@ -484,25 +542,29 @@ export default function CheckoutPage() {
                   deliveryFee={calculations.deliveryFee}
                   tipAmount={calculations.tipAmount}
                   totalAmount={calculations.totalAmount}
+                  giftCardPayment={appliedGiftCard?.amountToApply}
+                  orderMode={formState.orderMode}
                 />
 
-                {/* Payment Notice */}
-                <div className="flex items-center justify-center gap-2 mt-4 text-gray-500">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                    />
-                  </svg>
-                  <span className="text-sm">{paymentLabel}</span>
-                </div>
+                {/* Payment Notice (only show if not fully paid by gift card) */}
+                {(!appliedGiftCard || appliedGiftCard.amountToApply < calculations.totalAmount) && (
+                  <div className="flex items-center justify-center gap-2 mt-4 text-gray-500">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                      />
+                    </svg>
+                    <span className="text-sm">{paymentLabel}</span>
+                  </div>
+                )}
 
                 {/* Submit Error */}
                 {submitError && (
@@ -549,25 +611,29 @@ export default function CheckoutPage() {
             deliveryFee={calculations.deliveryFee}
             tipAmount={calculations.tipAmount}
             totalAmount={calculations.totalAmount}
+            giftCardPayment={appliedGiftCard?.amountToApply}
+            orderMode={formState.orderMode}
           />
 
-          {/* Payment Notice */}
-          <div className="flex items-center justify-center gap-2 mt-4 text-gray-500">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-              />
-            </svg>
-            <span className="text-sm">{paymentLabel}</span>
-          </div>
+          {/* Payment Notice (only show if not fully paid by gift card) */}
+          {(!appliedGiftCard || appliedGiftCard.amountToApply < calculations.totalAmount) && (
+            <div className="flex items-center justify-center gap-2 mt-4 text-gray-500">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                />
+              </svg>
+              <span className="text-sm">{paymentLabel}</span>
+            </div>
+          )}
 
           {/* Submit Error */}
           {submitError && (

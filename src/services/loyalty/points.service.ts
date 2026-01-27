@@ -8,6 +8,7 @@ import {
 } from "@/repositories/loyalty-member.repository";
 import type {
   AwardPointsInput,
+  AwardCustomPointsInput,
   PointsEarnResult,
   PointTransactionData,
   PaginatedTransactions,
@@ -91,6 +92,67 @@ export class PointsService {
       balanceBefore,
       balanceAfter,
       description: input.description ?? `Earned ${pointsEarned} points from order`,
+    });
+
+    // Update member balance
+    await this.memberRepository.updatePoints(tenantId, memberId, pointsEarned);
+
+    return {
+      pointsEarned,
+      newBalance: balanceAfter,
+      transactionId: transaction.id,
+    };
+  }
+
+  /**
+   * Award a custom points amount (for special cases like gift card double points)
+   * Unlike awardPoints, this accepts a pre-calculated points value
+   */
+  async awardPointsWithCustomAmount(
+    tenantId: string,
+    memberId: string,
+    input: AwardCustomPointsInput
+  ): Promise<PointsEarnResult> {
+    // Check if points already awarded for this order
+    if (input.orderId) {
+      const existing = await this.transactionRepository.hasEarnedForOrder(
+        tenantId,
+        input.orderId
+      );
+      if (existing) {
+        throw new Error("Points already awarded for this order");
+      }
+    }
+
+    // Get current member balance
+    const member = await this.memberRepository.getById(tenantId, memberId);
+    if (!member) {
+      throw new Error("Loyalty member not found");
+    }
+
+    const pointsEarned = input.points;
+
+    if (pointsEarned <= 0) {
+      return {
+        pointsEarned: 0,
+        newBalance: member.points,
+        transactionId: "",
+      };
+    }
+
+    const balanceBefore = member.points;
+    const balanceAfter = balanceBefore + pointsEarned;
+
+    // Create transaction record
+    const transaction = await this.transactionRepository.create(tenantId, {
+      memberId,
+      merchantId: input.merchantId,
+      orderId: input.orderId,
+      type: "earn",
+      points: pointsEarned,
+      balanceBefore,
+      balanceAfter,
+      description: input.description ?? `Earned ${pointsEarned} points`,
     });
 
     // Update member balance
