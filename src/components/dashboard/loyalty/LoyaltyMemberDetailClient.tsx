@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -11,13 +12,17 @@ import {
   Award,
 } from "lucide-react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/orders/Pagination";
 import { StatusBadge } from "@/components/orders/StatusBadge";
 import {
   useDashboardFormatPrice,
   useDashboardFormatDateTime,
 } from "@/hooks";
+import { useMerchants } from "@/contexts";
 import { formatPhone } from "@/lib/utils";
+import { formatCustomerName } from "@/lib/names";
+import { AdjustPointsModal } from "./AdjustPointsModal";
 import type { OrderStatus, OrderMode } from "@/types";
 
 // ==================== Types ====================
@@ -27,7 +32,8 @@ interface LoyaltyMemberDetailClientProps {
     id: string;
     phone: string;
     email: string | null;
-    name: string | null;
+    firstName: string | null;
+    lastName: string | null;
     points: number;
     totalOrders: number;
     totalSpent: number;
@@ -118,7 +124,7 @@ function MemberInfoCard({
       <CardContent className="space-y-3">
         <div className="flex items-center gap-2 text-gray-600">
           <User className="h-4 w-4 text-gray-400" />
-          <span>{member.name || "-"}</span>
+          <span>{formatCustomerName(member.firstName || "", member.lastName || "") || "-"}</span>
         </div>
         <div className="flex items-center gap-2 text-gray-600">
           <Phone className="h-4 w-4 text-gray-400" />
@@ -141,10 +147,12 @@ function MemberStatsCard({
   member,
   formatPrice,
   formatDate,
+  onAdjustClick,
 }: {
   member: LoyaltyMemberDetailClientProps["member"];
   formatPrice: (amount: number) => string;
   formatDate: (date: Date | string) => string;
+  onAdjustClick: () => void;
 }) {
   return (
     <Card>
@@ -157,9 +165,14 @@ function MemberStatsCard({
             <Award className="h-4 w-4 text-gray-400" />
             <span>Points Balance</span>
           </div>
-          <span className="text-lg font-semibold text-green-600">
-            {member.points.toLocaleString()}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-lg font-semibold text-green-600">
+              {member.points.toLocaleString()}
+            </span>
+            <Button variant="outline" size="sm" onClick={onAdjustClick}>
+              Adjust
+            </Button>
+          </div>
         </div>
         <div className="flex justify-between text-gray-600">
           <span>Total Orders</span>
@@ -430,6 +443,11 @@ export function LoyaltyMemberDetailClient({
   const searchParams = useSearchParams();
   const formatPrice = useDashboardFormatPrice();
   const { formatDate } = useDashboardFormatDateTime();
+  const merchants = useMerchants();
+  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+
+  // Get first merchant for API calls
+  const merchantId = merchants[0]?.id;
 
   const handleTabChange = (tab: string) => {
     const params = new URLSearchParams(searchParams);
@@ -444,6 +462,34 @@ export function LoyaltyMemberDetailClient({
     router.push(`?${params.toString()}`);
   };
 
+  const handleAdjustPoints = async (pointsAmount: number, description: string) => {
+    if (!merchantId) {
+      throw new Error("No merchant available");
+    }
+
+    const response = await fetch(
+      `/api/dashboard/${merchantId}/loyalty/members/${member.id}/adjust-points`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ points: pointsAmount, description }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || "Failed to adjust points");
+    }
+
+    // Refresh the page to show updated data
+    router.refresh();
+  };
+
+  const memberName =
+    formatCustomerName(member.firstName || "", member.lastName || "") ||
+    formatPhone(member.phone);
+
   return (
     <div className="space-y-6">
       {/* Header with Back Button */}
@@ -455,9 +501,7 @@ export function LoyaltyMemberDetailClient({
           <ArrowLeft className="h-5 w-5 text-gray-600" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">
-            {member.name || formatPhone(member.phone)}
-          </h1>
+          <h1 className="text-2xl font-bold">{memberName}</h1>
           <p className="mt-1 text-sm text-gray-500">Loyalty Member Details</p>
         </div>
       </div>
@@ -469,6 +513,7 @@ export function LoyaltyMemberDetailClient({
           member={member}
           formatPrice={formatPrice}
           formatDate={formatDate}
+          onAdjustClick={() => setIsAdjustModalOpen(true)}
         />
       </div>
 
@@ -497,6 +542,15 @@ export function LoyaltyMemberDetailClient({
           onPageChange={handlePageChange}
         />
       )}
+
+      {/* Adjust Points Modal */}
+      <AdjustPointsModal
+        isOpen={isAdjustModalOpen}
+        onClose={() => setIsAdjustModalOpen(false)}
+        onConfirm={handleAdjustPoints}
+        currentBalance={member.points}
+        memberName={memberName}
+      />
     </div>
   );
 }
