@@ -215,6 +215,30 @@ export function GiftcardPageClient({
         <div className="bg-white rounded-lg shadow-sm border p-6">
           <h2 className="text-xl font-semibold mb-4">Your Information</h2>
 
+          {/* Loyalty promotion for non-members */}
+          {!member && !isLoyaltyLoading && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-amber-600 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                />
+              </svg>
+              <span className="text-sm text-gray-700">
+                Join our rewards program! Earn{" "}
+                <span className="font-semibold text-amber-700">2x points</span>{" "}
+                when you spend with gift cards.
+              </span>
+            </div>
+          )}
+
           {member && (
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
               <svg
