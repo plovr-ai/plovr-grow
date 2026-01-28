@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { generateEntityId } from "@/lib/id";
 
 export class MenuRepository {
   // ==================== Menu-scoped query methods ====================
@@ -219,7 +220,7 @@ export class MenuRepository {
   ) {
     return prisma.menuCategory.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         ...data,
         tenant: { connect: { id: tenantId } },
         company: { connect: { id: companyId } },
@@ -256,7 +257,7 @@ export class MenuRepository {
   ) {
     return prisma.menuItem.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         ...data,
         tenant: { connect: { id: tenantId } },
         company: { connect: { id: companyId } },

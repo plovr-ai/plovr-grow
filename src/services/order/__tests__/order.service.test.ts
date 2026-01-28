@@ -39,11 +39,22 @@ vi.mock("@/services/menu", () => ({
 vi.mock("@/services/merchant", () => ({
   merchantService: {
     getMerchant: vi.fn(),
+    getMerchantById: vi.fn(),
+  },
+}));
+
+vi.mock("@/repositories/sequence.repository", () => ({
+  sequenceRepository: {
+    getNextOrderSequence: vi.fn(),
+    getNextCompanyOrderSequence: vi.fn(),
+    getNextCateringOrderSequence: vi.fn(),
+    getNextInvoiceSequence: vi.fn(),
   },
 }));
 
 // Import mocked modules
 import { orderRepository } from "@/repositories/order.repository";
+import { sequenceRepository } from "@/repositories/sequence.repository";
 import { menuService, taxConfigService } from "@/services/menu";
 import { merchantService } from "@/services/merchant";
 
@@ -98,7 +109,8 @@ describe("OrderService", () => {
     const mockInput = {
       companyId: "company-1",
       merchantId: "merchant-1",
-      customerName: "John Doe",
+      customerFirstName: "John",
+      customerLastName: "Doe",
       customerPhone: "123-456-7890",
       customerEmail: "john@example.com",
       orderMode: "pickup" as const,
@@ -110,7 +122,7 @@ describe("OrderService", () => {
           quantity: 2,
           selectedModifiers: [],
           totalPrice: 37.98,
-          taxConfigId: "tax-1",
+          taxes: [{ taxConfigId: "tax-1", name: "Standard Tax", rate: 0.08875, roundingMethod: "half_up" as const }],
         },
       ],
       tipAmount: 5,
@@ -131,25 +143,38 @@ describe("OrderService", () => {
         slug: "test-merchant",
       } as never);
 
+      vi.mocked(merchantService.getMerchantById).mockResolvedValue({
+        id: "merchant-1",
+        name: "Test Merchant",
+        slug: "test-merchant",
+        timezone: "America/New_York",
+      } as never);
+
+      vi.mocked(sequenceRepository.getNextOrderSequence).mockResolvedValue(1);
+      vi.mocked(sequenceRepository.getNextCompanyOrderSequence).mockResolvedValue(1);
+
       vi.mocked(orderRepository.getNextMerchantOrderSequence).mockResolvedValue(1);
 
       vi.mocked(orderRepository.create).mockResolvedValue({
         id: "order-1",
-        orderNumber: "#001",
+        orderNumber: "20260127-0001",
         tenantId: "tenant-1",
         merchantId: "merchant-1",
         status: "pending",
-        customerName: "John Doe",
+        customerFirstName: "John",
+        customerLastName: "Doe",
         customerPhone: "123-456-7890",
         customerEmail: "john@example.com",
         orderMode: "pickup",
         items: mockInput.items,
         subtotal: 37.98,
-        taxAmount: 3.37,
+        taxAmount: 0,
         tipAmount: 5,
         deliveryFee: 0,
         discount: 0,
-        totalAmount: 46.35,
+        giftCardPayment: 0,
+        cashPayment: 42.98,
+        totalAmount: 42.98,
         createdAt: new Date(),
         updatedAt: new Date(),
       } as never);
@@ -164,7 +189,8 @@ describe("OrderService", () => {
         "merchant-1",
         expect.objectContaining({
           orderNumber: expect.any(String),
-          customerName: "John Doe",
+          customerFirstName: "John",
+          customerLastName: "Doe",
           customerPhone: "123-456-7890",
           orderMode: "pickup",
           status: "pending",
@@ -184,22 +210,25 @@ describe("OrderService", () => {
 
       vi.mocked(orderRepository.create).mockResolvedValue({
         id: "order-1",
-        orderNumber: "#001",
+        orderNumber: "20260127-0001",
         tenantId: "tenant-1",
         merchantId: "merchant-1",
         loyaltyMemberId: "loyalty-member-123",
         status: "pending",
-        customerName: "John Doe",
+        customerFirstName: "John",
+        customerLastName: "Doe",
         customerPhone: "123-456-7890",
         customerEmail: "john@example.com",
         orderMode: "pickup",
         items: mockInput.items,
         subtotal: 37.98,
-        taxAmount: 3.37,
+        taxAmount: 0,
         tipAmount: 5,
         deliveryFee: 0,
         discount: 0,
-        totalAmount: 46.35,
+        giftCardPayment: 0,
+        cashPayment: 42.98,
+        totalAmount: 42.98,
         createdAt: new Date(),
         updatedAt: new Date(),
       } as never);
@@ -212,7 +241,8 @@ describe("OrderService", () => {
         "merchant-1",
         expect.objectContaining({
           orderNumber: expect.any(String),
-          customerName: "John Doe",
+          customerFirstName: "John",
+          customerLastName: "Doe",
           status: "pending",
         }),
         "loyalty-member-123"
@@ -241,11 +271,12 @@ describe("OrderService", () => {
       expect(eventHandler).toHaveBeenCalledWith(
         expect.objectContaining({
           orderId: "order-1",
-          orderNumber: "#001",
+          orderNumber: "20260127-0001",
           merchantId: "merchant-1",
           tenantId: "tenant-1",
           status: "pending",
-          customerName: "John Doe",
+          customerFirstName: "John",
+          customerLastName: "Doe",
         })
       );
 
@@ -255,9 +286,10 @@ describe("OrderService", () => {
     it("should use merchant-specific order sequence", async () => {
       await orderService.createOrder("tenant-1", mockInput);
 
-      expect(orderRepository.getNextMerchantOrderSequence).toHaveBeenCalledWith(
+      expect(sequenceRepository.getNextOrderSequence).toHaveBeenCalledWith(
         "tenant-1",
-        "merchant-1"
+        "merchant-1",
+        expect.any(String) // date string
       );
     });
   });

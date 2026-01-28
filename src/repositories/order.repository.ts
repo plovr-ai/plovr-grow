@@ -1,6 +1,7 @@
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import type { OrderStatus, OrderMode, SalesChannel } from "@/types";
+import { generateEntityId } from "@/lib/id";
 
 export class OrderRepository {
   /**
@@ -15,7 +16,7 @@ export class OrderRepository {
   ) {
     return prisma.order.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         ...data,
         tenant: { connect: { id: tenantId } },
         company: { connect: { id: companyId } },
@@ -285,7 +286,8 @@ export class OrderRepository {
       ...(search && {
         OR: [
           { orderNumber: { contains: search } },
-          { customerName: { contains: search } },
+          { customerFirstName: { contains: search } },
+          { customerLastName: { contains: search } },
           { customerPhone: { contains: search } },
         ],
       }),
@@ -430,6 +432,31 @@ export class OrderRepository {
   }
 
   /**
+   * Get next order number sequence for Company-level orders (e.g., giftcards)
+   * Uses companyId instead of merchantId to avoid conflicts
+   */
+  async getNextCompanyOrderSequence(
+    tenantId: string,
+    companyId: string
+  ): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const count = await prisma.order.count({
+      where: {
+        tenantId,
+        companyId,
+        merchantId: null, // Company-level orders have null merchantId
+        createdAt: {
+          gte: today,
+        },
+      },
+    });
+
+    return count + 1;
+  }
+
+  /**
    * Get orders for a company (all merchants under the company)
    */
   async getCompanyOrders(
@@ -480,7 +507,8 @@ export class OrderRepository {
       ...(search && {
         OR: [
           { orderNumber: { contains: search } },
-          { customerName: { contains: search } },
+          { customerFirstName: { contains: search } },
+          { customerLastName: { contains: search } },
           { customerPhone: { contains: search } },
         ],
       }),
@@ -529,11 +557,18 @@ export class OrderRepository {
       cancelReason: string;
     }>
   ) {
+    // First verify the order belongs to the tenant
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, tenantId },
+      select: { id: true },
+    });
+
+    if (!order) {
+      throw new Error(`Order not found: ${orderId}`);
+    }
+
     return prisma.order.update({
-      where: {
-        id: orderId,
-        tenantId,
-      },
+      where: { id: orderId },
       data: {
         status,
         ...additionalData,
@@ -559,11 +594,18 @@ export class OrderRepository {
     orderId: string,
     loyaltyMemberId: string
   ) {
+    // First verify the order belongs to the tenant
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, tenantId },
+      select: { id: true },
+    });
+
+    if (!order) {
+      throw new Error(`Order not found: ${orderId}`);
+    }
+
     return prisma.order.update({
-      where: {
-        id: orderId,
-        tenantId,
-      },
+      where: { id: orderId },
       data: {
         loyaltyMember: { connect: { id: loyaltyMemberId } },
       },

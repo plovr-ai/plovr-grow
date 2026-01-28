@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { generateEntityId } from "@/lib/id";
 
 export class CateringRepository {
   /**
@@ -9,7 +10,8 @@ export class CateringRepository {
     tenantId: string,
     merchantId: string,
     data: {
-      name: string;
+      firstName: string;
+      lastName: string;
       phone: string;
       email: string;
       notes?: string | null;
@@ -17,10 +19,11 @@ export class CateringRepository {
   ) {
     return prisma.cateringLead.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         tenantId,
         merchantId,
-        name: data.name,
+        firstName: data.firstName,
+        lastName: data.lastName,
         phone: data.phone,
         email: data.email,
         notes: data.notes,
@@ -55,7 +58,8 @@ export class CateringRepository {
 
     if (search) {
       where.OR = [
-        { name: { contains: search } },
+        { firstName: { contains: search } },
+        { lastName: { contains: search } },
         { phone: { contains: search } },
         { email: { contains: search } },
       ];
@@ -113,7 +117,8 @@ export class CateringRepository {
 
     if (search) {
       where.OR = [
-        { name: { contains: search } },
+        { firstName: { contains: search } },
+        { lastName: { contains: search } },
         { phone: { contains: search } },
         { email: { contains: search } },
       ];

@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { generateEntityId } from "@/lib/id";
 
 export class TaxConfigRepository {
   // ==================== Query methods ====================
@@ -98,7 +99,7 @@ export class TaxConfigRepository {
         rate,
       },
       create: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         merchantId,
         taxConfigId,
         rate,
@@ -193,7 +194,7 @@ export class TaxConfigRepository {
     if (taxConfigIds.length > 0) {
       await prisma.menuItemTax.createMany({
         data: taxConfigIds.map((taxConfigId) => ({
-          id: crypto.randomUUID(),
+          id: generateEntityId(),
           menuItemId: itemId,
           taxConfigId,
         })),
@@ -217,7 +218,7 @@ export class TaxConfigRepository {
   ) {
     return prisma.taxConfig.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         tenantId,
         companyId,
         name: data.name,

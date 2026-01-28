@@ -27,8 +27,14 @@ model Tenant {
   otpVerifications        OtpVerification[]
   featuredItems           FeaturedItem[]
   cateringLeads           CateringLead[]
+  cateringOrders          CateringOrder[]
+  invoices                Invoice[]
   giftCards               GiftCard[]
   giftCardTransactions    GiftCardTransaction[]
+  orderSequences          OrderSequence[]
+  companyOrderSequences   CompanyOrderSequence[]
+  cateringOrderSequences  CateringOrderSequence[]
+  invoiceSequences        InvoiceSequence[]
 
   @@map("tenants")
 }
@@ -65,6 +71,7 @@ model Company {
   featuredItems         FeaturedItem[]
   orders                Order[]
   giftCards             GiftCard[]
+  companyOrderSequences CompanyOrderSequence[]
 
   @@index([slug])
   @@index([tenantId])
@@ -185,6 +192,9 @@ model Merchant {
   merchantTaxRates  MerchantTaxRate[]
   pointTransactions PointTransaction[]
   cateringLeads     CateringLead[]
+  cateringOrders    CateringOrder[]
+  orderSequences         OrderSequence[]
+  cateringOrderSequences CateringOrderSequence[]
 
   @@index([companyId])
   @@index([slug])
@@ -421,7 +431,7 @@ model OtpVerification {
 // ==================== Featured Items ====================
 
 model FeaturedItem {
-  id         String   @id @default(cuid())
+  id         String   @id
   tenantId   String   @map("tenant_id")
   companyId  String   @map("company_id")
   menuItemId String   @map("menu_item_id")
@@ -454,14 +464,95 @@ model CateringLead {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  merchant      Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cateringOrder CateringOrder?
 
   @@index([tenantId])
   @@index([merchantId])
   @@index([merchantId, status])
   @@index([merchantId, createdAt])
   @@map("catering_leads")
+}
+
+model CateringOrder {
+  id                String    @id
+  tenantId          String    @map("tenant_id")
+  merchantId        String    @map("merchant_id")
+  leadId            String?   @unique @map("lead_id")
+
+  // Customer info
+  customerFirstName String    @map("customer_first_name")
+  customerLastName  String    @map("customer_last_name")
+  customerPhone     String    @map("customer_phone")
+  customerEmail     String    @map("customer_email")
+
+  // Event details
+  eventDate         DateTime  @map("event_date")
+  eventTime         String    @map("event_time")
+  guestCount        Int       @map("guest_count")
+  eventType         String?   @map("event_type")
+  eventAddress      String?   @map("event_address") @db.Text
+  specialRequests   String?   @map("special_requests") @db.Text
+
+  // Order details
+  orderNumber       String    @unique @map("order_number")
+  items             Json
+  subtotal          Decimal   @db.Decimal(10, 2)
+  taxAmount         Decimal   @map("tax_amount") @db.Decimal(10, 2)
+  serviceCharge     Decimal   @default(0.00) @map("service_charge") @db.Decimal(10, 2)
+  totalAmount       Decimal   @map("total_amount") @db.Decimal(10, 2)
+
+  // Status
+  status            String    @default("draft")
+  notes             String?   @db.Text
+
+  // Timestamps
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  sentAt            DateTime? @map("sent_at")
+  paidAt            DateTime? @map("paid_at")
+
+  // Relations
+  tenant            Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  merchant          Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  lead              CateringLead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  invoice           Invoice?
+
+  @@index([tenantId])
+  @@index([merchantId])
+  @@index([status])
+  @@index([merchantId, status])
+  @@index([merchantId, eventDate])
+  @@map("catering_orders")
+}
+
+model Invoice {
+  id              String    @id
+  tenantId        String    @map("tenant_id")
+  cateringOrderId String    @unique @map("catering_order_id")
+  invoiceNumber   String    @unique @map("invoice_number")
+
+  // Payment details
+  amount          Decimal   @db.Decimal(10, 2)
+  status          String    @default("unpaid")
+  dueDate         DateTime  @map("due_date")
+  paymentLink     String?   @map("payment_link")
+
+  // Email tracking
+  sentAt          DateTime? @map("sent_at")
+  openedAt        DateTime? @map("opened_at")
+  paidAt          DateTime? @map("paid_at")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cateringOrder   CateringOrder @relation(fields: [cateringOrderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("invoices")
 }
 
 // ==================== Gift Card System ====================
@@ -508,4 +599,80 @@ model GiftCardTransaction {
   @@index([giftCardId])
   @@index([orderId])
   @@map("gift_card_transactions")
+}
+
+// ==================== Sequence Tables ====================
+
+/// Order sequence table for atomic sequence generation (merchant-level)
+model OrderSequence {
+  id         String   @id
+  tenantId   String   @map("tenant_id")
+  merchantId String   @map("merchant_id")
+  date       String   // Format: "2026-01-27"
+  sequence   Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, merchantId, date])
+  @@index([tenantId])
+  @@index([merchantId])
+  @@index([date])
+  @@map("order_sequences")
+}
+
+/// Company-level order sequence (for gift card orders)
+model CompanyOrderSequence {
+  id        String   @id
+  tenantId  String   @map("tenant_id")
+  companyId String   @map("company_id")
+  date      String   // Format: "2026-01-27"
+  sequence  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, companyId, date])
+  @@index([tenantId])
+  @@index([companyId])
+  @@index([date])
+  @@map("company_order_sequences")
+}
+
+/// Catering order sequence table
+model CateringOrderSequence {
+  id         String   @id
+  tenantId   String   @map("tenant_id")
+  merchantId String   @map("merchant_id")
+  date       String   // Format: "2026-01-27"
+  sequence   Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, merchantId, date])
+  @@index([tenantId])
+  @@index([merchantId])
+  @@index([date])
+  @@map("catering_order_sequences")
+}
+
+/// Invoice sequence table (tenant-level, never resets)
+model InvoiceSequence {
+  id        String   @id
+  tenantId  String   @unique @map("tenant_id")
+  sequence  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("invoice_sequences")
 }

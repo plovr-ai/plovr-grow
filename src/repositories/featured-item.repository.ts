@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import { generateEntityId } from "@/lib/id";
 
 export class FeaturedItemRepository {
   /**
@@ -41,6 +42,7 @@ export class FeaturedItemRepository {
       if (menuItemIds.length > 0) {
         await tx.featuredItem.createMany({
           data: menuItemIds.map((menuItemId, index) => ({
+            id: generateEntityId(),
             tenantId,
             companyId,
             menuItemId,
@@ -74,6 +76,7 @@ export class FeaturedItemRepository {
 
     return prisma.featuredItem.create({
       data: {
+        id: generateEntityId(),
         tenantId,
         companyId,
         menuItemId,

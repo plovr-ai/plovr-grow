@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { generateEntityId } from "@/lib/id";
 
 export class MerchantRepository {
   /**
@@ -137,7 +138,7 @@ export class MerchantRepository {
   ) {
     return prisma.merchant.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         ...data,
         company: { connect: { id: companyId } },
       },

@@ -3,9 +3,12 @@
 
 import { Prisma } from "@prisma/client";
 import { menuService } from "@/services/menu";
+import { merchantService } from "@/services/merchant";
 import { orderRepository } from "@/repositories/order.repository";
+import { sequenceRepository } from "@/repositories/sequence.repository";
 import { pointTransactionRepository } from "@/repositories/point-transaction.repository";
-import { generateOrderNumber } from "@/lib/utils";
+import { generateOrderNumber, generateGiftcardOrderNumber } from "@/lib/utils";
+import { getTodayInTimezone } from "@/lib/timezone";
 import { calculateOrderPricing, type PricingItem, type TipInput } from "@/lib/pricing";
 import { orderEventEmitter } from "./order-events";
 import type {
@@ -22,6 +25,7 @@ import type { OrderStatus } from "@/types";
 export class OrderService {
   /**
    * Create a new order for a merchant or Company (giftcards)
+   * Uses atomic sequence generation to prevent race conditions
    */
   async createOrder(tenantId: string, input: CreateOrderInput) {
     const { companyId, merchantId } = input;
@@ -48,11 +52,26 @@ export class OrderService {
     const giftCardPayment = input.giftCardPayment ?? 0;
     const cashPayment = Math.max(0, calculation.totalAmount - giftCardPayment);
 
-    // Generate order number (merchant-specific sequence for regular orders, tenant-level for giftcards)
+    // Get merchant timezone for accurate date-based sequencing
+    let timezone: string | undefined;
+    if (merchantId) {
+      const merchant = await merchantService.getMerchantById(merchantId);
+      timezone = merchant?.timezone;
+    }
+
+    // Get current date in merchant's timezone (format: "2026-01-27")
+    const dateStr = timezone
+      ? getTodayInTimezone(timezone)
+      : new Date().toISOString().slice(0, 10);
+
+    // Generate order number using atomic sequence (no retry needed)
     const sequence = merchantId
-      ? await orderRepository.getNextMerchantOrderSequence(tenantId, merchantId)
-      : await orderRepository.getNextMerchantOrderSequence(tenantId, "global"); // Use "global" as fallback for Company-level orders
-    const orderNumber = generateOrderNumber(sequence);
+      ? await sequenceRepository.getNextOrderSequence(tenantId, merchantId, dateStr)
+      : await sequenceRepository.getNextCompanyOrderSequence(tenantId, companyId, dateStr);
+
+    const orderNumber = merchantId
+      ? generateOrderNumber(sequence, timezone)
+      : generateGiftcardOrderNumber(sequence, timezone);
 
     // Create the order in database
     const order = await orderRepository.create(
@@ -114,7 +133,7 @@ export class OrderService {
    */
   async calculateOrderTotals(
     _tenantId: string,
-    merchantId: string,
+    merchantId: string | undefined,
     input: Pick<CreateOrderInput, "items" | "orderMode" | "tipAmount" | "discountCode">
   ): Promise<OrderCalculation> {
     // Convert to PricingItem using taxes from cart items directly

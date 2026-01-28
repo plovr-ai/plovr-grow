@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { generateEntityId } from "@/lib/id";
 
 export const GIFT_CARD_STATUSES = ["active", "depleted", "disabled"] as const;
 export type GiftCardStatus = (typeof GIFT_CARD_STATUSES)[number];
@@ -22,7 +23,7 @@ export class GiftCardRepository {
   ) {
     return prisma.giftCard.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         tenantId,
         companyId,
         cardNumber: data.cardNumber,
@@ -120,7 +121,7 @@ export class GiftCardRepository {
   ) {
     return prisma.giftCardTransaction.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         tenantId,
         giftCardId: data.giftCardId,
         orderId: data.orderId,

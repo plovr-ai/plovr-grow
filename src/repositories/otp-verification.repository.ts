@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import { generateEntityId } from "@/lib/id";
 
 export const OTP_PURPOSES = ["login", "register"] as const;
 export type OtpPurpose = (typeof OTP_PURPOSES)[number];
@@ -29,7 +30,7 @@ export class OtpVerificationRepository {
         verifiedAt: null,
       },
       create: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         tenantId,
         phone,
         purpose,

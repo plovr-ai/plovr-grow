@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { getTodayInTimezone } from "@/lib/timezone";
 
 /**
  * Merge Tailwind CSS classes
@@ -26,12 +27,52 @@ export function formatPrice(
 /**
  * Generate a human-readable order number
  * Format: YYYYMMDD-XXXX (e.g., 20240115-0042)
+ * @param sequence - Order sequence number for the day
+ * @param timezone - IANA timezone (e.g., "America/New_York"). Defaults to UTC for backward compatibility.
  */
-export function generateOrderNumber(sequence: number): string {
-  const date = new Date();
-  const dateStr = date.toISOString().slice(0, 10).replace(/-/g, "");
+export function generateOrderNumber(sequence: number, timezone?: string): string {
+  const dateStr = timezone
+    ? getTodayInTimezone(timezone).replace(/-/g, "")
+    : new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const seqStr = sequence.toString().padStart(4, "0");
   return `${dateStr}-${seqStr}`;
+}
+
+/**
+ * Generate a catering order number
+ * Format: CTR-YYYYMMDD-XXXX (e.g., CTR-20240115-0001)
+ * @param sequence - Order sequence number for the day
+ * @param timezone - IANA timezone (e.g., "America/New_York"). Defaults to UTC for backward compatibility.
+ */
+export function generateCateringOrderNumber(sequence: number, timezone?: string): string {
+  const dateStr = timezone
+    ? getTodayInTimezone(timezone).replace(/-/g, "")
+    : new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const seqStr = sequence.toString().padStart(4, "0");
+  return `CTR-${dateStr}-${seqStr}`;
+}
+
+/**
+ * Generate a giftcard order number
+ * Format: GC-YYYYMMDD-XXXX (e.g., GC-20240115-0001)
+ * @param sequence - Order sequence number for the day
+ * @param timezone - IANA timezone (e.g., "America/New_York"). Defaults to UTC for backward compatibility.
+ */
+export function generateGiftcardOrderNumber(sequence: number, timezone?: string): string {
+  const dateStr = timezone
+    ? getTodayInTimezone(timezone).replace(/-/g, "")
+    : new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const seqStr = sequence.toString().padStart(4, "0");
+  return `GC-${dateStr}-${seqStr}`;
+}
+
+/**
+ * Generate an invoice number
+ * Format: INV-XXXXXX (e.g., INV-000001)
+ */
+export function generateInvoiceNumber(sequence: number): string {
+  const seqStr = sequence.toString().padStart(6, "0");
+  return `INV-${seqStr}`;
 }
 
 /**

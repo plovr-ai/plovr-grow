@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { generateEntityId } from "@/lib/id";
 
 export class LoyaltyMemberRepository {
   /**
@@ -36,17 +37,19 @@ export class LoyaltyMemberRepository {
     data: {
       phone: string;
       email?: string | null;
-      name?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
     }
   ) {
     return prisma.loyaltyMember.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         tenantId,
         companyId,
         phone: data.phone,
         email: data.email,
-        name: data.name,
+        firstName: data.firstName,
+        lastName: data.lastName,
       },
     });
   }
@@ -113,7 +116,8 @@ export class LoyaltyMemberRepository {
     phone: string,
     data?: {
       email?: string | null;
-      name?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
     }
   ) {
     const existing = await this.getByPhone(tenantId, companyId, phone);
@@ -124,7 +128,8 @@ export class LoyaltyMemberRepository {
     const member = await this.create(tenantId, companyId, {
       phone,
       email: data?.email,
-      name: data?.name,
+      firstName: data?.firstName,
+      lastName: data?.lastName,
     });
     return { member, isNew: true };
   }
@@ -151,7 +156,8 @@ export class LoyaltyMemberRepository {
     if (search) {
       where.OR = [
         { phone: { contains: search } },
-        { name: { contains: search } },
+        { firstName: { contains: search } },
+        { lastName: { contains: search } },
         { email: { contains: search } },
       ];
     }

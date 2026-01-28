@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import { generateEntityId } from "@/lib/id";
 
 export class LoyaltyConfigRepository {
   /**
@@ -38,7 +39,7 @@ export class LoyaltyConfigRepository {
   ) {
     return prisma.loyaltyConfig.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         tenantId,
         companyId,
         pointsPerDollar: data.pointsPerDollar ?? 1,
@@ -87,7 +88,7 @@ export class LoyaltyConfigRepository {
         status: data.status,
       },
       create: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         tenantId,
         companyId,
         pointsPerDollar: data.pointsPerDollar ?? 1,

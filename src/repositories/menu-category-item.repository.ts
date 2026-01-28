@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import { generateEntityId } from "@/lib/id";
 
 export class MenuCategoryItemRepository {
   /**
@@ -11,7 +12,7 @@ export class MenuCategoryItemRepository {
   ) {
     return prisma.menuCategoryItem.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         categoryId,
         menuItemId,
         sortOrder,
@@ -90,7 +91,7 @@ export class MenuCategoryItemRepository {
       // Create new associations
       if (categoryIds.length > 0) {
         const creates = categoryIds.map((categoryId, index) => ({
-          id: crypto.randomUUID(),
+          id: generateEntityId(),
           categoryId,
           menuItemId,
           sortOrder: index,

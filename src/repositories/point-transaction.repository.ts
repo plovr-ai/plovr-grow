@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { generateEntityId } from "@/lib/id";
 
 export const POINT_TRANSACTION_TYPES = ["earn", "redeem", "adjust", "expire"] as const;
 export type PointTransactionType = (typeof POINT_TRANSACTION_TYPES)[number];
@@ -35,7 +36,7 @@ export class PointTransactionRepository {
   ) {
     return prisma.pointTransaction.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         tenantId,
         memberId: data.memberId,
         merchantId: data.merchantId,

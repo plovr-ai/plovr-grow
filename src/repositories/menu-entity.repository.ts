@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { generateEntityId } from "@/lib/id";
 
 export class MenuEntityRepository {
   // ==================== Query methods ====================
@@ -88,7 +89,7 @@ export class MenuEntityRepository {
 
     return prisma.menu.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         tenantId,
         companyId,
         name: data.name,

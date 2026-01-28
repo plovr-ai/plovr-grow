@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { generateEntityId } from "@/lib/id";
 
 export class CompanyRepository {
   /**
@@ -80,7 +81,7 @@ export class CompanyRepository {
   ) {
     return prisma.company.create({
       data: {
-        id: crypto.randomUUID(),
+        id: generateEntityId(),
         ...data,
         tenant: { connect: { id: tenantId } },
       },
