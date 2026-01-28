@@ -17,6 +17,7 @@ import {
   Users,
   Star,
   Utensils,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -106,6 +107,12 @@ const navigation: NavItem[] = [
         pattern: /^\/dashboard\/catering\/leads/,
       },
     ],
+  },
+  {
+    label: "Gift Cards",
+    href: "/dashboard/giftcard",
+    icon: CreditCard,
+    pattern: /^\/dashboard\/giftcard/,
   },
   {
     label: "Company",

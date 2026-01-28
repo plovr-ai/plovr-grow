@@ -10,6 +10,7 @@ import {
 } from "@/lib/giftcard";
 import type {
   GiftCardData,
+  GiftCardStats,
   GiftCardValidationResult,
   GiftCardRedemptionResult,
   CreateGiftCardInput,
@@ -232,6 +233,16 @@ export class GiftCardService {
   }
 
   /**
+   * Get gift card statistics for Dashboard overview
+   */
+  async getCompanyGiftCardStats(
+    tenantId: string,
+    companyId: string
+  ): Promise<GiftCardStats> {
+    return this.repository.getStatsByCompany(tenantId, companyId);
+  }
+
+  /**
    * Get gift cards for a company (for Dashboard)
    */
   async getCompanyGiftCards(
@@ -241,6 +252,7 @@ export class GiftCardService {
       page?: number;
       pageSize?: number;
       status?: GiftCardStatus;
+      search?: string;
     } = {}
   ): Promise<PaginatedGiftCards> {
     const result = await this.repository.getByCompany(tenantId, companyId, options);

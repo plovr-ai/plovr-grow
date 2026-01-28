@@ -4,12 +4,18 @@ import { useState, useCallback } from "react";
 import { usePhoneInput } from "@/hooks";
 import { useCompanySlug, useLoyalty, type LoyaltyMember } from "@/contexts";
 import { OtpModal } from "./OtpModal";
+import {
+  loyaltyRegistrationSchema,
+  type LoyaltyRegistrationData,
+} from "@storefront/lib/validations/loyalty";
 
 interface LoyaltySectionProps {
   subtotal: number;
   onMemberLogin?: (member: LoyaltyMember) => void;
   onMemberLogout?: () => void;
 }
+
+type FormStep = "phone" | "registration";
 
 export function LoyaltySection({
   subtotal,
@@ -22,15 +28,24 @@ export function LoyaltySection({
 
   // UI state
   const [isExpanded, setIsExpanded] = useState(false);
+  const [step, setStep] = useState<FormStep>("phone");
   const [phone, setPhone] = useState("");
   const [showOtpModal, setShowOtpModal] = useState(false);
 
+  // Registration form state
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [formErrors, setFormErrors] = useState<
+    Partial<Record<keyof LoyaltyRegistrationData, string>>
+  >({});
+
   // Loading state
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isCheckingPhone, setIsCheckingPhone] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
   // Error state
-  const [sendError, setSendError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [verifyError, setVerifyError] = useState("");
 
   // Local pointsPerDollar for pre-login display (before context has the value)
@@ -45,7 +60,7 @@ export function LoyaltySection({
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhone(e.target.value);
     setPhone(formatted);
-    setSendError("");
+    setPhoneError("");
   };
 
   const formatPhoneForApi = (formattedPhone: string): string => {
@@ -60,11 +75,12 @@ export function LoyaltySection({
     return `+${digits}`;
   };
 
-  const handleSendOtp = useCallback(async () => {
+  // Step 1: Check if user is new or existing
+  const handleCheckPhone = useCallback(async () => {
     if (!companySlug || !phone) return;
 
-    setIsSendingOtp(true);
-    setSendError("");
+    setIsCheckingPhone(true);
+    setPhoneError("");
 
     try {
       const response = await fetch("/api/storefront/loyalty/otp/send", {
@@ -79,7 +95,7 @@ export function LoyaltySection({
       const data = await response.json();
 
       if (!data.success) {
-        setSendError(data.error || "Failed to send verification code");
+        setPhoneError(data.error || "Failed to verify phone number");
         return;
       }
 
@@ -96,13 +112,41 @@ export function LoyaltySection({
         // Ignore status fetch errors, use default
       }
 
-      setShowOtpModal(true);
+      // Check if new member - show registration form, otherwise show OTP modal
+      if (data.data?.isNewMember) {
+        setStep("registration");
+      } else {
+        setShowOtpModal(true);
+      }
     } catch {
-      setSendError("Network error. Please try again.");
+      setPhoneError("Network error. Please try again.");
     } finally {
-      setIsSendingOtp(false);
+      setIsCheckingPhone(false);
     }
   }, [companySlug, phone]);
+
+  // Step 2: Validate registration form and show OTP modal (for new users)
+  const handleSubmitRegistration = useCallback(async () => {
+    // Validate form
+    const result = loyaltyRegistrationSchema.safeParse({
+      firstName,
+      lastName,
+      email,
+    });
+
+    if (!result.success) {
+      const errors: Partial<Record<keyof LoyaltyRegistrationData, string>> = {};
+      result.error.issues.forEach((issue) => {
+        const field = issue.path[0] as keyof LoyaltyRegistrationData;
+        errors[field] = issue.message;
+      });
+      setFormErrors(errors);
+      return;
+    }
+
+    setFormErrors({});
+    setShowOtpModal(true);
+  }, [firstName, lastName, email]);
 
   const handleVerifyOtp = useCallback(
     async (code: string) => {
@@ -119,6 +163,12 @@ export function LoyaltySection({
             phone: formatPhoneForApi(phone),
             code,
             companySlug,
+            // Include registration data for new users
+            ...(step === "registration" && {
+              firstName: firstName.trim(),
+              lastName: lastName.trim(),
+              email: email.trim(),
+            }),
           }),
         });
 
@@ -143,6 +193,7 @@ export function LoyaltySection({
         login(memberData, localPointsPerDollar);
         setShowOtpModal(false);
         setIsExpanded(false);
+        setStep("phone");
         onMemberLogin?.(memberData);
       } catch {
         setVerifyError("Network error. Please try again.");
@@ -150,7 +201,7 @@ export function LoyaltySection({
         setIsVerifying(false);
       }
     },
-    [companySlug, phone, localPointsPerDollar, login, onMemberLogin]
+    [companySlug, phone, step, firstName, lastName, email, localPointsPerDollar, login, onMemberLogin]
   );
 
   const handleResendOtp = useCallback(async () => {
@@ -174,8 +225,31 @@ export function LoyaltySection({
   const handleLogout = async () => {
     await logout();
     setPhone("");
+    setFirstName("");
+    setLastName("");
+    setEmail("");
     setIsExpanded(false);
+    setStep("phone");
     onMemberLogout?.();
+  };
+
+  const handleBackToPhone = () => {
+    setStep("phone");
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setFormErrors({});
+  };
+
+  const handleCancel = () => {
+    setIsExpanded(false);
+    setStep("phone");
+    setPhone("");
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPhoneError("");
+    setFormErrors({});
   };
 
   // Don't render if company slug is not available (loyalty not configured)
@@ -249,8 +323,8 @@ export function LoyaltySection({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
-      ) : (
-        // Expanded state - show phone input
+      ) : step === "phone" ? (
+        // Phone input step
         <div>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -261,7 +335,7 @@ export function LoyaltySection({
             </div>
             <button
               type="button"
-              onClick={() => setIsExpanded(false)}
+              onClick={handleCancel}
               className="text-sm text-gray-500 hover:text-gray-700"
             >
               Cancel
@@ -279,21 +353,140 @@ export function LoyaltySection({
               onChange={handlePhoneChange}
               placeholder="(555) 123-4567"
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-transparent"
-              disabled={isSendingOtp}
+              disabled={isCheckingPhone}
             />
             <button
               type="button"
-              onClick={handleSendOtp}
-              disabled={phone.replace(/\D/g, "").length < 10 || isSendingOtp}
+              onClick={handleCheckPhone}
+              disabled={phone.replace(/\D/g, "").length < 10 || isCheckingPhone}
               className="px-4 py-2 bg-theme-primary text-theme-primary-foreground font-medium rounded-lg hover:bg-theme-primary-hover transition-colors disabled:bg-gray-200 disabled:text-gray-400 whitespace-nowrap"
             >
-              {isSendingOtp ? "Sending..." : "Send Code"}
+              {isCheckingPhone ? "Checking..." : "Continue"}
             </button>
           </div>
 
-          {sendError && (
-            <p className="text-sm text-red-500 mt-2">{sendError}</p>
+          {phoneError && (
+            <p className="text-sm text-red-500 mt-2">{phoneError}</p>
           )}
+
+          {estimatedPoints > 0 && (
+            <p className="text-sm text-gray-500 mt-2">
+              You&apos;ll earn <span className="font-medium text-theme-primary">+{estimatedPoints} pts</span> on this order
+            </p>
+          )}
+        </div>
+      ) : (
+        // Registration form step
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-theme-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+              </svg>
+              <span className="font-medium text-gray-700">Create Your Account</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <p className="text-sm text-gray-500 mb-3">
+            Complete your profile to earn rewards
+          </p>
+
+          {/* Phone display (read-only) */}
+          <div className="mb-3">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-700 text-sm">
+                {phone}
+              </div>
+              <button
+                type="button"
+                onClick={handleBackToPhone}
+                className="text-sm text-theme-primary hover:text-theme-primary-hover"
+              >
+                Change
+              </button>
+            </div>
+          </div>
+
+          {/* First Name */}
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              First Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => {
+                setFirstName(e.target.value);
+                setFormErrors((prev) => ({ ...prev, firstName: undefined }));
+              }}
+              placeholder="John"
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-transparent ${
+                formErrors.firstName ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {formErrors.firstName && (
+              <p className="text-sm text-red-500 mt-1">{formErrors.firstName}</p>
+            )}
+          </div>
+
+          {/* Last Name */}
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Last Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => {
+                setLastName(e.target.value);
+                setFormErrors((prev) => ({ ...prev, lastName: undefined }));
+              }}
+              placeholder="Doe"
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-transparent ${
+                formErrors.lastName ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {formErrors.lastName && (
+              <p className="text-sm text-red-500 mt-1">{formErrors.lastName}</p>
+            )}
+          </div>
+
+          {/* Email */}
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setFormErrors((prev) => ({ ...prev, email: undefined }));
+              }}
+              placeholder="john@example.com"
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-transparent ${
+                formErrors.email ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {formErrors.email && (
+              <p className="text-sm text-red-500 mt-1">{formErrors.email}</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSubmitRegistration}
+            className="w-full py-2 bg-theme-primary text-theme-primary-foreground font-medium rounded-lg hover:bg-theme-primary-hover transition-colors"
+          >
+            Send Verification Code
+          </button>
 
           {estimatedPoints > 0 && (
             <p className="text-sm text-gray-500 mt-2">

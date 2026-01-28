@@ -4,6 +4,10 @@ import { useState, useEffect } from "react";
 import { useLoyalty, useCompanySlug } from "@/contexts";
 import { usePhoneInput } from "@/hooks";
 import { OtpModal } from "@storefront/components/checkout/OtpModal";
+import {
+  loyaltyRegistrationSchema,
+  type LoyaltyRegistrationData,
+} from "@storefront/lib/validations/loyalty";
 
 interface LoyaltyRegistrationCTAProps {
   orderId: string;
@@ -44,6 +48,14 @@ export function LoyaltyRegistrationCTA({
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [earnedPoints, setEarnedPoints] = useState(0);
 
+  // Registration form state (pre-filled from order info)
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [formErrors, setFormErrors] = useState<
+    Partial<Record<keyof LoyaltyRegistrationData, string>>
+  >({});
+
   // Calculate estimated points
   const estimatedPoints = Math.floor(subtotal * pointsPerDollar);
 
@@ -71,12 +83,21 @@ export function LoyaltyRegistrationCTA({
     checkPoints();
   }, [orderId, companySlug]);
 
-  // Pre-fill phone from order on initial load
+  // Pre-fill form from order on initial load
   useEffect(() => {
     if (customerPhone && !phone) {
       setPhone(formatPhone(customerPhone));
     }
-  }, [customerPhone, phone, formatPhone]);
+    if (customerFirstName && !firstName) {
+      setFirstName(customerFirstName);
+    }
+    if (customerLastName && !lastName) {
+      setLastName(customerLastName);
+    }
+    if (customerEmail && !email) {
+      setEmail(customerEmail);
+    }
+  }, [customerPhone, customerFirstName, customerLastName, customerEmail, phone, firstName, lastName, email, formatPhone]);
 
   // Don't render if:
   // - No company slug (loyalty not configured)
@@ -125,8 +146,32 @@ export function LoyaltyRegistrationCTA({
     return `+${digits}`;
   };
 
+  const validateForm = (): boolean => {
+    const result = loyaltyRegistrationSchema.safeParse({
+      firstName,
+      lastName,
+      email,
+    });
+
+    if (!result.success) {
+      const errors: Partial<Record<keyof LoyaltyRegistrationData, string>> = {};
+      result.error.issues.forEach((issue) => {
+        const field = issue.path[0] as keyof LoyaltyRegistrationData;
+        errors[field] = issue.message;
+      });
+      setFormErrors(errors);
+      return false;
+    }
+
+    setFormErrors({});
+    return true;
+  };
+
   const handleSendOtp = async () => {
     if (!companySlug || !phone) return;
+
+    // Validate form first
+    if (!validateForm()) return;
 
     setIsSendingOtp(true);
     setSendError("");
@@ -171,9 +216,9 @@ export function LoyaltyRegistrationCTA({
           phone: formatPhoneForApi(phone),
           code,
           companySlug,
-          firstName: customerFirstName,
-          lastName: customerLastName,
-          email: customerEmail,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.trim(),
         }),
       });
 
@@ -307,11 +352,15 @@ export function LoyaltyRegistrationCTA({
 
           <p className="text-sm text-gray-600 mb-3">
             {isGiftcardOrder
-              ? "Verify your phone number to create an account."
-              : `Verify your phone number to create an account and earn ${estimatedPoints} points from this order.`}
+              ? "Complete your profile to create an account."
+              : `Complete your profile to create an account and earn ${estimatedPoints} points from this order.`}
           </p>
 
-          <div className="flex gap-2">
+          {/* Phone */}
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phone Number <span className="text-red-500">*</span>
+            </label>
             <input
               type="tel"
               value={phone}
@@ -320,18 +369,88 @@ export function LoyaltyRegistrationCTA({
                 setSendError("");
               }}
               placeholder="(555) 123-4567"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
               disabled={isSendingOtp}
             />
-            <button
-              type="button"
-              onClick={handleSendOtp}
-              disabled={phone.replace(/\D/g, "").length < 10 || isSendingOtp}
-              className="px-4 py-2 bg-amber-600 text-white font-medium rounded-lg hover:bg-amber-700 disabled:bg-gray-200 disabled:text-gray-400"
-            >
-              {isSendingOtp ? "Sending..." : "Verify"}
-            </button>
           </div>
+
+          {/* First Name */}
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              First Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => {
+                setFirstName(e.target.value);
+                setFormErrors((prev) => ({ ...prev, firstName: undefined }));
+              }}
+              placeholder="John"
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                formErrors.firstName ? "border-red-500" : "border-gray-300"
+              }`}
+              disabled={isSendingOtp}
+            />
+            {formErrors.firstName && (
+              <p className="text-sm text-red-500 mt-1">{formErrors.firstName}</p>
+            )}
+          </div>
+
+          {/* Last Name */}
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Last Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => {
+                setLastName(e.target.value);
+                setFormErrors((prev) => ({ ...prev, lastName: undefined }));
+              }}
+              placeholder="Doe"
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                formErrors.lastName ? "border-red-500" : "border-gray-300"
+              }`}
+              disabled={isSendingOtp}
+            />
+            {formErrors.lastName && (
+              <p className="text-sm text-red-500 mt-1">{formErrors.lastName}</p>
+            )}
+          </div>
+
+          {/* Email */}
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setFormErrors((prev) => ({ ...prev, email: undefined }));
+              }}
+              placeholder="john@example.com"
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                formErrors.email ? "border-red-500" : "border-gray-300"
+              }`}
+              disabled={isSendingOtp}
+            />
+            {formErrors.email && (
+              <p className="text-sm text-red-500 mt-1">{formErrors.email}</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSendOtp}
+            disabled={phone.replace(/\D/g, "").length < 10 || isSendingOtp}
+            className="w-full py-2 bg-amber-600 text-white font-medium rounded-lg hover:bg-amber-700 disabled:bg-gray-200 disabled:text-gray-400"
+          >
+            {isSendingOtp ? "Sending..." : "Send Verification Code"}
+          </button>
 
           {sendError && <p className="text-sm text-red-500 mt-2">{sendError}</p>}
         </div>

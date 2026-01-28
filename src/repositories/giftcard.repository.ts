@@ -155,6 +155,71 @@ export class GiftCardRepository {
   }
 
   /**
+   * Get gift card statistics for a company
+   */
+  async getStatsByCompany(
+    tenantId: string,
+    companyId: string
+  ): Promise<{
+    totalCards: number;
+    totalValueSold: number;
+    totalRedeemed: number;
+    activeBalance: number;
+    activeCards: number;
+    depletedCards: number;
+    disabledCards: number;
+  }> {
+    const [countByStatus, totals, activeBalanceSum, redemptionTotal] =
+      await Promise.all([
+        // Count cards by status
+        prisma.giftCard.groupBy({
+          by: ["status"],
+          where: { tenantId, companyId },
+          _count: true,
+        }),
+        // Sum initial amounts and count total
+        prisma.giftCard.aggregate({
+          where: { tenantId, companyId },
+          _sum: { initialAmount: true },
+          _count: true,
+        }),
+        // Sum active balances (only active cards)
+        prisma.giftCard.aggregate({
+          where: { tenantId, companyId, status: "active" },
+          _sum: { currentBalance: true },
+        }),
+        // Sum redemption transactions
+        prisma.giftCardTransaction.aggregate({
+          where: {
+            tenantId,
+            giftCard: { companyId },
+            type: "redemption",
+          },
+          _sum: { amount: true },
+        }),
+      ]);
+
+    // Process counts by status
+    const statusCounts = countByStatus.reduce(
+      (acc, item) => {
+        acc[item.status] = item._count;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
+    return {
+      totalCards: totals._count,
+      totalValueSold: Number(totals._sum.initialAmount ?? 0),
+      totalRedeemed: Number(redemptionTotal._sum.amount ?? 0),
+      activeBalance: Number(activeBalanceSum._sum.currentBalance ?? 0),
+      activeCards: statusCounts["active"] ?? 0,
+      depletedCards: statusCounts["depleted"] ?? 0,
+      disabledCards: statusCounts["disabled"] ?? 0,
+    };
+  }
+
+  /**
    * Get gift cards for a company with pagination
    */
   async getByCompany(
@@ -164,18 +229,24 @@ export class GiftCardRepository {
       page?: number;
       pageSize?: number;
       status?: GiftCardStatus;
+      search?: string;
     } = {}
   ) {
-    const { page = 1, pageSize = 20, status } = options;
+    const { page = 1, pageSize = 20, status, search } = options;
 
     const where: Prisma.GiftCardWhereInput = {
       tenantId,
       companyId,
+      ...(status && { status }),
+      ...(search && {
+        OR: [
+          { cardNumber: { contains: search } },
+          { purchaseOrder: { customerEmail: { contains: search } } },
+          { purchaseOrder: { customerFirstName: { contains: search } } },
+          { purchaseOrder: { customerLastName: { contains: search } } },
+        ],
+      }),
     };
-
-    if (status) {
-      where.status = status;
-    }
 
     const [items, total] = await Promise.all([
       prisma.giftCard.findMany({

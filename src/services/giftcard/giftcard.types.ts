@@ -1,6 +1,26 @@
 import type { GiftCardStatus, GiftCardTransactionType } from "@/repositories/giftcard.repository";
 
 /**
+ * Gift card statistics for Dashboard overview
+ */
+export interface GiftCardStats {
+  /** Total number of gift cards issued */
+  totalCards: number;
+  /** Total initial value of all gift cards sold */
+  totalValueSold: number;
+  /** Total amount redeemed across all cards */
+  totalRedeemed: number;
+  /** Current active balance across all active cards */
+  activeBalance: number;
+  /** Count of active gift cards */
+  activeCards: number;
+  /** Count of depleted gift cards */
+  depletedCards: number;
+  /** Count of disabled gift cards */
+  disabledCards: number;
+}
+
+/**
  * Gift card data returned from service
  */
 export interface GiftCardData {

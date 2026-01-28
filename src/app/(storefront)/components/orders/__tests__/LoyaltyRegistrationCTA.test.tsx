@@ -191,7 +191,7 @@ describe("LoyaltyRegistrationCTA", () => {
         });
     });
 
-    it("should pre-fill phone from order", async () => {
+    it("should pre-fill all fields from order", async () => {
       render(<LoyaltyRegistrationCTA {...defaultProps} />, {
         wrapper: createWrapper(),
       });
@@ -203,12 +203,37 @@ describe("LoyaltyRegistrationCTA", () => {
       // Expand
       fireEvent.click(screen.getByText(/Join rewards and earn/));
 
-      // Phone should be pre-filled (format may vary based on locale)
+      // All fields should be pre-filled
       const phoneInput = screen.getByPlaceholderText("(555) 123-4567") as HTMLInputElement;
-      // Just check that it has some value (phone was pre-filled)
       expect(phoneInput.value).toBeTruthy();
-      // And contains the digits from the original phone
-      expect(phoneInput.value.replace(/\D/g, "")).toContain("555123456");
+
+      const firstNameInput = screen.getByPlaceholderText("John") as HTMLInputElement;
+      expect(firstNameInput.value).toBe("John");
+
+      const lastNameInput = screen.getByPlaceholderText("Doe") as HTMLInputElement;
+      expect(lastNameInput.value).toBe("Doe");
+
+      const emailInput = screen.getByPlaceholderText("john@example.com") as HTMLInputElement;
+      expect(emailInput.value).toBe("john@example.com");
+    });
+
+    it("should show required indicators on all fields", async () => {
+      render(<LoyaltyRegistrationCTA {...defaultProps} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Join rewards and earn/)).toBeInTheDocument();
+      });
+
+      // Expand
+      fireEvent.click(screen.getByText(/Join rewards and earn/));
+
+      // Check for required field labels
+      expect(screen.getByText(/Phone Number/)).toBeInTheDocument();
+      expect(screen.getByText(/First Name/)).toBeInTheDocument();
+      expect(screen.getByText(/Last Name/)).toBeInTheDocument();
+      expect(screen.getByText(/Email/)).toBeInTheDocument();
     });
 
     it("should collapse when Cancel is clicked", async () => {
@@ -231,7 +256,7 @@ describe("LoyaltyRegistrationCTA", () => {
       expect(screen.queryByText("Join Rewards Program")).not.toBeInTheDocument();
     });
 
-    it("should disable verify button when phone is invalid", async () => {
+    it("should disable send button when phone is invalid", async () => {
       render(<LoyaltyRegistrationCTA {...defaultProps} customerPhone="" />, {
         wrapper: createWrapper(),
       });
@@ -243,8 +268,133 @@ describe("LoyaltyRegistrationCTA", () => {
       // Expand
       fireEvent.click(screen.getByText(/Join rewards and earn/));
 
-      const verifyButton = screen.getByRole("button", { name: "Verify" });
-      expect(verifyButton).toBeDisabled();
+      const sendButton = screen.getByRole("button", { name: "Send Verification Code" });
+      expect(sendButton).toBeDisabled();
+    });
+
+    it("should allow editing pre-filled fields", async () => {
+      render(<LoyaltyRegistrationCTA {...defaultProps} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Join rewards and earn/)).toBeInTheDocument();
+      });
+
+      // Expand
+      fireEvent.click(screen.getByText(/Join rewards and earn/));
+
+      // Edit firstName
+      const firstNameInput = screen.getByPlaceholderText("John") as HTMLInputElement;
+      fireEvent.change(firstNameInput, { target: { value: "Jane" } });
+      expect(firstNameInput.value).toBe("Jane");
+
+      // Edit lastName
+      const lastNameInput = screen.getByPlaceholderText("Doe") as HTMLInputElement;
+      fireEvent.change(lastNameInput, { target: { value: "Smith" } });
+      expect(lastNameInput.value).toBe("Smith");
+
+      // Edit email
+      const emailInput = screen.getByPlaceholderText("john@example.com") as HTMLInputElement;
+      fireEvent.change(emailInput, { target: { value: "jane@example.com" } });
+      expect(emailInput.value).toBe("jane@example.com");
+    });
+  });
+
+  describe("form validation", () => {
+    beforeEach(() => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: false, error: "Not logged in" }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: true, data: { pointsAwarded: false } }),
+        });
+    });
+
+    it("should validate required fields before sending OTP", async () => {
+      render(
+        <LoyaltyRegistrationCTA
+          {...defaultProps}
+          customerFirstName={null}
+          customerLastName={null}
+          customerEmail={null}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/Join rewards and earn/)).toBeInTheDocument();
+      });
+
+      // Expand
+      fireEvent.click(screen.getByText(/Join rewards and earn/));
+
+      // Try to send without filling required fields
+      fireEvent.click(screen.getByRole("button", { name: "Send Verification Code" }));
+
+      // Should show validation errors
+      await waitFor(() => {
+        expect(screen.getByText("First name is required")).toBeInTheDocument();
+        expect(screen.getByText("Last name is required")).toBeInTheDocument();
+      });
+    });
+
+    it("should validate email format", async () => {
+      render(
+        <LoyaltyRegistrationCTA
+          {...defaultProps}
+          customerEmail="invalid-email"
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/Join rewards and earn/)).toBeInTheDocument();
+      });
+
+      // Expand
+      fireEvent.click(screen.getByText(/Join rewards and earn/));
+
+      // Try to send with invalid email
+      fireEvent.click(screen.getByRole("button", { name: "Send Verification Code" }));
+
+      // Should show email validation error
+      await waitFor(() => {
+        expect(screen.getByText("Please enter a valid email")).toBeInTheDocument();
+      });
+    });
+
+    it("should clear validation errors when field is corrected", async () => {
+      render(
+        <LoyaltyRegistrationCTA
+          {...defaultProps}
+          customerFirstName={null}
+        />,
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/Join rewards and earn/)).toBeInTheDocument();
+      });
+
+      // Expand
+      fireEvent.click(screen.getByText(/Join rewards and earn/));
+
+      // Submit to trigger validation error
+      fireEvent.click(screen.getByRole("button", { name: "Send Verification Code" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("First name is required")).toBeInTheDocument();
+      });
+
+      // Fix the error
+      fireEvent.change(screen.getByPlaceholderText("John"), { target: { value: "John" } });
+
+      // Error should be cleared
+      expect(screen.queryByText("First name is required")).not.toBeInTheDocument();
     });
   });
 
@@ -261,7 +411,7 @@ describe("LoyaltyRegistrationCTA", () => {
         });
     });
 
-    it("should call OTP send API when Verify is clicked", async () => {
+    it("should call OTP send API when Send Verification Code is clicked", async () => {
       // Additional mock for OTP send
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -279,9 +429,9 @@ describe("LoyaltyRegistrationCTA", () => {
       // Expand
       fireEvent.click(screen.getByText(/Join rewards and earn/));
 
-      // Click Verify
-      const verifyButton = screen.getByRole("button", { name: "Verify" });
-      fireEvent.click(verifyButton);
+      // Click Send Verification Code
+      const sendButton = screen.getByRole("button", { name: "Send Verification Code" });
+      fireEvent.click(sendButton);
 
       // Should have called OTP send API
       await waitFor(() => {
@@ -311,8 +461,8 @@ describe("LoyaltyRegistrationCTA", () => {
       // Expand
       fireEvent.click(screen.getByText(/Join rewards and earn/));
 
-      // Click Verify
-      fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+      // Click Send Verification Code
+      fireEvent.click(screen.getByRole("button", { name: "Send Verification Code" }));
 
       // Should show error
       await waitFor(() => {
@@ -338,8 +488,8 @@ describe("LoyaltyRegistrationCTA", () => {
       // Expand
       fireEvent.click(screen.getByText(/Join rewards and earn/));
 
-      // Click Verify
-      fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+      // Click Send Verification Code
+      fireEvent.click(screen.getByRole("button", { name: "Send Verification Code" }));
 
       // Should show OTP modal
       await waitFor(() => {
@@ -348,7 +498,7 @@ describe("LoyaltyRegistrationCTA", () => {
     });
   });
 
-  describe("email integration", () => {
+  describe("registration completion", () => {
     beforeEach(() => {
       mockFetch
         .mockResolvedValueOnce({
@@ -361,12 +511,7 @@ describe("LoyaltyRegistrationCTA", () => {
         });
     });
 
-    it("should pass email to OTP verify API when customerEmail is provided", async () => {
-      const propsWithEmail = {
-        ...defaultProps,
-        customerEmail: "john@example.com",
-      };
-
+    it("should pass edited form data to OTP verify API", async () => {
       // Mock OTP send
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -379,7 +524,7 @@ describe("LoyaltyRegistrationCTA", () => {
         json: async () => ({
           success: true,
           data: {
-            member: { id: "member-1", phone: "+15551234567", firstName: "John", lastName: null, points: 0 },
+            member: { id: "member-1", phone: "+15551234567", firstName: "Jane", lastName: "Smith", email: "jane@example.com", points: 0 },
           },
         }),
       });
@@ -390,7 +535,7 @@ describe("LoyaltyRegistrationCTA", () => {
         json: async () => ({ success: true, data: { pointsEarned: 50 } }),
       });
 
-      render(<LoyaltyRegistrationCTA {...propsWithEmail} />, {
+      render(<LoyaltyRegistrationCTA {...defaultProps} />, {
         wrapper: createWrapper(),
       });
 
@@ -398,105 +543,36 @@ describe("LoyaltyRegistrationCTA", () => {
         expect(screen.getByText(/Join rewards and earn/)).toBeInTheDocument();
       });
 
-      // Expand and send OTP
+      // Expand and edit fields
       fireEvent.click(screen.getByText(/Join rewards and earn/));
-      fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+
+      fireEvent.change(screen.getByPlaceholderText("John"), { target: { value: "Jane" } });
+      fireEvent.change(screen.getByPlaceholderText("Doe"), { target: { value: "Smith" } });
+      fireEvent.change(screen.getByPlaceholderText("john@example.com"), { target: { value: "jane@example.com" } });
+
+      fireEvent.click(screen.getByRole("button", { name: "Send Verification Code" }));
 
       await waitFor(() => {
         expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
       });
 
-      // Enter OTP code
-      const otpInputs = screen.getAllByRole("textbox");
-      otpInputs.forEach((input, i) => {
-        fireEvent.change(input, { target: { value: String(i + 1) } });
-      });
+      // Enter OTP code - use aria-label to select only OTP digit inputs
+      const otpInputs = screen.getAllByLabelText(/Digit \d/);
+      for (let i = 0; i < 6; i++) {
+        fireEvent.change(otpInputs[i], { target: { value: String(i + 1) } });
+      }
 
-      // Verify button click - get all buttons and select the one in the modal
-      const verifyButtons = screen.getAllByRole("button");
-      const verifyCodeButton = verifyButtons.find(
-        (btn) => btn.textContent?.includes("Verify Code") || btn.textContent?.includes("Verifying")
-      );
-      fireEvent.click(verifyCodeButton!);
-
-      // Check API call includes email
+      // Check API call includes edited data
       await waitFor(() => {
         const verifyCall = mockFetch.mock.calls.find(
           (call) => call[0] === "/api/storefront/loyalty/otp/verify"
         );
         expect(verifyCall).toBeDefined();
         const body = JSON.parse(verifyCall![1].body);
-        expect(body.email).toBe("john@example.com");
-        expect(body.firstName).toBe("John");
-        expect(body.lastName).toBe("Doe");
+        expect(body.firstName).toBe("Jane");
+        expect(body.lastName).toBe("Smith");
+        expect(body.email).toBe("jane@example.com");
         expect(body.companySlug).toBe("test-company");
-      });
-    });
-
-    it("should handle null customerEmail gracefully", async () => {
-      const propsWithoutEmail = {
-        ...defaultProps,
-        customerEmail: null,
-      };
-
-      // Mock OTP send
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true }),
-      });
-
-      // Mock OTP verify
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: {
-            member: { id: "member-1", phone: "+15551234567", firstName: "John", lastName: null, points: 0 },
-          },
-        }),
-      });
-
-      // Mock award points
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, data: { pointsEarned: 50 } }),
-      });
-
-      render(<LoyaltyRegistrationCTA {...propsWithoutEmail} />, {
-        wrapper: createWrapper(),
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText(/Join rewards and earn/)).toBeInTheDocument();
-      });
-
-      // Expand and complete flow
-      fireEvent.click(screen.getByText(/Join rewards and earn/));
-      fireEvent.click(screen.getByRole("button", { name: "Verify" }));
-
-      await waitFor(() => {
-        expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
-      });
-
-      // Enter OTP
-      const otpInputs = screen.getAllByRole("textbox");
-      otpInputs.forEach((input, i) => {
-        fireEvent.change(input, { target: { value: String(i + 1) } });
-      });
-      const verifyButtons = screen.getAllByRole("button");
-      const verifyCodeButton = verifyButtons.find(
-        (btn) => btn.textContent?.includes("Verify Code") || btn.textContent?.includes("Verifying")
-      );
-      fireEvent.click(verifyCodeButton!);
-
-      // Check API call - email should be null
-      await waitFor(() => {
-        const verifyCall = mockFetch.mock.calls.find(
-          (call) => call[0] === "/api/storefront/loyalty/otp/verify"
-        );
-        expect(verifyCall).toBeDefined();
-        const body = JSON.parse(verifyCall![1].body);
-        expect(body.email).toBeNull();
       });
     });
 
@@ -513,7 +589,7 @@ describe("LoyaltyRegistrationCTA", () => {
         json: async () => ({
           success: true,
           data: {
-            member: { id: "member-1", phone: "+15551234567", firstName: "John", lastName: null, points: 0 },
+            member: { id: "member-1", phone: "+15551234567", firstName: "John", lastName: "Doe", email: "john@example.com", points: 0 },
           },
         }),
       });
@@ -534,21 +610,16 @@ describe("LoyaltyRegistrationCTA", () => {
 
       // Complete registration flow
       fireEvent.click(screen.getByText(/Join rewards and earn/));
-      fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+      fireEvent.click(screen.getByRole("button", { name: "Send Verification Code" }));
 
       await waitFor(() => {
         expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
       });
 
-      const otpInputs = screen.getAllByRole("textbox");
-      otpInputs.forEach((input, i) => {
-        fireEvent.change(input, { target: { value: String(i + 1) } });
-      });
-      const verifyButtons = screen.getAllByRole("button");
-      const verifyCodeButton = verifyButtons.find(
-        (btn) => btn.textContent?.includes("Verify Code") || btn.textContent?.includes("Verifying")
-      );
-      fireEvent.click(verifyCodeButton!);
+      const otpInputs = screen.getAllByLabelText(/Digit \d/);
+      for (let i = 0; i < 6; i++) {
+        fireEvent.change(otpInputs[i], { target: { value: String(i + 1) } });
+      }
 
       // Should show success message
       await waitFor(() => {
@@ -600,7 +671,7 @@ describe("LoyaltyRegistrationCTA", () => {
       fireEvent.click(screen.getByText(/Join rewards and earn/));
 
       // Should show simplified description without points
-      expect(screen.getByText("Verify your phone number to create an account.")).toBeInTheDocument();
+      expect(screen.getByText("Complete your profile to create an account.")).toBeInTheDocument();
     });
 
     it("should NOT call award-order-points API for gift card orders", async () => {
@@ -616,7 +687,7 @@ describe("LoyaltyRegistrationCTA", () => {
         json: async () => ({
           success: true,
           data: {
-            member: { id: "member-1", phone: "+15551234567", email: null, firstName: "John", lastName: null, points: 0 },
+            member: { id: "member-1", phone: "+15551234567", email: null, firstName: "John", lastName: "Doe", points: 0 },
           },
         }),
       });
@@ -631,24 +702,17 @@ describe("LoyaltyRegistrationCTA", () => {
 
       // Expand and send OTP
       fireEvent.click(screen.getByText(/Join rewards and earn/));
-      fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+      fireEvent.click(screen.getByRole("button", { name: "Send Verification Code" }));
 
       await waitFor(() => {
         expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
       });
 
-      // Enter OTP code
-      const otpInputs = screen.getAllByRole("textbox");
-      otpInputs.forEach((input, i) => {
-        fireEvent.change(input, { target: { value: String(i + 1) } });
-      });
-
-      // Click verify
-      const verifyButtons = screen.getAllByRole("button");
-      const verifyCodeButton = verifyButtons.find(
-        (btn) => btn.textContent?.includes("Verify Code") || btn.textContent?.includes("Verifying")
-      );
-      fireEvent.click(verifyCodeButton!);
+      // Enter OTP code - use aria-label to select only OTP digit inputs
+      const otpInputs = screen.getAllByLabelText(/Digit \d/);
+      for (let i = 0; i < 6; i++) {
+        fireEvent.change(otpInputs[i], { target: { value: String(i + 1) } });
+      }
 
       // Wait for success
       await waitFor(() => {
@@ -675,7 +739,7 @@ describe("LoyaltyRegistrationCTA", () => {
         json: async () => ({
           success: true,
           data: {
-            member: { id: "member-1", phone: "+15551234567", email: null, firstName: "John", lastName: null, points: 0 },
+            member: { id: "member-1", phone: "+15551234567", email: null, firstName: "John", lastName: "Doe", points: 0 },
           },
         }),
       });
@@ -690,21 +754,16 @@ describe("LoyaltyRegistrationCTA", () => {
 
       // Complete registration flow
       fireEvent.click(screen.getByText(/Join rewards and earn/));
-      fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+      fireEvent.click(screen.getByRole("button", { name: "Send Verification Code" }));
 
       await waitFor(() => {
         expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
       });
 
-      const otpInputs = screen.getAllByRole("textbox");
-      otpInputs.forEach((input, i) => {
-        fireEvent.change(input, { target: { value: String(i + 1) } });
-      });
-      const verifyButtons = screen.getAllByRole("button");
-      const verifyCodeButton = verifyButtons.find(
-        (btn) => btn.textContent?.includes("Verify Code") || btn.textContent?.includes("Verifying")
-      );
-      fireEvent.click(verifyCodeButton!);
+      const otpInputs = screen.getAllByLabelText(/Digit \d/);
+      for (let i = 0; i < 6; i++) {
+        fireEvent.change(otpInputs[i], { target: { value: String(i + 1) } });
+      }
 
       // Should show gift card specific success message
       await waitFor(() => {
