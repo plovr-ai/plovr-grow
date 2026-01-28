@@ -94,6 +94,12 @@ const navigation: NavItem[] = [
     pattern: /^\/dashboard\/catering/,
     children: [
       {
+        label: "Orders",
+        href: "/dashboard/catering/orders",
+        icon: Receipt,
+        pattern: /^\/dashboard\/catering\/orders/,
+      },
+      {
         label: "Leads",
         href: "/dashboard/catering/leads",
         icon: List,
