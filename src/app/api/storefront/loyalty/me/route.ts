@@ -69,7 +69,9 @@ export async function GET(request: NextRequest) {
         member: {
           id: member.id,
           phone: member.phone,
-          name: member.name,
+          email: member.email,
+          firstName: member.firstName,
+          lastName: member.lastName,
           points: member.points,
         },
         pointsPerDollar,

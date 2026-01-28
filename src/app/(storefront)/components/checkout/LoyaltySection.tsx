@@ -134,7 +134,9 @@ export function LoyaltySection({
         const memberData: LoyaltyMember = {
           id: data.data.member.id,
           phone: data.data.member.phone,
-          name: data.data.member.name,
+          email: data.data.member.email,
+          firstName: data.data.member.firstName,
+          lastName: data.data.member.lastName,
           points: data.data.member.points,
         };
 

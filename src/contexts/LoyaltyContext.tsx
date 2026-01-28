@@ -13,7 +13,9 @@ import { useMerchantConfig } from "./MerchantContext";
 export interface LoyaltyMember {
   id: string;
   phone: string;
-  name: string | null;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
   points: number;
 }
 

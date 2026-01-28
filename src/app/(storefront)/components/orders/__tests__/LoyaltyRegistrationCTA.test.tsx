@@ -31,7 +31,8 @@ function createWrapper() {
 const defaultProps = {
   orderId: "order-123",
   customerPhone: "+15551234567",
-  customerName: "John Doe",
+  customerFirstName: "John",
+  customerLastName: "Doe",
   customerEmail: "john@example.com",
   subtotal: 50.0,
 };
@@ -63,7 +64,7 @@ describe("LoyaltyRegistrationCTA", () => {
           json: async () => ({
             success: true,
             data: {
-              member: { id: "member-1", phone: "+15551234567", name: "John", points: 100 },
+              member: { id: "member-1", phone: "+15551234567", firstName: "John", lastName: null, points: 100 },
               pointsPerDollar: 1,
             },
           }),
@@ -378,7 +379,7 @@ describe("LoyaltyRegistrationCTA", () => {
         json: async () => ({
           success: true,
           data: {
-            member: { id: "member-1", phone: "+15551234567", name: "John", points: 0 },
+            member: { id: "member-1", phone: "+15551234567", firstName: "John", lastName: null, points: 0 },
           },
         }),
       });
@@ -426,7 +427,8 @@ describe("LoyaltyRegistrationCTA", () => {
         expect(verifyCall).toBeDefined();
         const body = JSON.parse(verifyCall![1].body);
         expect(body.email).toBe("john@example.com");
-        expect(body.name).toBe("John Doe");
+        expect(body.firstName).toBe("John");
+        expect(body.lastName).toBe("Doe");
         expect(body.companySlug).toBe("test-company");
       });
     });
@@ -449,7 +451,7 @@ describe("LoyaltyRegistrationCTA", () => {
         json: async () => ({
           success: true,
           data: {
-            member: { id: "member-1", phone: "+15551234567", name: "John", points: 0 },
+            member: { id: "member-1", phone: "+15551234567", firstName: "John", lastName: null, points: 0 },
           },
         }),
       });
@@ -511,7 +513,7 @@ describe("LoyaltyRegistrationCTA", () => {
         json: async () => ({
           success: true,
           data: {
-            member: { id: "member-1", phone: "+15551234567", name: "John", points: 0 },
+            member: { id: "member-1", phone: "+15551234567", firstName: "John", lastName: null, points: 0 },
           },
         }),
       });
@@ -553,6 +555,165 @@ describe("LoyaltyRegistrationCTA", () => {
         expect(screen.getByText(/Welcome to rewards/)).toBeInTheDocument();
         expect(screen.getByText(/50 points/)).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("isGiftcardOrder prop", () => {
+    beforeEach(() => {
+      // Default mocks for non-member, points not awarded
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: false, error: "Not logged in" }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: true, data: { pointsAwarded: false } }),
+        });
+    });
+
+    it("should display 2x points message in collapsed state for gift card orders", async () => {
+      render(<LoyaltyRegistrationCTA {...defaultProps} isGiftcardOrder={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Join rewards and earn/)).toBeInTheDocument();
+      });
+
+      const ctaButton = screen.getByRole("button");
+      expect(ctaButton.textContent).toContain("2x points");
+      expect(ctaButton.textContent).toContain("when using gift cards");
+      expect(ctaButton.textContent).not.toContain("for this order");
+    });
+
+    it("should display simplified description in expanded state for gift card orders", async () => {
+      render(<LoyaltyRegistrationCTA {...defaultProps} isGiftcardOrder={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Join rewards and earn/)).toBeInTheDocument();
+      });
+
+      // Expand
+      fireEvent.click(screen.getByText(/Join rewards and earn/));
+
+      // Should show simplified description without points
+      expect(screen.getByText("Verify your phone number to create an account.")).toBeInTheDocument();
+    });
+
+    it("should NOT call award-order-points API for gift card orders", async () => {
+      // Mock OTP send
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true }),
+      });
+
+      // Mock OTP verify
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            member: { id: "member-1", phone: "+15551234567", email: null, firstName: "John", lastName: null, points: 0 },
+          },
+        }),
+      });
+
+      render(<LoyaltyRegistrationCTA {...defaultProps} isGiftcardOrder={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Join rewards and earn/)).toBeInTheDocument();
+      });
+
+      // Expand and send OTP
+      fireEvent.click(screen.getByText(/Join rewards and earn/));
+      fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
+      });
+
+      // Enter OTP code
+      const otpInputs = screen.getAllByRole("textbox");
+      otpInputs.forEach((input, i) => {
+        fireEvent.change(input, { target: { value: String(i + 1) } });
+      });
+
+      // Click verify
+      const verifyButtons = screen.getAllByRole("button");
+      const verifyCodeButton = verifyButtons.find(
+        (btn) => btn.textContent?.includes("Verify Code") || btn.textContent?.includes("Verifying")
+      );
+      fireEvent.click(verifyCodeButton!);
+
+      // Wait for success
+      await waitFor(() => {
+        expect(screen.getByText(/Welcome to rewards/)).toBeInTheDocument();
+      });
+
+      // Verify that award-order-points was NOT called
+      const awardCall = mockFetch.mock.calls.find(
+        (call) => call[0] === "/api/storefront/loyalty/award-order-points"
+      );
+      expect(awardCall).toBeUndefined();
+    });
+
+    it("should show gift card specific success message after registration", async () => {
+      // Mock OTP send
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true }),
+      });
+
+      // Mock OTP verify
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            member: { id: "member-1", phone: "+15551234567", email: null, firstName: "John", lastName: null, points: 0 },
+          },
+        }),
+      });
+
+      render(<LoyaltyRegistrationCTA {...defaultProps} isGiftcardOrder={true} />, {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Join rewards and earn/)).toBeInTheDocument();
+      });
+
+      // Complete registration flow
+      fireEvent.click(screen.getByText(/Join rewards and earn/));
+      fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
+      });
+
+      const otpInputs = screen.getAllByRole("textbox");
+      otpInputs.forEach((input, i) => {
+        fireEvent.change(input, { target: { value: String(i + 1) } });
+      });
+      const verifyButtons = screen.getAllByRole("button");
+      const verifyCodeButton = verifyButtons.find(
+        (btn) => btn.textContent?.includes("Verify Code") || btn.textContent?.includes("Verifying")
+      );
+      fireEvent.click(verifyCodeButton!);
+
+      // Should show gift card specific success message
+      await waitFor(() => {
+        expect(screen.getByText(/Welcome to rewards/)).toBeInTheDocument();
+        expect(screen.getByText(/Use your gift cards to earn 2x points/)).toBeInTheDocument();
+      });
+
+      // Should NOT mention "points from this order"
+      expect(screen.queryByText(/points from this order/)).not.toBeInTheDocument();
     });
   });
 });

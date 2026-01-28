@@ -8,17 +8,22 @@ import { OtpModal } from "@storefront/components/checkout/OtpModal";
 interface LoyaltyRegistrationCTAProps {
   orderId: string;
   customerPhone: string;
-  customerName: string | null;
+  customerFirstName: string | null;
+  customerLastName: string | null;
   customerEmail: string | null;
   subtotal: number;
+  /** Gift card orders don't earn points - show different messaging */
+  isGiftcardOrder?: boolean;
 }
 
 export function LoyaltyRegistrationCTA({
   orderId,
   customerPhone,
-  customerName,
+  customerFirstName,
+  customerLastName,
   customerEmail,
   subtotal,
+  isGiftcardOrder = false,
 }: LoyaltyRegistrationCTAProps) {
   const companySlug = useCompanySlug();
   const { member, isLoading, pointsPerDollar, login } = useLoyalty();
@@ -102,8 +107,9 @@ export function LoyaltyRegistrationCTA({
               />
             </svg>
             <span className="font-medium">
-              Welcome to rewards! You earned {earnedPoints} points from this
-              order.
+              {isGiftcardOrder
+                ? "Welcome to rewards! Use your gift cards to earn 2x points on future orders."
+                : `Welcome to rewards! You earned ${earnedPoints} points from this order.`}
             </span>
           </div>
         </div>
@@ -165,7 +171,8 @@ export function LoyaltyRegistrationCTA({
           phone: formatPhoneForApi(phone),
           code,
           companySlug,
-          name: customerName,
+          firstName: customerFirstName,
+          lastName: customerLastName,
           email: customerEmail,
         }),
       });
@@ -179,27 +186,29 @@ export function LoyaltyRegistrationCTA({
 
       const memberId = data.data.member.id;
 
-      // Award points for this order
-      const awardResponse = await fetch(
-        "/api/storefront/loyalty/award-order-points",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId,
-            memberId,
-            companySlug,
-          }),
-        }
-      );
+      // Award points for this order (skip for gift card orders - they don't earn points)
+      if (!isGiftcardOrder) {
+        const awardResponse = await fetch(
+          "/api/storefront/loyalty/award-order-points",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderId,
+              memberId,
+              companySlug,
+            }),
+          }
+        );
 
-      const awardData = await awardResponse.json();
+        const awardData = await awardResponse.json();
+        setEarnedPoints(awardData.data?.pointsEarned || estimatedPoints);
+      }
 
       // Update context
       login(data.data.member, pointsPerDollar);
 
       // Show success
-      setEarnedPoints(awardData.data?.pointsEarned || estimatedPoints);
       setShowOtpModal(false);
       setRegistrationSuccess(true);
     } catch {
@@ -250,11 +259,21 @@ export function LoyaltyRegistrationCTA({
               />
             </svg>
             <span className="text-gray-700">
-              Join rewards and earn{" "}
-              <span className="font-medium text-amber-700">
-                {estimatedPoints} points
-              </span>{" "}
-              for this order!
+              {isGiftcardOrder ? (
+                <>
+                  Join rewards and earn{" "}
+                  <span className="font-medium text-amber-700">2x points</span>{" "}
+                  when using gift cards!
+                </>
+              ) : (
+                <>
+                  Join rewards and earn{" "}
+                  <span className="font-medium text-amber-700">
+                    {estimatedPoints} points
+                  </span>{" "}
+                  for this order!
+                </>
+              )}
             </span>
           </div>
           <svg
@@ -287,8 +306,9 @@ export function LoyaltyRegistrationCTA({
           </div>
 
           <p className="text-sm text-gray-600 mb-3">
-            Verify your phone number to create an account and earn{" "}
-            {estimatedPoints} points from this order.
+            {isGiftcardOrder
+              ? "Verify your phone number to create an account."
+              : `Verify your phone number to create an account and earn ${estimatedPoints} points from this order.`}
           </p>
 
           <div className="flex gap-2">

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useFormatPrice, usePhoneInput } from "@/hooks";
+import { useLoyalty } from "@/contexts/LoyaltyContext";
 import type { GiftcardConfig } from "@/types/company";
 
 interface GiftcardPageClientProps {
@@ -15,7 +16,8 @@ interface FormState {
   selectedAmount: number | null;
   recipientName: string;
   recipientEmail: string;
-  buyerName: string;
+  buyerFirstName: string;
+  buyerLastName: string;
   buyerPhone: string;
   buyerEmail: string;
   message: string;
@@ -24,7 +26,8 @@ interface FormState {
 interface FormErrors {
   selectedAmount?: string;
   recipientEmail?: string;
-  buyerName?: string;
+  buyerFirstName?: string;
+  buyerLastName?: string;
   buyerPhone?: string;
   buyerEmail?: string;
   message?: string;
@@ -46,7 +49,8 @@ export function GiftcardPageClient({
     selectedAmount: defaultAmount,
     recipientName: "",
     recipientEmail: "",
-    buyerName: "",
+    buyerFirstName: "",
+    buyerLastName: "",
     buyerPhone: "",
     buyerEmail: "",
     message: "",
@@ -55,6 +59,22 @@ export function GiftcardPageClient({
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Get loyalty member for auto-fill
+  const { member, isLoading: isLoyaltyLoading } = useLoyalty();
+
+  // Auto-fill form when member is logged in
+  useEffect(() => {
+    if (member && !isLoyaltyLoading) {
+      setFormState((prev) => ({
+        ...prev,
+        buyerFirstName: member.firstName || prev.buyerFirstName,
+        buyerLastName: member.lastName || prev.buyerLastName,
+        buyerPhone: member.phone ? formatPhoneInput(member.phone) : prev.buyerPhone,
+        buyerEmail: member.email || prev.buyerEmail,
+      }));
+    }
+  }, [member?.id, isLoyaltyLoading, formatPhoneInput]);
 
   // Get effective amount (only from selected denomination)
   const effectiveAmount = formState.selectedAmount;
@@ -81,8 +101,12 @@ export function GiftcardPageClient({
     }
 
     // Buyer info validation
-    if (!formState.buyerName.trim()) {
-      newErrors.buyerName = "Name is required";
+    if (!formState.buyerFirstName.trim()) {
+      newErrors.buyerFirstName = "First name is required";
+    }
+
+    if (!formState.buyerLastName.trim()) {
+      newErrors.buyerLastName = "Last name is required";
     }
 
     if (!formState.buyerPhone) {
@@ -129,7 +153,8 @@ export function GiftcardPageClient({
           amount: effectiveAmount,
           recipientName: formState.recipientName || undefined,
           recipientEmail: formState.recipientEmail || undefined,
-          buyerName: formState.buyerName,
+          buyerFirstName: formState.buyerFirstName,
+          buyerLastName: formState.buyerLastName,
           buyerPhone: formState.buyerPhone,
           buyerEmail: formState.buyerEmail,
           message: formState.message || undefined,
@@ -190,27 +215,71 @@ export function GiftcardPageClient({
         <div className="bg-white rounded-lg shadow-sm border p-6">
           <h2 className="text-xl font-semibold mb-4">Your Information</h2>
 
+          {member && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span className="text-sm text-green-700">
+                Logged in as rewards member
+              </span>
+            </div>
+          )}
+
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name <span className="text-red-600">*</span>
-              </label>
-              <input
-                type="text"
-                value={formState.buyerName}
-                onChange={(e) =>
-                  setFormState((prev) => ({ ...prev, buyerName: e.target.value }))
-                }
-                placeholder="Your name"
-                className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
-                  errors.buyerName
-                    ? "border-red-500 focus:ring-red-500"
-                    : "border-gray-300 focus:ring-theme-primary"
-                } focus:outline-none focus:ring-2 focus:border-transparent transition-colors`}
-              />
-              {errors.buyerName && (
-                <p className="text-sm text-red-600 mt-1">{errors.buyerName}</p>
-              )}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  First Name <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formState.buyerFirstName}
+                  onChange={(e) =>
+                    setFormState((prev) => ({ ...prev, buyerFirstName: e.target.value }))
+                  }
+                  placeholder="First name"
+                  className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
+                    errors.buyerFirstName
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-theme-primary"
+                  } focus:outline-none focus:ring-2 focus:border-transparent transition-colors`}
+                />
+                {errors.buyerFirstName && (
+                  <p className="text-sm text-red-600 mt-1">{errors.buyerFirstName}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Last Name <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formState.buyerLastName}
+                  onChange={(e) =>
+                    setFormState((prev) => ({ ...prev, buyerLastName: e.target.value }))
+                  }
+                  placeholder="Last name"
+                  className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
+                    errors.buyerLastName
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-theme-primary"
+                  } focus:outline-none focus:ring-2 focus:border-transparent transition-colors`}
+                />
+                {errors.buyerLastName && (
+                  <p className="text-sm text-red-600 mt-1">{errors.buyerLastName}</p>
+                )}
+              </div>
             </div>
 
             <div>

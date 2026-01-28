@@ -9,7 +9,8 @@ const verifyOtpSchema = z.object({
   phone: z.string().min(1, "Phone number is required"),
   code: z.string().length(6, "Verification code must be 6 digits"),
   companySlug: z.string().min(1, "Company slug is required"),
-  name: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
 });
 
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { phone, code, companySlug, name, email } = validation.data;
+    const { phone, code, companySlug, firstName, lastName, email } = validation.data;
 
     // Get company by slug
     const company = await merchantService.getCompanyBySlug(companySlug);
@@ -74,7 +75,8 @@ export async function POST(request: NextRequest) {
       companyId,
       phone,
       {
-        name,
+        firstName,
+        lastName,
         email: email || undefined,
       }
     );
@@ -88,7 +90,9 @@ export async function POST(request: NextRequest) {
         member: {
           id: member.id,
           phone: member.phone,
-          name: member.name,
+          email: member.email,
+          firstName: member.firstName,
+          lastName: member.lastName,
           points: member.points,
           isNewEnrollment: isNew,
         },

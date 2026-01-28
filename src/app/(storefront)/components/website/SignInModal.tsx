@@ -4,6 +4,10 @@ import { useState, useCallback } from "react";
 import { usePhoneInput } from "@/hooks";
 import { useCompanySlug, useLoyalty, type LoyaltyMember } from "@/contexts";
 import { OtpModal } from "../checkout/OtpModal";
+import {
+  loyaltyRegistrationSchema,
+  type LoyaltyRegistrationData,
+} from "@storefront/lib/validations/loyalty";
 
 interface SignInModalProps {
   isOpen: boolean;
@@ -11,21 +15,33 @@ interface SignInModalProps {
   onSuccess?: () => void;
 }
 
+type ModalStep = "phone" | "registration" | "otp";
+
 export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
   const companySlug = useCompanySlug();
   const { login } = useLoyalty();
   const { format: formatPhone } = usePhoneInput();
 
   // UI state
+  const [step, setStep] = useState<ModalStep>("phone");
   const [phone, setPhone] = useState("");
   const [showOtpModal, setShowOtpModal] = useState(false);
 
+  // Registration form state
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [formErrors, setFormErrors] = useState<
+    Partial<Record<keyof LoyaltyRegistrationData, string>>
+  >({});
+
   // Loading state
+  const [isCheckingPhone, setIsCheckingPhone] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
   // Error state
-  const [sendError, setSendError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [verifyError, setVerifyError] = useState("");
 
   // Points per dollar for login context
@@ -34,7 +50,7 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhone(e.target.value);
     setPhone(formatted);
-    setSendError("");
+    setPhoneError("");
   };
 
   const formatPhoneForApi = (formattedPhone: string): string => {
@@ -48,11 +64,12 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
     return `+${digits}`;
   };
 
-  const handleSendOtp = useCallback(async () => {
+  // Step 1: Check if user is new or existing
+  const handleCheckPhone = useCallback(async () => {
     if (!companySlug || !phone) return;
 
-    setIsSendingOtp(true);
-    setSendError("");
+    setIsCheckingPhone(true);
+    setPhoneError("");
 
     try {
       const response = await fetch("/api/storefront/loyalty/otp/send", {
@@ -67,7 +84,7 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
       const data = await response.json();
 
       if (!data.success) {
-        setSendError(data.error || "Failed to send verification code");
+        setPhoneError(data.error || "Failed to verify phone number");
         return;
       }
 
@@ -84,13 +101,41 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
         // Ignore status fetch errors, use default
       }
 
-      setShowOtpModal(true);
+      // Check if new member - show registration form, otherwise show OTP modal
+      if (data.data?.isNewMember) {
+        setStep("registration");
+      } else {
+        setShowOtpModal(true);
+      }
     } catch {
-      setSendError("Network error. Please try again.");
+      setPhoneError("Network error. Please try again.");
     } finally {
-      setIsSendingOtp(false);
+      setIsCheckingPhone(false);
     }
   }, [companySlug, phone]);
+
+  // Step 2: Validate registration form and send OTP (for new users)
+  const handleSubmitRegistration = useCallback(async () => {
+    // Validate form
+    const result = loyaltyRegistrationSchema.safeParse({
+      firstName,
+      lastName,
+      email,
+    });
+
+    if (!result.success) {
+      const errors: Partial<Record<keyof LoyaltyRegistrationData, string>> = {};
+      result.error.issues.forEach((issue) => {
+        const field = issue.path[0] as keyof LoyaltyRegistrationData;
+        errors[field] = issue.message;
+      });
+      setFormErrors(errors);
+      return;
+    }
+
+    setFormErrors({});
+    setShowOtpModal(true);
+  }, [firstName, lastName, email]);
 
   const handleVerifyOtp = useCallback(
     async (code: string) => {
@@ -107,6 +152,12 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
             phone: formatPhoneForApi(phone),
             code,
             companySlug,
+            // Include registration data for new users
+            ...(step === "registration" && {
+              firstName: firstName.trim(),
+              lastName: lastName.trim(),
+              email: email.trim(),
+            }),
           }),
         });
 
@@ -121,7 +172,9 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
         const memberData: LoyaltyMember = {
           id: data.data.member.id,
           phone: data.data.member.phone,
-          name: data.data.member.name,
+          email: data.data.member.email ?? null,
+          firstName: data.data.member.firstName ?? null,
+          lastName: data.data.member.lastName ?? null,
           points: data.data.member.points,
         };
 
@@ -135,7 +188,17 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
         setIsVerifying(false);
       }
     },
-    [companySlug, phone, localPointsPerDollar, login, onSuccess]
+    [
+      companySlug,
+      phone,
+      step,
+      firstName,
+      lastName,
+      email,
+      localPointsPerDollar,
+      login,
+      onSuccess,
+    ]
   );
 
   const handleResendOtp = useCallback(async () => {
@@ -158,10 +221,23 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
 
   const handleClose = () => {
     setPhone("");
-    setSendError("");
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPhoneError("");
     setVerifyError("");
+    setFormErrors({});
     setShowOtpModal(false);
+    setStep("phone");
     onClose();
+  };
+
+  const handleBackToPhone = () => {
+    setStep("phone");
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setFormErrors({});
   };
 
   if (!isOpen) return null;
@@ -215,45 +291,164 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
               </svg>
             </div>
             <h2 className="text-lg font-semibold text-gray-900">
-              Sign In to Earn Rewards
+              {step === "registration"
+                ? "Create Your Account"
+                : "Sign In to Earn Rewards"}
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Enter your phone number to sign in or create an account
+              {step === "registration"
+                ? "Complete your profile to earn rewards"
+                : "Enter your phone number to sign in or create an account"}
             </p>
           </div>
 
-          {/* Phone Input */}
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="phone"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Phone Number
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={handlePhoneChange}
-                placeholder="(555) 123-4567"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-transparent"
-                disabled={isSendingOtp}
-              />
-              {sendError && (
-                <p className="text-sm text-red-500 mt-1">{sendError}</p>
-              )}
-            </div>
+          {step === "phone" ? (
+            // Phone Input Step
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="phone"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Phone Number
+                </label>
+                <input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  placeholder="(555) 123-4567"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-transparent"
+                  disabled={isCheckingPhone}
+                />
+                {phoneError && (
+                  <p className="text-sm text-red-500 mt-1">{phoneError}</p>
+                )}
+              </div>
 
-            <button
-              type="button"
-              onClick={handleSendOtp}
-              disabled={phone.replace(/\D/g, "").length < 10 || isSendingOtp}
-              className="w-full py-3 bg-theme-primary text-theme-primary-foreground font-medium rounded-lg hover:bg-theme-primary-hover transition-colors disabled:bg-gray-200 disabled:text-gray-400"
-            >
-              {isSendingOtp ? "Sending..." : "Send Verification Code"}
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={handleCheckPhone}
+                disabled={phone.replace(/\D/g, "").length < 10 || isCheckingPhone}
+                className="w-full py-3 bg-theme-primary text-theme-primary-foreground font-medium rounded-lg hover:bg-theme-primary-hover transition-colors disabled:bg-gray-200 disabled:text-gray-400"
+              >
+                {isCheckingPhone ? "Checking..." : "Continue"}
+              </button>
+            </div>
+          ) : (
+            // Registration Form Step
+            <div className="space-y-4">
+              {/* Phone display (read-only) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+                    {phone}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleBackToPhone}
+                    className="text-sm text-theme-primary hover:text-theme-primary-hover"
+                  >
+                    Change
+                  </button>
+                </div>
+              </div>
+
+              {/* First Name */}
+              <div>
+                <label
+                  htmlFor="firstName"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  First Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="firstName"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => {
+                    setFirstName(e.target.value);
+                    setFormErrors((prev) => ({ ...prev, firstName: undefined }));
+                  }}
+                  placeholder="John"
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-transparent ${
+                    formErrors.firstName ? "border-red-500" : "border-gray-300"
+                  }`}
+                />
+                {formErrors.firstName && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {formErrors.firstName}
+                  </p>
+                )}
+              </div>
+
+              {/* Last Name */}
+              <div>
+                <label
+                  htmlFor="lastName"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Last Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="lastName"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => {
+                    setLastName(e.target.value);
+                    setFormErrors((prev) => ({ ...prev, lastName: undefined }));
+                  }}
+                  placeholder="Doe"
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-transparent ${
+                    formErrors.lastName ? "border-red-500" : "border-gray-300"
+                  }`}
+                />
+                {formErrors.lastName && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {formErrors.lastName}
+                  </p>
+                )}
+              </div>
+
+              {/* Email */}
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setFormErrors((prev) => ({ ...prev, email: undefined }));
+                  }}
+                  placeholder="john@example.com"
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-transparent ${
+                    formErrors.email ? "border-red-500" : "border-gray-300"
+                  }`}
+                />
+                {formErrors.email && (
+                  <p className="text-sm text-red-500 mt-1">{formErrors.email}</p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSubmitRegistration}
+                disabled={isSendingOtp}
+                className="w-full py-3 bg-theme-primary text-theme-primary-foreground font-medium rounded-lg hover:bg-theme-primary-hover transition-colors disabled:bg-gray-200 disabled:text-gray-400"
+              >
+                {isSendingOtp ? "Sending..." : "Send Verification Code"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
