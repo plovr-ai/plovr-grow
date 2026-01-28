@@ -166,7 +166,7 @@ export function GiftCardInput({
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="GC-XXXX-XXXX-XXXX"
+            placeholder="XXXX-XXXX-XXXX-XXXX"
             disabled={disabled || validationState === "loading"}
             className={`w-full px-3 py-2 border rounded-lg text-sm font-mono uppercase
               focus:outline-none focus:ring-2 focus:ring-theme-primary/50 focus:border-theme-primary

@@ -62,7 +62,7 @@ describe("GiftcardOverviewClient", () => {
   const mockGiftCards: GiftCardWithOrder[] = [
     {
       id: "gc-1",
-      cardNumber: "GC-ABCD-EFGH-IJKL",
+      cardNumber: "1234-5678-9012-3456",
       initialAmount: 100,
       currentBalance: 75,
       status: "active",
@@ -77,7 +77,7 @@ describe("GiftcardOverviewClient", () => {
     },
     {
       id: "gc-2",
-      cardNumber: "GC-MNOP-QRST-UVWX",
+      cardNumber: "2345-6789-0123-4567",
       initialAmount: 50,
       currentBalance: 0,
       status: "depleted",
@@ -92,7 +92,7 @@ describe("GiftcardOverviewClient", () => {
     },
     {
       id: "gc-3",
-      cardNumber: "GC-WXYZ-1234-5678",
+      cardNumber: "3456-7890-1234-5678",
       initialAmount: 200,
       currentBalance: 200,
       status: "disabled",
@@ -185,9 +185,9 @@ describe("GiftcardOverviewClient", () => {
       const searchInput = screen.getByPlaceholderText(
         "Search by card number, name, or email..."
       );
-      fireEvent.change(searchInput, { target: { value: "GC-ABCD" } });
+      fireEvent.change(searchInput, { target: { value: "1234-5678" } });
 
-      expect(searchInput).toHaveValue("GC-ABCD");
+      expect(searchInput).toHaveValue("1234-5678");
     });
 
     it("should update URL with search param on form submit", () => {
@@ -261,14 +261,14 @@ describe("GiftcardOverviewClient", () => {
       render(<GiftcardOverviewClient {...defaultProps} />, { wrapper: Wrapper });
 
       // First gift card
-      expect(screen.getByText("GC-ABCD-EFGH-IJKL")).toBeInTheDocument();
+      expect(screen.getByText("1234-5678-9012-3456")).toBeInTheDocument();
       expect(screen.getByText("John Doe")).toBeInTheDocument();
       expect(screen.getByText("john@example.com")).toBeInTheDocument();
       expect(screen.getByText("$100.00")).toBeInTheDocument();
       expect(screen.getByText("$75.00")).toBeInTheDocument();
 
       // Second gift card
-      expect(screen.getByText("GC-MNOP-QRST-UVWX")).toBeInTheDocument();
+      expect(screen.getByText("2345-6789-0123-4567")).toBeInTheDocument();
       expect(screen.getByText("Jane Smith")).toBeInTheDocument();
       expect(screen.getByText("$50.00")).toBeInTheDocument();
       expect(screen.getByText("$0.00")).toBeInTheDocument();
