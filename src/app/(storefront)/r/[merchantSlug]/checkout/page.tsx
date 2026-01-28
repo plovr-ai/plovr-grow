@@ -101,27 +101,41 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (loyaltyMember && !loyaltyLoading) {
       setLoyaltyMemberId(loyaltyMember.id);
-      // Pre-fill name if available and not already filled
-      if (loyaltyMember.firstName && !formState.customerFirstName) {
-        setFormState((prev) => ({
-          ...prev,
-          customerFirstName: loyaltyMember.firstName || "",
-          customerLastName: loyaltyMember.lastName || ""
-        }));
-      }
-      // Pre-fill phone if available and not already filled
-      if (loyaltyMember.phone && !formState.customerPhone) {
-        const digits = loyaltyMember.phone.replace(/\D/g, "");
-        const formattedPhone =
-          digits.length === 11 && digits.startsWith("1")
-            ? `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
-            : digits.length === 10
-            ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
-            : loyaltyMember.phone;
-        setFormState((prev) => ({ ...prev, customerPhone: formattedPhone }));
-      }
+
+      // Pre-fill contact info from loyalty member if not already filled
+      setFormState((prev) => {
+        const updates: Partial<FormState> = {};
+
+        // Pre-fill name if available and not already filled
+        if (loyaltyMember.firstName && !prev.customerFirstName) {
+          updates.customerFirstName = loyaltyMember.firstName;
+          updates.customerLastName = loyaltyMember.lastName || "";
+        }
+
+        // Pre-fill phone if available and not already filled
+        if (loyaltyMember.phone && !prev.customerPhone) {
+          const digits = loyaltyMember.phone.replace(/\D/g, "");
+          updates.customerPhone =
+            digits.length === 11 && digits.startsWith("1")
+              ? `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
+              : digits.length === 10
+              ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+              : loyaltyMember.phone;
+        }
+
+        // Pre-fill email if available and not already filled
+        if (loyaltyMember.email && !prev.customerEmail) {
+          updates.customerEmail = loyaltyMember.email;
+        }
+
+        // Only update if there are changes
+        if (Object.keys(updates).length > 0) {
+          return { ...prev, ...updates };
+        }
+        return prev;
+      });
     }
-  }, [loyaltyMember, loyaltyLoading, formState.customerFirstName, formState.customerPhone]);
+  }, [loyaltyMember, loyaltyLoading]);
 
   // Get fee config from merchant context
   const { fees: configFees } = useFeeConfig();
