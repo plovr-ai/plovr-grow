@@ -53,13 +53,12 @@ export function Navigation({
     { label: "Gift Cards", href: giftcardLink },
     { label: "Locations", href: locationsLink },
     { label: "Our Story", href: "#story" },
-    { label: "Contact", href: "#location" },
   ];
 
   // Get display name for logged-in member
   const getDisplayName = () => {
     if (!member) return "";
-    return member.name || "Member";
+    return member.firstName || "Member";
   };
 
   // Render auth section for desktop
