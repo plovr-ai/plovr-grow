@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useFormatPrice, usePhoneInput } from "@/hooks";
 import { useLoyalty } from "@/contexts/LoyaltyContext";
+import {
+  StripeProvider,
+  CardPaymentForm,
+  type CardPaymentFormRef,
+} from "@storefront/components/checkout";
 import type { GiftcardConfig } from "@/types/company";
 
 interface GiftcardPageClientProps {
@@ -14,6 +19,7 @@ interface GiftcardPageClientProps {
 
 interface FormState {
   selectedAmount: number | null;
+  isGiftForSelf: boolean;
   recipientName: string;
   recipientEmail: string;
   buyerFirstName: string;
@@ -47,6 +53,7 @@ export function GiftcardPageClient({
 
   const [formState, setFormState] = useState<FormState>({
     selectedAmount: defaultAmount,
+    isGiftForSelf: true,
     recipientName: "",
     recipientEmail: "",
     buyerFirstName: "",
@@ -59,6 +66,13 @@ export function GiftcardPageClient({
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Stripe payment states
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const [isPaymentReady, setIsPaymentReady] = useState(false);
+  const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
+  const cardPaymentFormRef = useRef<CardPaymentFormRef>(null);
 
   // Get loyalty member for auto-fill
   const { member, isLoading: isLoyaltyLoading } = useLoyalty();
@@ -92,6 +106,78 @@ export function GiftcardPageClient({
     setErrors((prev) => ({ ...prev, selectedAmount: undefined }));
   };
 
+  const handleRecipientTypeChange = (isForSelf: boolean) => {
+    setFormState((prev) => ({
+      ...prev,
+      isGiftForSelf: isForSelf,
+      // Clear recipient fields when switching back to "For myself"
+      ...(isForSelf && {
+        recipientName: "",
+        recipientEmail: "",
+        message: "",
+      }),
+    }));
+    // Clear recipient-related errors
+    if (isForSelf) {
+      setErrors((prev) => ({
+        ...prev,
+        recipientEmail: undefined,
+        message: undefined,
+      }));
+    }
+  };
+
+  // Create PaymentIntent for Stripe
+  const createPaymentIntent = useCallback(async () => {
+    if (!effectiveAmount || isCreatingPaymentIntent || clientSecret) return;
+
+    setIsCreatingPaymentIntent(true);
+    setSubmitError(null);
+
+    try {
+      const response = await fetch(`/api/storefront/${companySlug}/payment-intent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: effectiveAmount,
+          currency: "USD",
+          loyaltyMemberId: member?.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setClientSecret(data.data.clientSecret);
+        setPaymentIntentId(data.data.paymentIntentId);
+      } else {
+        setSubmitError(data.error || "Failed to initialize payment");
+      }
+    } catch (error) {
+      console.error("Payment intent creation failed:", error);
+      setSubmitError("Failed to initialize payment");
+    } finally {
+      setIsCreatingPaymentIntent(false);
+    }
+  }, [effectiveAmount, companySlug, member?.id, isCreatingPaymentIntent, clientSecret]);
+
+  // Create PaymentIntent when amount is selected
+  useEffect(() => {
+    if (effectiveAmount && !clientSecret && !isCreatingPaymentIntent) {
+      createPaymentIntent();
+    }
+  }, [effectiveAmount, clientSecret, isCreatingPaymentIntent, createPaymentIntent]);
+
+  // Reset PaymentIntent when amount changes
+  useEffect(() => {
+    if (clientSecret) {
+      setClientSecret(null);
+      setPaymentIntentId(null);
+      setIsPaymentReady(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveAmount]);
+
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
@@ -121,9 +207,13 @@ export function GiftcardPageClient({
       newErrors.buyerEmail = "Invalid email format";
     }
 
-    // Optional recipient email validation
-    if (formState.recipientEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.recipientEmail)) {
-      newErrors.recipientEmail = "Invalid email format";
+    // Recipient email validation (required when sending to someone else)
+    if (!formState.isGiftForSelf) {
+      if (!formState.recipientEmail) {
+        newErrors.recipientEmail = "Recipient email is required";
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.recipientEmail)) {
+        newErrors.recipientEmail = "Invalid email format";
+      }
     }
 
     // Message length validation
@@ -142,10 +232,25 @@ export function GiftcardPageClient({
       return;
     }
 
+    // Ensure payment is ready
+    if (!isPaymentReady || !cardPaymentFormRef.current) {
+      setSubmitError("Payment form not ready");
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
+      // Step 1: Confirm Stripe payment
+      const paymentResult = await cardPaymentFormRef.current.confirmPayment();
+      if (!paymentResult.success) {
+        setSubmitError(paymentResult.error || "Payment failed");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Step 2: Create giftcard order with payment intent ID
       const response = await fetch(`/api/storefront/${companySlug}/giftcard`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -158,6 +263,7 @@ export function GiftcardPageClient({
           buyerPhone: formState.buyerPhone,
           buyerEmail: formState.buyerEmail,
           message: formState.message || undefined,
+          stripePaymentIntentId: paymentIntentId,
         }),
       });
 
@@ -178,13 +284,7 @@ export function GiftcardPageClient({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-2">Gift Cards</h1>
-        <p className="text-gray-600">Give the gift of {companyName}</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-8">
         {/* Denomination Selection */}
         <div className="bg-white rounded-lg shadow-sm border p-6">
           <h2 className="text-xl font-semibold mb-4">Select Amount</h2>
@@ -350,73 +450,130 @@ export function GiftcardPageClient({
           </div>
         </div>
 
-        {/* Recipient Information (Optional) */}
+        {/* Recipient Selection */}
         <div className="bg-white rounded-lg shadow-sm border p-6">
-          <h2 className="text-xl font-semibold mb-2">Recipient Information</h2>
-          <p className="text-sm text-gray-600 mb-4">Optional - for future email delivery</p>
+          <h2 className="text-xl font-semibold mb-4">This gift card is for</h2>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Recipient Name
-              </label>
+          {/* Radio Toggle */}
+          <div className="flex items-center gap-6 mb-4">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
-                type="text"
-                value={formState.recipientName}
-                onChange={(e) =>
-                  setFormState((prev) => ({ ...prev, recipientName: e.target.value }))
-                }
-                placeholder="Recipient's name"
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-transparent transition-colors"
+                type="radio"
+                name="recipientType"
+                checked={formState.isGiftForSelf}
+                onChange={() => handleRecipientTypeChange(true)}
+                className="w-4 h-4 text-theme-primary focus:ring-theme-primary"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Recipient Email
-              </label>
+              <span className="text-gray-700">Myself</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
-                type="email"
-                value={formState.recipientEmail}
-                onChange={(e) =>
-                  setFormState((prev) => ({ ...prev, recipientEmail: e.target.value }))
-                }
-                placeholder="recipient@email.com"
-                className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
-                  errors.recipientEmail
-                    ? "border-red-500 focus:ring-red-500"
-                    : "border-gray-300 focus:ring-theme-primary"
-                } focus:outline-none focus:ring-2 focus:border-transparent transition-colors`}
+                type="radio"
+                name="recipientType"
+                checked={!formState.isGiftForSelf}
+                onChange={() => handleRecipientTypeChange(false)}
+                className="w-4 h-4 text-theme-primary focus:ring-theme-primary"
               />
-              {errors.recipientEmail && (
-                <p className="text-sm text-red-600 mt-1">{errors.recipientEmail}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Gift Message
-              </label>
-              <textarea
-                value={formState.message}
-                onChange={(e) =>
-                  setFormState((prev) => ({ ...prev, message: e.target.value }))
-                }
-                placeholder="Optional message to recipient"
-                rows={3}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-theme-primary ${
-                  errors.message ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                {formState.message.length}/200 characters
-              </p>
-              {errors.message && (
-                <p className="text-sm text-red-600 mt-1">{errors.message}</p>
-              )}
-            </div>
+              <span className="text-gray-700">Someone else</span>
+            </label>
           </div>
+
+          {/* Recipient Fields (shown only when "Someone else" is selected) */}
+          {!formState.isGiftForSelf && (
+            <div className="space-y-4 pt-4 border-t border-gray-200">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Recipient Name
+                </label>
+                <input
+                  type="text"
+                  value={formState.recipientName}
+                  onChange={(e) =>
+                    setFormState((prev) => ({ ...prev, recipientName: e.target.value }))
+                  }
+                  placeholder="Recipient's name"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-theme-primary focus:border-transparent transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Recipient Email <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={formState.recipientEmail}
+                  onChange={(e) =>
+                    setFormState((prev) => ({ ...prev, recipientEmail: e.target.value }))
+                  }
+                  placeholder="recipient@email.com"
+                  className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
+                    errors.recipientEmail
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-theme-primary"
+                  } focus:outline-none focus:ring-2 focus:border-transparent transition-colors`}
+                />
+                {errors.recipientEmail && (
+                  <p className="text-sm text-red-600 mt-1">{errors.recipientEmail}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Gift Message
+                </label>
+                <textarea
+                  value={formState.message}
+                  onChange={(e) =>
+                    setFormState((prev) => ({ ...prev, message: e.target.value }))
+                  }
+                  placeholder="Add a personal message (optional)"
+                  rows={3}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-theme-primary ${
+                    errors.message ? "border-red-500" : "border-gray-300"
+                  }`}
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  {formState.message.length}/200 characters
+                </p>
+                {errors.message && (
+                  <p className="text-sm text-red-600 mt-1">{errors.message}</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Payment Section */}
+        {effectiveAmount !== null && (
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-xl font-semibold mb-4">Payment</h2>
+
+            {isCreatingPaymentIntent && (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-500" />
+                <span className="ml-2 text-gray-500">Loading payment form...</span>
+              </div>
+            )}
+
+            {clientSecret && (
+              <StripeProvider clientSecret={clientSecret}>
+                <CardPaymentForm
+                  ref={cardPaymentFormRef}
+                  onReady={() => setIsPaymentReady(true)}
+                  onError={(error) => setSubmitError(error)}
+                  disabled={isSubmitting}
+                />
+              </StripeProvider>
+            )}
+
+            {!clientSecret && !isCreatingPaymentIntent && (
+              <div className="text-center text-gray-500 py-4">
+                Unable to load payment form. Please try again.
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Order Summary */}
         {effectiveAmount !== null && !isNaN(effectiveAmount) && (
@@ -439,12 +596,11 @@ export function GiftcardPageClient({
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isSubmitting || effectiveAmount === null}
+          disabled={isSubmitting || effectiveAmount === null || !isPaymentReady}
           className="w-full bg-theme-primary text-theme-primary-foreground py-3 rounded-lg font-semibold hover:bg-theme-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {isSubmitting ? "Processing..." : "Purchase Gift Card"}
+          {isSubmitting ? "Processing Payment..." : `Pay ${effectiveAmount ? formatPrice(effectiveAmount) : ""}`}
         </button>
-      </form>
-    </div>
+    </form>
   );
 }
