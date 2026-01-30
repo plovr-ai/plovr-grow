@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCartStore, useCartHydration } from "@/stores";
@@ -15,7 +15,15 @@ import {
   OrderSummary,
   PriceSummary,
   GiftCardInput,
+  StripeProvider,
+  PaymentMethodSelector,
+  CardPaymentForm,
+  ErrorAlert,
+  PaymentLoadingState,
+  SubmitButton,
   type AppliedGiftCard,
+  type PaymentOption,
+  type CardPaymentFormRef,
 } from "@storefront/components/checkout";
 import {
   checkoutFormSchema,
@@ -40,6 +48,7 @@ interface FormState {
   };
   tip: TipInput | null;
   notes: string;
+  paymentMethod: PaymentOption;
 }
 
 interface FormErrors {
@@ -74,6 +83,7 @@ const initialFormState: FormState = {
   },
   tip: null,
   notes: "",
+  paymentMethod: "card", // Default to card payment
 };
 
 export default function CheckoutPage() {
@@ -93,6 +103,13 @@ export default function CheckoutPage() {
   const [isOrderSuccess, setIsOrderSuccess] = useState(false);
   const [loyaltyMemberId, setLoyaltyMemberId] = useState<string | null>(null);
   const [appliedGiftCard, setAppliedGiftCard] = useState<AppliedGiftCard | null>(null);
+
+  // Stripe payment states
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const [isPaymentReady, setIsPaymentReady] = useState(false);
+  const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
+  const cardPaymentFormRef = useRef<CardPaymentFormRef>(null);
 
   // Get loyalty member from context (if already logged in)
   const { member: loyaltyMember, isLoading: loyaltyLoading } = useLoyalty();
@@ -178,6 +195,60 @@ export default function CheckoutPage() {
     };
   }, [pricing, formState.orderMode, displayFees]);
 
+  // Calculate amount due after gift card
+  const amountDue = useMemo(() => {
+    if (!appliedGiftCard) return calculations.totalAmount;
+    return Math.max(0, calculations.totalAmount - appliedGiftCard.amountToApply);
+  }, [calculations.totalAmount, appliedGiftCard]);
+
+  // Create PaymentIntent when needed
+  const createPaymentIntent = useCallback(async () => {
+    if (amountDue <= 0 || isCreatingPaymentIntent || clientSecret) return;
+
+    setIsCreatingPaymentIntent(true);
+    try {
+      const response = await fetch(`/api/storefront/r/${merchantSlug}/payment-intent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: amountDue,
+          currency: "USD",
+          loyaltyMemberId: loyaltyMemberId || undefined,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setClientSecret(data.data.clientSecret);
+        setPaymentIntentId(data.data.paymentIntentId);
+      } else {
+        setSubmitError(data.error || "Failed to initialize payment");
+      }
+    } catch (error) {
+      setSubmitError("Failed to initialize payment");
+    } finally {
+      setIsCreatingPaymentIntent(false);
+    }
+  }, [amountDue, merchantSlug, loyaltyMemberId, isCreatingPaymentIntent, clientSecret]);
+
+  // Create PaymentIntent when card payment selected and amount > 0
+  useEffect(() => {
+    if (formState.paymentMethod === "card" && amountDue > 0 && !clientSecret) {
+      createPaymentIntent();
+    }
+  }, [formState.paymentMethod, amountDue, clientSecret, createPaymentIntent]);
+
+  // Reset PaymentIntent when amount changes significantly
+  useEffect(() => {
+    // If we have a PaymentIntent but the amount changed, we need a new one
+    if (clientSecret && formState.paymentMethod === "card") {
+      setClientSecret(null);
+      setPaymentIntentId(null);
+      setIsPaymentReady(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amountDue]);
+
   // Handle form field changes
   const handleContactChange = (
     field: "customerFirstName" | "customerLastName" | "customerPhone" | "customerEmail",
@@ -219,6 +290,16 @@ export default function CheckoutPage() {
     setFormState((prev) => ({ ...prev, notes: e.target.value }));
   };
 
+  const handlePaymentMethodChange = (method: PaymentOption) => {
+    setFormState((prev) => ({ ...prev, paymentMethod: method }));
+    // Reset payment state when switching methods
+    if (method === "cash") {
+      setClientSecret(null);
+      setPaymentIntentId(null);
+      setIsPaymentReady(false);
+    }
+  };
+
   // Gift Card handlers
   const handleGiftCardApply = (giftCard: AppliedGiftCard) => {
     // Recalculate amount to apply based on current total
@@ -244,6 +325,20 @@ export default function CheckoutPage() {
       }
     }
   }, [calculations.totalAmount, appliedGiftCard]);
+
+  // Payment label for cash payment (must be before early returns)
+  const paymentLabel =
+    formState.orderMode === "delivery" ? "Pay at delivery" : "Pay at pickup";
+
+  // Determine if submit button should be disabled (must be before early returns)
+  const isSubmitDisabled = useMemo(() => {
+    if (isSubmitting) return true;
+    // If card payment is selected and amount > 0, payment must be ready
+    if (formState.paymentMethod === "card" && amountDue > 0) {
+      return !isPaymentReady || !clientSecret;
+    }
+    return false;
+  }, [isSubmitting, formState.paymentMethod, amountDue, isPaymentReady, clientSecret]);
 
   // Validate and submit
   const handleSubmit = async () => {
@@ -316,6 +411,22 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
+      // If card payment and amount > 0, confirm payment first
+      if (formState.paymentMethod === "card" && amountDue > 0) {
+        if (!cardPaymentFormRef.current) {
+          setSubmitError("Payment form not ready");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const paymentResult = await cardPaymentFormRef.current.confirmPayment();
+        if (!paymentResult.success) {
+          setSubmitError(paymentResult.error || "Payment failed");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const response = await fetch(`/api/storefront/r/${merchantSlug}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -338,6 +449,11 @@ export default function CheckoutPage() {
                 giftCardId: appliedGiftCard.giftCardId,
                 amount: appliedGiftCard.amountToApply,
               }
+            : undefined,
+          // Card payment (Stripe)
+          paymentMethod: formState.paymentMethod,
+          stripePaymentIntentId: formState.paymentMethod === "card" && amountDue > 0
+            ? paymentIntentId
             : undefined,
         }),
       });
@@ -435,9 +551,6 @@ export default function CheckoutPage() {
     );
   }
 
-  const paymentLabel =
-    formState.orderMode === "delivery" ? "Pay at delivery" : "Pay at pickup";
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -522,6 +635,37 @@ export default function CheckoutPage() {
               disabled={isSubmitting}
             />
 
+            {/* Payment Method Selection (only show if there's amount to pay) */}
+            {amountDue > 0 && (
+              <>
+                <PaymentMethodSelector
+                  value={formState.paymentMethod}
+                  onChange={handlePaymentMethodChange}
+                  disabled={isSubmitting}
+                  orderMode={formState.orderMode}
+                />
+
+                {/* Card Payment Form */}
+                {formState.paymentMethod === "card" && clientSecret && (
+                  <StripeProvider clientSecret={clientSecret}>
+                    <CardPaymentForm
+                      ref={cardPaymentFormRef}
+                      onReady={() => setIsPaymentReady(true)}
+                      onError={(error) => setSubmitError(error)}
+                      disabled={isSubmitting}
+                    />
+                  </StripeProvider>
+                )}
+
+                {/* Loading state for PaymentIntent creation */}
+                {formState.paymentMethod === "card" && !clientSecret && isCreatingPaymentIntent && (
+                  <div className="bg-white rounded-xl border border-gray-100 p-4">
+                    <PaymentLoadingState />
+                  </div>
+                )}
+              </>
+            )}
+
             {/* Order Notes */}
             <div className="bg-white rounded-xl border border-gray-100 p-4">
               <label
@@ -560,8 +704,8 @@ export default function CheckoutPage() {
                   orderMode={formState.orderMode}
                 />
 
-                {/* Payment Notice (only show if not fully paid by gift card) */}
-                {(!appliedGiftCard || appliedGiftCard.amountToApply < calculations.totalAmount) && (
+                {/* Payment Notice (only show for cash payment) */}
+                {amountDue > 0 && formState.paymentMethod === "cash" && (
                   <div className="flex items-center justify-center gap-2 mt-4 text-gray-500">
                     <svg
                       className="w-5 h-5"
@@ -573,42 +717,26 @@ export default function CheckoutPage() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={1.5}
-                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
                       />
                     </svg>
                     <span className="text-sm">{paymentLabel}</span>
                   </div>
                 )}
 
-                {/* Submit Error */}
-                {submitError && (
-                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-600 text-center">
-                      {submitError}
-                    </p>
-                  </div>
-                )}
+                <ErrorAlert message={submitError} className="mt-3" />
 
                 {/* Place Order Button */}
-                <button
+                <SubmitButton
                   onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="w-full mt-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold py-4 rounded-xl transition-colors flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-                      <span>Placing Order...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Place Order</span>
-                      <span className="font-bold">
-                        {formatPrice(calculations.totalAmount)}
-                      </span>
-                    </>
-                  )}
-                </button>
+                  disabled={isSubmitDisabled}
+                  isSubmitting={isSubmitting}
+                  amount={calculations.totalAmount}
+                  label={amountDue > 0 && formState.paymentMethod === "card" ? "Pay & Place Order" : "Place Order"}
+                  submittingLabel="Placing Order..."
+                  variant="primary"
+                  className="mt-4"
+                />
               </div>
             </div>
           </div>
@@ -629,8 +757,8 @@ export default function CheckoutPage() {
             orderMode={formState.orderMode}
           />
 
-          {/* Payment Notice (only show if not fully paid by gift card) */}
-          {(!appliedGiftCard || appliedGiftCard.amountToApply < calculations.totalAmount) && (
+          {/* Payment Notice (only show for cash payment) */}
+          {amountDue > 0 && formState.paymentMethod === "cash" && (
             <div className="flex items-center justify-center gap-2 mt-4 text-gray-500">
               <svg
                 className="w-5 h-5"
@@ -642,40 +770,26 @@ export default function CheckoutPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={1.5}
-                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                  d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
                 />
               </svg>
               <span className="text-sm">{paymentLabel}</span>
             </div>
           )}
 
-          {/* Submit Error */}
-          {submitError && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600 text-center">{submitError}</p>
-            </div>
-          )}
+          <ErrorAlert message={submitError} className="mt-3" />
 
           {/* Place Order Button */}
-          <button
+          <SubmitButton
             onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="w-full mt-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-semibold py-4 rounded-xl transition-colors flex items-center justify-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-                <span>Placing Order...</span>
-              </>
-            ) : (
-              <>
-                <span>Place Order</span>
-                <span className="font-bold">
-                  {formatPrice(calculations.totalAmount)}
-                </span>
-              </>
-            )}
-          </button>
+            disabled={isSubmitDisabled}
+            isSubmitting={isSubmitting}
+            amount={calculations.totalAmount}
+            label={amountDue > 0 && formState.paymentMethod === "card" ? "Pay & Place Order" : "Place Order"}
+            submittingLabel="Placing Order..."
+            variant="primary"
+            className="mt-4"
+          />
         </div>
       </div>
     </div>

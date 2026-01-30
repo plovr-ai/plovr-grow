@@ -76,7 +76,7 @@ export default async function GiftcardPage({
         />
 
         <section className="bg-white border-b pt-20">
-          <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Gift Cards
             </h1>
@@ -87,7 +87,7 @@ export default async function GiftcardPage({
         </section>
 
         <section className="bg-gray-50">
-          <div className="max-w-4xl mx-auto px-4 py-12">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <GiftcardPageClient
               companySlug={companySlug}
               companyName={company.name}

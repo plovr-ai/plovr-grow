@@ -1,14 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useFormatPrice, usePhoneInput } from "@/hooks";
 import { useLoyalty } from "@/contexts/LoyaltyContext";
 import {
   StripeProvider,
   CardPaymentForm,
+  CheckoutPageLayout,
+  SubmitButton,
+  ErrorAlert,
+  PaymentLoadingState,
   type CardPaymentFormRef,
 } from "@storefront/components/checkout";
+import { usePaymentIntent } from "@storefront/hooks";
 import type { GiftcardConfig } from "@/types/company";
 
 interface GiftcardPageClientProps {
@@ -66,16 +71,30 @@ export function GiftcardPageClient({
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-
-  // Stripe payment states
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [isPaymentReady, setIsPaymentReady] = useState(false);
-  const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
   const cardPaymentFormRef = useRef<CardPaymentFormRef>(null);
 
   // Get loyalty member for auto-fill
   const { member, isLoading: isLoyaltyLoading } = useLoyalty();
+
+  // Use payment intent hook
+  const {
+    clientSecret,
+    paymentIntentId,
+    isCreatingPaymentIntent,
+    error: paymentIntentError,
+  } = usePaymentIntent({
+    amount: formState.selectedAmount,
+    apiPath: `/api/storefront/${companySlug}/payment-intent`,
+    loyaltyMemberId: member?.id,
+  });
+
+  // Sync payment intent error with submit error
+  useEffect(() => {
+    if (paymentIntentError) {
+      setSubmitError(paymentIntentError);
+    }
+  }, [paymentIntentError]);
 
   // Auto-fill form when member is logged in
   useEffect(() => {
@@ -127,56 +146,12 @@ export function GiftcardPageClient({
     }
   };
 
-  // Create PaymentIntent for Stripe
-  const createPaymentIntent = useCallback(async () => {
-    if (!effectiveAmount || isCreatingPaymentIntent || clientSecret) return;
-
-    setIsCreatingPaymentIntent(true);
-    setSubmitError(null);
-
-    try {
-      const response = await fetch(`/api/storefront/${companySlug}/payment-intent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: effectiveAmount,
-          currency: "USD",
-          loyaltyMemberId: member?.id,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setClientSecret(data.data.clientSecret);
-        setPaymentIntentId(data.data.paymentIntentId);
-      } else {
-        setSubmitError(data.error || "Failed to initialize payment");
-      }
-    } catch (error) {
-      console.error("Payment intent creation failed:", error);
-      setSubmitError("Failed to initialize payment");
-    } finally {
-      setIsCreatingPaymentIntent(false);
-    }
-  }, [effectiveAmount, companySlug, member?.id, isCreatingPaymentIntent, clientSecret]);
-
-  // Create PaymentIntent when amount is selected
+  // Reset payment ready state when client secret changes
   useEffect(() => {
-    if (effectiveAmount && !clientSecret && !isCreatingPaymentIntent) {
-      createPaymentIntent();
-    }
-  }, [effectiveAmount, clientSecret, isCreatingPaymentIntent, createPaymentIntent]);
-
-  // Reset PaymentIntent when amount changes
-  useEffect(() => {
-    if (clientSecret) {
-      setClientSecret(null);
-      setPaymentIntentId(null);
+    if (!clientSecret) {
       setIsPaymentReady(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveAmount]);
+  }, [clientSecret]);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -284,24 +259,27 @@ export function GiftcardPageClient({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Denomination Selection */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <h2 className="text-xl font-semibold mb-4">Select Amount</h2>
+    <form onSubmit={handleSubmit}>
+      <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+        {/* Left Column - Form Sections */}
+        <div className="lg:col-span-2 space-y-6 pb-40 lg:pb-0">
+          {/* Denomination Selection */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-xl font-semibold mb-4">Select Amount</h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
             {config.denominations.map((amount) => (
               <button
                 key={amount}
                 type="button"
                 onClick={() => handleDenominationSelect(amount)}
-                className={`p-6 rounded-lg border-2 transition-colors ${
+                className={`p-3 rounded-lg border-2 transition-colors ${
                   formState.selectedAmount === amount
                     ? "border-theme-primary bg-theme-primary-light"
                     : "border-gray-200 hover:border-gray-300"
                 }`}
               >
-                <div className="text-2xl font-bold">{formatPrice(amount)}</div>
+                <div className="text-lg font-bold">{formatPrice(amount)}</div>
               </button>
             ))}
           </div>
@@ -549,12 +527,7 @@ export function GiftcardPageClient({
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <h2 className="text-xl font-semibold mb-4">Payment</h2>
 
-            {isCreatingPaymentIntent && (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-500" />
-                <span className="ml-2 text-gray-500">Loading payment form...</span>
-              </div>
-            )}
+            {isCreatingPaymentIntent && <PaymentLoadingState />}
 
             {clientSecret && (
               <StripeProvider clientSecret={clientSecret}>
@@ -574,33 +547,58 @@ export function GiftcardPageClient({
             )}
           </div>
         )}
+        </div>
 
-        {/* Order Summary */}
-        {effectiveAmount !== null && !isNaN(effectiveAmount) && (
-          <div className="bg-gray-50 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
-            <div className="flex justify-between text-lg">
-              <span>Total</span>
-              <span className="font-bold">{formatPrice(effectiveAmount)}</span>
+        {/* Right Column - Desktop Sticky Summary */}
+        <div className="hidden lg:block">
+          <div className="sticky top-24">
+            <div className="bg-white rounded-xl border border-gray-100 p-4">
+              {/* Order Summary */}
+              <h2 className="text-lg font-semibold mb-3">Order Summary</h2>
+              <div className="flex justify-between text-lg mb-4">
+                <span>Total</span>
+                <span className="font-bold">
+                  {effectiveAmount ? formatPrice(effectiveAmount) : "--"}
+                </span>
+              </div>
+
+              <ErrorAlert message={submitError} className="mb-4" />
+
+              <SubmitButton
+                type="submit"
+                isSubmitting={isSubmitting}
+                disabled={isSubmitting || effectiveAmount === null || !isPaymentReady}
+                amount={effectiveAmount}
+                label="Pay"
+                submittingLabel="Processing..."
+                variant="theme"
+              />
             </div>
           </div>
-        )}
+        </div>
+      </div>
 
-        {/* Submit Error */}
-        {submitError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-            {submitError}
-          </div>
-        )}
+      {/* Mobile Fixed Footer */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-10">
+        <div className="flex items-center justify-between mb-3">
+          <span className="font-medium">Total</span>
+          <span className="text-lg font-bold">
+            {effectiveAmount ? formatPrice(effectiveAmount) : "--"}
+          </span>
+        </div>
 
-        {/* Submit Button */}
-        <button
+        <ErrorAlert message={submitError} className="mb-3" />
+
+        <SubmitButton
           type="submit"
+          isSubmitting={isSubmitting}
           disabled={isSubmitting || effectiveAmount === null || !isPaymentReady}
-          className="w-full bg-theme-primary text-theme-primary-foreground py-3 rounded-lg font-semibold hover:bg-theme-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {isSubmitting ? "Processing Payment..." : `Pay ${effectiveAmount ? formatPrice(effectiveAmount) : ""}`}
-        </button>
+          amount={effectiveAmount}
+          label="Pay"
+          submittingLabel="Processing..."
+          variant="theme"
+        />
+      </div>
     </form>
   );
 }
