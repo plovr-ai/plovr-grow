@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, CreditCard, DollarSign, TrendingDown, Wallet } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Pagination } from "@/components/orders/Pagination";
 import { useDashboardFormatPrice } from "@/hooks";
 import { formatCustomerName } from "@/lib/names";
@@ -17,17 +18,11 @@ interface GiftcardOverviewClientProps {
   currentPage: number;
   total: number;
   initialFilters: {
-    status: string;
     search: string;
+    dateFrom: string;
+    dateTo: string;
   };
 }
-
-const STATUS_OPTIONS = [
-  { value: "all", label: "All Statuses" },
-  { value: "active", label: "Active" },
-  { value: "depleted", label: "Depleted" },
-  { value: "disabled", label: "Disabled" },
-] as const;
 
 function StatCard({
   icon: Icon,
@@ -58,25 +53,6 @@ function StatCard({
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const styles = {
-    active: "bg-green-100 text-green-800",
-    depleted: "bg-gray-100 text-gray-800",
-    disabled: "bg-red-100 text-red-800",
-  };
-
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
-        styles[status as keyof typeof styles] ?? styles.active
-      )}
-    >
-      {status}
-    </span>
-  );
-}
-
 export function GiftcardOverviewClient({
   stats,
   giftCards,
@@ -89,6 +65,8 @@ export function GiftcardOverviewClient({
   const searchParams = useSearchParams();
   const formatPrice = useDashboardFormatPrice();
   const [searchInput, setSearchInput] = useState(initialFilters.search);
+  const [dateFrom, setDateFrom] = useState(initialFilters.dateFrom);
+  const [dateTo, setDateTo] = useState(initialFilters.dateTo);
 
   const updateFilters = (updates: Partial<typeof initialFilters>) => {
     const params = new URLSearchParams(searchParams);
@@ -136,13 +114,49 @@ export function GiftcardOverviewClient({
         </p>
       </div>
 
+      {/* Date Filters */}
+      <div className="flex flex-wrap items-end gap-4">
+        {/* Date From */}
+        <div className="w-[180px]">
+          <Label htmlFor="date-from" className="mb-2 block text-sm">
+            From
+          </Label>
+          <Input
+            id="date-from"
+            type="date"
+            value={dateFrom}
+            onChange={(e) => {
+              setDateFrom(e.target.value);
+              updateFilters({ dateFrom: e.target.value });
+            }}
+            className="cursor-pointer"
+          />
+        </div>
+
+        {/* Date To */}
+        <div className="w-[180px]">
+          <Label htmlFor="date-to" className="mb-2 block text-sm">
+            To
+          </Label>
+          <Input
+            id="date-to"
+            type="date"
+            value={dateTo}
+            onChange={(e) => {
+              setDateTo(e.target.value);
+              updateFilters({ dateTo: e.target.value });
+            }}
+            className="cursor-pointer"
+          />
+        </div>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={CreditCard}
           label="Total Gift Cards"
           value={stats.totalCards}
-          subValue={`${stats.activeCards} active`}
           iconColor="bg-blue-500"
         />
         <StatCard
@@ -165,33 +179,19 @@ export function GiftcardOverviewClient({
         />
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex flex-wrap gap-4">
-        <form onSubmit={handleSearchSubmit} className="min-w-[300px] flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Search by card number, name, or email..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </form>
-
-        <select
-          value={initialFilters.status}
-          onChange={(e) => updateFilters({ status: e.target.value })}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Search */}
+      <form onSubmit={handleSearchSubmit} className="max-w-md">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Search by card number, name, or email..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </form>
 
       {/* Gift Cards Table */}
       {giftCards.length === 0 ? (
@@ -214,9 +214,6 @@ export function GiftcardOverviewClient({
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                   Balance
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Created
@@ -247,9 +244,6 @@ export function GiftcardOverviewClient({
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-gray-900">
                     {formatPrice(giftCard.currentBalance)}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-center">
-                    <StatusBadge status={giftCard.status} />
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                     {formatDate(giftCard.createdAt)}

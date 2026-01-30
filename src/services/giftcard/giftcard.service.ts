@@ -17,7 +17,6 @@ import type {
   PaginatedGiftCards,
   GiftCardWithOrder,
 } from "./giftcard.types";
-import type { GiftCardStatus } from "@/repositories/giftcard.repository";
 
 export class GiftCardService {
   private _repository: GiftCardRepository | null = null;
@@ -105,17 +104,11 @@ export class GiftCardService {
       };
     }
 
-    if (giftCard.status === "disabled") {
+    // Check if card has balance
+    if (Number(giftCard.currentBalance) <= 0) {
       return {
         valid: false,
-        error: "disabled",
-      };
-    }
-
-    if (giftCard.status === "depleted" || Number(giftCard.currentBalance) <= 0) {
-      return {
-        valid: false,
-        error: "depleted",
+        error: "no_balance",
       };
     }
 
@@ -139,10 +132,6 @@ export class GiftCardService {
 
     if (!giftCard) {
       throw new Error("Gift card not found");
-    }
-
-    if (giftCard.status !== "active") {
-      throw new Error(`Gift card is ${giftCard.status}`);
     }
 
     const currentBalance = Number(giftCard.currentBalance);
@@ -237,9 +226,13 @@ export class GiftCardService {
    */
   async getCompanyGiftCardStats(
     tenantId: string,
-    companyId: string
+    companyId: string,
+    options: {
+      dateFrom?: Date;
+      dateTo?: Date;
+    } = {}
   ): Promise<GiftCardStats> {
-    return this.repository.getStatsByCompany(tenantId, companyId);
+    return this.repository.getStatsByCompany(tenantId, companyId, options);
   }
 
   /**
@@ -251,8 +244,9 @@ export class GiftCardService {
     options: {
       page?: number;
       pageSize?: number;
-      status?: GiftCardStatus;
       search?: string;
+      dateFrom?: Date;
+      dateTo?: Date;
     } = {}
   ): Promise<PaginatedGiftCards> {
     const result = await this.repository.getByCompany(tenantId, companyId, options);
@@ -264,7 +258,6 @@ export class GiftCardService {
         cardNumber: item.cardNumber,
         initialAmount: Number(item.initialAmount),
         currentBalance: Number(item.currentBalance),
-        status: item.status as GiftCardStatus,
         createdAt: item.createdAt,
         purchaseOrder: {
           id: item.purchaseOrder.id,
@@ -285,7 +278,6 @@ export class GiftCardService {
     cardNumber: string;
     initialAmount: unknown;
     currentBalance: unknown;
-    status: string;
     createdAt: Date;
   }): GiftCardData {
     return {
@@ -293,7 +285,6 @@ export class GiftCardService {
       cardNumber: giftCard.cardNumber,
       initialAmount: Number(giftCard.initialAmount),
       currentBalance: Number(giftCard.currentBalance),
-      status: giftCard.status as GiftCardStatus,
       createdAt: giftCard.createdAt,
     };
   }

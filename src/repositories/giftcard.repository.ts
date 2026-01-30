@@ -2,9 +2,6 @@ import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
 
-export const GIFT_CARD_STATUSES = ["active", "depleted", "disabled"] as const;
-export type GiftCardStatus = (typeof GIFT_CARD_STATUSES)[number];
-
 export const GIFT_CARD_TRANSACTION_TYPES = ["purchase", "redemption", "refund"] as const;
 export type GiftCardTransactionType = (typeof GIFT_CARD_TRANSACTION_TYPES)[number];
 
@@ -30,7 +27,6 @@ export class GiftCardRepository {
         initialAmount: data.initialAmount,
         currentBalance: data.initialAmount,
         purchaseOrderId: data.purchaseOrderId,
-        status: "active",
       },
     });
   }
@@ -73,35 +69,10 @@ export class GiftCardRepository {
   /**
    * Update gift card balance
    */
-  async updateBalance(
-    tenantId: string,
-    id: string,
-    newBalance: number,
-    status?: GiftCardStatus
-  ) {
-    const updateData: Prisma.GiftCardUpdateInput = {
-      currentBalance: newBalance,
-    };
-
-    if (status) {
-      updateData.status = status;
-    } else if (newBalance <= 0) {
-      updateData.status = "depleted";
-    }
-
+  async updateBalance(tenantId: string, id: string, newBalance: number) {
     return prisma.giftCard.update({
       where: { id },
-      data: updateData,
-    });
-  }
-
-  /**
-   * Disable a gift card
-   */
-  async disable(tenantId: string, id: string) {
-    return prisma.giftCard.update({
-      where: { id },
-      data: { status: "disabled" },
+      data: { currentBalance: newBalance },
     });
   }
 
@@ -159,63 +130,59 @@ export class GiftCardRepository {
    */
   async getStatsByCompany(
     tenantId: string,
-    companyId: string
+    companyId: string,
+    options: {
+      dateFrom?: Date;
+      dateTo?: Date;
+    } = {}
   ): Promise<{
     totalCards: number;
     totalValueSold: number;
     totalRedeemed: number;
     activeBalance: number;
-    activeCards: number;
-    depletedCards: number;
-    disabledCards: number;
   }> {
-    const [countByStatus, totals, activeBalanceSum, redemptionTotal] =
-      await Promise.all([
-        // Count cards by status
-        prisma.giftCard.groupBy({
-          by: ["status"],
-          where: { tenantId, companyId },
-          _count: true,
-        }),
-        // Sum initial amounts and count total
-        prisma.giftCard.aggregate({
-          where: { tenantId, companyId },
-          _sum: { initialAmount: true },
-          _count: true,
-        }),
-        // Sum active balances (only active cards)
-        prisma.giftCard.aggregate({
-          where: { tenantId, companyId, status: "active" },
-          _sum: { currentBalance: true },
-        }),
-        // Sum redemption transactions
-        prisma.giftCardTransaction.aggregate({
-          where: {
-            tenantId,
-            giftCard: { companyId },
-            type: "redemption",
-          },
-          _sum: { amount: true },
-        }),
-      ]);
+    const { dateFrom, dateTo } = options;
 
-    // Process counts by status
-    const statusCounts = countByStatus.reduce(
-      (acc, item) => {
-        acc[item.status] = item._count;
-        return acc;
-      },
-      {} as Record<string, number>
-    );
+    const dateFilter =
+      dateFrom && dateTo
+        ? {
+            createdAt: {
+              gte: dateFrom,
+              lte: dateTo,
+            },
+          }
+        : {};
+
+    const giftCardWhere = { tenantId, companyId, ...dateFilter };
+
+    const [totals, activeBalanceSum, redemptionTotal] = await Promise.all([
+      // Sum initial amounts and count total
+      prisma.giftCard.aggregate({
+        where: giftCardWhere,
+        _sum: { initialAmount: true },
+        _count: true,
+      }),
+      // Sum all current balances
+      prisma.giftCard.aggregate({
+        where: giftCardWhere,
+        _sum: { currentBalance: true },
+      }),
+      // Sum redemption transactions for gift cards in the date range
+      prisma.giftCardTransaction.aggregate({
+        where: {
+          tenantId,
+          giftCard: { companyId, ...dateFilter },
+          type: "redemption",
+        },
+        _sum: { amount: true },
+      }),
+    ]);
 
     return {
       totalCards: totals._count,
       totalValueSold: Number(totals._sum.initialAmount ?? 0),
       totalRedeemed: Number(redemptionTotal._sum.amount ?? 0),
       activeBalance: Number(activeBalanceSum._sum.currentBalance ?? 0),
-      activeCards: statusCounts["active"] ?? 0,
-      depletedCards: statusCounts["depleted"] ?? 0,
-      disabledCards: statusCounts["disabled"] ?? 0,
     };
   }
 
@@ -228,16 +195,16 @@ export class GiftCardRepository {
     options: {
       page?: number;
       pageSize?: number;
-      status?: GiftCardStatus;
       search?: string;
+      dateFrom?: Date;
+      dateTo?: Date;
     } = {}
   ) {
-    const { page = 1, pageSize = 20, status, search } = options;
+    const { page = 1, pageSize = 20, search, dateFrom, dateTo } = options;
 
     const where: Prisma.GiftCardWhereInput = {
       tenantId,
       companyId,
-      ...(status && { status }),
       ...(search && {
         OR: [
           { cardNumber: { contains: search } },
@@ -246,6 +213,13 @@ export class GiftCardRepository {
           { purchaseOrder: { customerLastName: { contains: search } } },
         ],
       }),
+      ...(dateFrom &&
+        dateTo && {
+          createdAt: {
+            gte: dateFrom,
+            lte: dateTo,
+          },
+        }),
     };
 
     const [items, total] = await Promise.all([

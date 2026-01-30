@@ -2,13 +2,13 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { giftCardService } from "@/services/giftcard";
 import { GiftcardOverviewClient } from "@/components/dashboard/giftcard";
-import type { GiftCardStatus } from "@/repositories/giftcard.repository";
 
 interface GiftcardPageProps {
   searchParams: Promise<{
     page?: string;
-    status?: string;
     search?: string;
+    dateFrom?: string;
+    dateTo?: string;
   }>;
 }
 
@@ -25,17 +25,27 @@ export default async function GiftcardPage({ searchParams }: GiftcardPageProps) 
 
   // Parse filter parameters
   const currentPage = parseInt(search.page ?? "1", 10);
-  const statusFilter = search.status as GiftCardStatus | undefined;
   const searchQuery = search.search;
+
+  // Parse date filters
+  const dateFrom = search.dateFrom ? new Date(search.dateFrom) : undefined;
+  // For dateTo, set to end of day for inclusive range
+  const dateTo = search.dateTo
+    ? new Date(search.dateTo + "T23:59:59.999")
+    : undefined;
 
   // Fetch stats and gift cards in parallel
   const [stats, giftCardsData] = await Promise.all([
-    giftCardService.getCompanyGiftCardStats(tenantId, companyId),
+    giftCardService.getCompanyGiftCardStats(tenantId, companyId, {
+      dateFrom,
+      dateTo,
+    }),
     giftCardService.getCompanyGiftCards(tenantId, companyId, {
       page: currentPage,
       pageSize: 20,
-      status: statusFilter,
       search: searchQuery,
+      dateFrom,
+      dateTo,
     }),
   ]);
 
@@ -47,8 +57,9 @@ export default async function GiftcardPage({ searchParams }: GiftcardPageProps) 
       currentPage={currentPage}
       total={giftCardsData.total}
       initialFilters={{
-        status: statusFilter ?? "all",
         search: searchQuery ?? "",
+        dateFrom: search.dateFrom ?? "",
+        dateTo: search.dateTo ?? "",
       }}
     />
   );
