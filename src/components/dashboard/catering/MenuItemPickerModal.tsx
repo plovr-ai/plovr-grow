@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { X, Search } from "lucide-react";
+import { X, Search, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -22,10 +22,11 @@ interface MenuItem {
 interface MenuItemPickerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (item: MenuItem) => void;
+  onSelect: (items: MenuItem[]) => void;
   menus: MenuInfo[];
   menuItems: MenuItem[];
   formatPrice: (price: number) => string;
+  mode?: "single" | "multi";
   selectedItemId?: string;
 }
 
@@ -36,6 +37,7 @@ export function MenuItemPickerModal({
   menus,
   menuItems,
   formatPrice,
+  mode = "multi",
   selectedItemId,
 }: MenuItemPickerModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,6 +45,9 @@ export function MenuItemPickerModal({
     menus.length > 0 ? menus[0].id : null
   );
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Map<string, MenuItem>>(
+    new Map()
+  );
 
   // Ensure selectedMenuId is valid (in case menus change)
   const effectiveMenuId = useMemo(() => {
@@ -85,6 +90,7 @@ export function MenuItemPickerModal({
   const handleClose = useCallback(() => {
     setSearchQuery("");
     setSelectedCategory(null);
+    setSelectedItems(new Map());
     onClose();
   }, [onClose]);
 
@@ -110,8 +116,29 @@ export function MenuItemPickerModal({
 
   if (!isOpen) return null;
 
+  const handleItemToggle = (item: MenuItem) => {
+    setSelectedItems((prev) => {
+      const next = new Map(prev);
+      if (next.has(item.id)) {
+        next.delete(item.id);
+      } else {
+        next.set(item.id, item);
+      }
+      return next;
+    });
+  };
+
   const handleItemClick = (item: MenuItem) => {
-    onSelect(item);
+    if (mode === "single") {
+      onSelect([item]);
+      handleClose();
+    } else {
+      handleItemToggle(item);
+    }
+  };
+
+  const handleConfirm = () => {
+    onSelect(Array.from(selectedItems.values()));
     handleClose();
   };
 
@@ -230,32 +257,74 @@ export function MenuItemPickerModal({
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {filteredItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleItemClick(item)}
-                    className={cn(
-                      "flex flex-col items-start rounded-lg border p-3 text-left transition-colors",
-                      selectedItemId === item.id
-                        ? "border-theme-primary bg-theme-primary-light"
-                        : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
-                    )}
-                  >
-                    <span className="font-medium text-gray-900 line-clamp-2">
-                      {item.name}
-                    </span>
-                    <span className="mt-1 text-xs text-gray-500">
-                      {item.categoryName}
-                    </span>
-                    <span className="mt-2 font-semibold text-gray-900">
-                      {formatPrice(item.price)}
-                    </span>
-                  </button>
-                ))}
+                {filteredItems.map((item) => {
+                  const isSelected =
+                    mode === "single"
+                      ? selectedItemId === item.id
+                      : selectedItems.has(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleItemClick(item)}
+                      className={cn(
+                        "relative flex flex-col items-start rounded-lg border p-3 text-left transition-colors",
+                        isSelected
+                          ? "border-theme-primary bg-theme-primary-light"
+                          : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                      )}
+                    >
+                      {mode === "multi" && (
+                        <div
+                          className={cn(
+                            "absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded border transition-colors",
+                            isSelected
+                              ? "border-theme-primary bg-theme-primary"
+                              : "border-gray-300 bg-white"
+                          )}
+                        >
+                          {isSelected && (
+                            <Check className="h-3 w-3 text-theme-primary-foreground" />
+                          )}
+                        </div>
+                      )}
+                      <span className="font-medium text-gray-900 line-clamp-2 pr-6">
+                        {item.name}
+                      </span>
+                      <span className="mt-1 text-xs text-gray-500">
+                        {item.categoryName}
+                      </span>
+                      <span className="mt-2 font-semibold text-gray-900">
+                        {formatPrice(item.price)}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
+
+        {/* Footer - Multi-select confirmation */}
+        {mode === "multi" && (
+          <div className="flex items-center justify-between border-t px-6 py-4">
+            <span className="text-sm text-gray-600">
+              {selectedItems.size === 0
+                ? "Select items to add"
+                : `${selectedItems.size} item${selectedItems.size > 1 ? "s" : ""} selected`}
+            </span>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirm}
+                disabled={selectedItems.size === 0}
+              >
+                Add Items{selectedItems.size > 0 ? ` (${selectedItems.size})` : ""}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

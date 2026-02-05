@@ -55,6 +55,7 @@ model Company {
   supportPhone          String?         @map("support_phone")
   currency              String          @default("USD")
   locale                String          @default("en-US")
+  timezone              String          @default("America/New_York")
   settings              Json?
   status                String          @default("active")
   onboardingStatus      String          @default("not_started") @map("onboarding_status")

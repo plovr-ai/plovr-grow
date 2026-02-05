@@ -156,6 +156,9 @@ async function main() {
     websiteUrl: "https://joespizza.com",
     supportEmail: "support@joespizza.com",
     supportPhone: "(212) 555-0100",
+    currency: "USD",
+    locale: "en-US",
+    timezone: "America/New_York",
     settings: joesPizzaWebsiteSettings,
   };
 
@@ -579,6 +582,9 @@ async function main() {
     websiteUrl: "https://bellasbakery.com",
     supportEmail: "hello@bellasbakery.com",
     supportPhone: "(415) 555-0200",
+    currency: "USD",
+    locale: "en-US",
+    timezone: "America/Los_Angeles",
     settings: bellasBakeryWebsiteSettings,
   };
 
@@ -1497,6 +1503,9 @@ async function main() {
       description: "Testing onboarding flow",
       supportEmail: "test@example.com",
       supportPhone: "(555) 555-5555",
+      currency: "USD",
+      locale: "en-US",
+      timezone: "America/Los_Angeles",
     },
   });
 

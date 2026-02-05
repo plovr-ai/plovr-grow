@@ -1,5 +1,5 @@
 import { toZonedTime, fromZonedTime } from "date-fns-tz";
-import { startOfDay, endOfDay } from "date-fns";
+import { startOfDay, endOfDay, subDays } from "date-fns";
 
 /**
  * Get today's date string in a specific timezone
@@ -35,4 +35,24 @@ export function getDateRangeInTimezone(
   const utcEnd = fromZonedTime(localEnd, timezone);
 
   return { start: utcStart, end: utcEnd };
+}
+
+/**
+ * Get the last N days date range in a specific timezone
+ * @param timezone - IANA timezone (e.g., "America/Los_Angeles")
+ * @param days - Number of days to go back (default: 30)
+ * @returns Object with from and to date strings in YYYY-MM-DD format
+ */
+export function getLastNDaysInTimezone(
+  timezone: string,
+  days: number = 30
+): { from: string; to: string } {
+  const now = new Date();
+  const zonedToday = toZonedTime(now, timezone);
+  const zonedPastDate = subDays(zonedToday, days);
+
+  return {
+    from: zonedPastDate.toISOString().split("T")[0],
+    to: zonedToday.toISOString().split("T")[0],
+  };
 }

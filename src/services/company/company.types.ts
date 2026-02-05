@@ -35,4 +35,5 @@ export interface CreateTenantWithCompanyInput {
   companySupportPhone?: string;
   companyCurrency?: string;
   companyLocale?: string;
+  companyTimezone?: string;
 }

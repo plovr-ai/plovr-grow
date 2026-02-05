@@ -26,6 +26,7 @@ const mockCompany = {
   supportPhone: "555-123-4567",
   currency: "USD",
   locale: "en-US",
+  timezone: "America/New_York",
   status: "active",
   createdAt: new Date("2024-01-15"),
   merchants: [

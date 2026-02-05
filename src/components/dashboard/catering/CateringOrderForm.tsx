@@ -38,6 +38,7 @@ interface CateringOrderFormProps {
   menus: MenuInfo[];
   menuItems: MenuItem[];
   leadId?: string;
+  initialEventDate?: string;
   initialData?: {
     customerFirstName: string;
     customerLastName: string;
@@ -52,6 +53,7 @@ export function CateringOrderForm({
   menus,
   menuItems,
   leadId,
+  initialEventDate,
   initialData,
 }: CateringOrderFormProps) {
   const router = useRouter();
@@ -65,7 +67,7 @@ export function CateringOrderForm({
   const [customerEmail, setCustomerEmail] = useState(initialData?.customerEmail ?? "");
 
   // Event details
-  const [eventDate, setEventDate] = useState("");
+  const [eventDate, setEventDate] = useState(initialEventDate ?? "");
   const [eventTime, setEventTime] = useState("");
   const [guestCount, setGuestCount] = useState("");
   const [eventType, setEventType] = useState("");
@@ -98,9 +100,10 @@ export function CateringOrderForm({
     setIsPickerOpen(true);
   };
 
-  const handleItemSelect = (selectedItem: MenuItem) => {
+  const handleItemSelect = (selectedItemsFromModal: MenuItem[]) => {
     if (editingItemIndex !== null) {
-      // Update existing item
+      // Edit mode: single item replacement
+      const selectedItem = selectedItemsFromModal[0];
       const newItems = [...items];
       const item = newItems[editingItemIndex];
       item.menuItemId = selectedItem.id;
@@ -109,17 +112,15 @@ export function CateringOrderForm({
       item.totalPrice = selectedItem.price * item.quantity;
       setItems(newItems);
     } else {
-      // Add new item
-      setItems([
-        ...items,
-        {
-          menuItemId: selectedItem.id,
-          name: selectedItem.name,
-          quantity: 1,
-          unitPrice: selectedItem.price,
-          totalPrice: selectedItem.price,
-        },
-      ]);
+      // Add mode: batch add items
+      const newItems = selectedItemsFromModal.map((selectedItem) => ({
+        menuItemId: selectedItem.id,
+        name: selectedItem.name,
+        quantity: 1,
+        unitPrice: selectedItem.price,
+        totalPrice: selectedItem.price,
+      }));
+      setItems([...items, ...newItems]);
     }
   };
 
@@ -230,7 +231,7 @@ export function CateringOrderForm({
   return (
     <div className="space-y-8 max-w-4xl">
       {/* Merchant Selection */}
-      {merchants.length > 1 && (
+      {merchants.length > 0 && (
         <div className="bg-white rounded-lg border p-6">
           <h3 className="font-semibold mb-4">Location</h3>
           <Select
@@ -504,6 +505,7 @@ export function CateringOrderForm({
         menus={menus}
         menuItems={menuItems}
         formatPrice={priceFormatter}
+        mode={editingItemIndex !== null ? "single" : "multi"}
         selectedItemId={
           editingItemIndex !== null ? items[editingItemIndex]?.menuItemId : undefined
         }

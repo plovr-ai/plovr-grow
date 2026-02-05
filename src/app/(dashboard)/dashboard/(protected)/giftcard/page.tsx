@@ -1,7 +1,9 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { giftCardService } from "@/services/giftcard";
+import { companyService } from "@/services/company";
 import { GiftcardOverviewClient } from "@/components/dashboard/giftcard";
+import { getLastNDaysInTimezone } from "@/lib/timezone";
 
 interface GiftcardPageProps {
   searchParams: Promise<{
@@ -23,16 +25,23 @@ export default async function GiftcardPage({ searchParams }: GiftcardPageProps) 
 
   const { tenantId, companyId } = session.user;
 
+  // Get company for timezone
+  const company = await companyService.getCompany(companyId);
+  const companyTimezone = company?.timezone ?? "America/New_York";
+
+  // Calculate default date range (last 30 days)
+  const defaultDateRange = getLastNDaysInTimezone(companyTimezone, 30);
+  const dateFromString = search.dateFrom ?? defaultDateRange.from;
+  const dateToString = search.dateTo ?? defaultDateRange.to;
+
   // Parse filter parameters
   const currentPage = parseInt(search.page ?? "1", 10);
   const searchQuery = search.search;
 
-  // Parse date filters
-  const dateFrom = search.dateFrom ? new Date(search.dateFrom) : undefined;
+  // Parse date filters (now always have values)
+  const dateFrom = new Date(dateFromString);
   // For dateTo, set to end of day for inclusive range
-  const dateTo = search.dateTo
-    ? new Date(search.dateTo + "T23:59:59.999")
-    : undefined;
+  const dateTo = new Date(dateToString + "T23:59:59.999");
 
   // Fetch stats and gift cards in parallel
   const [stats, giftCardsData] = await Promise.all([
@@ -58,8 +67,8 @@ export default async function GiftcardPage({ searchParams }: GiftcardPageProps) 
       total={giftCardsData.total}
       initialFilters={{
         search: searchQuery ?? "",
-        dateFrom: search.dateFrom ?? "",
-        dateTo: search.dateTo ?? "",
+        dateFrom: dateFromString,
+        dateTo: dateToString,
       }}
     />
   );

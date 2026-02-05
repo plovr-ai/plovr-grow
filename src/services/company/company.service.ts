@@ -44,6 +44,7 @@ export class CompanyService {
           supportPhone: input.companySupportPhone,
           currency: input.companyCurrency ?? "USD",
           locale: input.companyLocale ?? "en-US",
+          timezone: input.companyTimezone ?? "America/New_York",
         },
       });
 
@@ -72,6 +73,7 @@ export class CompanyService {
       supportPhone: input.supportPhone,
       currency: input.currency ?? "USD",
       locale: input.locale ?? "en-US",
+      timezone: input.timezone ?? "America/New_York",
       settings: input.settings as Prisma.InputJsonValue,
     });
   }
@@ -152,6 +154,7 @@ export class CompanyService {
       data.supportPhone = input.supportPhone;
     if (input.currency !== undefined) data.currency = input.currency;
     if (input.locale !== undefined) data.locale = input.locale;
+    if (input.timezone !== undefined) data.timezone = input.timezone;
     if (input.settings !== undefined)
       data.settings = input.settings as Prisma.InputJsonValue;
     if (input.status !== undefined) data.status = input.status;

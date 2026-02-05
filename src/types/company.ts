@@ -19,6 +19,7 @@ export interface CompanyInfo {
   supportPhone: string | null;
   currency: string;
   locale: string;
+  timezone: string;
   status: CompanyStatus;
 
   // Onboarding fields
@@ -104,6 +105,7 @@ export interface CreateCompanyInput {
   supportPhone?: string;
   currency?: string;
   locale?: string;
+  timezone?: string;
   settings?: CompanySettings;
 }
 
@@ -117,6 +119,7 @@ export interface UpdateCompanyInput {
   supportPhone?: string;
   currency?: string;
   locale?: string;
+  timezone?: string;
   settings?: CompanySettings;
   status?: CompanyStatus;
 }
