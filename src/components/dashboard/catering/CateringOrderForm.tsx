@@ -20,6 +20,7 @@ interface MenuItem {
   id: string;
   name: string;
   price: number;
+  categoryId: string;
   categoryName: string;
   menuId: string;
 }
@@ -100,25 +101,25 @@ export function CateringOrderForm({
     setIsPickerOpen(true);
   };
 
-  const handleItemSelect = (selectedItemsFromModal: MenuItem[]) => {
+  const handleItemSelect = (selectedItemsFromModal: Array<{ item: MenuItem; quantity: number }>) => {
     if (editingItemIndex !== null) {
       // Edit mode: single item replacement
-      const selectedItem = selectedItemsFromModal[0];
+      const { item: selectedItem } = selectedItemsFromModal[0];
       const newItems = [...items];
-      const item = newItems[editingItemIndex];
-      item.menuItemId = selectedItem.id;
-      item.name = selectedItem.name;
-      item.unitPrice = selectedItem.price;
-      item.totalPrice = selectedItem.price * item.quantity;
+      const existingItem = newItems[editingItemIndex];
+      existingItem.menuItemId = selectedItem.id;
+      existingItem.name = selectedItem.name;
+      existingItem.unitPrice = selectedItem.price;
+      existingItem.totalPrice = selectedItem.price * existingItem.quantity;
       setItems(newItems);
     } else {
-      // Add mode: batch add items
-      const newItems = selectedItemsFromModal.map((selectedItem) => ({
-        menuItemId: selectedItem.id,
-        name: selectedItem.name,
-        quantity: 1,
-        unitPrice: selectedItem.price,
-        totalPrice: selectedItem.price,
+      // Add mode: batch add items with quantities
+      const newItems = selectedItemsFromModal.map(({ item, quantity }) => ({
+        menuItemId: item.id,
+        name: item.name,
+        quantity,
+        unitPrice: item.price,
+        totalPrice: item.price * quantity,
       }));
       setItems([...items, ...newItems]);
     }

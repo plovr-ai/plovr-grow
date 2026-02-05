@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { X, Search, Check } from "lucide-react";
+import { X, Search, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -15,14 +15,20 @@ interface MenuItem {
   id: string;
   name: string;
   price: number;
+  categoryId: string;
   categoryName: string;
   menuId: string;
+}
+
+interface SelectedItemWithQuantity {
+  item: MenuItem;
+  quantity: number;
 }
 
 interface MenuItemPickerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (items: MenuItem[]) => void;
+  onSelect: (items: SelectedItemWithQuantity[]) => void;
   menus: MenuInfo[];
   menuItems: MenuItem[];
   formatPrice: (price: number) => string;
@@ -45,9 +51,15 @@ export function MenuItemPickerModal({
     menus.length > 0 ? menus[0].id : null
   );
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedItems, setSelectedItems] = useState<Map<string, MenuItem>>(
+  const [selectedItems, setSelectedItems] = useState<Map<string, SelectedItemWithQuantity>>(
     new Map()
   );
+
+  // Key for React rendering (unique per category-item combination)
+  const getReactKey = (item: MenuItem) => `${item.categoryId}-${item.id}`;
+
+  // Key for state Map (same item shares quantity across categories)
+  const getStateKey = (item: MenuItem) => item.id;
 
   // Ensure selectedMenuId is valid (in case menus change)
   const effectiveMenuId = useMemo(() => {
@@ -69,6 +81,13 @@ export function MenuItemPickerModal({
     return Array.from(categorySet).sort();
   }, [menuFilteredItems]);
 
+  // Auto-select first category when categories change or selectedCategory is invalid
+  useEffect(() => {
+    if (categories.length > 0 && (!selectedCategory || !categories.includes(selectedCategory))) {
+      setSelectedCategory(categories[0]);
+    }
+  }, [categories, selectedCategory]);
+
   // Filter items based on search and category
   // When searching, ignore category filter to search all items in current menu
   const filteredItems = useMemo(() => {
@@ -80,9 +99,7 @@ export function MenuItemPickerModal({
       if (searchQuery) {
         return matchesSearch;
       }
-      const matchesCategory =
-        !selectedCategory || item.categoryName === selectedCategory;
-      return matchesCategory;
+      return item.categoryName === selectedCategory;
     });
   }, [menuFilteredItems, searchQuery, selectedCategory]);
 
@@ -116,13 +133,33 @@ export function MenuItemPickerModal({
 
   if (!isOpen) return null;
 
-  const handleItemToggle = (item: MenuItem) => {
+  const handleIncrement = (item: MenuItem, e: React.MouseEvent) => {
+    e.stopPropagation();
     setSelectedItems((prev) => {
       const next = new Map(prev);
-      if (next.has(item.id)) {
-        next.delete(item.id);
+      const key = getStateKey(item);
+      const existing = next.get(key);
+      if (existing) {
+        next.set(key, { item, quantity: existing.quantity + 1 });
       } else {
-        next.set(item.id, item);
+        next.set(key, { item, quantity: 1 });
+      }
+      return next;
+    });
+  };
+
+  const handleDecrement = (item: MenuItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedItems((prev) => {
+      const next = new Map(prev);
+      const key = getStateKey(item);
+      const existing = next.get(key);
+      if (existing) {
+        if (existing.quantity <= 1) {
+          next.delete(key);
+        } else {
+          next.set(key, { item, quantity: existing.quantity - 1 });
+        }
       }
       return next;
     });
@@ -130,10 +167,21 @@ export function MenuItemPickerModal({
 
   const handleItemClick = (item: MenuItem) => {
     if (mode === "single") {
-      onSelect([item]);
+      onSelect([{ item, quantity: 1 }]);
       handleClose();
     } else {
-      handleItemToggle(item);
+      // In multi mode, clicking the card increments by 1
+      setSelectedItems((prev) => {
+        const next = new Map(prev);
+        const key = getStateKey(item);
+        const existing = next.get(key);
+        if (existing) {
+          next.set(key, { item, quantity: existing.quantity + 1 });
+        } else {
+          next.set(key, { item, quantity: 1 });
+        }
+        return next;
+      });
     }
   };
 
@@ -141,6 +189,12 @@ export function MenuItemPickerModal({
     onSelect(Array.from(selectedItems.values()));
     handleClose();
   };
+
+  // Calculate total quantity for footer display
+  const totalQuantity = Array.from(selectedItems.values()).reduce(
+    (sum, { quantity }) => sum + quantity,
+    0
+  );
 
   return (
     <div
@@ -208,20 +262,6 @@ export function MenuItemPickerModal({
           {/* Category Sidebar */}
           <div className="w-48 flex-shrink-0 overflow-y-auto border-r bg-gray-50 p-4">
             <nav className="flex flex-col gap-1">
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className={cn(
-                  "w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  !selectedCategory
-                    ? "bg-theme-primary-light text-theme-primary-hover border-l-4 border-theme-primary"
-                    : "text-gray-700 hover:bg-gray-100"
-                )}
-              >
-                All Items
-                <span className="ml-1 text-xs opacity-75">
-                  ({menuFilteredItems.length})
-                </span>
-              </button>
               {categories.map((category) => {
                 const count = menuFilteredItems.filter(
                   (item) => item.categoryName === category
@@ -258,45 +298,70 @@ export function MenuItemPickerModal({
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {filteredItems.map((item) => {
+                  const selectedItem = selectedItems.get(getStateKey(item));
+                  const quantity = selectedItem?.quantity ?? 0;
                   const isSelected =
                     mode === "single"
                       ? selectedItemId === item.id
-                      : selectedItems.has(item.id);
+                      : quantity > 0;
                   return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleItemClick(item)}
+                    <div
+                      key={getReactKey(item)}
                       className={cn(
-                        "relative flex flex-col items-start rounded-lg border p-3 text-left transition-colors",
+                        "relative flex flex-col rounded-lg border p-3 transition-colors",
                         isSelected
                           ? "border-theme-primary bg-theme-primary-light"
                           : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
                       )}
                     >
+                      <button
+                        type="button"
+                        onClick={() => handleItemClick(item)}
+                        className="flex-1 text-left"
+                      >
+                        <span className="font-medium text-gray-900 line-clamp-2">
+                          {item.name}
+                        </span>
+                        <span className="mt-1 block text-xs text-gray-500">
+                          {item.categoryName}
+                        </span>
+                        <span className="mt-2 block font-semibold text-gray-900">
+                          {formatPrice(item.price)}
+                        </span>
+                      </button>
                       {mode === "multi" && (
-                        <div
-                          className={cn(
-                            "absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded border transition-colors",
-                            isSelected
-                              ? "border-theme-primary bg-theme-primary"
-                              : "border-gray-300 bg-white"
-                          )}
-                        >
-                          {isSelected && (
-                            <Check className="h-3 w-3 text-theme-primary-foreground" />
-                          )}
+                        <div className="mt-3 flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => handleDecrement(item, e)}
+                            disabled={quantity === 0}
+                            className={cn(
+                              "flex h-7 w-7 items-center justify-center rounded-full border transition-colors",
+                              quantity > 0
+                                ? "border-theme-primary text-theme-primary hover:bg-theme-primary hover:text-theme-primary-foreground"
+                                : "border-gray-300 text-gray-300 cursor-not-allowed"
+                            )}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span
+                            className={cn(
+                              "w-8 text-center font-medium",
+                              quantity > 0 ? "text-gray-900" : "text-gray-400"
+                            )}
+                          >
+                            {quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => handleIncrement(item, e)}
+                            className="flex h-7 w-7 items-center justify-center rounded-full border border-theme-primary text-theme-primary transition-colors hover:bg-theme-primary hover:text-theme-primary-foreground"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
                         </div>
                       )}
-                      <span className="font-medium text-gray-900 line-clamp-2 pr-6">
-                        {item.name}
-                      </span>
-                      <span className="mt-1 text-xs text-gray-500">
-                        {item.categoryName}
-                      </span>
-                      <span className="mt-2 font-semibold text-gray-900">
-                        {formatPrice(item.price)}
-                      </span>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -308,9 +373,9 @@ export function MenuItemPickerModal({
         {mode === "multi" && (
           <div className="flex items-center justify-between border-t px-6 py-4">
             <span className="text-sm text-gray-600">
-              {selectedItems.size === 0
+              {totalQuantity === 0
                 ? "Select items to add"
-                : `${selectedItems.size} item${selectedItems.size > 1 ? "s" : ""} selected`}
+                : `${selectedItems.size} item${selectedItems.size > 1 ? "s" : ""}, ${totalQuantity} total`}
             </span>
             <div className="flex gap-3">
               <Button variant="outline" onClick={handleClose}>
@@ -318,9 +383,9 @@ export function MenuItemPickerModal({
               </Button>
               <Button
                 onClick={handleConfirm}
-                disabled={selectedItems.size === 0}
+                disabled={totalQuantity === 0}
               >
-                Add Items{selectedItems.size > 0 ? ` (${selectedItems.size})` : ""}
+                Add Items{totalQuantity > 0 ? ` (${totalQuantity})` : ""}
               </Button>
             </div>
           </div>
