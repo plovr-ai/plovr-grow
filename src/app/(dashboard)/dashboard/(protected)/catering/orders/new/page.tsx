@@ -8,6 +8,7 @@ interface NewCateringOrderPageProps {
   searchParams: Promise<{
     merchantId?: string;
     leadId?: string;
+    eventDate?: string;
   }>;
 }
 
@@ -80,6 +81,7 @@ export default async function NewCateringOrderPage({
         menus={activeMenus.map((m) => ({ id: m.id, name: m.name }))}
         menuItems={menuItems}
         leadId={search.leadId}
+        initialEventDate={search.eventDate}
       />
     </div>
   );

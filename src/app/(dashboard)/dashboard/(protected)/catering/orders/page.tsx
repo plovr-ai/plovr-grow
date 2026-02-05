@@ -40,10 +40,11 @@ export default async function CateringOrdersPage({
     companyId
   );
 
-  // Default merchant ID for API calls
+  // Default merchant ID for API calls (always select first merchant if not specified)
   const defaultMerchantId = merchants[0]?.id;
+  const selectedMerchantId = merchantIdFilter || defaultMerchantId;
 
-  // Fetch orders with pagination
+  // Fetch orders with pagination (always filter by merchant for catering)
   const ordersData = await cateringOrderService.getCompanyOrders(
     tenantId,
     companyId,
@@ -52,7 +53,7 @@ export default async function CateringOrdersPage({
       pageSize: 20,
       search: searchQuery,
       status: statusFilter as "draft" | "sent" | "paid" | "completed" | "cancelled" | "all" | undefined,
-      merchantId: merchantIdFilter,
+      merchantId: selectedMerchantId,
       dateFrom: search.dateFrom ? new Date(search.dateFrom) : undefined,
       dateTo: search.dateTo ? new Date(search.dateTo) : undefined,
     }
@@ -64,12 +65,12 @@ export default async function CateringOrdersPage({
       totalPages={ordersData.totalPages}
       currentPage={currentPage}
       total={ordersData.total}
-      merchants={merchants.map((m) => ({ id: m.id, name: m.name }))}
+      merchants={merchants.map((m) => ({ id: m.id, name: m.name, timezone: m.timezone }))}
       defaultMerchantId={defaultMerchantId}
       initialFilters={{
         search: searchQuery ?? "",
         status: statusFilter ?? "all",
-        merchantId: merchantIdFilter ?? "all",
+        merchantId: selectedMerchantId ?? "",
         dateFrom: search.dateFrom ?? "",
         dateTo: search.dateTo ?? "",
       }}
