@@ -58,7 +58,7 @@ export class LoyaltyMemberService {
       tenantId,
       companyId,
       phone,
-      data ? { email: data.email, name: data.name } : undefined
+      data ? { email: data.email, firstName: data.firstName, lastName: data.lastName } : undefined
     );
     return {
       member: toLoyaltyMemberData(result.member),
@@ -80,7 +80,8 @@ export class LoyaltyMemberService {
     return {
       memberId: member.id,
       phone: member.phone,
-      name: member.name,
+      firstName: member.firstName,
+      lastName: member.lastName,
       points: member.points,
       totalOrders: member.totalOrders,
       totalSpent: Number(member.totalSpent),
@@ -104,7 +105,8 @@ export class LoyaltyMemberService {
     return {
       memberId: member.id,
       phone: member.phone,
-      name: member.name,
+      firstName: member.firstName,
+      lastName: member.lastName,
       points: member.points,
       totalOrders: member.totalOrders,
       totalSpent: Number(member.totalSpent),
@@ -119,7 +121,7 @@ export class LoyaltyMemberService {
   async updateMember(
     tenantId: string,
     memberId: string,
-    data: { name?: string; email?: string }
+    data: { firstName?: string; lastName?: string; email?: string }
   ): Promise<void> {
     await this.repository.update(tenantId, memberId, data);
   }

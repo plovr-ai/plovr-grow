@@ -5,10 +5,16 @@ import { merchantService } from "@/services/merchant";
 
 // Validation schema
 const cateringFormSchema = z.object({
-  name: z
+  firstName: z
     .string()
-    .min(2, "Name must be at least 2 characters")
-    .max(100, "Name is too long"),
+    .min(1, "First name is required")
+    .max(50, "First name is too long")
+    .trim(),
+  lastName: z
+    .string()
+    .min(1, "Last name is required")
+    .max(50, "Last name is too long")
+    .trim(),
   phone: z
     .string()
     .regex(
@@ -41,7 +47,7 @@ export async function POST(
       );
     }
 
-    const { name, phone, email, notes } = validation.data;
+    const { firstName, lastName, phone, email, notes } = validation.data;
 
     // Get merchant by slug
     const merchant = await merchantService.getMerchantBySlug(slug);
@@ -56,7 +62,8 @@ export async function POST(
 
     // Create catering lead
     const lead = await cateringService.createLead(tenantId, merchant.id, {
-      name,
+      firstName,
+      lastName,
       phone,
       email,
       notes: notes || undefined,

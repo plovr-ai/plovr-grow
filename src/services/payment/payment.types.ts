@@ -1,0 +1,49 @@
+export interface CreatePaymentIntentRequest {
+  tenantId: string;
+  companyId: string;
+  merchantId?: string;
+  amount: number;
+  currency: string;
+  orderId?: string;
+  loyaltyMemberId?: string;
+  saveCard?: boolean;
+}
+
+export interface CreatePaymentIntentResponse {
+  paymentIntentId: string;
+  clientSecret: string;
+  stripeCustomerId?: string;
+}
+
+export interface PaymentSucceededData {
+  paymentIntentId: string;
+  status: string;
+  paymentMethodType?: string;
+  cardBrand?: string;
+  cardLast4?: string;
+}
+
+export interface PaymentFailedData {
+  paymentIntentId: string;
+  failureCode?: string;
+  failureMessage?: string;
+}
+
+export interface CreatePaymentRecordInput {
+  tenantId: string;
+  orderId: string;
+  stripePaymentIntentId: string;
+  stripeCustomerId?: string | null;
+  amount: number;
+  currency: string;
+}
+
+export interface VerifyPaymentResult {
+  success: boolean;
+  paymentIntentId: string;
+  status: string;
+  amount: number;
+  cardBrand?: string;
+  cardLast4?: string;
+  error?: string;
+}

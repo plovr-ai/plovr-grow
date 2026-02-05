@@ -41,6 +41,7 @@ function Wrapper({ children }: { children: ReactNode }) {
         ],
         currency: "USD",
         locale: "en-US",
+        subscription: null,
       }}
     >
       {children}
@@ -54,9 +55,6 @@ describe("GiftcardOverviewClient", () => {
     totalValueSold: 2500,
     totalRedeemed: 750,
     activeBalance: 1750,
-    activeCards: 20,
-    depletedCards: 3,
-    disabledCards: 2,
   };
 
   const mockGiftCards: GiftCardWithOrder[] = [
@@ -65,7 +63,6 @@ describe("GiftcardOverviewClient", () => {
       cardNumber: "1234-5678-9012-3456",
       initialAmount: 100,
       currentBalance: 75,
-      status: "active",
       createdAt: new Date("2024-01-15"),
       purchaseOrder: {
         id: "order-1",
@@ -80,7 +77,6 @@ describe("GiftcardOverviewClient", () => {
       cardNumber: "2345-6789-0123-4567",
       initialAmount: 50,
       currentBalance: 0,
-      status: "depleted",
       createdAt: new Date("2024-01-10"),
       purchaseOrder: {
         id: "order-2",
@@ -95,7 +91,6 @@ describe("GiftcardOverviewClient", () => {
       cardNumber: "3456-7890-1234-5678",
       initialAmount: 200,
       currentBalance: 200,
-      status: "disabled",
       createdAt: new Date("2024-01-05"),
       purchaseOrder: {
         id: "order-3",
@@ -114,7 +109,6 @@ describe("GiftcardOverviewClient", () => {
     currentPage: 1,
     total: 50,
     initialFilters: {
-      status: "all",
       search: "",
     },
   };
@@ -151,7 +145,6 @@ describe("GiftcardOverviewClient", () => {
 
       // Total cards
       expect(screen.getByText("25")).toBeInTheDocument();
-      expect(screen.getByText("20 active")).toBeInTheDocument();
 
       // Currency values
       expect(screen.getByText("$2,500.00")).toBeInTheDocument();
@@ -160,23 +153,13 @@ describe("GiftcardOverviewClient", () => {
     });
   });
 
-  describe("Filters", () => {
+  describe("Search", () => {
     it("should render search input", () => {
       render(<GiftcardOverviewClient {...defaultProps} />, { wrapper: Wrapper });
 
       expect(
         screen.getByPlaceholderText("Search by card number, name, or email...")
       ).toBeInTheDocument();
-    });
-
-    it("should render status dropdown with all options", () => {
-      render(<GiftcardOverviewClient {...defaultProps} />, { wrapper: Wrapper });
-
-      const dropdown = screen.getByRole("combobox");
-      expect(dropdown).toBeInTheDocument();
-
-      // Check options
-      expect(screen.getByText("All Statuses")).toBeInTheDocument();
     });
 
     it("should update search input value", () => {
@@ -216,33 +199,6 @@ describe("GiftcardOverviewClient", () => {
         expect.not.stringContaining("page=")
       );
     });
-
-    it("should update URL when status filter changes", () => {
-      render(<GiftcardOverviewClient {...defaultProps} />, { wrapper: Wrapper });
-
-      const dropdown = screen.getByRole("combobox");
-      fireEvent.change(dropdown, { target: { value: "active" } });
-
-      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("status=active"));
-    });
-
-    it("should clear status param when 'all' is selected", () => {
-      mockSearchParams.set("status", "active");
-      render(
-        <GiftcardOverviewClient
-          {...defaultProps}
-          initialFilters={{ status: "active", search: "" }}
-        />,
-        { wrapper: Wrapper }
-      );
-
-      const dropdown = screen.getByRole("combobox");
-      fireEvent.change(dropdown, { target: { value: "all" } });
-
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.not.stringContaining("status=")
-      );
-    });
   });
 
   describe("Table", () => {
@@ -253,7 +209,6 @@ describe("GiftcardOverviewClient", () => {
       expect(screen.getByText("Customer")).toBeInTheDocument();
       expect(screen.getByText("Initial Amount")).toBeInTheDocument();
       expect(screen.getByText("Balance")).toBeInTheDocument();
-      expect(screen.getByText("Status")).toBeInTheDocument();
       expect(screen.getByText("Created")).toBeInTheDocument();
     });
 
@@ -280,26 +235,6 @@ describe("GiftcardOverviewClient", () => {
       expect(screen.getByText("Jan 15, 2024")).toBeInTheDocument();
       expect(screen.getByText("Jan 10, 2024")).toBeInTheDocument();
       expect(screen.getByText("Jan 5, 2024")).toBeInTheDocument();
-    });
-
-    it("should render status badges with correct text", () => {
-      render(<GiftcardOverviewClient {...defaultProps} />, { wrapper: Wrapper });
-
-      expect(screen.getByText("active")).toBeInTheDocument();
-      expect(screen.getByText("depleted")).toBeInTheDocument();
-      expect(screen.getByText("disabled")).toBeInTheDocument();
-    });
-
-    it("should render status badges with correct colors", () => {
-      render(<GiftcardOverviewClient {...defaultProps} />, { wrapper: Wrapper });
-
-      const activeBadge = screen.getByText("active");
-      const depletedBadge = screen.getByText("depleted");
-      const disabledBadge = screen.getByText("disabled");
-
-      expect(activeBadge).toHaveClass("bg-green-100", "text-green-800");
-      expect(depletedBadge).toHaveClass("bg-gray-100", "text-gray-800");
-      expect(disabledBadge).toHaveClass("bg-red-100", "text-red-800");
     });
   });
 
@@ -387,7 +322,7 @@ describe("GiftcardOverviewClient", () => {
       render(
         <GiftcardOverviewClient
           {...defaultProps}
-          initialFilters={{ status: "all", search: "test query" }}
+          initialFilters={{ search: "test query" }}
         />,
         { wrapper: Wrapper }
       );
@@ -396,19 +331,6 @@ describe("GiftcardOverviewClient", () => {
         "Search by card number, name, or email..."
       );
       expect(searchInput).toHaveValue("test query");
-    });
-
-    it("should show status value from initialFilters", () => {
-      render(
-        <GiftcardOverviewClient
-          {...defaultProps}
-          initialFilters={{ status: "active", search: "" }}
-        />,
-        { wrapper: Wrapper }
-      );
-
-      const dropdown = screen.getByRole("combobox");
-      expect(dropdown).toHaveValue("active");
     });
   });
 
@@ -434,9 +356,6 @@ describe("GiftcardOverviewClient", () => {
         totalValueSold: 0,
         totalRedeemed: 0,
         activeBalance: 0,
-        activeCards: 0,
-        depletedCards: 0,
-        disabledCards: 0,
       };
 
       render(
@@ -450,7 +369,6 @@ describe("GiftcardOverviewClient", () => {
       );
 
       expect(screen.getByText("0")).toBeInTheDocument();
-      expect(screen.getByText("0 active")).toBeInTheDocument();
       expect(screen.getAllByText("$0.00").length).toBe(3);
     });
 
@@ -460,9 +378,6 @@ describe("GiftcardOverviewClient", () => {
         totalValueSold: 1000000,
         totalRedeemed: 500000,
         activeBalance: 500000,
-        activeCards: 8000,
-        depletedCards: 1500,
-        disabledCards: 500,
       };
 
       render(
@@ -471,7 +386,6 @@ describe("GiftcardOverviewClient", () => {
       );
 
       expect(screen.getByText("10000")).toBeInTheDocument();
-      expect(screen.getByText("8000 active")).toBeInTheDocument();
       expect(screen.getByText("$1,000,000.00")).toBeInTheDocument();
     });
   });

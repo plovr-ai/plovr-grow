@@ -11,7 +11,8 @@ export interface OrderDetailData {
   status: OrderStatus;
   orderMode: OrderMode;
   items: OrderItemData[];
-  customerName: string;
+  customerFirstName: string;
+  customerLastName: string;
   customerPhone: string;
   customerEmail: string | null;
   deliveryAddress: DeliveryAddress | null;

@@ -20,7 +20,8 @@ export interface OrderEventPayload {
 }
 
 export interface OrderCreatedEvent extends OrderEventPayload {
-  customerName: string;
+  customerFirstName: string;
+  customerLastName: string;
   customerPhone: string;
   orderMode: OrderMode;
   salesChannel: SalesChannel;
@@ -37,7 +38,8 @@ export interface OrderStatusChangedEvent extends OrderEventPayload {
 export interface OrderCompletedEvent extends OrderStatusChangedEvent {
   companyId: string;
   customerPhone: string;
-  customerName?: string;
+  customerFirstName?: string;
+  customerLastName?: string;
   customerEmail?: string;
   totalAmount: number;
 }

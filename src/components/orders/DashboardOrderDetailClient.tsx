@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, User, Phone, Mail, MapPin, FileText } from "lucide-react";
 import { useDashboardFormatPrice, useDashboardFormatDateTime } from "@/hooks";
+import { formatCustomerName } from "@/lib/names";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "./StatusBadge";
 import type { OrderStatus, OrderMode, OrderItemData, DeliveryAddress, SalesChannel } from "@/types";
@@ -20,7 +21,8 @@ interface DashboardOrderDetailData {
   orderMode: string;
   salesChannel: string;
   items: OrderItemData[];
-  customerName: string;
+  customerFirstName: string;
+  customerLastName: string;
   customerPhone: string;
   customerEmail: string | null;
   deliveryAddress: DeliveryAddress | null;
@@ -358,14 +360,16 @@ function formatPhoneNumber(phone: string): string {
 }
 
 function CustomerInfo({
-  customerName,
+  customerFirstName,
+  customerLastName,
   customerPhone,
   customerEmail,
   orderMode,
   deliveryAddress,
   notes,
 }: {
-  customerName: string;
+  customerFirstName: string;
+  customerLastName: string;
   customerPhone: string;
   customerEmail: string | null;
   orderMode: OrderMode;
@@ -382,7 +386,7 @@ function CustomerInfo({
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-gray-600">
             <User className="w-4 h-4 text-gray-400" />
-            <span>{customerName}</span>
+            <span>{formatCustomerName(customerFirstName, customerLastName)}</span>
           </div>
           <div className="flex items-center gap-2 text-gray-600">
             <Phone className="w-4 h-4 text-gray-400" />
@@ -583,7 +587,8 @@ export function DashboardOrderDetailClient({ order, imageMap }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Customer Info */}
         <CustomerInfo
-          customerName={order.customerName}
+          customerFirstName={order.customerFirstName}
+          customerLastName={order.customerLastName}
           customerPhone={order.customerPhone}
           customerEmail={order.customerEmail}
           orderMode={order.orderMode as OrderMode}

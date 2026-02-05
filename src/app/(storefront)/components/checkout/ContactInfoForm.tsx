@@ -3,7 +3,8 @@
 import { usePhoneInput } from "@/hooks";
 
 interface ContactInfo {
-  customerName: string;
+  customerFirstName: string;
+  customerLastName: string;
   customerPhone: string;
   customerEmail: string;
 }
@@ -34,29 +35,58 @@ export function ContactInfoForm({
         Contact Information
       </h2>
       <div className="space-y-4">
-        <div>
-          <label
-            htmlFor="customerName"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="customerName"
-            value={values.customerName}
-            onChange={(e) => onChange("customerName", e.target.value)}
-            disabled={disabled}
-            placeholder="Your full name"
-            className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
-              errors.customerName
-                ? "border-red-500 focus:ring-red-500"
-                : "border-gray-300 focus:ring-red-600"
-            } focus:outline-none focus:ring-2 focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed`}
-          />
-          {errors.customerName && (
-            <p className="mt-1 text-sm text-red-500">{errors.customerName}</p>
-          )}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label
+              htmlFor="customerFirstName"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              First Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="customerFirstName"
+              value={values.customerFirstName}
+              onChange={(e) => onChange("customerFirstName", e.target.value)}
+              disabled={disabled}
+              placeholder="John"
+              autoComplete="given-name"
+              className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
+                errors.customerFirstName
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-gray-300 focus:ring-red-600"
+              } focus:outline-none focus:ring-2 focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed`}
+            />
+            {errors.customerFirstName && (
+              <p className="mt-1 text-sm text-red-500">{errors.customerFirstName}</p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="customerLastName"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Last Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="customerLastName"
+              value={values.customerLastName}
+              onChange={(e) => onChange("customerLastName", e.target.value)}
+              disabled={disabled}
+              placeholder="Doe"
+              autoComplete="family-name"
+              className={`w-full px-4 py-3 rounded-lg border placeholder:text-gray-400 ${
+                errors.customerLastName
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-gray-300 focus:ring-red-600"
+              } focus:outline-none focus:ring-2 focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed`}
+            />
+            {errors.customerLastName && (
+              <p className="mt-1 text-sm text-red-500">{errors.customerLastName}</p>
+            )}
+          </div>
         </div>
 
         <div>

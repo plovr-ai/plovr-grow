@@ -29,7 +29,8 @@ export class CateringService {
     input: CreateCateringLeadInput
   ): Promise<CateringLeadData> {
     const lead = await this.repository.create(tenantId, merchantId, {
-      name: input.name,
+      firstName: input.firstName,
+      lastName: input.lastName,
       phone: input.phone,
       email: input.email,
       notes: input.notes,

@@ -61,7 +61,8 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       member: {
         id: "member-1",
         phone: "+15551234567",
-        name: "John Doe",
+        firstName: "John",
+        lastName: "Doe",
         email: "john@example.com",
         points: 0,
         tenantId: "tenant-1",
@@ -84,7 +85,8 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
           phone: "+15551234567",
           code: "123456",
           companySlug: "test-company",
-          name: "John Doe",
+          firstName: "John",
+          lastName: "Doe",
           email: "john@example.com",
         }),
       }
@@ -103,7 +105,8 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       "company-1",
       "+15551234567",
       {
-        name: "John Doe",
+        firstName: "John",
+        lastName: "Doe",
         email: "john@example.com",
       }
     );
@@ -129,7 +132,8 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       member: {
         id: "member-1",
         phone: "+15551234567",
-        name: "John Doe",
+        firstName: "John",
+        lastName: "Doe",
         email: null,
         points: 0,
         tenantId: "tenant-1",
@@ -152,7 +156,8 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
           phone: "+15551234567",
           code: "123456",
           companySlug: "test-company",
-          name: "John Doe",
+          firstName: "John",
+          lastName: "Doe",
           email: "",
         }),
       }
@@ -170,7 +175,8 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       "company-1",
       "+15551234567",
       {
-        name: "John Doe",
+        firstName: "John",
+        lastName: "Doe",
         email: undefined,
       }
     );
@@ -185,7 +191,8 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
           phone: "+15551234567",
           code: "123456",
           companySlug: "test-company",
-          name: "John Doe",
+          firstName: "John",
+          lastName: "Doe",
           email: "invalid-email",
         }),
       }
@@ -208,7 +215,8 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
           phone: "+15551234567",
           code: "123456",
           companySlug: "test-company",
-          name: "John Doe",
+          firstName: "John",
+          lastName: "Doe",
           email: null,
         }),
       }
@@ -242,7 +250,8 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       member: {
         id: "member-1",
         phone: "+15551234567",
-        name: "John Doe",
+        firstName: "John",
+        lastName: "Doe",
         email: null,
         points: 0,
         tenantId: "tenant-1",
@@ -265,7 +274,8 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
           phone: "+15551234567",
           code: "123456",
           companySlug: "test-company",
-          name: "John Doe",
+          firstName: "John",
+          lastName: "Doe",
           // No email parameter
         }),
       }
@@ -283,7 +293,8 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       "company-1",
       "+15551234567",
       {
-        name: "John Doe",
+        firstName: "John",
+        lastName: "Doe",
         email: undefined,
       }
     );
@@ -300,7 +311,8 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
           phone: "+15551234567",
           code: "123456",
           companySlug: "non-existent",
-          name: "John Doe",
+          firstName: "John",
+          lastName: "Doe",
           email: "john@example.com",
         }),
       }
@@ -338,7 +350,8 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
           phone: "+15551234567",
           code: "999999",
           companySlug: "test-company",
-          name: "John Doe",
+          firstName: "John",
+          lastName: "Doe",
           email: "john@example.com",
         }),
       }

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/orders/Pagination";
 import { useDashboardFormatPrice } from "@/hooks";
 import { formatPhone } from "@/lib/utils";
+import { formatCustomerName } from "@/lib/names";
 import type { LoyaltyMemberData } from "@/services/loyalty/loyalty.types";
 
 interface LoyaltyMembersClientProps {
@@ -141,7 +142,7 @@ export function LoyaltyMembersClient({
                       href={`/dashboard/loyalty/members/${member.id}`}
                       className="block hover:text-blue-600"
                     >
-                      {member.name || "-"}
+                      {member.firstName || member.lastName ? formatCustomerName(member.firstName || "", member.lastName || "") : "-"}
                     </Link>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-gray-900">

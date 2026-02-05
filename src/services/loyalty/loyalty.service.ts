@@ -11,7 +11,8 @@ import type {
 export interface OrderCompletionData {
   merchantId: string;
   customerPhone: string;
-  customerName?: string;
+  customerFirstName?: string;
+  customerLastName?: string;
   customerEmail?: string;
   totalAmount: number;
 }
@@ -64,7 +65,8 @@ export class LoyaltyService {
       data.customerPhone,
       {
         phone: data.customerPhone,
-        name: data.customerName,
+        firstName: data.customerFirstName,
+        lastName: data.customerLastName,
         email: data.customerEmail,
       }
     );
@@ -137,13 +139,13 @@ export class LoyaltyService {
     tenantId: string,
     companyId: string,
     phone: string,
-    data?: { name?: string; email?: string }
+    data?: { firstName?: string; lastName?: string; email?: string }
   ): Promise<{ member: LoyaltyMemberData; isNew: boolean }> {
     return loyaltyMemberService.findOrCreateByPhone(
       tenantId,
       companyId,
       phone,
-      data ? { phone, name: data.name, email: data.email } : undefined
+      data ? { phone, firstName: data.firstName, lastName: data.lastName, email: data.email } : undefined
     );
   }
 }

@@ -168,7 +168,8 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
         <LoyaltyRegistrationCTA
           orderId={order.id}
           customerPhone={order.customerPhone}
-          customerName={order.customerName}
+          customerFirstName={order.customerFirstName}
+          customerLastName={order.customerLastName}
           customerEmail={order.customerEmail}
           subtotal={Number(order.subtotal)}
         />
@@ -190,7 +191,8 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
 
         {/* Customer Info */}
         <CustomerInfo
-          customerName={order.customerName}
+          customerFirstName={order.customerFirstName}
+          customerLastName={order.customerLastName}
           customerPhone={order.customerPhone}
           customerEmail={order.customerEmail}
           orderMode={order.orderMode as OrderMode}

@@ -4,6 +4,7 @@ import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { StatusBadge } from "./StatusBadge";
 import { formatPrice } from "@/lib/utils";
 import { formatDate, formatTime, getTimezoneAbbr } from "@/lib/datetime";
+import { formatCustomerName } from "@/lib/names";
 import type { OrderMode, OrderStatus, SalesChannel } from "@/types";
 
 // Serialized order type with Decimal fields converted to numbers
@@ -72,7 +73,7 @@ export function OrderCard({ order }: OrderCardProps) {
         </CardHeader>
 
         <CardContent className="space-y-2 text-sm">
-          <div className="font-medium">{order.customerName}</div>
+          <div className="font-medium">{formatCustomerName(order.customerFirstName, order.customerLastName)}</div>
           <div className="text-gray-600">{order.customerPhone}</div>
 
           <div className="flex items-center gap-2 flex-wrap">

@@ -1,4 +1,4 @@
-import type { GiftCardStatus, GiftCardTransactionType } from "@/repositories/giftcard.repository";
+import type { GiftCardTransactionType } from "@/repositories/giftcard.repository";
 
 /**
  * Gift card statistics for Dashboard overview
@@ -10,14 +10,8 @@ export interface GiftCardStats {
   totalValueSold: number;
   /** Total amount redeemed across all cards */
   totalRedeemed: number;
-  /** Current active balance across all active cards */
+  /** Current balance across all cards */
   activeBalance: number;
-  /** Count of active gift cards */
-  activeCards: number;
-  /** Count of depleted gift cards */
-  depletedCards: number;
-  /** Count of disabled gift cards */
-  disabledCards: number;
 }
 
 /**
@@ -28,7 +22,6 @@ export interface GiftCardData {
   cardNumber: string;
   initialAmount: number;
   currentBalance: number;
-  status: GiftCardStatus;
   createdAt: Date;
 }
 
@@ -51,7 +44,7 @@ export interface GiftCardWithOrder extends GiftCardData {
 export interface GiftCardValidationResult {
   valid: boolean;
   giftCard?: GiftCardData;
-  error?: "not_found" | "depleted" | "disabled" | "invalid_format";
+  error?: "not_found" | "no_balance" | "invalid_format";
 }
 
 /**

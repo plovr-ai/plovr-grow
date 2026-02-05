@@ -38,7 +38,8 @@ async function handleOrderCompleted(event: OrderCompletedEvent): Promise<void> {
       {
         merchantId: event.merchantId,
         customerPhone: event.customerPhone,
-        customerName: event.customerName,
+        customerFirstName: event.customerFirstName,
+        customerLastName: event.customerLastName,
         customerEmail: event.customerEmail,
         totalAmount: event.totalAmount,
       }

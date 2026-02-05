@@ -35,6 +35,9 @@ model Tenant {
   companyOrderSequences   CompanyOrderSequence[]
   cateringOrderSequences  CateringOrderSequence[]
   invoiceSequences        InvoiceSequence[]
+  payments                Payment[]
+  stripeCustomers         StripeCustomer[]
+  subscription            Subscription?
 
   @@map("tenants")
 }
@@ -72,6 +75,7 @@ model Company {
   orders                Order[]
   giftCards             GiftCard[]
   companyOrderSequences CompanyOrderSequence[]
+  stripeCustomers       StripeCustomer[]
 
   @@index([slug])
   @@index([tenantId])
@@ -241,6 +245,7 @@ model Order {
   pointTransactions     PointTransaction[]
   giftCardPurchase      GiftCard?              @relation("GiftCardPurchase")
   giftCardRedemptions   GiftCardTransaction[]  @relation("GiftCardRedemption")
+  payments              Payment[]
 
   @@unique([tenantId, orderNumber])
   @@index([companyId])
@@ -377,6 +382,7 @@ model LoyaltyMember {
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   pointTransactions PointTransaction[]
   orders            Order[]
+  stripeCustomer    StripeCustomer?
 
   @@unique([tenantId, companyId, phone])
   @@index([phone])
@@ -565,7 +571,6 @@ model GiftCard {
   initialAmount   Decimal               @map("initial_amount") @db.Decimal(10, 2)
   currentBalance  Decimal               @map("current_balance") @db.Decimal(10, 2)
   purchaseOrderId String                @unique @map("purchase_order_id")
-  status          String                @default("active") // active, depleted, disabled
   createdAt       DateTime              @default(now()) @map("created_at")
   updatedAt       DateTime              @updatedAt @map("updated_at")
 
@@ -675,4 +680,110 @@ model InvoiceSequence {
 
   @@index([tenantId])
   @@map("invoice_sequences")
+}
+
+// ==================== Payment System ====================
+
+/// Payment record for Stripe payments
+model Payment {
+  id                    String    @id
+  tenantId              String    @map("tenant_id")
+  orderId               String    @map("order_id")
+
+  // Stripe fields
+  stripePaymentIntentId String    @unique @map("stripe_payment_intent_id")
+  stripeCustomerId      String?   @map("stripe_customer_id")
+
+  // Payment info
+  amount                Decimal   @db.Decimal(10, 2)
+  currency              String    @default("USD")
+  status                String    @default("pending") // pending, processing, succeeded, failed, canceled
+  paymentMethod         String?   @map("payment_method") // card, apple_pay, google_pay
+
+  // Card details (populated after successful payment)
+  cardBrand             String?   @map("card_brand") // visa, mastercard, amex
+  cardLast4             String?   @map("card_last4")
+
+  // Failure info
+  failureCode           String?   @map("failure_code")
+  failureMessage        String?   @map("failure_message")
+
+  // Timestamps
+  paidAt                DateTime? @map("paid_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order                 Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([orderId])
+  @@index([stripePaymentIntentId])
+  @@index([status])
+  @@map("payments")
+}
+
+/// Stripe customer mapping for saved cards
+model StripeCustomer {
+  id                String   @id
+  tenantId          String   @map("tenant_id")
+  companyId         String   @map("company_id")
+  loyaltyMemberId   String   @unique @map("loyalty_member_id")
+  stripeCustomerId  String   @unique @map("stripe_customer_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  loyaltyMember LoyaltyMember @relation(fields: [loyaltyMemberId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([companyId])
+  @@index([stripeCustomerId])
+  @@map("stripe_customers")
+}
+
+// ==================== Subscription System ====================
+
+/// Subscription record for tenant-level billing
+model Subscription {
+  id                      String    @id
+  tenantId                String    @unique @map("tenant_id")
+
+  // Stripe references
+  stripeCustomerId        String    @unique @map("stripe_customer_id")
+  stripeSubscriptionId    String?   @unique @map("stripe_subscription_id")
+  stripePriceId           String?   @map("stripe_price_id")
+
+  // Status: incomplete | trialing | active | past_due | canceled | unpaid | paused
+  status                  String    @default("incomplete")
+
+  // Plan: free | standard
+  plan                    String    @default("standard")
+
+  // Billing cycle
+  currentPeriodStart      DateTime? @map("current_period_start")
+  currentPeriodEnd        DateTime? @map("current_period_end")
+
+  // Trial
+  trialStart              DateTime? @map("trial_start")
+  trialEnd                DateTime? @map("trial_end")
+
+  // Cancellation
+  cancelAtPeriodEnd       Boolean   @default(false) @map("cancel_at_period_end")
+  canceledAt              DateTime? @map("canceled_at")
+
+  // Grace period for past_due
+  gracePeriodEnd          DateTime? @map("grace_period_end")
+
+  // Timestamps
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tenant                  Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("subscriptions")
 }

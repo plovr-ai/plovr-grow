@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Pagination } from "@/components/orders/Pagination";
 import { formatPhone } from "@/lib/utils";
+import { formatCustomerName } from "@/lib/names";
 import type { CateringLeadWithMerchant } from "@/services/catering/catering.types";
 
 interface CateringLeadsClientProps {
@@ -173,7 +174,7 @@ export function CateringLeadsClient({
                 {leads.map((lead) => (
                   <tr key={lead.id} className="hover:bg-gray-50">
                     <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                      {lead.name}
+                      {formatCustomerName(lead.firstName, lead.lastName)}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                       {formatPhone(lead.phone)}

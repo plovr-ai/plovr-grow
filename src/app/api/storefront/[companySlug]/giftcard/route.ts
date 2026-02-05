@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { orderService } from "@/services/order";
 import { merchantService } from "@/services/merchant";
 import { giftCardService } from "@/services/giftcard";
-import { giftcardFormSchema } from "@storefront/lib/validations/giftcard";
+import { paymentService } from "@/services/payment";
+import { giftcardApiSchema } from "@storefront/lib/validations/giftcard";
 import type { OrderItemData } from "@/types";
 
 export async function POST(
@@ -23,7 +24,7 @@ export async function POST(
 
     // Parse and validate request body
     const body = await request.json();
-    const validation = giftcardFormSchema.safeParse(body);
+    const validation = giftcardApiSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(
@@ -37,6 +38,24 @@ export async function POST(
     }
 
     const data = validation.data;
+
+    // Verify payment if stripePaymentIntentId is provided
+    if (data.stripePaymentIntentId) {
+      const verification = await paymentService.verifyPayment(
+        data.stripePaymentIntentId,
+        data.amount
+      );
+
+      if (!verification.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: verification.error || "Payment verification failed",
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     // Create giftcard order item (virtual item, not from menu)
     const giftcardItem: OrderItemData = {
@@ -63,6 +82,17 @@ export async function POST(
       notes: data.message || undefined,
       tipAmount: 0,
     });
+
+    // Create payment record if payment was made
+    if (data.stripePaymentIntentId) {
+      await paymentService.createPaymentRecord({
+        tenantId: company.tenantId,
+        orderId: order.id,
+        stripePaymentIntentId: data.stripePaymentIntentId,
+        amount: data.amount,
+        currency: "USD",
+      });
+    }
 
     // Create the gift card record with generated card number
     const giftCard = await giftCardService.createGiftCard(

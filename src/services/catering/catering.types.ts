@@ -4,7 +4,8 @@ export interface CateringLeadData {
   id: string;
   tenantId: string;
   merchantId: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   phone: string;
   email: string;
   notes: string | null;
@@ -22,7 +23,8 @@ export interface CateringLeadWithMerchant extends CateringLeadData {
 }
 
 export interface CreateCateringLeadInput {
-  name: string;
+  firstName: string;
+  lastName: string;
   phone: string;
   email: string;
   notes?: string;
@@ -59,7 +61,8 @@ export function toCateringLeadData(lead: CateringLead): CateringLeadData {
     id: lead.id,
     tenantId: lead.tenantId,
     merchantId: lead.merchantId,
-    name: lead.name,
+    firstName: lead.firstName,
+    lastName: lead.lastName,
     phone: lead.phone,
     email: lead.email,
     notes: lead.notes,

@@ -1,10 +1,12 @@
 "use client";
 
 import { useFormatPhone } from "@/hooks";
+import { formatCustomerName } from "@/lib/names";
 import type { OrderMode, DeliveryAddress } from "@/types";
 
 interface Props {
-  customerName: string;
+  customerFirstName: string;
+  customerLastName: string;
   customerPhone: string;
   customerEmail: string | null;
   orderMode: OrderMode;
@@ -13,7 +15,8 @@ interface Props {
 }
 
 export function CustomerInfo({
-  customerName,
+  customerFirstName,
+  customerLastName,
   customerPhone,
   customerEmail,
   orderMode,
@@ -44,7 +47,7 @@ export function CustomerInfo({
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
             </svg>
-            <span>{customerName}</span>
+            <span>{formatCustomerName(customerFirstName, customerLastName)}</span>
           </div>
           <div className="flex items-center gap-2 text-gray-600">
             <svg

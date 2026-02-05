@@ -51,7 +51,7 @@ export function MenuItemFormPage({
   const [description, setDescription] = useState(item?.description ?? "");
   const [price, setPrice] = useState(item ? item.price.toString() : "");
   const [imageUrl, setImageUrl] = useState(item?.imageUrl ?? "");
-  const [status, setStatus] = useState<"active" | "inactive" | "out_of_stock">(
+  const [status, setStatus] = useState<"active" | "inactive" | "out_of_stock" | "archived">(
     item?.status ?? "active"
   );
   const [modifierGroups, setModifierGroups] = useState<ModifierGroupInput[]>(

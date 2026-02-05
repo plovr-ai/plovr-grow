@@ -8,14 +8,16 @@ interface CateringPageClientProps {
 }
 
 interface FormData {
-  name: string;
+  firstName: string;
+  lastName: string;
   phone: string;
   email: string;
   notes: string;
 }
 
 interface FormErrors {
-  name?: string;
+  firstName?: string;
+  lastName?: string;
   phone?: string;
   email?: string;
   notes?: string;
@@ -23,7 +25,8 @@ interface FormErrors {
 
 export function CateringPageClient({ merchantSlug }: CateringPageClientProps) {
   const [formData, setFormData] = useState<FormData>({
-    name: "",
+    firstName: "",
+    lastName: "",
     phone: "",
     email: "",
     notes: "",
@@ -64,7 +67,7 @@ export function CateringPageClient({ merchantSlug }: CateringPageClientProps) {
 
       // Success
       setIsSuccess(true);
-      setFormData({ name: "", phone: "", email: "", notes: "" });
+      setFormData({ firstName: "", lastName: "", phone: "", email: "", notes: "" });
     } catch {
       alert("An error occurred. Please try again.");
     } finally {
@@ -110,29 +113,57 @@ export function CateringPageClient({ merchantSlug }: CateringPageClientProps) {
       className="bg-white rounded-xl border border-gray-100 p-6"
     >
       <div className="space-y-5">
-        {/* Name */}
-        <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="name"
-            value={formData.name}
-            onChange={(e) =>
-              setFormData({ ...formData, name: e.target.value })
-            }
-            placeholder="Your full name"
-            className={`w-full px-4 py-3 rounded-lg border ${
-              errors.name ? "border-red-500" : "border-gray-300"
-            } focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent`}
-          />
-          {errors.name && (
-            <p className="mt-1 text-sm text-red-500">{errors.name}</p>
-          )}
+        {/* Name Fields */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label
+              htmlFor="firstName"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              First Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="firstName"
+              value={formData.firstName}
+              onChange={(e) =>
+                setFormData({ ...formData, firstName: e.target.value })
+              }
+              placeholder="John"
+              autoComplete="given-name"
+              className={`w-full px-4 py-3 rounded-lg border ${
+                errors.firstName ? "border-red-500" : "border-gray-300"
+              } focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent`}
+            />
+            {errors.firstName && (
+              <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="lastName"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Last Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="lastName"
+              value={formData.lastName}
+              onChange={(e) =>
+                setFormData({ ...formData, lastName: e.target.value })
+              }
+              placeholder="Doe"
+              autoComplete="family-name"
+              className={`w-full px-4 py-3 rounded-lg border ${
+                errors.lastName ? "border-red-500" : "border-gray-300"
+              } focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent`}
+            />
+            {errors.lastName && (
+              <p className="mt-1 text-sm text-red-500">{errors.lastName}</p>
+            )}
+          </div>
         </div>
 
         {/* Phone */}

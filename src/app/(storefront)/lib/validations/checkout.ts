@@ -18,10 +18,16 @@ export const US_STATES = [
 
 // Contact information schema
 export const contactInfoSchema = z.object({
-  customerName: z
+  customerFirstName: z
     .string()
-    .min(2, "Name must be at least 2 characters")
-    .max(100, "Name must be less than 100 characters"),
+    .min(1, "First name is required")
+    .max(50, "First name must be less than 50 characters")
+    .trim(),
+  customerLastName: z
+    .string()
+    .min(1, "Last name is required")
+    .max(50, "Last name must be less than 50 characters")
+    .trim(),
   customerPhone: z
     .string()
     .regex(phoneRegex, "Please enter a valid phone number"),
@@ -62,7 +68,8 @@ export const deliveryAddressSchema = z.object({
 export const checkoutFormSchema = z
   .object({
     orderMode: z.enum(ORDER_MODES),
-    customerName: contactInfoSchema.shape.customerName,
+    customerFirstName: contactInfoSchema.shape.customerFirstName,
+    customerLastName: contactInfoSchema.shape.customerLastName,
     customerPhone: contactInfoSchema.shape.customerPhone,
     customerEmail: contactInfoSchema.shape.customerEmail,
     deliveryAddress: deliveryAddressSchema.optional(),

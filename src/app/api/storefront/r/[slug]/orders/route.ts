@@ -3,11 +3,14 @@ import { orderService } from "@/services/order";
 import { merchantService } from "@/services/merchant";
 import { pointsService, loyaltyConfigService } from "@/services/loyalty";
 import { giftCardService } from "@/services/giftcard";
+import { paymentService } from "@/services/payment";
 import { checkoutFormSchema } from "@storefront/lib/validations/checkout";
-import type { OrderItemData } from "@/types";
+import type { OrderItemData, OrderMode } from "@/types";
+
+type PaymentMethodType = "cash" | "card";
 
 interface OrderRequestBody {
-  orderMode: string;
+  orderMode: OrderMode;
   customerFirstName: string;
   customerLastName: string;
   customerPhone: string;
@@ -29,6 +32,9 @@ interface OrderRequestBody {
     giftCardId: string;
     amount: number;
   };
+  // Card payment (Stripe)
+  paymentMethod?: PaymentMethodType;
+  stripePaymentIntentId?: string;
 }
 
 export async function POST(
@@ -100,9 +106,9 @@ export async function POST(
         );
       }
 
-      if (giftCard.status !== "active") {
+      if (giftCard.currentBalance <= 0) {
         return NextResponse.json(
-          { success: false, error: `Gift card is ${giftCard.status}` },
+          { success: false, error: "Gift card has no balance" },
           { status: 400 }
         );
       }
@@ -118,6 +124,60 @@ export async function POST(
         id: giftCard.id,
         balance: giftCard.currentBalance,
       };
+    }
+
+    // Validate Stripe payment if payment method is card
+    let verifiedPayment: {
+      paymentIntentId: string;
+      amount: number;
+      cardBrand?: string;
+      cardLast4?: string;
+    } | null = null;
+
+    if (body.paymentMethod === "card" && body.stripePaymentIntentId) {
+      // Calculate expected card payment amount
+      // We need to calculate total first to verify
+      const orderCalculation = await orderService.calculateOrderTotals(
+        tenantId,
+        merchant.id,
+        {
+          items: body.items,
+          orderMode: body.orderMode,
+          tipAmount: body.tipAmount,
+          discountCode: undefined,
+        }
+      );
+
+      const giftCardAmount = body.giftCardPayment?.amount || 0;
+      const expectedCardPayment = Math.max(
+        0,
+        orderCalculation.totalAmount - giftCardAmount
+      );
+
+      // Only verify if there's an amount to pay
+      if (expectedCardPayment > 0) {
+        const paymentResult = await paymentService.verifyPayment(
+          body.stripePaymentIntentId,
+          expectedCardPayment
+        );
+
+        if (!paymentResult.success) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: paymentResult.error || "Payment verification failed",
+            },
+            { status: 400 }
+          );
+        }
+
+        verifiedPayment = {
+          paymentIntentId: body.stripePaymentIntentId,
+          amount: expectedCardPayment,
+          cardBrand: paymentResult.cardBrand,
+          cardLast4: paymentResult.cardLast4,
+        };
+      }
     }
 
     // Create order with merchantId and payment breakdown
@@ -150,6 +210,23 @@ export async function POST(
       } catch (error) {
         console.error("Failed to redeem gift card:", error);
         // Note: Order is already created. In production, consider rolling back or marking order for review.
+      }
+    }
+
+    // Create payment record if card payment was made
+    if (verifiedPayment) {
+      try {
+        await paymentService.createPaymentRecord({
+          tenantId,
+          orderId: order.id,
+          stripePaymentIntentId: verifiedPayment.paymentIntentId,
+          amount: verifiedPayment.amount,
+          currency: merchant.currency || "USD",
+        });
+      } catch (error) {
+        console.error("Failed to create payment record:", error);
+        // Note: Order and payment were successful, but record creation failed
+        // This should be logged and handled asynchronously
       }
     }
 

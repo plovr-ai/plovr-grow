@@ -48,6 +48,7 @@ export default async function NewMenuItemPage({ searchParams }: PageProps) {
       item={null}
       categoryId={categoryId}
       categoryName={category.name}
+      categories={menuData.categories}
       taxConfigs={taxConfigOptions}
     />
   );

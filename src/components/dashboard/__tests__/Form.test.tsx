@@ -28,6 +28,7 @@ function Wrapper({ children }: { children: ReactNode }) {
         merchants: [],
         currency: "USD",
         locale: "en-US",
+        subscription: null,
       }}
     >
       {children}

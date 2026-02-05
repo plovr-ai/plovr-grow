@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { DashboardLayoutClient } from "@/components/dashboard";
 import { merchantService } from "@/services/merchant";
 import { companyRepository } from "@/repositories/company.repository";
+import { subscriptionService } from "@/services/subscription";
 
 export default async function ProtectedLayout({
   children,
@@ -18,10 +19,11 @@ export default async function ProtectedLayout({
 
   const { tenantId, companyId } = session.user;
 
-  // Fetch company and merchants data
-  const [company, merchants] = await Promise.all([
+  // Fetch company, merchants, and subscription data
+  const [company, merchants, subscription] = await Promise.all([
     companyRepository.getById(companyId),
     merchantService.getMerchantsByCompanyId(tenantId, companyId),
+    subscriptionService.getSubscriptionForDashboard(tenantId),
   ]);
 
   if (!company) {
@@ -51,6 +53,7 @@ export default async function ProtectedLayout({
     })),
     currency: defaultCurrency,
     locale: defaultLocale,
+    subscription,
   };
 
   return (

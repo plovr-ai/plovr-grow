@@ -108,7 +108,8 @@ describe("CheckoutPage", () => {
         wrapper: createWrapper(),
       });
 
-      expect(screen.getByPlaceholderText("Your full name")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("John")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Doe")).toBeInTheDocument();
       expect(screen.getByPlaceholderText("(555) 123-4567")).toBeInTheDocument();
     });
 
@@ -294,7 +295,7 @@ describe("CheckoutPage", () => {
       // Should show validation errors (based on zod schema)
       await waitFor(() => {
         expect(
-          screen.getByText("Name must be at least 2 characters")
+          screen.getByText("First name is required")
         ).toBeInTheDocument();
       });
     });
@@ -328,8 +329,11 @@ describe("CheckoutPage", () => {
       });
 
       // Fill in required form fields
-      fireEvent.change(screen.getByPlaceholderText("Your full name"), {
-        target: { value: "John Doe" },
+      fireEvent.change(screen.getByPlaceholderText("John"), {
+        target: { value: "John" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("Doe"), {
+        target: { value: "Doe" },
       });
       fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
         target: { value: "(555) 123-4567" },
@@ -370,8 +374,11 @@ describe("CheckoutPage", () => {
       });
 
       // Fill in required form fields
-      fireEvent.change(screen.getByPlaceholderText("Your full name"), {
-        target: { value: "John Doe" },
+      fireEvent.change(screen.getByPlaceholderText("John"), {
+        target: { value: "John" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("Doe"), {
+        target: { value: "Doe" },
       });
       fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
         target: { value: "(555) 123-4567" },
@@ -462,8 +469,11 @@ describe("CheckoutPage", () => {
       });
 
       // Fill in required form fields
-      fireEvent.change(screen.getByPlaceholderText("Your full name"), {
-        target: { value: "John Doe" },
+      fireEvent.change(screen.getByPlaceholderText("John"), {
+        target: { value: "John" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("Doe"), {
+        target: { value: "Doe" },
       });
       fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
         target: { value: "(555) 123-4567" },

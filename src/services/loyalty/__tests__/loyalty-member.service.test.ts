@@ -24,7 +24,8 @@ describe("LoyaltyMemberService", () => {
     tenantId: "tenant-1",
     companyId: "company-1",
     phone: "+12025551234",
-    name: "John Doe",
+    firstName: "John",
+    lastName: "Doe",
     email: "john@example.com",
     points: 150,
     totalOrders: 5,
@@ -50,7 +51,8 @@ describe("LoyaltyMemberService", () => {
       expect(result).toMatchObject({
         id: "member-1",
         phone: "+12025551234",
-        name: "John Doe",
+        firstName: "John",
+        lastName: "Doe",
         points: 150,
       });
       expect(loyaltyMemberRepository.getById).toHaveBeenCalledWith(
@@ -129,7 +131,7 @@ describe("LoyaltyMemberService", () => {
         "tenant-1",
         "company-1",
         "+12025559999",
-        { name: "Jane Doe", email: "jane@example.com" }
+        { firstName: "Jane", lastName: "Doe", email: "jane@example.com" }
       );
 
       expect(result.isNew).toBe(true);
@@ -137,7 +139,7 @@ describe("LoyaltyMemberService", () => {
         "tenant-1",
         "company-1",
         "+12025559999",
-        { name: "Jane Doe", email: "jane@example.com" }
+        { firstName: "Jane", lastName: "Doe", email: "jane@example.com" }
       );
     });
   });
@@ -151,7 +153,8 @@ describe("LoyaltyMemberService", () => {
       expect(result).toEqual({
         memberId: "member-1",
         phone: "+12025551234",
-        name: "John Doe",
+        firstName: "John",
+        lastName: "Doe",
         points: 150,
         totalOrders: 5,
         totalSpent: 250.0,
@@ -212,7 +215,8 @@ describe("LoyaltyMemberService", () => {
       vi.mocked(loyaltyMemberRepository.update).mockResolvedValue();
 
       await service.updateMember("tenant-1", "member-1", {
-        name: "John Smith",
+        firstName: "John",
+        lastName: "Smith",
         email: "john.smith@example.com",
       });
 
@@ -220,7 +224,8 @@ describe("LoyaltyMemberService", () => {
         "tenant-1",
         "member-1",
         {
-          name: "John Smith",
+          firstName: "John",
+          lastName: "Smith",
           email: "john.smith@example.com",
         }
       );

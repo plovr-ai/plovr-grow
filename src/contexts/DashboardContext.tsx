@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
+import type { DashboardSubscriptionInfo } from "@/services/subscription/subscription.types";
 
 export interface MerchantInfo {
   id: string;
@@ -25,6 +26,7 @@ export interface DashboardContextValue {
   merchants: MerchantInfo[];
   currency: string;
   locale: string;
+  subscription: DashboardSubscriptionInfo | null;
 }
 
 interface DashboardProviderProps {

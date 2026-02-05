@@ -21,6 +21,7 @@ function createWrapper(currency: string, locale: string) {
           merchants: [],
           currency,
           locale,
+          subscription: null,
         }}
       >
         {children}

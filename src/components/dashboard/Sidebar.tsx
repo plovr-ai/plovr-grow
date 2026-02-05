@@ -18,6 +18,7 @@ import {
   Star,
   Utensils,
   CreditCard,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -119,6 +120,12 @@ const navigation: NavItem[] = [
     href: "/dashboard/company",
     icon: Building2,
     pattern: /^\/dashboard\/company/,
+  },
+  {
+    label: "Subscription",
+    href: "/dashboard/subscription",
+    icon: Crown,
+    pattern: /^\/dashboard\/subscription/,
   },
   {
     label: "Settings",

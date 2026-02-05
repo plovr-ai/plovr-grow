@@ -66,7 +66,8 @@ export async function GET(request: NextRequest) {
         member: {
           id: dashboard.member.id,
           phone: dashboard.member.phone,
-          name: dashboard.member.name,
+          firstName: dashboard.member.firstName,
+          lastName: dashboard.member.lastName,
           points: dashboard.member.points,
           totalOrders: dashboard.member.totalOrders,
           totalSpent: dashboard.member.totalSpent,

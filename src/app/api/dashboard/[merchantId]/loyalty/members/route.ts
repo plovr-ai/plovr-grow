@@ -43,7 +43,8 @@ export async function GET(
         members: result.items.map((m) => ({
           id: m.id,
           phone: m.phone,
-          name: m.name,
+          firstName: m.firstName,
+          lastName: m.lastName,
           email: m.email,
           points: m.points,
           totalOrders: m.totalOrders,

@@ -1,10 +1,8 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { companyService } from "@/services/company/company.service";
-import { OnboardingWizard } from "@/components/onboarding";
-import { initializeOnboardingAction } from "./actions/onboarding";
-import type { OnboardingData } from "@/types/onboarding";
-import { DEFAULT_ONBOARDING_DATA } from "@/types/onboarding";
+import { menuService } from "@/services/menu/menu.service";
+import { AgentChatClient } from "@/components/dashboard/agent";
 
 export default async function DashboardOverviewPage() {
   const session = await auth();
@@ -18,48 +16,36 @@ export default async function DashboardOverviewPage() {
   );
   if (!company) redirect("/dashboard/login");
 
-  const isOnboardingComplete = company.onboardingStatus === "completed";
+  // Get first merchant for the agent API
+  const merchantId = company.merchants?.[0]?.id;
 
-  // Show onboarding wizard if not completed
-  if (!isOnboardingComplete) {
-    if (company.onboardingStatus === "not_started") {
-      await initializeOnboardingAction();
-    }
-
-    const onboardingData =
-      (company.onboardingData as unknown as OnboardingData) || DEFAULT_ONBOARDING_DATA;
-
+  if (!merchantId) {
     return (
       <div className="py-8">
-        <OnboardingWizard companyId={company.id} initialData={onboardingData} />
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6 text-center">
+          <h2 className="text-lg font-medium text-yellow-800">
+            No Store Found
+          </h2>
+          <p className="mt-2 text-yellow-700">
+            Please create a store first before using the AI assistant.
+          </p>
+        </div>
       </div>
     );
   }
 
-  // Normal dashboard overview (after onboarding)
+  // Check if the company has any menus
+  const tenantId = company.tenantId;
+  const menuCount = await menuService.countMenus(tenantId, company.id);
+  const hasMenu = menuCount > 0;
+
   return (
-    <div>
-      <h2 className="mb-4 text-2xl font-bold">Dashboard Overview</h2>
-      <p className="text-gray-600">Welcome to {company.name}</p>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* TODO: Dashboard overview cards */}
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h3 className="text-sm font-medium text-gray-500">Total Orders</h3>
-          <p className="mt-2 text-3xl font-semibold">--</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h3 className="text-sm font-medium text-gray-500">Revenue</h3>
-          <p className="mt-2 text-3xl font-semibold">--</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h3 className="text-sm font-medium text-gray-500">Menu Items</h3>
-          <p className="mt-2 text-3xl font-semibold">--</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h3 className="text-sm font-medium text-gray-500">Stores</h3>
-          <p className="mt-2 text-3xl font-semibold">{company.merchants?.length ?? 0}</p>
-        </div>
-      </div>
+    <div className="py-8">
+      <AgentChatClient
+        merchantId={merchantId}
+        companyName={company.name}
+        hasMenu={hasMenu}
+      />
     </div>
   );
 }
