@@ -8,12 +8,9 @@ export interface SelectProps
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, children, ...props }, ref) => {
     return (
-      <div className="relative">
+      <div className={cn("relative", className)}>
         <select
-          className={cn(
-            "flex h-10 w-full appearance-none rounded-md border border-gray-300 bg-white pl-3 pr-10 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-            className
-          )}
+          className="flex h-10 w-full appearance-none rounded-md border border-gray-300 bg-white pl-3 pr-10 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           ref={ref}
           {...props}
         >
