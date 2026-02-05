@@ -48,14 +48,34 @@ export class DashboardAgentService {
       ...context,
     };
 
-    // Step 1: Classify intent
+    // Step 1: Check subscription status - non-subscribed users get guided to subscribe
+    const isSubscribed = currentContext.subscription?.canAccessPremiumFeatures ?? false;
+
+    // Step 2: Classify intent
     const intent = await intentClassifier.classify(message, currentContext);
 
-    // Step 2: Check if this is a URL-containing message for onboarding
+    // Step 3: Check if this is a URL-containing message for onboarding
     const extractedUrls = extractUrlsFromMessage(message);
     const hasUrls = Object.keys(extractedUrls).length > 0;
 
-    // Step 3: Determine response strategy
+    // Step 4: Determine response strategy
+    // For non-subscribed users, prioritize subscription guidance
+    if (!isSubscribed) {
+      // Allow subscription-related intents or explicit subscription requests
+      if (intent.category === "subscription" ||
+          message.toLowerCase().includes("trial") ||
+          message.toLowerCase().includes("subscribe") ||
+          message.toLowerCase().includes("订阅") ||
+          message.toLowerCase().includes("试用")) {
+        yield* this.handleSubscriptionCheckout(tenantId, companyId, merchantId, userId, currentContext);
+      } else {
+        // Guide non-subscribed users to subscribe first
+        yield* this.handleSubscriptionGuidance(currentContext);
+      }
+      return;
+    }
+
+    // Subscribed users: normal flow
     if (hasUrls && (intent.category === "onboarding" || currentContext.onboardingState?.status === "collecting_urls")) {
       // Execute onboarding import
       yield* this.handleOnboardingImport(
@@ -76,6 +96,124 @@ export class DashboardAgentService {
       // For other intents, provide guidance (tools not implemented yet)
       yield* this.handleNotImplemented(intent, currentContext);
     }
+  }
+
+  /**
+   * Handle subscription guidance for non-subscribed users
+   */
+  private async *handleSubscriptionGuidance(
+    _context: ConversationContext
+  ): AsyncGenerator<StreamEvent> {
+    yield {
+      type: "text",
+      data: "Before you can access the Dashboard features, please start your free trial.\n\n" +
+        "**What you'll get:**\n" +
+        "• Online ordering website\n" +
+        "• Menu management\n" +
+        "• Order management\n" +
+        "• Loyalty program\n" +
+        "• Gift cards\n" +
+        "• Analytics & reports\n\n" +
+        "Ready to get started? Click the button below!",
+    };
+
+    yield {
+      type: "quick_actions",
+      data: [
+        {
+          id: "start_trial",
+          label: "Start Free Trial",
+          description: "14-day free trial, no credit card required",
+          action: { type: "send_message", payload: "I want to start my free trial" },
+        },
+      ] as QuickAction[],
+    };
+
+    yield { type: "done", data: null };
+  }
+
+  /**
+   * Handle subscription checkout - execute the subscription tool
+   */
+  private async *handleSubscriptionCheckout(
+    tenantId: string,
+    companyId: string,
+    merchantId: string,
+    userId: string,
+    context: ConversationContext
+  ): AsyncGenerator<StreamEvent> {
+    const tool = toolRegistry.get("subscription_checkout");
+    if (!tool) {
+      yield { type: "error", data: "Subscription tool not available" };
+      yield { type: "done", data: null };
+      return;
+    }
+
+    // Notify tool start
+    yield {
+      type: "tool_start",
+      data: {
+        toolId: tool.definition.id,
+        toolName: tool.definition.name,
+      },
+    };
+
+    try {
+      const result = await tool.execute({}, {
+        tenantId,
+        companyId,
+        merchantId,
+        userId,
+        conversationContext: context,
+      });
+
+      // Tool result
+      yield {
+        type: "tool_end",
+        data: result,
+      };
+
+      if (result.success && result.data) {
+        const data = result.data as { checkoutUrl: string; message: string };
+        yield {
+          type: "text",
+          data: data.message,
+        };
+
+        yield {
+          type: "quick_actions",
+          data: [
+            {
+              id: "go_to_checkout",
+              label: "Continue to Checkout",
+              action: { type: "navigate", payload: data.checkoutUrl },
+            },
+          ] as QuickAction[],
+        };
+      } else {
+        yield {
+          type: "text",
+          data: `Sorry, I couldn't create a checkout session: ${result.error || "Unknown error"}. Please try again later.`,
+        };
+      }
+    } catch (error) {
+      yield {
+        type: "tool_end",
+        data: {
+          toolId: tool.definition.id,
+          toolName: tool.definition.name,
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+      };
+
+      yield {
+        type: "text",
+        data: "Sorry, something went wrong. Please try again later.",
+      };
+    }
+
+    yield { type: "done", data: null };
   }
 
   /**
@@ -364,54 +502,109 @@ export class DashboardAgentService {
 
   /**
    * Generate welcome message for first-time users
+   * @param companyName - Company name for personalization
+   * @param hasMenu - Whether the company has menu items
+   * @param isSubscribed - Whether the user has an active subscription
    */
-  getWelcomeMessage(companyName: string, hasMenu: boolean): Message {
+  getWelcomeMessage(companyName: string, hasMenu: boolean, isSubscribed: boolean = true): Message {
     const content: MessageContent[] = [];
 
+    // Non-subscribed users: show subscription guidance
+    if (!isSubscribed) {
+      content.push({
+        type: "text",
+        text: `👋 Welcome to Plovr, ${companyName}!\n\n` +
+          `I'm your AI assistant, here to help you get started with your online ordering system.\n\n` +
+          `Before we begin, let's set up your subscription. You can start with a **14-day free trial** - no credit card required to start!\n\n` +
+          `**What you'll get:**\n` +
+          `✅ Online ordering website\n` +
+          `✅ Menu management\n` +
+          `✅ Order management\n` +
+          `✅ Loyalty program\n` +
+          `✅ Gift cards\n` +
+          `✅ Analytics & reports\n\n` +
+          `Ready to get started?`,
+      });
+
+      content.push({
+        type: "quick_actions",
+        quickActions: [
+          {
+            id: "start_trial",
+            label: "Start Free Trial",
+            description: "14-day free trial, no credit card required",
+            action: { type: "send_message", payload: "I want to start my free trial" },
+          },
+          {
+            id: "learn_more",
+            label: "Learn More",
+            description: "Tell me about the features",
+            action: { type: "send_message", payload: "Tell me more about the features" },
+          },
+        ],
+      });
+
+      return {
+        id: this.generateMessageId(),
+        role: "assistant",
+        content,
+        createdAt: new Date(),
+      };
+    }
+
+    // Subscribed users without menu: onboarding guidance
     if (!hasMenu) {
       content.push({
         type: "text",
-        text: `Welcome to ${companyName}! I'm your AI assistant.\n\n` +
-          `I noticed you haven't set up your menu yet. Would you like me to help you import it from your existing sources?`,
+        text: `🎉 Great! Your subscription is now active, ${companyName}!\n\n` +
+          `Now let's set up your restaurant. I can help you:\n` +
+          `1. **Import your menu** from DoorDash, UberEats, or your website\n` +
+          `2. **Set up business info** like hours, address, and contact details\n` +
+          `3. **Configure settings** for ordering, payments, and more\n\n` +
+          `What would you like to do first?`,
+      });
+
+      content.push({
+        type: "quick_actions",
+        quickActions: [
+          {
+            id: "import_menu",
+            label: "Import Menu",
+            description: "Import from website, DoorDash, Uber Eats, or Google",
+            action: { type: "send_message", payload: "I want to import my menu" },
+          },
+          {
+            id: "create_manual",
+            label: "Create Manually",
+            description: "Add menu items one by one",
+            action: { type: "navigate", payload: "/dashboard/menu/items/new" },
+          },
+        ],
       });
     } else {
+      // Subscribed users with menu: normal welcome
       content.push({
         type: "text",
         text: `Welcome back to ${companyName}! I'm your AI assistant.\n\n` +
           `How can I help you today?`,
       });
-    }
 
-    content.push({
-      type: "quick_actions",
-      quickActions: !hasMenu
-        ? [
-            {
-              id: "import_menu",
-              label: "Import Menu",
-              description: "Import from website, DoorDash, Uber Eats, or Google",
-              action: { type: "send_message", payload: "I want to import my menu" },
-            },
-            {
-              id: "create_manual",
-              label: "Create Manually",
-              description: "Add menu items one by one",
-              action: { type: "navigate", payload: "/dashboard/menu/items/new" },
-            },
-          ]
-        : [
-            {
-              id: "view_menu",
-              label: "View Menu",
-              action: { type: "navigate", payload: "/dashboard/menu" },
-            },
-            {
-              id: "view_orders",
-              label: "View Orders",
-              action: { type: "navigate", payload: "/dashboard/orders" },
-            },
-          ],
-    });
+      content.push({
+        type: "quick_actions",
+        quickActions: [
+          {
+            id: "view_menu",
+            label: "View Menu",
+            action: { type: "navigate", payload: "/dashboard/menu" },
+          },
+          {
+            id: "view_orders",
+            label: "View Orders",
+            action: { type: "navigate", payload: "/dashboard/orders" },
+          },
+        ],
+      });
+    }
 
     return {
       id: this.generateMessageId(),

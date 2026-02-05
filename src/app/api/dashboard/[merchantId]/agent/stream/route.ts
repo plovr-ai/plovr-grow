@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { merchantRepository } from "@/repositories/merchant.repository";
 import { dashboardAgentService } from "@/services/dashboard-agent";
+import { subscriptionService } from "@/services/subscription";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,9 @@ export async function POST(
   const companyId = merchant.companyId;
   const userId = session.user.id;
 
+  // Fetch subscription status server-side (secure)
+  const subscription = await subscriptionService.getSubscriptionForDashboard(tenantId);
+
   // Create SSE stream
   const encoder = new TextEncoder();
 
@@ -104,13 +108,19 @@ export async function POST(
           {
             message,
             conversationId,
-            context: context
-              ? {
-                  activeIntent: context.activeIntent as import("@/services/dashboard-agent").IntentResult | undefined,
-                  slots: context.slots || {},
-                  onboardingState: context.onboardingState as import("@/services/dashboard-agent").OnboardingState | undefined,
-                }
-              : undefined,
+            context: {
+              activeIntent: context?.activeIntent as import("@/services/dashboard-agent").IntentResult | undefined,
+              slots: context?.slots || {},
+              onboardingState: context?.onboardingState as import("@/services/dashboard-agent").OnboardingState | undefined,
+              subscription: subscription
+                ? {
+                    status: subscription.status,
+                    canAccessPremiumFeatures: subscription.canAccessPremiumFeatures,
+                    isTrialing: subscription.isTrialing,
+                    trialDaysRemaining: subscription.trialDaysRemaining,
+                  }
+                : undefined,
+            },
           }
         );
 

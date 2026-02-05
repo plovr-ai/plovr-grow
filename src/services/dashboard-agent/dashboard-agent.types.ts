@@ -73,6 +73,13 @@ export interface OnboardingState {
   };
 }
 
+export interface SubscriptionContext {
+  status: string;
+  canAccessPremiumFeatures: boolean;
+  isTrialing: boolean;
+  trialDaysRemaining: number | null;
+}
+
 export interface ConversationContext {
   /** Current active intent/topic */
   activeIntent?: IntentResult;
@@ -80,11 +87,14 @@ export interface ConversationContext {
   slots: Record<string, unknown>;
   /** Onboarding progress if applicable */
   onboardingState?: OnboardingState;
+  /** Subscription status */
+  subscription?: SubscriptionContext;
 }
 
 // ==================== Intent Types ====================
 
 export type IntentCategory =
+  | "subscription"
   | "onboarding"
   | "menu_management"
   | "order_management"

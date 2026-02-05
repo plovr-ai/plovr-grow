@@ -8,6 +8,26 @@ import type {
  * Pattern-based intent keywords for each category
  */
 const INTENT_PATTERNS: Record<IntentCategory, string[]> = {
+  subscription: [
+    "subscribe",
+    "subscription",
+    "plan",
+    "pricing",
+    "trial",
+    "free trial",
+    "upgrade",
+    "billing",
+    "payment plan",
+    "start trial",
+    "begin trial",
+    "订阅",
+    "付费",
+    "试用",
+    "免费试用",
+    "套餐",
+    "定价",
+    "升级",
+  ],
   onboarding: [
     "import",
     "导入",
@@ -223,6 +243,13 @@ class IntentClassifier {
    */
   private extractAction(message: string, category: IntentCategory): string {
     switch (category) {
+      case "subscription":
+        if (message.includes("start") || message.includes("begin") || message.includes("开始"))
+          return "start_trial";
+        if (message.includes("upgrade") || message.includes("升级")) return "upgrade";
+        if (message.includes("billing") || message.includes("账单")) return "manage_billing";
+        return "start_trial";
+
       case "onboarding":
         return "import_menu";
 

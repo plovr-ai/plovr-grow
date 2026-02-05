@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { Sparkles } from "lucide-react";
 import { MessageList } from "./MessageList";
 import { InputArea } from "./InputArea";
 import { QuickActions } from "./QuickActions";
 import { TypingIndicator } from "./TypingIndicator";
 import { useAgentChat } from "@/hooks/useAgentChat";
+import { useSubscription } from "@/hooks/useSubscription";
 import type { Message, QuickAction } from "@/services/dashboard-agent";
 
 interface AgentChatClientProps {
@@ -19,40 +20,105 @@ interface AgentChatClientProps {
 }
 
 /**
- * Generate welcome message based on onboarding status
+ * Generate welcome message based on subscription and onboarding status
  */
-function generateWelcomeMessage(companyName: string, hasMenu: boolean): Message {
-  const quickActions: QuickAction[] = !hasMenu
-    ? [
-        {
-          id: "import_menu",
-          label: "Import Menu",
-          description: "Import from website, DoorDash, Uber Eats, or Google",
-          action: { type: "send_message", payload: "I want to import my menu" },
-        },
-        {
-          id: "create_manual",
-          label: "Create Manually",
-          description: "Add menu items one by one",
-          action: { type: "navigate", payload: "/dashboard/menu/items/new" },
-        },
-      ]
-    : [
-        {
-          id: "view_menu",
-          label: "View Menu",
-          action: { type: "navigate", payload: "/dashboard/menu" },
-        },
-        {
-          id: "view_orders",
-          label: "View Orders",
-          action: { type: "navigate", payload: "/dashboard/orders" },
-        },
-      ];
+function generateWelcomeMessage(
+  companyName: string,
+  hasMenu: boolean,
+  isSubscribed: boolean
+): Message {
+  // Non-subscribed users: show subscription guidance
+  if (!isSubscribed) {
+    const quickActions: QuickAction[] = [
+      {
+        id: "start_trial",
+        label: "Start Free Trial",
+        description: "14-day free trial, no credit card required",
+        action: { type: "send_message", payload: "I want to start my free trial" },
+      },
+      {
+        id: "learn_more",
+        label: "Learn More",
+        description: "Tell me about the features",
+        action: { type: "send_message", payload: "Tell me more about the features" },
+      },
+    ];
 
-  const welcomeText = !hasMenu
-    ? `Welcome to ${companyName}! I'm your AI assistant.\n\nI noticed you haven't set up your menu yet. Would you like me to help you import it from your existing sources?`
-    : `Welcome back to ${companyName}! I'm your AI assistant.\n\nHow can I help you today?`;
+    const welcomeText =
+      `Welcome to Plovr, ${companyName}!\n\n` +
+      `I'm your AI assistant, here to help you get started with your online ordering system.\n\n` +
+      `Before we begin, let's set up your subscription. You can start with a **14-day free trial** - no credit card required to start!\n\n` +
+      `**What you'll get:**\n` +
+      `- Online ordering website\n` +
+      `- Menu management\n` +
+      `- Order management\n` +
+      `- Loyalty program\n` +
+      `- Gift cards\n` +
+      `- Analytics & reports\n\n` +
+      `Ready to get started?`;
+
+    return {
+      id: `welcome_${Date.now()}`,
+      role: "assistant",
+      content: [
+        { type: "text", text: welcomeText },
+        { type: "quick_actions", quickActions },
+      ],
+      createdAt: new Date(),
+    };
+  }
+
+  // Subscribed users without menu: onboarding guidance
+  if (!hasMenu) {
+    const quickActions: QuickAction[] = [
+      {
+        id: "import_menu",
+        label: "Import Menu",
+        description: "Import from website, DoorDash, Uber Eats, or Google",
+        action: { type: "send_message", payload: "I want to import my menu" },
+      },
+      {
+        id: "create_manual",
+        label: "Create Manually",
+        description: "Add menu items one by one",
+        action: { type: "navigate", payload: "/dashboard/menu/items/new" },
+      },
+    ];
+
+    const welcomeText =
+      `Great! Your subscription is now active, ${companyName}!\n\n` +
+      `Now let's set up your restaurant. I can help you:\n` +
+      `1. **Import your menu** from DoorDash, UberEats, or your website\n` +
+      `2. **Set up business info** like hours, address, and contact details\n` +
+      `3. **Configure settings** for ordering, payments, and more\n\n` +
+      `What would you like to do first?`;
+
+    return {
+      id: `welcome_${Date.now()}`,
+      role: "assistant",
+      content: [
+        { type: "text", text: welcomeText },
+        { type: "quick_actions", quickActions },
+      ],
+      createdAt: new Date(),
+    };
+  }
+
+  // Subscribed users with menu: normal welcome
+  const quickActions: QuickAction[] = [
+    {
+      id: "view_menu",
+      label: "View Menu",
+      action: { type: "navigate", payload: "/dashboard/menu" },
+    },
+    {
+      id: "view_orders",
+      label: "View Orders",
+      action: { type: "navigate", payload: "/dashboard/orders" },
+    },
+  ];
+
+  const welcomeText = `Welcome back to ${companyName}! I'm your AI assistant.\n\nHow can I help you today?`;
 
   return {
     id: `welcome_${Date.now()}`,
@@ -76,8 +142,12 @@ export function AgentChatClient({
   hasMenu = false,
 }: AgentChatClientProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { isActive: isSubscribed } = useSubscription();
 
-  const welcomeMessage = generateWelcomeMessage(companyName, hasMenu);
+  const welcomeMessage = useMemo(
+    () => generateWelcomeMessage(companyName, hasMenu, isSubscribed),
+    [companyName, hasMenu, isSubscribed]
+  );
 
   const {
     messages,

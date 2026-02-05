@@ -32,7 +32,10 @@ export default auth((req) => {
     );
   }
 
-  return NextResponse.next();
+  // Add pathname header for server components to access
+  const response = NextResponse.next();
+  response.headers.set("x-pathname", nextUrl.pathname);
+  return response;
 });
 
 export const config = {
