@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { merchantService } from "@/services/merchant";
 import { menuService } from "@/services/menu";
+import { cateringService } from "@/services/catering";
 import { CateringOrderForm } from "@/components/dashboard/catering/CateringOrderForm";
 
 interface NewCateringOrderPageProps {
@@ -51,6 +52,7 @@ export default async function NewCateringOrderPage({
         id: item.id,
         name: item.name,
         price: Number(item.price),
+        categoryId: cat.id,
         categoryName: cat.name,
         menuId: menu.id,
       }))
@@ -59,6 +61,28 @@ export default async function NewCateringOrderPage({
 
   const menuItemsArrays = await Promise.all(menuItemsPromises);
   const menuItems = menuItemsArrays.flat();
+
+  // Fetch lead data if leadId is provided
+  let initialData:
+    | {
+        customerFirstName: string;
+        customerLastName: string;
+        customerPhone: string;
+        customerEmail: string;
+      }
+    | undefined;
+
+  if (search.leadId) {
+    const lead = await cateringService.getLeadById(tenantId, search.leadId);
+    if (lead) {
+      initialData = {
+        customerFirstName: lead.firstName,
+        customerLastName: lead.lastName,
+        customerPhone: lead.phone,
+        customerEmail: lead.email,
+      };
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -82,6 +106,7 @@ export default async function NewCateringOrderPage({
         menuItems={menuItems}
         leadId={search.leadId}
         initialEventDate={search.eventDate}
+        initialData={initialData}
       />
     </div>
   );

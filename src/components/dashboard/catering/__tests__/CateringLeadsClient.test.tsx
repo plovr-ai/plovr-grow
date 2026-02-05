@@ -5,14 +5,19 @@ import type { CateringLeadWithMerchant } from "@/services/catering/catering.type
 
 // Mock next/navigation
 const mockPush = vi.fn();
+const mockRefresh = vi.fn();
 const mockSearchParams = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
+    refresh: mockRefresh,
   }),
   useSearchParams: () => mockSearchParams,
 }));
+
+// Mock fetch
+global.fetch = vi.fn();
 
 describe("CateringLeadsClient", () => {
   const mockMerchants = [
@@ -25,7 +30,8 @@ describe("CateringLeadsClient", () => {
       id: "lead-1",
       tenantId: "tenant-1",
       merchantId: "merchant-1",
-      name: "John Doe",
+      firstName: "John",
+      lastName: "Doe",
       phone: "2125551234",
       email: "john@example.com",
       notes: "Birthday party for 20 people",
@@ -36,14 +42,14 @@ describe("CateringLeadsClient", () => {
         id: "merchant-1",
         name: "Downtown Location",
         slug: "downtown",
-        companyId: "company-1",
       },
     },
     {
       id: "lead-2",
       tenantId: "tenant-1",
       merchantId: "merchant-2",
-      name: "Jane Smith",
+      firstName: "Jane",
+      lastName: "Smith",
       phone: "3105559876",
       email: "jane@example.com",
       notes: null,
@@ -54,14 +60,14 @@ describe("CateringLeadsClient", () => {
         id: "merchant-2",
         name: "Westside Location",
         slug: "westside",
-        companyId: "company-1",
       },
     },
     {
       id: "lead-3",
       tenantId: "tenant-1",
       merchantId: "merchant-1",
-      name: "Bob Wilson",
+      firstName: "Bob",
+      lastName: "Wilson",
       phone: "4155554567",
       email: "bob@example.com",
       notes: "Corporate event",
@@ -72,7 +78,6 @@ describe("CateringLeadsClient", () => {
         id: "merchant-1",
         name: "Downtown Location",
         slug: "downtown",
-        companyId: "company-1",
       },
     },
   ];
@@ -92,6 +97,8 @@ describe("CateringLeadsClient", () => {
 
   beforeEach(() => {
     mockPush.mockClear();
+    mockRefresh.mockClear();
+    (global.fetch as ReturnType<typeof vi.fn>).mockClear();
     mockSearchParams.forEach((_, key) => mockSearchParams.delete(key));
   });
 

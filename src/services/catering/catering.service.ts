@@ -4,6 +4,7 @@ import {
 } from "@/repositories/catering.repository";
 import type {
   CateringLeadData,
+  CateringLeadWithMerchant,
   CreateCateringLeadInput,
   PaginatedCateringLeads,
   PaginatedCateringLeadsWithMerchant,
@@ -96,6 +97,18 @@ export class CateringService {
     status: string
   ): Promise<void> {
     await this.repository.updateStatus(tenantId, leadId, status);
+  }
+
+  /**
+   * Get a single lead by ID
+   */
+  async getLeadById(
+    tenantId: string,
+    leadId: string
+  ): Promise<CateringLeadWithMerchant | null> {
+    const lead = await this.repository.getById(tenantId, leadId);
+    if (!lead) return null;
+    return toCateringLeadWithMerchant(lead);
   }
 }
 

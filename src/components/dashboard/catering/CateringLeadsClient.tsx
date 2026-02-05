@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Pagination } from "@/components/orders/Pagination";
 import { formatPhone } from "@/lib/utils";
 import { formatCustomerName } from "@/lib/names";
+import { LeadDetailModal } from "./LeadDetailModal";
 import type { CateringLeadWithMerchant } from "@/services/catering/catering.types";
 
 interface CateringLeadsClientProps {
@@ -50,6 +51,14 @@ export function CateringLeadsClient({
   const searchParams = useSearchParams();
   const [searchInput, setSearchInput] = useState(initialFilters.search);
 
+  // Modal state
+  const [selectedLead, setSelectedLead] =
+    useState<CateringLeadWithMerchant | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Local leads state for optimistic updates
+  const [localLeads, setLocalLeads] = useState(leads);
+
   const updateFilters = (updates: Partial<typeof initialFilters>) => {
     const params = new URLSearchParams(searchParams);
 
@@ -76,6 +85,51 @@ export function CateringLeadsClient({
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateFilters({ search: searchInput });
+  };
+
+  const handleRowClick = (lead: CateringLeadWithMerchant) => {
+    setSelectedLead(lead);
+    setIsModalOpen(true);
+  };
+
+  const handleStatusUpdate = async (leadId: string, status: string) => {
+    // Optimistic update
+    const previousLeads = localLeads;
+    const previousSelectedLead = selectedLead;
+
+    setLocalLeads((prev) =>
+      prev.map((lead) => (lead.id === leadId ? { ...lead, status } : lead))
+    );
+    if (selectedLead?.id === leadId) {
+      setSelectedLead((prev) => (prev ? { ...prev, status } : null));
+    }
+
+    try {
+      const response = await fetch(
+        `/api/dashboard/${selectedLead?.merchantId}/catering/leads/${leadId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update status");
+      }
+
+      router.refresh();
+    } catch (error) {
+      // Rollback on error
+      setLocalLeads(previousLeads);
+      setSelectedLead(previousSelectedLead);
+      console.error("Error updating lead status:", error);
+    }
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedLead(null);
   };
 
   const formatDate = (date: Date) => {
@@ -137,7 +191,7 @@ export function CateringLeadsClient({
       </div>
 
       {/* Leads Table */}
-      {leads.length === 0 ? (
+      {localLeads.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white py-12 text-center">
           <p className="text-gray-500">No catering leads found</p>
         </div>
@@ -171,8 +225,12 @@ export function CateringLeadsClient({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {leads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-gray-50">
+                {localLeads.map((lead) => (
+                  <tr
+                    key={lead.id}
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleRowClick(lead)}
+                  >
                     <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
                       {formatCustomerName(lead.firstName, lead.lastName)}
                     </td>
@@ -218,6 +276,14 @@ export function CateringLeadsClient({
           onPageChange={handlePageChange}
         />
       )}
+
+      {/* Lead Detail Modal */}
+      <LeadDetailModal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        lead={selectedLead}
+        onStatusUpdate={handleStatusUpdate}
+      />
     </div>
   );
 }

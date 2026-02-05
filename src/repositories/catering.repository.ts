@@ -161,6 +161,24 @@ export class CateringRepository {
       data: { status },
     });
   }
+
+  /**
+   * Get a single lead by ID
+   */
+  async getById(tenantId: string, leadId: string) {
+    return prisma.cateringLead.findFirst({
+      where: { id: leadId, tenantId },
+      include: {
+        merchant: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+    });
+  }
 }
 
 export const cateringRepository = new CateringRepository();
