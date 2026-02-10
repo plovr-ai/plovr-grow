@@ -397,6 +397,208 @@ function DashboardComponent() {
 - 价格显示使用 `useDashboardFormatPrice()`
 - 价格输入框前缀使用 `useDashboardCurrencySymbol()`
 
+## 多语言系统 (i18n)
+
+项目使用 **next-intl** 实现国际化，采用以下架构：
+
+### 目录结构
+
+```
+src/
+├── i18n/
+│   ├── config.ts          # 语言配置 (支持的语言列表)
+│   └── request.ts          # next-intl 请求配置
+├── messages/
+│   ├── storefront/
+│   │   └── en.json         # Storefront 翻译文件
+│   ├── dashboard/
+│   │   └── en.json         # Dashboard 翻译文件
+│   └── shared/
+│       └── en.json         # 共享翻译 (错误消息等)
+└── lib/
+    └── errors/
+        ├── error-codes.ts  # 错误码常量
+        ├── app-error.ts    # AppError 类
+        └── index.ts
+```
+
+### 翻译文件格式
+
+使用 **JSON 扁平格式**，key 使用点号分隔命名空间：
+
+```json
+{
+  "checkout.title": "Checkout",
+  "checkout.firstName": "First Name",
+  "checkout.placeOrder": "Place Order",
+  "menu.addToCart": "Add to Cart",
+  "common.loading": "Loading...",
+  "common.cancel": "Cancel"
+}
+```
+
+### 翻译文件分离
+
+| 文件 | 用途 | 加载时机 |
+|------|------|----------|
+| `storefront/en.json` | 用户端文案 (菜单、结账、订单等) | 访问 Storefront 页面时 |
+| `dashboard/en.json` | 商户端文案 (菜单管理、订单管理等) | 访问 Dashboard 页面时 |
+| `shared/en.json` | 共享文案 (错误消息) | 始终加载 |
+
+### 组件中使用翻译
+
+```typescript
+"use client";
+import { useTranslations } from "next-intl";
+
+export function CheckoutForm() {
+  const t = useTranslations("checkout");
+
+  return (
+    <div>
+      <h1>{t("title")}</h1>
+      <label>{t("firstName")}</label>
+      <button>{t("placeOrder")}</button>
+    </div>
+  );
+}
+```
+
+### Service 层错误处理规范
+
+**核心原则：Service 层只返回错误码，不返回文案。文案在 App 层通过翻译文件获取。**
+
+#### 使用 AppError
+
+```typescript
+import { AppError, ErrorCodes } from "@/lib/errors";
+
+class OrderService {
+  async getOrder(tenantId: string, orderId: string) {
+    const order = await orderRepository.getById(tenantId, orderId);
+    if (!order) {
+      // ✅ 正确：抛出 AppError 带错误码
+      throw new AppError(ErrorCodes.ORDER_NOT_FOUND, undefined, 404);
+    }
+    return order;
+  }
+}
+```
+
+#### 错误码定义
+
+错误码定义在 `src/lib/errors/error-codes.ts`：
+
+```typescript
+export const ErrorCodes = {
+  // 订单相关
+  ORDER_NOT_FOUND: "ORDER_NOT_FOUND",
+  INVALID_PAYMENT_STATUS_TRANSITION: "INVALID_PAYMENT_STATUS_TRANSITION",
+
+  // 商户相关
+  MERCHANT_NOT_FOUND: "MERCHANT_NOT_FOUND",
+
+  // 认证相关
+  AUTH_EMAIL_EXISTS: "AUTH_EMAIL_EXISTS",
+  AUTH_INVALID_CREDENTIALS: "AUTH_INVALID_CREDENTIALS",
+
+  // OTP 相关
+  OTP_EXPIRED: "OTP_EXPIRED",
+  OTP_INVALID_CODE: "OTP_INVALID_CODE",
+
+  // Loyalty 相关
+  LOYALTY_MEMBER_NOT_FOUND: "LOYALTY_MEMBER_NOT_FOUND",
+  LOYALTY_POINTS_ALREADY_AWARDED: "LOYALTY_POINTS_ALREADY_AWARDED",
+} as const;
+```
+
+#### 错误消息翻译
+
+在 `src/messages/shared/en.json` 中定义错误消息：
+
+```json
+{
+  "errors.ORDER_NOT_FOUND": "Order not found",
+  "errors.MERCHANT_NOT_FOUND": "Restaurant not found",
+  "errors.AUTH_EMAIL_EXISTS": "An account with this email already exists",
+  "errors.OTP_EXPIRED": "Verification code has expired"
+}
+```
+
+#### API 层错误处理
+
+```typescript
+import { AppError } from "@/lib/errors";
+
+export async function GET(request: NextRequest) {
+  try {
+    const result = await orderService.getOrder(tenantId, orderId);
+    return NextResponse.json({ success: true, data: result });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { success: false, error: { code: error.code } },
+        { status: error.statusCode }
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: "INTERNAL_ERROR" } },
+      { status: 500 }
+    );
+  }
+}
+```
+
+#### 前端错误显示
+
+```typescript
+import { useTranslations } from "next-intl";
+
+function OrderPage() {
+  const t = useTranslations("errors");
+  const [error, setError] = useState<{ code: string } | null>(null);
+
+  // 显示翻译后的错误消息
+  {error && <div className="text-red-500">{t(error.code)}</div>}
+}
+```
+
+### 相关文件
+
+| 文件 | 说明 |
+|------|------|
+| `src/i18n/config.ts` | 语言配置 |
+| `src/i18n/request.ts` | next-intl 请求配置 |
+| `src/lib/errors/error-codes.ts` | 错误码常量 |
+| `src/lib/errors/app-error.ts` | AppError 类 |
+| `src/messages/storefront/en.json` | Storefront 翻译 |
+| `src/messages/dashboard/en.json` | Dashboard 翻译 |
+| `src/messages/shared/en.json` | 共享翻译 (错误消息) |
+
+### 开发规范
+
+1. **禁止在 Service 层硬编码错误消息**
+   ```typescript
+   // ❌ 错误
+   throw new Error("Order not found");
+
+   // ✅ 正确
+   throw new AppError(ErrorCodes.ORDER_NOT_FOUND, undefined, 404);
+   ```
+
+2. **禁止在组件中硬编码 UI 文案**
+   ```typescript
+   // ❌ 错误
+   <button>Place Order</button>
+
+   // ✅ 正确
+   <button>{t("placeOrder")}</button>
+   ```
+
+3. **新增错误码时同步更新翻译文件**
+   - 在 `error-codes.ts` 添加错误码
+   - 在 `shared/en.json` 添加对应翻译
+
 ## 常用命令
 
 ```bash
