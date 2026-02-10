@@ -120,6 +120,15 @@ describe("MenuForm", () => {
       expect(descInput.value).toBe("The main menu");
     });
 
+    it("should not show status field in edit mode (only active status exists)", () => {
+      render(<MenuForm {...defaultProps} menu={mockMenu} />);
+
+      // Status field should not be displayed since there's only one status value
+      expect(screen.queryByText("Status")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Active")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Hidden")).not.toBeInTheDocument();
+    });
+
     it("should show delete button when canDelete is true", () => {
       render(<MenuForm {...defaultProps} menu={mockMenu} canDelete={true} />);
 

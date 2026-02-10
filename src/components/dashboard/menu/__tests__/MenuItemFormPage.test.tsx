@@ -283,6 +283,14 @@ describe("MenuItemFormPage", () => {
       expect(screen.getByLabelText("Out of Stock")).toBeInTheDocument();
     });
 
+    it("should NOT have Hidden/inactive status option", () => {
+      render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
+
+      // Hidden/inactive option should not exist
+      expect(screen.queryByLabelText("Hidden")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Inactive")).not.toBeInTheDocument();
+    });
+
     it("should call updateMenuItemAction on submit", async () => {
       mockUpdateMenuItemAction.mockResolvedValue({ success: true });
 

@@ -173,6 +173,42 @@ describe("MenuItemCard", () => {
       const badge = badges.find((el) => el.classList.contains("rounded-full"));
       expect(badge).toBeInTheDocument();
     });
+
+    it("should show Archived badge", () => {
+      render(
+        <MenuItemCard {...defaultProps} item={{ ...singleCategoryItem, status: "archived" }} />,
+        { wrapper: Wrapper }
+      );
+      const badges = screen.getAllByText("Archived");
+      const badge = badges.find((el) => el.classList.contains("rounded-full"));
+      expect(badge).toBeInTheDocument();
+    });
+  });
+
+  describe("Status Dropdown", () => {
+    it("should have exactly 3 status options", () => {
+      render(<MenuItemCard {...defaultProps} />, { wrapper: Wrapper });
+
+      const statusSelect = screen.getByRole("combobox");
+      const options = statusSelect.querySelectorAll("option");
+
+      expect(options).toHaveLength(3);
+      expect(options[0]).toHaveValue("active");
+      expect(options[1]).toHaveValue("out_of_stock");
+      expect(options[2]).toHaveValue("archived");
+    });
+
+    it("should NOT have Hidden/inactive option", () => {
+      render(<MenuItemCard {...defaultProps} />, { wrapper: Wrapper });
+
+      const statusSelect = screen.getByRole("combobox");
+      const options = Array.from(statusSelect.querySelectorAll("option"));
+
+      const hasHidden = options.some(
+        (opt) => opt.value === "inactive" || opt.textContent === "Hidden"
+      );
+      expect(hasHidden).toBe(false);
+    });
   });
 
   describe("Multi-Category Badge", () => {
