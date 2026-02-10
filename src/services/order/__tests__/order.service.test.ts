@@ -238,6 +238,189 @@ describe("OrderService", () => {
     });
   });
 
+  describe("createCompanyOrder()", () => {
+    const mockInput = {
+      companyId: "company-1",
+      customerFirstName: "Jane",
+      customerLastName: "Smith",
+      customerPhone: "555-123-4567",
+      customerEmail: "jane@example.com",
+      items: [
+        {
+          menuItemId: "giftcard-50",
+          name: "$50 Gift Card",
+          price: 50,
+          quantity: 1,
+          selectedModifiers: [],
+          totalPrice: 50,
+          taxes: [],
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      vi.mocked(sequenceRepository.getNextCompanyOrderSequence).mockResolvedValue(1);
+
+      vi.mocked(orderRepository.create).mockResolvedValue({
+        id: "order-gc-1",
+        orderNumber: "GC-20260210-0001",
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        merchantId: null,
+        status: "created",
+        fulfillmentStatus: "pending",
+        customerFirstName: "Jane",
+        customerLastName: "Smith",
+        customerPhone: "555-123-4567",
+        customerEmail: "jane@example.com",
+        orderMode: "pickup",
+        salesChannel: "giftcard",
+        items: mockInput.items,
+        subtotal: 50,
+        taxAmount: 0,
+        tipAmount: 0,
+        deliveryFee: 0,
+        discount: 0,
+        giftCardPayment: 0,
+        cashPayment: 50,
+        totalAmount: 50,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never);
+    });
+
+    it("should create company order with merchantId as null", async () => {
+      const order = await orderService.createCompanyOrder("tenant-1", mockInput);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        null, // merchantId should be null
+        expect.objectContaining({
+          orderNumber: expect.any(String),
+          customerFirstName: "Jane",
+          customerLastName: "Smith",
+          orderMode: "pickup",
+          salesChannel: "giftcard",
+          status: "created",
+          fulfillmentStatus: "pending",
+          taxAmount: 0,
+          tipAmount: 0,
+          deliveryFee: 0,
+        }),
+        undefined
+      );
+
+      expect(order.id).toBe("order-gc-1");
+      expect(order.merchantId).toBeNull();
+    });
+
+    it("should calculate totalAmount as sum of item prices without tax", async () => {
+      const multiItemInput = {
+        ...mockInput,
+        items: [
+          { menuItemId: "gc-25", name: "$25 Gift Card", price: 25, quantity: 1, selectedModifiers: [], totalPrice: 25, taxes: [] },
+          { menuItemId: "gc-50", name: "$50 Gift Card", price: 50, quantity: 1, selectedModifiers: [], totalPrice: 50, taxes: [] },
+        ],
+      };
+
+      await orderService.createCompanyOrder("tenant-1", multiItemInput);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        null,
+        expect.objectContaining({
+          subtotal: 75,
+          totalAmount: 75,
+          taxAmount: 0,
+        }),
+        undefined
+      );
+    });
+
+    it("should not validate menu items (skip menu service call)", async () => {
+      await orderService.createCompanyOrder("tenant-1", mockInput);
+
+      // menuService.getMenuItemsByIds should NOT be called for company orders
+      expect(menuService.getMenuItemsByIds).not.toHaveBeenCalled();
+    });
+
+    it("should not emit order.created event", async () => {
+      const eventHandler = vi.fn();
+      const unsubscribe = orderEventEmitter.on("order.created", eventHandler);
+
+      await orderService.createCompanyOrder("tenant-1", mockInput);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Company orders should NOT emit events
+      expect(eventHandler).not.toHaveBeenCalled();
+
+      unsubscribe();
+    });
+
+    it("should use getNextCompanyOrderSequence for order number generation", async () => {
+      await orderService.createCompanyOrder("tenant-1", mockInput);
+
+      expect(sequenceRepository.getNextCompanyOrderSequence).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        expect.any(String) // dateStr
+      );
+
+      // Should NOT call merchant sequence
+      expect(sequenceRepository.getNextOrderSequence).not.toHaveBeenCalled();
+    });
+
+    it("should create order with loyaltyMemberId when provided", async () => {
+      const inputWithLoyalty = {
+        ...mockInput,
+        loyaltyMemberId: "loyalty-member-456",
+      };
+
+      vi.mocked(orderRepository.create).mockResolvedValue({
+        id: "order-gc-1",
+        orderNumber: "GC-20260210-0001",
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        merchantId: null,
+        loyaltyMemberId: "loyalty-member-456",
+        status: "created",
+        fulfillmentStatus: "pending",
+        customerFirstName: "Jane",
+        customerLastName: "Smith",
+        customerPhone: "555-123-4567",
+        customerEmail: "jane@example.com",
+        orderMode: "pickup",
+        salesChannel: "giftcard",
+        items: mockInput.items,
+        subtotal: 50,
+        taxAmount: 0,
+        tipAmount: 0,
+        deliveryFee: 0,
+        discount: 0,
+        giftCardPayment: 0,
+        cashPayment: 50,
+        totalAmount: 50,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never);
+
+      const order = await orderService.createCompanyOrder("tenant-1", inputWithLoyalty);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        null,
+        expect.any(Object),
+        "loyalty-member-456"
+      );
+
+      expect(order.loyaltyMemberId).toBe("loyalty-member-456");
+    });
+  });
+
   describe("getCompanyOrders()", () => {
     it("should call repository with correct parameters", async () => {
       const mockResult = {
