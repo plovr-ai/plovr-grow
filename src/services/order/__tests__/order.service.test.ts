@@ -236,6 +236,134 @@ describe("OrderService", () => {
 
       unsubscribe();
     });
+
+    it("should create delivery order with deliveryAddress and deliveryFee", async () => {
+      const deliveryInput = {
+        ...mockInput,
+        orderMode: "delivery" as const,
+        deliveryAddress: {
+          street: "123 Main St",
+          city: "New York",
+          state: "NY",
+          zipCode: "10001",
+        },
+      };
+
+      vi.mocked(orderRepository.create).mockResolvedValue({
+        id: "order-1",
+        orderNumber: "20260127-0001",
+        tenantId: "tenant-1",
+        merchantId: "merchant-1",
+        status: "created",
+        fulfillmentStatus: "pending",
+        orderMode: "delivery",
+        deliveryFee: 3.99,
+        totalAmount: 46.97,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never);
+
+      await orderService.createMerchantOrder("tenant-1", deliveryInput);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        "merchant-1",
+        expect.objectContaining({
+          orderMode: "delivery",
+          deliveryFee: 3.99,
+          deliveryAddress: deliveryInput.deliveryAddress,
+        }),
+        undefined
+      );
+    });
+
+    it("should calculate payment breakdown with giftCardPayment", async () => {
+      const inputWithGiftCard = {
+        ...mockInput,
+        giftCardPayment: 20,
+      };
+
+      vi.mocked(orderRepository.create).mockResolvedValue({
+        id: "order-1",
+        orderNumber: "20260127-0001",
+        tenantId: "tenant-1",
+        merchantId: "merchant-1",
+        status: "created",
+        fulfillmentStatus: "pending",
+        giftCardPayment: 20,
+        cashPayment: 22.98,
+        totalAmount: 42.98,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never);
+
+      await orderService.createMerchantOrder("tenant-1", inputWithGiftCard);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        "merchant-1",
+        expect.objectContaining({
+          giftCardPayment: 20,
+          cashPayment: expect.any(Number),
+        }),
+        undefined
+      );
+    });
+
+    it("should default salesChannel to online_order when not provided", async () => {
+      await orderService.createMerchantOrder("tenant-1", mockInput);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        "merchant-1",
+        expect.objectContaining({
+          salesChannel: "online_order",
+        }),
+        undefined
+      );
+    });
+
+    it("should save notes when provided", async () => {
+      const inputWithNotes = {
+        ...mockInput,
+        notes: "No onions please",
+      };
+
+      await orderService.createMerchantOrder("tenant-1", inputWithNotes);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        "merchant-1",
+        expect.objectContaining({
+          notes: "No onions please",
+        }),
+        undefined
+      );
+    });
+
+    it("should save scheduledAt when provided", async () => {
+      const scheduledTime = new Date("2026-02-15T18:00:00Z");
+      const inputWithSchedule = {
+        ...mockInput,
+        scheduledAt: scheduledTime,
+      };
+
+      await orderService.createMerchantOrder("tenant-1", inputWithSchedule);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        "merchant-1",
+        expect.objectContaining({
+          scheduledAt: scheduledTime,
+        }),
+        undefined
+      );
+    });
   });
 
   describe("createCompanyOrder()", () => {
@@ -418,6 +546,194 @@ describe("OrderService", () => {
       );
 
       expect(order.loyaltyMemberId).toBe("loyalty-member-456");
+    });
+
+    it("should calculate payment breakdown with giftCardPayment", async () => {
+      const inputWithGiftCard = {
+        ...mockInput,
+        giftCardPayment: 30,
+      };
+
+      vi.mocked(orderRepository.create).mockResolvedValue({
+        id: "order-gc-1",
+        orderNumber: "GC-20260210-0001",
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        merchantId: null,
+        giftCardPayment: 30,
+        cashPayment: 20,
+        totalAmount: 50,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never);
+
+      await orderService.createCompanyOrder("tenant-1", inputWithGiftCard);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        null,
+        expect.objectContaining({
+          giftCardPayment: 30,
+          cashPayment: 20,
+          totalAmount: 50,
+        }),
+        undefined
+      );
+    });
+
+    it("should save notes when provided", async () => {
+      const inputWithNotes = {
+        ...mockInput,
+        notes: "Happy Birthday!",
+      };
+
+      await orderService.createCompanyOrder("tenant-1", inputWithNotes);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        null,
+        expect.objectContaining({
+          notes: "Happy Birthday!",
+        }),
+        undefined
+      );
+    });
+
+    it("should handle decimal amounts correctly", async () => {
+      const decimalInput = {
+        ...mockInput,
+        items: [
+          { menuItemId: "gc-25.50", name: "$25.50 Gift Card", price: 25.5, quantity: 1, selectedModifiers: [], totalPrice: 25.5, taxes: [] },
+          { menuItemId: "gc-24.49", name: "$24.49 Gift Card", price: 24.49, quantity: 1, selectedModifiers: [], totalPrice: 24.49, taxes: [] },
+        ],
+      };
+
+      await orderService.createCompanyOrder("tenant-1", decimalInput);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        null,
+        expect.objectContaining({
+          subtotal: 49.99,
+          totalAmount: 49.99,
+        }),
+        undefined
+      );
+    });
+  });
+
+  describe("calculateOrderTotals()", () => {
+    beforeEach(() => {
+      vi.mocked(menuService.getMenuItemsByIds).mockResolvedValue([
+        { id: "item-1", name: "Test Item" },
+      ] as never);
+    });
+
+    it("should calculate subtotal from item prices", async () => {
+      const input = {
+        items: [
+          { menuItemId: "item-1", name: "Item 1", price: 10, quantity: 2, selectedModifiers: [], totalPrice: 20, taxes: [] },
+          { menuItemId: "item-2", name: "Item 2", price: 15, quantity: 1, selectedModifiers: [], totalPrice: 15, taxes: [] },
+        ],
+        orderMode: "pickup" as const,
+      };
+
+      const result = await orderService.calculateOrderTotals("tenant-1", "merchant-1", input);
+
+      expect(result.subtotal).toBe(35);
+    });
+
+    it("should calculate tax amount based on item taxes", async () => {
+      const input = {
+        items: [
+          {
+            menuItemId: "item-1",
+            name: "Taxable Item",
+            price: 100,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 100,
+            taxes: [{ taxConfigId: "tax-1", name: "Sales Tax", rate: 0.1, roundingMethod: "half_up" as const }],
+          },
+        ],
+        orderMode: "pickup" as const,
+      };
+
+      const result = await orderService.calculateOrderTotals("tenant-1", "merchant-1", input);
+
+      expect(result.taxAmount).toBe(10);
+    });
+
+    it("should add delivery fee for delivery orders", async () => {
+      const input = {
+        items: [
+          { menuItemId: "item-1", name: "Item", price: 20, quantity: 1, selectedModifiers: [], totalPrice: 20, taxes: [] },
+        ],
+        orderMode: "delivery" as const,
+      };
+
+      const result = await orderService.calculateOrderTotals("tenant-1", "merchant-1", input);
+
+      expect(result.deliveryFee).toBe(3.99);
+      expect(result.totalAmount).toBe(23.99);
+    });
+
+    it("should not add delivery fee for pickup orders", async () => {
+      const input = {
+        items: [
+          { menuItemId: "item-1", name: "Item", price: 20, quantity: 1, selectedModifiers: [], totalPrice: 20, taxes: [] },
+        ],
+        orderMode: "pickup" as const,
+      };
+
+      const result = await orderService.calculateOrderTotals("tenant-1", "merchant-1", input);
+
+      expect(result.deliveryFee).toBe(0);
+      expect(result.totalAmount).toBe(20);
+    });
+
+    it("should include tip in total amount", async () => {
+      const input = {
+        items: [
+          { menuItemId: "item-1", name: "Item", price: 20, quantity: 1, selectedModifiers: [], totalPrice: 20, taxes: [] },
+        ],
+        orderMode: "pickup" as const,
+        tipAmount: 5,
+      };
+
+      const result = await orderService.calculateOrderTotals("tenant-1", "merchant-1", input);
+
+      expect(result.tipAmount).toBe(5);
+      expect(result.totalAmount).toBe(25);
+    });
+
+    it("should calculate multiple taxes for same item", async () => {
+      const input = {
+        items: [
+          {
+            menuItemId: "item-1",
+            name: "Alcohol",
+            price: 100,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 100,
+            taxes: [
+              { taxConfigId: "tax-1", name: "Sales Tax", rate: 0.08, roundingMethod: "half_up" as const },
+              { taxConfigId: "tax-2", name: "Alcohol Tax", rate: 0.05, roundingMethod: "half_up" as const },
+            ],
+          },
+        ],
+        orderMode: "pickup" as const,
+      };
+
+      const result = await orderService.calculateOrderTotals("tenant-1", "merchant-1", input);
+
+      // 8% + 5% = 13% of $100 = $13
+      expect(result.taxAmount).toBe(13);
+      expect(result.totalAmount).toBe(113);
     });
   });
 
