@@ -1,38 +1,39 @@
 "use client";
 
-import type { OrderStatus, OrderMode } from "@/types";
+import type { OrderStatus, FulfillmentStatus, OrderMode } from "@/types";
 
 interface Props {
-  currentStatus: OrderStatus;
+  paymentStatus: OrderStatus;
+  fulfillmentStatus: FulfillmentStatus;
   orderMode: OrderMode;
 }
 
-interface StatusStep {
-  status: OrderStatus;
+interface FulfillmentStep {
+  status: FulfillmentStatus;
   label: string;
 }
 
-const STEPS: StatusStep[] = [
-  { status: "pending", label: "Placed" },
+const FULFILLMENT_STEPS: FulfillmentStep[] = [
+  { status: "pending", label: "Pending" },
   { status: "confirmed", label: "Confirmed" },
   { status: "preparing", label: "Preparing" },
   { status: "ready", label: "Ready" },
-  { status: "completed", label: "Completed" },
+  { status: "fulfilled", label: "Fulfilled" },
 ];
 
-const STATUS_ORDER: Record<OrderStatus, number> = {
+const FULFILLMENT_ORDER: Record<FulfillmentStatus, number> = {
   pending: 0,
   confirmed: 1,
   preparing: 2,
   ready: 3,
-  completed: 4,
-  cancelled: -1,
+  fulfilled: 4,
 };
 
-export function OrderStatusProgress({ currentStatus, orderMode }: Props) {
-  const currentIndex = STATUS_ORDER[currentStatus];
-  const isCancelled = currentStatus === "cancelled";
+export function OrderStatusProgress({ paymentStatus, fulfillmentStatus, orderMode }: Props) {
+  const isCancelled = paymentStatus === "canceled";
+  const isPaid = paymentStatus === "completed";
 
+  // Show cancelled state
   if (isCancelled) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-xl p-4">
@@ -63,16 +64,56 @@ export function OrderStatusProgress({ currentStatus, orderMode }: Props) {
     );
   }
 
+  // Show payment pending state
+  if (!isPaid) {
+    return (
+      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+            <svg
+              className="w-5 h-5 text-yellow-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <div>
+            <p className="font-medium text-yellow-800">
+              {paymentStatus === "partial_paid" ? "Partial Payment Received" : "Awaiting Payment"}
+            </p>
+            <p className="text-sm text-yellow-600">
+              {paymentStatus === "partial_paid"
+                ? "Please complete the remaining payment"
+                : "Please complete the payment to proceed"}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show fulfillment progress for paid orders
+  const currentIndex = FULFILLMENT_ORDER[fulfillmentStatus];
   const readyLabel = orderMode === "delivery" ? "Out for Delivery" : "Ready for Pickup";
-  const stepsWithLabels = STEPS.map((step) =>
-    step.status === "ready" ? { ...step, label: readyLabel } : step
-  );
+  const fulfilledLabel = orderMode === "delivery" ? "Delivered" : "Picked Up";
+  const stepsWithLabels = FULFILLMENT_STEPS.map((step) => {
+    if (step.status === "ready") return { ...step, label: readyLabel };
+    if (step.status === "fulfilled") return { ...step, label: fulfilledLabel };
+    return step;
+  });
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4">
       <div className="flex items-center justify-between">
         {stepsWithLabels.map((step, index) => {
-          const stepIndex = STATUS_ORDER[step.status];
+          const stepIndex = FULFILLMENT_ORDER[step.status];
           const isCompleted = stepIndex < currentIndex;
           const isCurrent = stepIndex === currentIndex;
 

@@ -2,6 +2,7 @@ import type { Order } from "@prisma/client";
 import type {
   OrderMode,
   OrderStatus,
+  FulfillmentStatus,
   OrderItemData,
   DeliveryAddress,
   TaxBreakdownItem,
@@ -21,7 +22,8 @@ export interface OrderData {
   customerEmail: string | null;
   orderMode: string;
   salesChannel: string;
-  status: string;
+  status: string;                    // Payment status
+  fulfillmentStatus: string;         // Fulfillment status
   items: OrderItemData[] | unknown;
   subtotal: number | unknown;
   taxAmount: number | unknown;
@@ -34,8 +36,11 @@ export interface OrderData {
   notes: string | null;
   deliveryAddress: DeliveryAddress | unknown | null;
   scheduledAt: Date | null;
-  confirmedAt: Date | null;
-  completedAt: Date | null;
+  paidAt: Date | null;               // When payment completed
+  confirmedAt: Date | null;          // When merchant confirmed
+  preparingAt: Date | null;          // When started preparing
+  readyAt: Date | null;              // When ready for pickup/delivery
+  fulfilledAt: Date | null;          // When fulfilled
   cancelledAt: Date | null;
   cancelReason: string | null;
   createdAt: Date;
@@ -77,14 +82,21 @@ export interface OrderWithCalculation extends Order {
   calculation: OrderCalculation;
 }
 
+// Update payment status (user behavior)
 export interface UpdateOrderStatusInput {
   status: OrderStatus;
   cancelReason?: string;
 }
 
+// Update fulfillment status (merchant behavior)
+export interface UpdateFulfillmentStatusInput {
+  fulfillmentStatus: FulfillmentStatus;
+}
+
 export interface OrderListOptions {
   merchantId?: string;
   status?: OrderStatus;
+  fulfillmentStatus?: FulfillmentStatus;
   orderMode?: OrderMode;
   salesChannel?: SalesChannel;
   dateFrom?: Date;
@@ -98,6 +110,7 @@ export interface OrderListOptions {
 
 export interface MerchantOrderListOptions {
   status?: OrderStatus;
+  fulfillmentStatus?: FulfillmentStatus;
   orderMode?: OrderMode;
   salesChannel?: SalesChannel;
   dateFrom?: Date;
@@ -112,6 +125,7 @@ export interface MerchantOrderListOptions {
 export interface CompanyOrderListOptions {
   merchantId?: string;
   status?: OrderStatus;
+  fulfillmentStatus?: FulfillmentStatus;
   orderMode?: OrderMode;
   salesChannel?: SalesChannel;
   dateFrom?: Date;
@@ -137,6 +151,7 @@ export interface OrderStats {
   totalRevenue: number;
   averageOrderValue: number;
   ordersByStatus: Partial<Record<OrderStatus, number>>;
+  ordersByFulfillmentStatus: Partial<Record<FulfillmentStatus, number>>;
   ordersByMode: Partial<Record<OrderMode, number>>;
 }
 
@@ -149,8 +164,11 @@ export interface PaginatedOrders {
 }
 
 // Timeline types for Order Detail page
+export type TimelineEventType = "payment" | "fulfillment";
+
 export interface TimelineEvent {
-  status: OrderStatus;
+  type: TimelineEventType;
+  status: OrderStatus | FulfillmentStatus;
   timestamp: Date;
 }
 

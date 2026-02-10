@@ -15,12 +15,13 @@ import type {
   CreateOrderInput,
   OrderCalculation,
   UpdateOrderStatusInput,
+  UpdateFulfillmentStatusInput,
   MerchantOrderListOptions,
   CompanyOrderListOptions,
   TimelineEvent,
   OrderWithTimeline,
 } from "./order.types";
-import type { OrderStatus } from "@/types";
+import type { OrderStatus, FulfillmentStatus } from "@/types";
 
 export class OrderService {
   /**
@@ -86,7 +87,8 @@ export class OrderService {
         customerEmail: input.customerEmail ?? null,
         orderMode: input.orderMode,
         salesChannel: input.salesChannel ?? "online_order",
-        status: "pending",
+        status: "created",              // Payment status: order created, not yet paid
+        fulfillmentStatus: "pending",   // Fulfillment status: waiting to start
         items: input.items as unknown as Prisma.InputJsonValue,
         subtotal: calculation.subtotal,
         taxAmount: calculation.taxAmount,
@@ -112,7 +114,8 @@ export class OrderService {
         orderNumber: order.orderNumber,
         merchantId,
         tenantId,
-        status: "pending",
+        status: "created",
+        fulfillmentStatus: "pending",
         timestamp: new Date(),
         customerFirstName: input.customerFirstName,
         customerLastName: input.customerLastName,
@@ -217,44 +220,52 @@ export class OrderService {
 
   /**
    * Build timeline from order timestamp fields
+   * Includes both payment events and fulfillment events
    */
   private buildTimeline(order: {
     status: string;
+    fulfillmentStatus: string;
     createdAt: Date;
+    paidAt: Date | null;
     confirmedAt: Date | null;
-    completedAt: Date | null;
+    preparingAt: Date | null;
+    readyAt: Date | null;
+    fulfilledAt: Date | null;
     cancelledAt: Date | null;
   }): TimelineEvent[] {
-    const events: TimelineEvent[] = [
-      { status: "pending", timestamp: order.createdAt },
-    ];
+    const events: TimelineEvent[] = [];
 
+    // Payment events
+    events.push({ type: "payment", status: "created", timestamp: order.createdAt });
+
+    if (order.paidAt) {
+      events.push({ type: "payment", status: "completed", timestamp: order.paidAt });
+    }
+
+    // Fulfillment events
     if (order.confirmedAt) {
-      events.push({ status: "confirmed", timestamp: order.confirmedAt });
+      events.push({ type: "fulfillment", status: "confirmed", timestamp: order.confirmedAt });
     }
 
-    // For preparing and ready, we infer from current status since we don't track timestamps
-    // In a real system, you would add preparingAt and readyAt fields to the database
-    const status = order.status as OrderStatus;
-    if (["preparing", "ready", "completed"].includes(status) && order.confirmedAt) {
-      // Preparing started after confirmation
-      events.push({ status: "preparing", timestamp: order.confirmedAt });
+    if (order.preparingAt) {
+      events.push({ type: "fulfillment", status: "preparing", timestamp: order.preparingAt });
     }
 
-    if (["ready", "completed"].includes(status) && order.confirmedAt) {
-      // Ready after preparing
-      events.push({ status: "ready", timestamp: order.confirmedAt });
+    if (order.readyAt) {
+      events.push({ type: "fulfillment", status: "ready", timestamp: order.readyAt });
     }
 
-    if (order.completedAt) {
-      events.push({ status: "completed", timestamp: order.completedAt });
+    if (order.fulfilledAt) {
+      events.push({ type: "fulfillment", status: "fulfilled", timestamp: order.fulfilledAt });
     }
 
+    // Cancellation (payment event)
     if (order.cancelledAt) {
-      events.push({ status: "cancelled", timestamp: order.cancelledAt });
+      events.push({ type: "payment", status: "canceled", timestamp: order.cancelledAt });
     }
 
-    return events;
+    // Sort by timestamp
+    return events.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   }
 
   // ==================== Company Order Management ====================
@@ -303,16 +314,17 @@ export class OrderService {
   }
 
   /**
-   * Count pending orders for a merchant (for Dashboard badge)
+   * Count active orders for a merchant (for Dashboard badge)
+   * Active = paid but not yet fulfilled
    */
-  async countMerchantPendingOrders(tenantId: string, merchantId: string) {
-    return orderRepository.countPendingOrders(tenantId, merchantId);
+  async countMerchantActiveOrders(tenantId: string, merchantId: string) {
+    return orderRepository.countActiveOrders(tenantId, merchantId);
   }
 
   /**
-   * Update order status with validation and event emission
+   * Update payment status with validation and event emission
    */
-  async updateOrderStatus(
+  async updatePaymentStatus(
     tenantId: string,
     orderId: string,
     input: UpdateOrderStatusInput
@@ -325,29 +337,25 @@ export class OrderService {
 
     const previousStatus = currentOrder.status as OrderStatus;
 
-    // Validate status transition
-    const isValid = this.validateStatusTransition(previousStatus, input.status);
+    // Validate payment status transition
+    const isValid = this.validatePaymentStatusTransition(previousStatus, input.status);
     if (!isValid) {
       throw new Error(
-        `Invalid status transition from ${previousStatus} to ${input.status}`
+        `Invalid payment status transition from ${previousStatus} to ${input.status}`
       );
     }
 
     const additionalData: Partial<{
-      confirmedAt: Date;
-      completedAt: Date;
+      paidAt: Date;
       cancelledAt: Date;
       cancelReason: string;
     }> = {};
 
     switch (input.status) {
-      case "confirmed":
-        additionalData.confirmedAt = new Date();
-        break;
       case "completed":
-        additionalData.completedAt = new Date();
+        additionalData.paidAt = new Date();
         break;
-      case "cancelled":
+      case "canceled":
         additionalData.cancelledAt = new Date();
         if (input.cancelReason) {
           additionalData.cancelReason = input.cancelReason;
@@ -355,7 +363,7 @@ export class OrderService {
         break;
     }
 
-    // Update order status in database
+    // Update payment status in database
     const updatedOrder = await orderRepository.updateStatusAndReturn(
       tenantId,
       orderId,
@@ -363,23 +371,113 @@ export class OrderService {
       additionalData
     );
 
-    // Emit status change event (only for valid status transitions)
-    if (currentOrder.merchantId && input.status !== "pending") {
-      const eventType = `order.${input.status}` as
-        | "order.confirmed"
-        | "order.preparing"
-        | "order.ready"
-        | "order.completed"
-        | "order.cancelled";
+    // Emit payment status change event
+    if (currentOrder.merchantId) {
+      if (input.status === "completed") {
+        orderEventEmitter.emit("order.paid", {
+          orderId: updatedOrder.id,
+          orderNumber: updatedOrder.orderNumber,
+          merchantId: currentOrder.merchantId,
+          tenantId,
+          status: input.status,
+          previousStatus,
+          timestamp: new Date(),
+        });
+      } else if (input.status === "canceled") {
+        orderEventEmitter.emit("order.cancelled", {
+          orderId: updatedOrder.id,
+          orderNumber: updatedOrder.orderNumber,
+          merchantId: currentOrder.merchantId,
+          tenantId,
+          status: input.status,
+          previousStatus,
+          timestamp: new Date(),
+          cancelReason: input.cancelReason,
+        });
+      }
+    }
+
+    return updatedOrder;
+  }
+
+  /**
+   * Update fulfillment status with validation and event emission
+   * BUSINESS RULE: Only allowed when payment status = "completed"
+   */
+  async updateFulfillmentStatus(
+    tenantId: string,
+    orderId: string,
+    input: UpdateFulfillmentStatusInput
+  ) {
+    // Get current order to validate transition and get merchantId
+    const currentOrder = await this.getOrder(tenantId, orderId);
+    if (!currentOrder) {
+      throw new Error("Order not found");
+    }
+
+    // Business rule: Only paid orders can have fulfillment status changed
+    if (currentOrder.status !== "completed") {
+      throw new Error("Cannot update fulfillment status: order is not fully paid");
+    }
+
+    const previousFulfillmentStatus = currentOrder.fulfillmentStatus as FulfillmentStatus;
+
+    // Validate fulfillment status transition
+    const isValid = this.validateFulfillmentStatusTransition(
+      previousFulfillmentStatus,
+      input.fulfillmentStatus
+    );
+    if (!isValid) {
+      throw new Error(
+        `Invalid fulfillment status transition from ${previousFulfillmentStatus} to ${input.fulfillmentStatus}`
+      );
+    }
+
+    const additionalData: Partial<{
+      confirmedAt: Date;
+      preparingAt: Date;
+      readyAt: Date;
+      fulfilledAt: Date;
+    }> = {};
+
+    switch (input.fulfillmentStatus) {
+      case "confirmed":
+        additionalData.confirmedAt = new Date();
+        break;
+      case "preparing":
+        additionalData.preparingAt = new Date();
+        break;
+      case "ready":
+        additionalData.readyAt = new Date();
+        break;
+      case "fulfilled":
+        additionalData.fulfilledAt = new Date();
+        break;
+    }
+
+    // Update fulfillment status in database
+    const updatedOrder = await orderRepository.updateFulfillmentStatusAndReturn(
+      tenantId,
+      orderId,
+      input.fulfillmentStatus,
+      additionalData
+    );
+
+    // Emit fulfillment status change event
+    if (currentOrder.merchantId) {
+      const eventType = `order.fulfillment.${input.fulfillmentStatus}` as
+        | "order.fulfillment.confirmed"
+        | "order.fulfillment.preparing"
+        | "order.fulfillment.ready"
+        | "order.fulfillment.fulfilled";
       orderEventEmitter.emit(eventType, {
         orderId: updatedOrder.id,
         orderNumber: updatedOrder.orderNumber,
         merchantId: currentOrder.merchantId,
         tenantId,
-        status: input.status,
-        previousStatus,
+        fulfillmentStatus: input.fulfillmentStatus,
+        previousFulfillmentStatus,
         timestamp: new Date(),
-        ...(input.cancelReason && { cancelReason: input.cancelReason }),
       });
     }
 
@@ -387,22 +485,59 @@ export class OrderService {
   }
 
   /**
-   * Validate order status transition
+   * Validate payment status transition
+   */
+  validatePaymentStatusTransition(
+    currentStatus: OrderStatus,
+    newStatus: OrderStatus
+  ): boolean {
+    const validTransitions: Record<OrderStatus, OrderStatus[]> = {
+      created: ["partial_paid", "completed", "canceled"],
+      partial_paid: ["completed", "canceled"],
+      completed: [],
+      canceled: [],
+    };
+
+    return validTransitions[currentStatus]?.includes(newStatus) ?? false;
+  }
+
+  /**
+   * Validate fulfillment status transition
+   */
+  validateFulfillmentStatusTransition(
+    currentStatus: FulfillmentStatus,
+    newStatus: FulfillmentStatus
+  ): boolean {
+    const validTransitions: Record<FulfillmentStatus, FulfillmentStatus[]> = {
+      pending: ["confirmed"],
+      confirmed: ["preparing"],
+      preparing: ["ready"],
+      ready: ["fulfilled"],
+      fulfilled: [],
+    };
+
+    return validTransitions[currentStatus]?.includes(newStatus) ?? false;
+  }
+
+  /**
+   * @deprecated Use updatePaymentStatus instead
+   */
+  async updateOrderStatus(
+    tenantId: string,
+    orderId: string,
+    input: UpdateOrderStatusInput
+  ) {
+    return this.updatePaymentStatus(tenantId, orderId, input);
+  }
+
+  /**
+   * @deprecated Use validatePaymentStatusTransition instead
    */
   validateStatusTransition(
     currentStatus: OrderStatus,
     newStatus: OrderStatus
   ): boolean {
-    const validTransitions: Record<OrderStatus, OrderStatus[]> = {
-      pending: ["confirmed", "cancelled"],
-      confirmed: ["preparing", "cancelled"],
-      preparing: ["ready", "cancelled"],
-      ready: ["completed", "cancelled"],
-      completed: [],
-      cancelled: [],
-    };
-
-    return validTransitions[currentStatus]?.includes(newStatus) ?? false;
+    return this.validatePaymentStatusTransition(currentStatus, newStatus);
   }
 
   /**

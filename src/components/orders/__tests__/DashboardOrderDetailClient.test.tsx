@@ -40,8 +40,10 @@ function createWrapper() {
 const mockOrder = {
   id: "order-123",
   orderNumber: "ORD-001",
-  status: "confirmed",
+  status: "completed",
+  fulfillmentStatus: "confirmed",
   orderMode: "pickup",
+  salesChannel: "online_order",
   items: [
     {
       menuItemId: "item-1",
@@ -70,7 +72,8 @@ const mockOrder = {
       totalPrice: 5.99,
     },
   ],
-  customerName: "John Doe",
+  customerFirstName: "John",
+  customerLastName: "Doe",
   customerPhone: "+15551234567",
   customerEmail: "john@example.com",
   deliveryAddress: null,
@@ -82,12 +85,16 @@ const mockOrder = {
   discount: 0,
   totalAmount: 39.53,
   createdAt: new Date("2024-01-15T10:30:00Z"),
+  paidAt: new Date("2024-01-15T10:32:00Z"),
   confirmedAt: new Date("2024-01-15T10:35:00Z"),
-  completedAt: null,
+  preparingAt: null,
+  readyAt: null,
+  fulfilledAt: null,
   cancelledAt: null,
   cancelReason: null,
   timeline: [
-    { status: "pending" as const, timestamp: "2024-01-15T10:30:00Z" },
+    { status: "created" as const, timestamp: "2024-01-15T10:30:00Z" },
+    { status: "completed" as const, timestamp: "2024-01-15T10:32:00Z" },
     { status: "confirmed" as const, timestamp: "2024-01-15T10:35:00Z" },
   ],
   merchant: {

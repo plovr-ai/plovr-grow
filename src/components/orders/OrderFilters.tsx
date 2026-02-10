@@ -18,7 +18,7 @@ interface OrderFiltersProps {
 export function OrderFilters({ filters, onChange }: OrderFiltersProps) {
   return (
     <div className="flex flex-wrap gap-4 items-end">
-      {/* Status Filter */}
+      {/* Order Status Filter */}
       <div className="w-full sm:w-[200px]">
         <Label htmlFor="status-filter" className="mb-2 block">Status</Label>
         <Select
@@ -27,12 +27,10 @@ export function OrderFilters({ filters, onChange }: OrderFiltersProps) {
           onChange={(e) => onChange({ status: e.target.value })}
         >
           <option value="all">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="preparing">Preparing</option>
-          <option value="ready">Ready</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
+          <option value="created">Unpaid</option>
+          <option value="partial_paid">Partial Paid</option>
+          <option value="completed">Paid</option>
+          <option value="canceled">Cancelled</option>
         </Select>
       </div>
 

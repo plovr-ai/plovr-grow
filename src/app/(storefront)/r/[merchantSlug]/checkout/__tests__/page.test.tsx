@@ -62,6 +62,32 @@ describe("CheckoutPage", () => {
     useCartStore.setState({ tenantId: null, items: [] });
     mockFetch.mockReset();
     mockPush.mockReset();
+
+    // Default mock implementation for all fetch calls
+    mockFetch.mockImplementation((url: string) => {
+      // Loyalty API - always return not logged in
+      if (url.includes("/loyalty/me")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: false, error: "Not logged in" }),
+        });
+      }
+      // Payment intent API - return mock client secret
+      if (url.includes("/payment-intent")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: { clientSecret: "pi_test_secret", paymentIntentId: "pi_test" },
+          }),
+        });
+      }
+      // Default: return success for order API
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ success: true, data: { orderId: "order-123" } }),
+      });
+    });
   });
 
   describe("empty cart", () => {
@@ -179,8 +205,8 @@ describe("CheckoutPage", () => {
         wrapper: createWrapper(),
       });
 
-      // Multiple Place Order buttons (mobile + desktop)
-      const placeOrderButtons = screen.getAllByText("Place Order");
+      // Multiple Place Order buttons (mobile + desktop) - shows "Pay & Place Order" when card payment
+      const placeOrderButtons = screen.getAllByText(/Place Order/);
       expect(placeOrderButtons.length).toBeGreaterThan(0);
     });
   });
@@ -254,8 +280,8 @@ describe("CheckoutPage", () => {
         wrapper: createWrapper(),
       });
 
-      // Should have two Place Order buttons (one for mobile, one for desktop)
-      const placeOrderButtons = screen.getAllByText("Place Order");
+      // Should have two Place Order buttons (one for mobile, one for desktop) - shows "Pay & Place Order" when card payment
+      const placeOrderButtons = screen.getAllByText(/Place Order/);
       expect(placeOrderButtons).toHaveLength(2);
     });
 
@@ -288,8 +314,12 @@ describe("CheckoutPage", () => {
         wrapper: createWrapper(),
       });
 
+      // Switch to cash payment to enable form submission
+      const cashPaymentOption = screen.getByText("Pay at Pickup");
+      fireEvent.click(cashPaymentOption);
+
       // Click Place Order without filling form
-      const placeOrderButtons = screen.getAllByText("Place Order");
+      const placeOrderButtons = screen.getAllByText(/Place Order/);
       fireEvent.click(placeOrderButtons[0]);
 
       // Should show validation errors (based on zod schema)
@@ -310,23 +340,15 @@ describe("CheckoutPage", () => {
     });
 
     it("should not show empty cart page after successful order", async () => {
-      // Mock fetch calls: first for loyalty /me API, then for order API
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: false, error: "Not logged in" }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            success: true,
-            data: { orderId: "order-123" },
-          }),
-        });
+      // Using default mock implementation from beforeEach
 
       render(<CheckoutPage />, {
         wrapper: createWrapper(),
       });
+
+      // Switch to cash payment to enable form submission
+      const cashPaymentOption = screen.getByText("Pay at Pickup");
+      fireEvent.click(cashPaymentOption);
 
       // Fill in required form fields
       fireEvent.change(screen.getByPlaceholderText("John"), {
@@ -340,7 +362,7 @@ describe("CheckoutPage", () => {
       });
 
       // Submit the form
-      const placeOrderButtons = screen.getAllByText("Place Order");
+      const placeOrderButtons = screen.getAllByText(/Place Order/);
       fireEvent.click(placeOrderButtons[0]);
 
       // Wait for the submission to complete
@@ -355,23 +377,37 @@ describe("CheckoutPage", () => {
     });
 
     it("should show error message when order fails", async () => {
-      // Mock fetch calls: first for loyalty /me API, then for failed order API
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: false, error: "Not logged in" }),
-        })
-        .mockResolvedValueOnce({
+      // Override default mock to return error for order API
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes("/loyalty/me")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ success: false, error: "Not logged in" }),
+          });
+        }
+        if (url.includes("/payment-intent")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: { clientSecret: "pi_test_secret", paymentIntentId: "pi_test" },
+            }),
+          });
+        }
+        // Order API returns error
+        return Promise.resolve({
           ok: false,
-          json: async () => ({
-            success: false,
-            error: "Failed to place order",
-          }),
+          json: async () => ({ success: false, error: "Failed to place order" }),
         });
+      });
 
       render(<CheckoutPage />, {
         wrapper: createWrapper(),
       });
+
+      // Switch to cash payment to enable form submission
+      const cashPaymentOption = screen.getByText("Pay at Pickup");
+      fireEvent.click(cashPaymentOption);
 
       // Fill in required form fields
       fireEvent.change(screen.getByPlaceholderText("John"), {
@@ -385,7 +421,7 @@ describe("CheckoutPage", () => {
       });
 
       // Submit the form
-      const placeOrderButtons = screen.getAllByText("Place Order");
+      const placeOrderButtons = screen.getAllByText(/Place Order/);
       fireEvent.click(placeOrderButtons[0]);
 
       // Wait for error message to appear (mobile + desktop)
@@ -450,23 +486,15 @@ describe("CheckoutPage", () => {
     });
 
     it("should NOT include imageUrl in order submission", async () => {
-      // Mock fetch calls: first for loyalty /me API, then for order API
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: false, error: "Not logged in" }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            success: true,
-            data: { orderId: "order-123" },
-          }),
-        });
+      // Using default mock implementation from beforeEach
 
       render(<CheckoutPage />, {
         wrapper: createWrapper(),
       });
+
+      // Switch to cash payment to enable form submission
+      const cashPaymentOption = screen.getByText("Pay at Pickup");
+      fireEvent.click(cashPaymentOption);
 
       // Fill in required form fields
       fireEvent.change(screen.getByPlaceholderText("John"), {
@@ -480,17 +508,23 @@ describe("CheckoutPage", () => {
       });
 
       // Submit the form
-      const placeOrderButtons = screen.getAllByText("Place Order");
+      const placeOrderButtons = screen.getAllByText(/Place Order/);
       fireEvent.click(placeOrderButtons[0]);
 
-      // Wait for the submission to complete
+      // Wait for the submission to complete and find the order API call
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(2);
+        const orderApiCalls = mockFetch.mock.calls.filter(
+          (call: [string, RequestInit?]) => call[0].includes("/orders") && !call[0].includes("/loyalty")
+        );
+        expect(orderApiCalls.length).toBeGreaterThan(0);
       });
 
-      // Get the order API call (second call)
-      const orderApiCall = mockFetch.mock.calls[1];
-      const requestBody = JSON.parse(orderApiCall[1].body);
+      // Get the order API call
+      const orderApiCalls = mockFetch.mock.calls.filter(
+        (call: [string, RequestInit?]) => call[0].includes("/orders") && !call[0].includes("/loyalty")
+      );
+      const orderApiCall = orderApiCalls[0];
+      const requestBody = JSON.parse(orderApiCall[1]?.body as string);
 
       // Verify items do NOT contain imageUrl
       expect(requestBody.items).toBeDefined();

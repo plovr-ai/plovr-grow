@@ -1,7 +1,10 @@
-import type { OrderStatus, OrderMode, OrderItemData, DeliveryAddress } from "@/types";
+import type { OrderStatus, FulfillmentStatus, OrderMode, OrderItemData, DeliveryAddress } from "@/types";
+
+export type TimelineEventType = "payment" | "fulfillment";
 
 export interface TimelineEvent {
-  status: OrderStatus;
+  type?: TimelineEventType;
+  status: OrderStatus | FulfillmentStatus;
   timestamp: Date | string;
 }
 
@@ -9,6 +12,7 @@ export interface OrderDetailData {
   id: string;
   orderNumber: string;
   status: OrderStatus;
+  fulfillmentStatus: FulfillmentStatus;
   orderMode: OrderMode;
   items: OrderItemData[];
   customerFirstName: string;
@@ -24,8 +28,11 @@ export interface OrderDetailData {
   discount: number;
   totalAmount: number;
   createdAt: Date | string;
+  paidAt: Date | string | null;
   confirmedAt: Date | string | null;
-  completedAt: Date | string | null;
+  preparingAt: Date | string | null;
+  readyAt: Date | string | null;
+  fulfilledAt: Date | string | null;
   cancelledAt: Date | string | null;
   cancelReason: string | null;
   timeline: TimelineEvent[];

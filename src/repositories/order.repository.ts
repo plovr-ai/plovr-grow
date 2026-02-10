@@ -1,6 +1,6 @@
 import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import type { OrderStatus, OrderMode, SalesChannel } from "@/types";
+import type { OrderStatus, FulfillmentStatus, OrderMode, SalesChannel } from "@/types";
 import { generateEntityId } from "@/lib/id";
 
 export class OrderRepository {
@@ -159,15 +159,14 @@ export class OrderRepository {
   }
 
   /**
-   * Update order status
+   * Update payment status
    */
   async updateStatus(
     tenantId: string,
     orderId: string,
     status: OrderStatus,
     additionalData?: Partial<{
-      confirmedAt: Date;
-      completedAt: Date;
+      paidAt: Date;
       cancelledAt: Date;
       cancelReason: string;
     }>
@@ -179,6 +178,32 @@ export class OrderRepository {
       },
       data: {
         status,
+        ...additionalData,
+      },
+    });
+  }
+
+  /**
+   * Update fulfillment status
+   */
+  async updateFulfillmentStatus(
+    tenantId: string,
+    orderId: string,
+    fulfillmentStatus: FulfillmentStatus,
+    additionalData?: Partial<{
+      confirmedAt: Date;
+      preparingAt: Date;
+      readyAt: Date;
+      fulfilledAt: Date;
+    }>
+  ) {
+    return prisma.order.updateMany({
+      where: {
+        id: orderId,
+        tenantId,
+      },
+      data: {
+        fulfillmentStatus,
         ...additionalData,
       },
     });
@@ -209,7 +234,7 @@ export class OrderRepository {
   async getStats(tenantId: string, dateFrom?: Date, dateTo?: Date) {
     const where: Prisma.OrderWhereInput = {
       tenantId,
-      status: { not: "cancelled" },
+      status: { not: "canceled" },
       ...(dateFrom && dateTo && {
         createdAt: {
           gte: dateFrom,
@@ -246,6 +271,7 @@ export class OrderRepository {
     merchantId: string,
     options: {
       status?: OrderStatus;
+      fulfillmentStatus?: FulfillmentStatus;
       orderMode?: string;
       salesChannel?: SalesChannel;
       dateFrom?: Date;
@@ -259,6 +285,7 @@ export class OrderRepository {
   ) {
     const {
       status,
+      fulfillmentStatus,
       orderMode,
       salesChannel,
       dateFrom,
@@ -274,6 +301,7 @@ export class OrderRepository {
       tenantId,
       merchantId,
       ...(status && { status }),
+      ...(fulfillmentStatus && { fulfillmentStatus }),
       ...(orderMode && { orderMode }),
       ...(salesChannel && { salesChannel }),
       ...(dateFrom &&
@@ -359,11 +387,12 @@ export class OrderRepository {
       select: {
         totalAmount: true,
         status: true,
+        fulfillmentStatus: true,
         orderMode: true,
       },
     });
 
-    const completedOrders = orders.filter((o) => o.status !== "cancelled");
+    const completedOrders = orders.filter((o) => o.status !== "canceled");
     const totalRevenue = completedOrders.reduce(
       (sum, order) => sum + Number(order.totalAmount),
       0
@@ -372,6 +401,14 @@ export class OrderRepository {
     const ordersByStatus = orders.reduce(
       (acc, order) => {
         acc[order.status] = (acc[order.status] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
+    const ordersByFulfillmentStatus = orders.reduce(
+      (acc, order) => {
+        acc[order.fulfillmentStatus] = (acc[order.fulfillmentStatus] || 0) + 1;
         return acc;
       },
       {} as Record<string, number>
@@ -391,19 +428,21 @@ export class OrderRepository {
       averageOrderValue:
         completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0,
       ordersByStatus,
+      ordersByFulfillmentStatus,
       ordersByType,
     };
   }
 
   /**
-   * Count pending/active orders for a merchant
+   * Count active orders for a merchant (paid but not yet fulfilled)
    */
-  async countPendingOrders(tenantId: string, merchantId: string) {
+  async countActiveOrders(tenantId: string, merchantId: string) {
     return prisma.order.count({
       where: {
         tenantId,
         merchantId,
-        status: { in: ["pending", "confirmed", "preparing"] },
+        status: "completed", // Only paid orders
+        fulfillmentStatus: { in: ["pending", "confirmed", "preparing", "ready"] },
       },
     });
   }
@@ -464,6 +503,7 @@ export class OrderRepository {
     companyId: string,
     options: {
       status?: OrderStatus;
+      fulfillmentStatus?: FulfillmentStatus;
       merchantId?: string;
       orderMode?: OrderMode;
       salesChannel?: SalesChannel;
@@ -478,6 +518,7 @@ export class OrderRepository {
   ) {
     const {
       status,
+      fulfillmentStatus,
       merchantId,
       orderMode,
       salesChannel,
@@ -495,6 +536,7 @@ export class OrderRepository {
       companyId,
       ...(merchantId && { merchantId }),
       ...(status && { status }),
+      ...(fulfillmentStatus && { fulfillmentStatus }),
       ...(orderMode && { orderMode }),
       ...(salesChannel && { salesChannel }),
       ...(dateFrom &&
@@ -544,15 +586,14 @@ export class OrderRepository {
   }
 
   /**
-   * Update order status and return updated order
+   * Update payment status and return updated order
    */
   async updateStatusAndReturn(
     tenantId: string,
     orderId: string,
     status: OrderStatus,
     additionalData?: Partial<{
-      confirmedAt: Date;
-      completedAt: Date;
+      paidAt: Date;
       cancelledAt: Date;
       cancelReason: string;
     }>
@@ -571,6 +612,49 @@ export class OrderRepository {
       where: { id: orderId },
       data: {
         status,
+        ...additionalData,
+      },
+      include: {
+        merchant: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            timezone: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Update fulfillment status and return updated order
+   */
+  async updateFulfillmentStatusAndReturn(
+    tenantId: string,
+    orderId: string,
+    fulfillmentStatus: FulfillmentStatus,
+    additionalData?: Partial<{
+      confirmedAt: Date;
+      preparingAt: Date;
+      readyAt: Date;
+      fulfilledAt: Date;
+    }>
+  ) {
+    // First verify the order belongs to the tenant
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, tenantId },
+      select: { id: true },
+    });
+
+    if (!order) {
+      throw new Error(`Order not found: ${orderId}`);
+    }
+
+    return prisma.order.update({
+      where: { id: orderId },
+      data: {
+        fulfillmentStatus,
         ...additionalData,
       },
       include: {

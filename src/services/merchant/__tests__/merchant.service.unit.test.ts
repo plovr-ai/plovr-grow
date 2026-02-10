@@ -29,6 +29,7 @@ vi.mock("@/repositories/company.repository", () => ({
 vi.mock("@/services/menu", () => ({
   menuService: {
     getMenuItemsByCompanyId: vi.fn(),
+    getFeaturedItems: vi.fn(),
   },
 }));
 
@@ -179,12 +180,44 @@ describe("MerchantService (unit tests)", () => {
   });
 
   describe("getCompanyWebsiteData()", () => {
+    // Mock data for featured items (matching FeaturedItemData type)
+    const mockFeaturedItemsData = [
+      {
+        id: "featured-1",
+        menuItemId: "item-cheese-pizza",
+        sortOrder: 1,
+        menuItem: {
+          id: "item-cheese-pizza",
+          name: "Classic Cheese Pizza",
+          description: "Fresh mozzarella and tomato sauce",
+          price: new Prisma.Decimal(18.99),
+          imageUrl: "https://example.com/pizza.jpg",
+          status: "active",
+          modifierGroups: null,
+        },
+      },
+      {
+        id: "featured-2",
+        menuItemId: "item-pepperoni-pizza",
+        sortOrder: 2,
+        menuItem: {
+          id: "item-pepperoni-pizza",
+          name: "Pepperoni Pizza",
+          description: "Classic pepperoni",
+          price: new Prisma.Decimal(21.99),
+          imageUrl: "https://example.com/pepperoni.jpg",
+          status: "active",
+          modifierGroups: [{ id: "mod-1", name: "Size" }],
+        },
+      },
+    ];
+
     beforeEach(() => {
       vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue(
         mockCompanyWithMerchants as never
       );
-      vi.mocked(menuService.getMenuItemsByCompanyId).mockResolvedValue(
-        mockMenuItems as never
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue(
+        mockFeaturedItemsData as never
       );
     });
 
@@ -201,10 +234,9 @@ describe("MerchantService (unit tests)", () => {
     it("should fetch featured items from menu database", async () => {
       const result = await merchantService.getCompanyWebsiteData("joes-pizza");
 
-      expect(menuService.getMenuItemsByCompanyId).toHaveBeenCalledWith(
+      expect(menuService.getFeaturedItems).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
-        ["item-cheese-pizza", "item-pepperoni-pizza"]
+        "company-1"
       );
       expect(result?.featuredItems).toHaveLength(2);
     });
@@ -214,10 +246,10 @@ describe("MerchantService (unit tests)", () => {
 
       const featuredItems = result?.featuredItems;
       expect(featuredItems?.[0]).toEqual({
-        id: "item-cheese-pizza",
+        id: "featured-1",
         name: "Classic Cheese Pizza",
         description: "Fresh mozzarella and tomato sauce",
-        price: 18.99,
+        price: "18.99",
         image: "https://example.com/pizza.jpg",
         category: undefined,
         menuItemId: "item-cheese-pizza",
@@ -229,50 +261,47 @@ describe("MerchantService (unit tests)", () => {
       const result = await merchantService.getCompanyWebsiteData("joes-pizza");
 
       const pepperoniItem = result?.featuredItems?.find(
-        (item) => item.id === "item-pepperoni-pizza"
+        (item) => item.id === "featured-2"
       );
       expect(pepperoniItem?.hasModifiers).toBe(true);
     });
 
-    it("should return empty featuredItems when no featuredItemIds configured", async () => {
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockCompanyWithMerchants,
-        settings: {
-          ...mockCompanyWithMerchants.settings,
-          website: {
-            ...mockCompanyWithMerchants.settings.website,
-            featuredItemIds: undefined,
-          },
-        },
-      } as never);
+    it("should return empty featuredItems when no featured items configured", async () => {
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
 
       const result = await merchantService.getCompanyWebsiteData("joes-pizza");
 
-      expect(menuService.getMenuItemsByCompanyId).not.toHaveBeenCalled();
+      expect(menuService.getFeaturedItems).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1"
+      );
       expect(result?.featuredItems).toEqual([]);
     });
 
-    it("should return empty featuredItems when featuredItemIds is empty array", async () => {
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockCompanyWithMerchants,
-        settings: {
-          ...mockCompanyWithMerchants.settings,
-          website: {
-            ...mockCompanyWithMerchants.settings.website,
-            featuredItemIds: [],
-          },
-        },
-      } as never);
+    it("should return empty featuredItems when getFeaturedItems returns empty", async () => {
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
 
       const result = await merchantService.getCompanyWebsiteData("joes-pizza");
 
-      expect(menuService.getMenuItemsByCompanyId).not.toHaveBeenCalled();
       expect(result?.featuredItems).toEqual([]);
     });
 
     it("should handle missing imageUrl gracefully", async () => {
-      vi.mocked(menuService.getMenuItemsByCompanyId).mockResolvedValue([
-        { ...mockMenuItems[0], imageUrl: null },
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([
+        {
+          id: "featured-1",
+          menuItemId: "item-1",
+          sortOrder: 1,
+          menuItem: {
+            id: "item-1",
+            name: "Test Item",
+            description: "Test description",
+            price: new Prisma.Decimal(10.00),
+            imageUrl: null,
+            status: "active",
+            modifierGroups: null,
+          },
+        },
       ] as never);
 
       const result = await merchantService.getCompanyWebsiteData("joes-pizza");
@@ -281,8 +310,21 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should handle missing description gracefully", async () => {
-      vi.mocked(menuService.getMenuItemsByCompanyId).mockResolvedValue([
-        { ...mockMenuItems[0], description: null },
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([
+        {
+          id: "featured-1",
+          menuItemId: "item-1",
+          sortOrder: 1,
+          menuItem: {
+            id: "item-1",
+            name: "Test Item",
+            description: null,
+            price: new Prisma.Decimal(10.00),
+            imageUrl: "https://example.com/image.jpg",
+            status: "active",
+            modifierGroups: null,
+          },
+        },
       ] as never);
 
       const result = await merchantService.getCompanyWebsiteData("joes-pizza");

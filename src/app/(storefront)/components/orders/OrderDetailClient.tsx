@@ -11,7 +11,7 @@ import { OrderTimeline } from "./OrderTimeline";
 import { LoyaltyRegistrationCTA } from "./LoyaltyRegistrationCTA";
 import { useLoyalty } from "@/contexts/LoyaltyContext";
 import type { OrderDetailData, TimelineEvent } from "./order-detail.types";
-import type { OrderStatus, OrderMode, OrderItemData } from "@/types";
+import type { OrderStatus, FulfillmentStatus, OrderMode, OrderItemData } from "@/types";
 
 interface Props {
   order: OrderDetailData;
@@ -20,9 +20,13 @@ interface Props {
 }
 
 interface SSEMessage {
-  type: "connected" | "status_changed";
+  type: "connected" | "payment_status_changed" | "fulfillment_status_changed";
+  // Payment status fields
   status?: OrderStatus;
   previousStatus?: OrderStatus;
+  // Fulfillment status fields
+  fulfillmentStatus?: FulfillmentStatus;
+  previousFulfillmentStatus?: FulfillmentStatus;
   timestamp?: string;
 }
 
@@ -35,8 +39,10 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
 
   // SSE connection for real-time updates
   useEffect(() => {
-    // Don't connect if order is in terminal state
-    if (order.status === "completed" || order.status === "cancelled") {
+    // Don't connect if order is in terminal state (payment completed and fulfillment fulfilled, or canceled)
+    const isFulfilled = order.fulfillmentStatus === "fulfilled";
+    const isCanceled = order.status === "canceled";
+    if (isFulfilled || isCanceled) {
       setConnectionStatus("disconnected");
       return;
     }
@@ -59,16 +65,33 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
         try {
           const data: SSEMessage = JSON.parse(event.data);
 
-          if (data.type === "status_changed" && data.status && data.timestamp) {
+          // Handle payment status change
+          if (data.type === "payment_status_changed" && data.status && data.timestamp) {
             setOrder((prev) => {
               const newTimeline: TimelineEvent[] = [
                 ...prev.timeline,
-                { status: data.status!, timestamp: data.timestamp! },
+                { type: "payment", status: data.status!, timestamp: data.timestamp! },
               ];
 
               return {
                 ...prev,
                 status: data.status!,
+                timeline: newTimeline,
+              };
+            });
+          }
+
+          // Handle fulfillment status change
+          if (data.type === "fulfillment_status_changed" && data.fulfillmentStatus && data.timestamp) {
+            setOrder((prev) => {
+              const newTimeline: TimelineEvent[] = [
+                ...prev.timeline,
+                { type: "fulfillment", status: data.fulfillmentStatus!, timestamp: data.timestamp! },
+              ];
+
+              return {
+                ...prev,
+                fulfillmentStatus: data.fulfillmentStatus!,
                 timeline: newTimeline,
               };
             });
@@ -132,7 +155,7 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
               </div>
             </div>
             {/* Connection status indicator */}
-            {order.status !== "completed" && order.status !== "cancelled" && (
+            {order.fulfillmentStatus !== "fulfilled" && order.status !== "canceled" && (
               <div className="flex items-center gap-1.5">
                 <div
                   className={`w-2 h-2 rounded-full ${
@@ -160,7 +183,8 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
         {/* Status Progress */}
         <OrderStatusProgress
-          currentStatus={order.status as OrderStatus}
+          paymentStatus={order.status as OrderStatus}
+          fulfillmentStatus={order.fulfillmentStatus as FulfillmentStatus}
           orderMode={order.orderMode as OrderMode}
         />
 

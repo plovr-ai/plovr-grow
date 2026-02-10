@@ -220,7 +220,7 @@ export function mockGetMerchantStats(
     );
   }
 
-  const completedOrders = orders.filter((o) => o.status !== "cancelled");
+  const completedOrders = orders.filter((o) => o.status !== "canceled");
   const totalRevenue = completedOrders.reduce((sum, order) => sum + order.totalAmount, 0);
 
   const ordersByStatus: Record<string, number> = {};

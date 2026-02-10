@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Order } from "@prisma/client";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
-import { StatusBadge } from "./StatusBadge";
+import { PaymentStatusBadge } from "./StatusBadge";
 import { formatPrice } from "@/lib/utils";
 import { formatDate, formatTime, getTimezoneAbbr } from "@/lib/datetime";
 import { formatCustomerName } from "@/lib/names";
@@ -68,7 +68,7 @@ export function OrderCard({ order }: OrderCardProps) {
                 {formattedDate} at {formattedTime} {timezoneAbbr}
               </p>
             </div>
-            <StatusBadge status={order.status as OrderStatus} />
+            <PaymentStatusBadge status={order.status as OrderStatus} />
           </div>
         </CardHeader>
 

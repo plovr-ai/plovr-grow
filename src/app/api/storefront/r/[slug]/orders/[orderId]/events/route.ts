@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { orderEventEmitter } from "@/services/order";
 import { merchantService } from "@/services/merchant";
+import type {
+  PaymentStatusChangedEvent,
+  FulfillmentStatusChangedEvent,
+} from "@/services/order/order-events.types";
 
 export const dynamic = "force-dynamic";
 
@@ -29,15 +33,33 @@ export async function GET(
       const unsubscribe = orderEventEmitter.onAny((event) => {
         // Filter for this specific order and merchant
         if (event.orderId === orderId && event.merchantId === merchant.id) {
-          const data = {
-            type: "status_changed",
-            status: event.status,
-            previousStatus: event.previousStatus,
-            timestamp: event.timestamp,
-          };
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
-          );
+          // Check if this is a payment status change event
+          if ("status" in event) {
+            const paymentEvent = event as PaymentStatusChangedEvent;
+            const data = {
+              type: "payment_status_changed",
+              status: paymentEvent.status,
+              previousStatus: paymentEvent.previousStatus,
+              timestamp: paymentEvent.timestamp,
+            };
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
+            );
+          }
+
+          // Check if this is a fulfillment status change event
+          if ("fulfillmentStatus" in event) {
+            const fulfillmentEvent = event as FulfillmentStatusChangedEvent;
+            const data = {
+              type: "fulfillment_status_changed",
+              fulfillmentStatus: fulfillmentEvent.fulfillmentStatus,
+              previousFulfillmentStatus: fulfillmentEvent.previousFulfillmentStatus,
+              timestamp: fulfillmentEvent.timestamp,
+            };
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
+            );
+          }
         }
       });
 

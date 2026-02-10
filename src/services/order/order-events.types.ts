@@ -1,25 +1,48 @@
-import type { OrderStatus, OrderMode, OrderItemData, SalesChannel } from "@/types";
+import type { OrderStatus, FulfillmentStatus, OrderMode, OrderItemData, SalesChannel } from "@/types";
 
-export type OrderEventType =
+// Payment events (user behavior)
+export type PaymentEventType =
   | "order.created"
-  | "order.confirmed"
-  | "order.preparing"
-  | "order.ready"
-  | "order.completed"
+  | "order.paid"
+  | "order.partial_paid"
   | "order.cancelled";
 
+// Fulfillment events (merchant behavior)
+export type FulfillmentEventType =
+  | "order.fulfillment.confirmed"
+  | "order.fulfillment.preparing"
+  | "order.fulfillment.ready"
+  | "order.fulfillment.fulfilled";
+
+export type OrderEventType = PaymentEventType | FulfillmentEventType;
+
+// Base event payload
 export interface OrderEventPayload {
   orderId: string;
   orderNumber: string;
   merchantId: string;
   tenantId: string;
-  status: OrderStatus;
-  previousStatus?: OrderStatus;
   timestamp: Date;
   metadata?: Record<string, unknown>;
 }
 
+// Payment status change event
+export interface PaymentStatusChangedEvent extends OrderEventPayload {
+  status: OrderStatus;
+  previousStatus?: OrderStatus;
+  cancelReason?: string;
+}
+
+// Fulfillment status change event
+export interface FulfillmentStatusChangedEvent extends OrderEventPayload {
+  fulfillmentStatus: FulfillmentStatus;
+  previousFulfillmentStatus?: FulfillmentStatus;
+}
+
+// Order created event
 export interface OrderCreatedEvent extends OrderEventPayload {
+  status: OrderStatus;
+  fulfillmentStatus: FulfillmentStatus;
   customerFirstName: string;
   customerLastName: string;
   customerPhone: string;
@@ -29,21 +52,28 @@ export interface OrderCreatedEvent extends OrderEventPayload {
   items: OrderItemData[];
 }
 
-export interface OrderStatusChangedEvent extends OrderEventPayload {
-  previousStatus: OrderStatus;
-  cancelReason?: string;
-}
-
-// Extended event for order completion with customer and amount info
-export interface OrderCompletedEvent extends OrderStatusChangedEvent {
-  companyId: string;
-  customerPhone: string;
+// Order paid event (for loyalty points, etc.)
+export interface OrderPaidEvent extends PaymentStatusChangedEvent {
+  companyId?: string;
+  customerPhone?: string;
   customerFirstName?: string;
   customerLastName?: string;
   customerEmail?: string;
-  totalAmount: number;
+  totalAmount?: number;
+}
+
+// Order cancelled event
+export interface OrderCancelledEvent extends PaymentStatusChangedEvent {
+  cancelReason?: string;
 }
 
 export type OrderEventHandler<T extends OrderEventPayload = OrderEventPayload> = (
   event: T
 ) => void | Promise<void>;
+
+// Legacy types for backward compatibility
+/** @deprecated Use PaymentStatusChangedEvent instead */
+export type OrderStatusChangedEvent = PaymentStatusChangedEvent;
+
+/** @deprecated Use OrderPaidEvent instead */
+export type OrderCompletedEvent = OrderPaidEvent;

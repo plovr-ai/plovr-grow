@@ -89,13 +89,20 @@ export interface Cart {
 
 export type OrderMode = "pickup" | "delivery" | "dine_in";
 
+// Payment status (user behavior)
 export type OrderStatus =
-  | "pending"
-  | "confirmed"
-  | "preparing"
-  | "ready"
-  | "completed"
-  | "cancelled";
+  | "created"       // Order created but not paid
+  | "partial_paid"  // Partially paid
+  | "completed"     // Fully paid
+  | "canceled";     // Cancelled
+
+// Fulfillment status (merchant behavior)
+export type FulfillmentStatus =
+  | "pending"       // Waiting for fulfillment to start
+  | "confirmed"     // Merchant accepted the order
+  | "preparing"     // Kitchen is preparing
+  | "ready"         // Ready for pickup/delivery
+  | "fulfilled";    // Order fulfilled
 
 export type SalesChannel = "online_order" | "catering" | "giftcard";
 

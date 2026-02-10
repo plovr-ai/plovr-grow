@@ -1,6 +1,6 @@
 "use client";
 
-import type { OrderStatus } from "@/types";
+import type { OrderStatus, FulfillmentStatus } from "@/types";
 import type { TimelineEvent } from "./order-detail.types";
 import { useFormatDateTime } from "@/hooks";
 
@@ -9,12 +9,35 @@ interface Props {
   cancelReason?: string | null;
 }
 
+// Combined status config for both payment and fulfillment statuses
 const STATUS_CONFIG: Record<
-  OrderStatus,
+  OrderStatus | FulfillmentStatus,
   { label: string; color: string; bgColor: string }
 > = {
-  pending: {
+  // Payment statuses
+  created: {
     label: "Order Placed",
+    color: "text-gray-600",
+    bgColor: "bg-gray-100",
+  },
+  partial_paid: {
+    label: "Partial Payment",
+    color: "text-orange-600",
+    bgColor: "bg-orange-100",
+  },
+  completed: {
+    label: "Payment Completed",
+    color: "text-green-600",
+    bgColor: "bg-green-100",
+  },
+  canceled: {
+    label: "Cancelled",
+    color: "text-red-600",
+    bgColor: "bg-red-100",
+  },
+  // Fulfillment statuses
+  pending: {
+    label: "Awaiting Fulfillment",
     color: "text-gray-600",
     bgColor: "bg-gray-100",
   },
@@ -25,23 +48,18 @@ const STATUS_CONFIG: Record<
   },
   preparing: {
     label: "Preparing",
-    color: "text-orange-600",
-    bgColor: "bg-orange-100",
+    color: "text-purple-600",
+    bgColor: "bg-purple-100",
   },
   ready: {
     label: "Ready",
     color: "text-green-600",
     bgColor: "bg-green-100",
   },
-  completed: {
-    label: "Completed",
+  fulfilled: {
+    label: "Fulfilled",
     color: "text-green-600",
     bgColor: "bg-green-100",
-  },
-  cancelled: {
-    label: "Cancelled",
-    color: "text-red-600",
-    bgColor: "bg-red-100",
   },
 };
 
@@ -59,7 +77,11 @@ export function OrderTimeline({ timeline, cancelReason }: Props) {
       <h2 className="text-sm font-medium text-gray-700 mb-3">Order Timeline</h2>
       <div className="relative">
         {sortedTimeline.map((event, index) => {
-          const config = STATUS_CONFIG[event.status];
+          const config = STATUS_CONFIG[event.status] || {
+            label: event.status,
+            color: "text-gray-600",
+            bgColor: "bg-gray-100",
+          };
           const isLast = index === sortedTimeline.length - 1;
 
           return (
@@ -80,7 +102,7 @@ export function OrderTimeline({ timeline, cancelReason }: Props) {
                 <p className="text-sm text-gray-400">
                   {formatDate(event.timestamp)} at {formatTime(event.timestamp)}
                 </p>
-                {event.status === "cancelled" && cancelReason && (
+                {event.status === "canceled" && cancelReason && (
                   <p className="text-sm text-red-500 mt-1">
                     Reason: {cancelReason}
                   </p>

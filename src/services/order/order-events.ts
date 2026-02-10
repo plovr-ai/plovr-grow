@@ -1,18 +1,25 @@
 import type {
   OrderEventType,
   OrderCreatedEvent,
-  OrderStatusChangedEvent,
-  OrderCompletedEvent,
+  PaymentStatusChangedEvent,
+  FulfillmentStatusChangedEvent,
+  OrderPaidEvent,
+  OrderCancelledEvent,
   OrderEventHandler,
+  OrderEventPayload,
 } from "./order-events.types";
 
 type EventMap = {
+  // Payment events
   "order.created": OrderCreatedEvent;
-  "order.confirmed": OrderStatusChangedEvent;
-  "order.preparing": OrderStatusChangedEvent;
-  "order.ready": OrderStatusChangedEvent;
-  "order.completed": OrderCompletedEvent;
-  "order.cancelled": OrderStatusChangedEvent;
+  "order.paid": OrderPaidEvent;
+  "order.partial_paid": PaymentStatusChangedEvent;
+  "order.cancelled": OrderCancelledEvent;
+  // Fulfillment events
+  "order.fulfillment.confirmed": FulfillmentStatusChangedEvent;
+  "order.fulfillment.preparing": FulfillmentStatusChangedEvent;
+  "order.fulfillment.ready": FulfillmentStatusChangedEvent;
+  "order.fulfillment.fulfilled": FulfillmentStatusChangedEvent;
 };
 
 /**
@@ -49,12 +56,16 @@ class OrderEventEmitter {
    */
   onAny(handler: OrderEventHandler): () => void {
     const events: OrderEventType[] = [
+      // Payment events
       "order.created",
-      "order.confirmed",
-      "order.preparing",
-      "order.ready",
-      "order.completed",
+      "order.paid",
+      "order.partial_paid",
       "order.cancelled",
+      // Fulfillment events
+      "order.fulfillment.confirmed",
+      "order.fulfillment.preparing",
+      "order.fulfillment.ready",
+      "order.fulfillment.fulfilled",
     ];
 
     const unsubscribers = events.map((event) => this.on(event, handler));
@@ -99,8 +110,8 @@ class OrderEventEmitter {
 export const orderEventEmitter = new OrderEventEmitter();
 
 if (process.env.NODE_ENV === "development") {
-  orderEventEmitter.onAny((event) => {
-    console.log(`[OrderEvent] ${event.status}:`, {
+  orderEventEmitter.onAny((event: OrderEventPayload) => {
+    console.log(`[OrderEvent]`, {
       orderId: event.orderId,
       orderNumber: event.orderNumber,
       merchantId: event.merchantId,

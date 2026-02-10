@@ -1,6 +1,6 @@
 import { orderEventEmitter } from "@/services/order/order-events";
 import { loyaltyService } from "./loyalty.service";
-import type { OrderCompletedEvent } from "@/services/order/order-events.types";
+import type { OrderPaidEvent } from "@/services/order/order-events.types";
 
 let isRegistered = false;
 
@@ -12,24 +12,31 @@ export function registerLoyaltyEventHandlers(): void {
     return;
   }
 
-  // Listen to order.completed events
-  orderEventEmitter.on("order.completed", handleOrderCompleted);
+  // Listen to order.paid events (when order payment is completed)
+  orderEventEmitter.on("order.paid", handleOrderPaid);
 
   isRegistered = true;
   console.log("[Loyalty] Event handlers registered");
 }
 
 /**
- * Handle order completion event
+ * Handle order paid event - awards loyalty points when payment is completed
  */
-async function handleOrderCompleted(event: OrderCompletedEvent): Promise<void> {
+async function handleOrderPaid(event: OrderPaidEvent): Promise<void> {
   try {
-    console.log("[Loyalty] Processing order completion:", {
+    console.log("[Loyalty] Processing order paid event:", {
       orderId: event.orderId,
       orderNumber: event.orderNumber,
       customerPhone: event.customerPhone,
       totalAmount: event.totalAmount,
     });
+
+    // Skip if no companyId provided
+    // Skip if required fields are missing
+    if (!event.companyId || !event.customerPhone || event.totalAmount === undefined) {
+      console.log("[Loyalty] Skipping - missing required fields (companyId, customerPhone, or totalAmount)");
+      return;
+    }
 
     const result = await loyaltyService.processOrderCompletion(
       event.tenantId,

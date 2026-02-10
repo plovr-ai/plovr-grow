@@ -29,7 +29,8 @@ describe("OrdersManagementClient", () => {
       customerPhone: "+1234567890",
       customerEmail: "john@example.com",
       orderMode: "pickup",
-      status: "pending",
+      status: "created",
+      fulfillmentStatus: "pending",
       items: [{ name: "Test Item", quantity: 1 }],
       subtotal: 10.0,
       taxAmount: 0.88,
@@ -64,6 +65,7 @@ describe("OrdersManagementClient", () => {
       merchantId: "all",
       status: "all",
       orderMode: "all",
+      salesChannel: "all",
       dateFrom: "",
       dateTo: "",
     },
@@ -89,9 +91,9 @@ describe("OrdersManagementClient", () => {
       render(<OrdersManagementClient {...defaultProps} />);
 
       const statusSelect = screen.getByLabelText("Status");
-      fireEvent.change(statusSelect, { target: { value: "pending" } });
+      fireEvent.change(statusSelect, { target: { value: "created" } });
 
-      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("status=pending"));
+      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("status=created"));
     });
 
     it("should map merchantId to 'merchantId' URL parameter", () => {
@@ -128,9 +130,9 @@ describe("OrdersManagementClient", () => {
 
       const statusSelect = screen.getByLabelText("Status");
 
-      // Set to pending
-      fireEvent.change(statusSelect, { target: { value: "pending" } });
-      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("status=pending"));
+      // Set to created
+      fireEvent.change(statusSelect, { target: { value: "created" } });
+      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("status=created"));
 
       mockPush.mockClear();
 
@@ -144,7 +146,7 @@ describe("OrdersManagementClient", () => {
       render(<OrdersManagementClient {...defaultProps} />);
 
       const statusSelect = screen.getByLabelText("Status");
-      fireEvent.change(statusSelect, { target: { value: "pending" } });
+      fireEvent.change(statusSelect, { target: { value: "created" } });
 
       const lastCall = mockPush.mock.calls[0][0];
       expect(lastCall).not.toContain("page=");
@@ -234,7 +236,7 @@ describe("OrdersManagementClient", () => {
     });
 
     it("should preserve existing filters when changing page", () => {
-      mockSearchParams.set("status", "pending");
+      mockSearchParams.set("status", "created");
       mockSearchParams.set("mode", "delivery");
 
       const props = {
@@ -249,7 +251,7 @@ describe("OrdersManagementClient", () => {
       fireEvent.click(nextButton);
 
       const lastCall = mockPush.mock.calls[0][0];
-      expect(lastCall).toContain("status=pending");
+      expect(lastCall).toContain("status=created");
       expect(lastCall).toContain("mode=delivery");
       expect(lastCall).toContain("page=2");
     });
@@ -269,7 +271,7 @@ describe("OrdersManagementClient", () => {
   });
 
   describe("Location Filter Visibility", () => {
-    it("should hide location filter when there is only one merchant", () => {
+    it("should show location filter even with only one merchant", () => {
       const props = {
         ...defaultProps,
         merchants: [{ id: "merchant1", name: "Only Location" }],
@@ -277,7 +279,7 @@ describe("OrdersManagementClient", () => {
 
       render(<OrdersManagementClient {...props} />);
 
-      expect(screen.queryByLabelText("Location")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Location")).toBeInTheDocument();
     });
 
     it("should show location filter when there are multiple merchants", () => {
@@ -290,7 +292,7 @@ describe("OrdersManagementClient", () => {
   describe("Multiple Filter Combinations", () => {
     it("should handle multiple filters being set simultaneously", () => {
       // Set initial URL parameters
-      mockSearchParams.set("status", "pending");
+      mockSearchParams.set("status", "created");
 
       render(<OrdersManagementClient {...defaultProps} />);
 
@@ -300,7 +302,7 @@ describe("OrdersManagementClient", () => {
 
       const lastCall = mockPush.mock.calls[0][0];
       // Should preserve existing status filter
-      expect(lastCall).toContain("status=pending");
+      expect(lastCall).toContain("status=created");
       // Should add new mode filter
       expect(lastCall).toContain("mode=delivery");
     });

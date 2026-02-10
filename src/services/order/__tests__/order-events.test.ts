@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { orderEventEmitter } from "../order-events";
-import type { OrderCreatedEvent, OrderStatusChangedEvent } from "../order-events.types";
+import type {
+  OrderCreatedEvent,
+  PaymentStatusChangedEvent,
+  FulfillmentStatusChangedEvent,
+} from "../order-events.types";
 
 describe("OrderEventEmitter", () => {
   beforeEach(() => {
@@ -18,11 +22,14 @@ describe("OrderEventEmitter", () => {
         orderNumber: "#001",
         merchantId: "merchant-1",
         tenantId: "tenant-1",
-        status: "pending",
+        status: "created",
+        fulfillmentStatus: "pending",
         timestamp: new Date(),
-        customerName: "John Doe",
+        customerFirstName: "John",
+        customerLastName: "Doe",
         customerPhone: "123-456-7890",
         orderMode: "pickup",
+        salesChannel: "online_order",
         totalAmount: 25.99,
         items: [],
       };
@@ -40,18 +47,21 @@ describe("OrderEventEmitter", () => {
 
     it("should not call handler for different event type", async () => {
       const handler = vi.fn();
-      const unsubscribe = orderEventEmitter.on("order.confirmed", handler);
+      const unsubscribe = orderEventEmitter.on("order.fulfillment.confirmed", handler);
 
       const event: OrderCreatedEvent = {
         orderId: "order-1",
         orderNumber: "#001",
         merchantId: "merchant-1",
         tenantId: "tenant-1",
-        status: "pending",
+        status: "created",
+        fulfillmentStatus: "pending",
         timestamp: new Date(),
-        customerName: "John Doe",
+        customerFirstName: "John",
+        customerLastName: "Doe",
         customerPhone: "123-456-7890",
         orderMode: "pickup",
+        salesChannel: "online_order",
         totalAmount: 25.99,
         items: [],
       };
@@ -67,22 +77,22 @@ describe("OrderEventEmitter", () => {
 
     it("should return unsubscribe function", async () => {
       const handler = vi.fn();
-      const unsubscribe = orderEventEmitter.on("order.completed", handler);
+      const unsubscribe = orderEventEmitter.on("order.paid", handler);
 
       // Unsubscribe before emitting
       unsubscribe();
 
-      const event: OrderStatusChangedEvent = {
+      const event: PaymentStatusChangedEvent = {
         orderId: "order-1",
         orderNumber: "#001",
         merchantId: "merchant-1",
         tenantId: "tenant-1",
         status: "completed",
-        previousStatus: "ready",
+        previousStatus: "created",
         timestamp: new Date(),
       };
 
-      orderEventEmitter.emit("order.completed", event);
+      orderEventEmitter.emit("order.paid", event);
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -100,27 +110,30 @@ describe("OrderEventEmitter", () => {
         orderNumber: "#001",
         merchantId: "merchant-1",
         tenantId: "tenant-1",
-        status: "pending",
+        status: "created",
+        fulfillmentStatus: "pending",
         timestamp: new Date(),
-        customerName: "John Doe",
+        customerFirstName: "John",
+        customerLastName: "Doe",
         customerPhone: "123-456-7890",
         orderMode: "pickup",
+        salesChannel: "online_order",
         totalAmount: 25.99,
         items: [],
       };
 
-      const confirmedEvent: OrderStatusChangedEvent = {
+      const confirmedEvent: FulfillmentStatusChangedEvent = {
         orderId: "order-1",
         orderNumber: "#001",
         merchantId: "merchant-1",
         tenantId: "tenant-1",
-        status: "confirmed",
-        previousStatus: "pending",
+        fulfillmentStatus: "confirmed",
+        previousFulfillmentStatus: "pending",
         timestamp: new Date(),
       };
 
       orderEventEmitter.emit("order.created", createdEvent);
-      orderEventEmitter.emit("order.confirmed", confirmedEvent);
+      orderEventEmitter.emit("order.fulfillment.confirmed", confirmedEvent);
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -140,11 +153,14 @@ describe("OrderEventEmitter", () => {
         orderNumber: "#001",
         merchantId: "merchant-1",
         tenantId: "tenant-1",
-        status: "pending",
+        status: "created",
+        fulfillmentStatus: "pending",
         timestamp: new Date(),
-        customerName: "John Doe",
+        customerFirstName: "John",
+        customerLastName: "Doe",
         customerPhone: "123-456-7890",
         orderMode: "pickup",
+        salesChannel: "online_order",
         totalAmount: 25.99,
         items: [],
       };
@@ -165,13 +181,13 @@ describe("OrderEventEmitter", () => {
       const unsubscribe1 = orderEventEmitter.on("order.cancelled", handler1);
       const unsubscribe2 = orderEventEmitter.on("order.cancelled", handler2);
 
-      const event: OrderStatusChangedEvent = {
+      const event: PaymentStatusChangedEvent = {
         orderId: "order-1",
         orderNumber: "#001",
         merchantId: "merchant-1",
         tenantId: "tenant-1",
-        status: "cancelled",
-        previousStatus: "pending",
+        status: "canceled",
+        previousStatus: "created",
         timestamp: new Date(),
         cancelReason: "Customer requested",
       };
@@ -199,20 +215,20 @@ describe("OrderEventEmitter", () => {
         results.push(2);
       });
 
-      const unsubscribe1 = orderEventEmitter.on("order.ready", slowHandler);
-      const unsubscribe2 = orderEventEmitter.on("order.ready", fastHandler);
+      const unsubscribe1 = orderEventEmitter.on("order.fulfillment.ready", slowHandler);
+      const unsubscribe2 = orderEventEmitter.on("order.fulfillment.ready", fastHandler);
 
-      const event: OrderStatusChangedEvent = {
+      const event: FulfillmentStatusChangedEvent = {
         orderId: "order-1",
         orderNumber: "#001",
         merchantId: "merchant-1",
         tenantId: "tenant-1",
-        status: "ready",
-        previousStatus: "preparing",
+        fulfillmentStatus: "ready",
+        previousFulfillmentStatus: "preparing",
         timestamp: new Date(),
       };
 
-      orderEventEmitter.emit("order.ready", event);
+      orderEventEmitter.emit("order.fulfillment.ready", event);
 
       // Fast handler should complete first
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -234,21 +250,21 @@ describe("OrderEventEmitter", () => {
 
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-      const unsubscribe1 = orderEventEmitter.on("order.preparing", errorHandler);
-      const unsubscribe2 = orderEventEmitter.on("order.preparing", normalHandler);
+      const unsubscribe1 = orderEventEmitter.on("order.fulfillment.preparing", errorHandler);
+      const unsubscribe2 = orderEventEmitter.on("order.fulfillment.preparing", normalHandler);
 
-      const event: OrderStatusChangedEvent = {
+      const event: FulfillmentStatusChangedEvent = {
         orderId: "order-1",
         orderNumber: "#001",
         merchantId: "merchant-1",
         tenantId: "tenant-1",
-        status: "preparing",
-        previousStatus: "confirmed",
+        fulfillmentStatus: "preparing",
+        previousFulfillmentStatus: "confirmed",
         timestamp: new Date(),
       };
 
       // Should not throw
-      expect(() => orderEventEmitter.emit("order.preparing", event)).not.toThrow();
+      expect(() => orderEventEmitter.emit("order.fulfillment.preparing", event)).not.toThrow();
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -275,16 +291,16 @@ describe("OrderEventEmitter", () => {
     });
 
     it("should return correct count after subscribing", () => {
-      const initialCount = orderEventEmitter.listenerCount("order.confirmed");
+      const initialCount = orderEventEmitter.listenerCount("order.fulfillment.confirmed");
 
       const handler = vi.fn();
-      const unsubscribe = orderEventEmitter.on("order.confirmed", handler);
+      const unsubscribe = orderEventEmitter.on("order.fulfillment.confirmed", handler);
 
-      expect(orderEventEmitter.listenerCount("order.confirmed")).toBe(initialCount + 1);
+      expect(orderEventEmitter.listenerCount("order.fulfillment.confirmed")).toBe(initialCount + 1);
 
       unsubscribe();
 
-      expect(orderEventEmitter.listenerCount("order.confirmed")).toBe(initialCount);
+      expect(orderEventEmitter.listenerCount("order.fulfillment.confirmed")).toBe(initialCount);
     });
   });
 });

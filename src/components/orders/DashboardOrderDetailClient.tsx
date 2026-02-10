@@ -5,19 +5,20 @@ import { ArrowLeft, User, Phone, Mail, MapPin, FileText } from "lucide-react";
 import { useDashboardFormatPrice, useDashboardFormatDateTime } from "@/hooks";
 import { formatCustomerName } from "@/lib/names";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { StatusBadge } from "./StatusBadge";
-import type { OrderStatus, OrderMode, OrderItemData, DeliveryAddress, SalesChannel } from "@/types";
+import { PaymentStatusBadge, FulfillmentStatusBadge } from "./StatusBadge";
+import type { OrderStatus, FulfillmentStatus, OrderMode, OrderItemData, DeliveryAddress, SalesChannel } from "@/types";
 
 // Types for Dashboard Order Detail
 interface TimelineEvent {
-  status: OrderStatus;
+  status: OrderStatus | FulfillmentStatus;
   timestamp: Date | string;
 }
 
-interface DashboardOrderDetailData {
+export interface DashboardOrderDetailData {
   id: string;
   orderNumber: string;
   status: string;
+  fulfillmentStatus: string;
   orderMode: string;
   salesChannel: string;
   items: OrderItemData[];
@@ -34,8 +35,11 @@ interface DashboardOrderDetailData {
   discount: number;
   totalAmount: number;
   createdAt: Date | string;
+  paidAt: Date | string | null;
   confirmedAt: Date | string | null;
-  completedAt: Date | string | null;
+  preparingAt: Date | string | null;
+  readyAt: Date | string | null;
+  fulfilledAt: Date | string | null;
   cancelledAt: Date | string | null;
   cancelReason: string | null;
   timeline: TimelineEvent[];
@@ -65,38 +69,41 @@ const salesChannelLabels: Record<SalesChannel, string> = {
 };
 
 // ==================== Order Status Progress ====================
-interface StatusStep {
-  status: OrderStatus;
+interface FulfillmentStep {
+  status: FulfillmentStatus;
   label: string;
 }
 
-const STEPS: StatusStep[] = [
-  { status: "pending", label: "Placed" },
+const FULFILLMENT_STEPS: FulfillmentStep[] = [
+  { status: "pending", label: "Pending" },
   { status: "confirmed", label: "Confirmed" },
   { status: "preparing", label: "Preparing" },
   { status: "ready", label: "Ready" },
-  { status: "completed", label: "Completed" },
+  { status: "fulfilled", label: "Fulfilled" },
 ];
 
-const STATUS_ORDER: Record<OrderStatus, number> = {
+const FULFILLMENT_ORDER: Record<FulfillmentStatus, number> = {
   pending: 0,
   confirmed: 1,
   preparing: 2,
   ready: 3,
-  completed: 4,
-  cancelled: -1,
+  fulfilled: 4,
 };
 
 function OrderStatusProgress({
-  currentStatus,
+  paymentStatus,
+  fulfillmentStatus,
   orderMode,
 }: {
-  currentStatus: OrderStatus;
+  paymentStatus: OrderStatus;
+  fulfillmentStatus: FulfillmentStatus;
   orderMode: OrderMode;
 }) {
-  const currentIndex = STATUS_ORDER[currentStatus];
-  const isCancelled = currentStatus === "cancelled";
+  const currentIndex = FULFILLMENT_ORDER[fulfillmentStatus];
+  const isCancelled = paymentStatus === "canceled";
+  const isPaid = paymentStatus === "completed";
 
+  // Show cancelled state
   if (isCancelled) {
     return (
       <Card className="border-red-200 bg-red-50">
@@ -127,17 +134,58 @@ function OrderStatusProgress({
     );
   }
 
+  // Show payment pending state
+  if (!isPaid) {
+    return (
+      <Card className="border-yellow-200 bg-yellow-50">
+        <CardContent className="pt-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
+              <svg
+                className="w-5 h-5 text-yellow-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div>
+              <p className="font-medium text-yellow-800">
+                {paymentStatus === "partial_paid" ? "Partial Payment Received" : "Awaiting Payment"}
+              </p>
+              <p className="text-sm text-yellow-600">
+                {paymentStatus === "partial_paid"
+                  ? "Please complete the remaining payment"
+                  : "Please complete the payment to proceed"}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show fulfillment progress for paid orders
   const readyLabel = orderMode === "delivery" ? "Out for Delivery" : "Ready for Pickup";
-  const stepsWithLabels = STEPS.map((step) =>
-    step.status === "ready" ? { ...step, label: readyLabel } : step
-  );
+  const fulfilledLabel = orderMode === "delivery" ? "Delivered" : "Picked Up";
+  const stepsWithLabels = FULFILLMENT_STEPS.map((step) => {
+    if (step.status === "ready") return { ...step, label: readyLabel };
+    if (step.status === "fulfilled") return { ...step, label: fulfilledLabel };
+    return step;
+  });
 
   return (
     <Card>
       <CardContent className="pt-4">
         <div className="flex items-center justify-between">
           {stepsWithLabels.map((step, index) => {
-            const stepIndex = STATUS_ORDER[step.status];
+            const stepIndex = FULFILLMENT_ORDER[step.status];
             const isCompleted = stepIndex < currentIndex;
             const isCurrent = stepIndex === currentIndex;
 
@@ -440,12 +488,35 @@ function CustomerInfo({
 }
 
 // ==================== Order Timeline ====================
+// Combined status config for both payment and fulfillment statuses
 const TIMELINE_STATUS_CONFIG: Record<
-  OrderStatus,
+  OrderStatus | FulfillmentStatus,
   { label: string; color: string; bgColor: string }
 > = {
-  pending: {
+  // Payment statuses
+  created: {
     label: "Order Placed",
+    color: "text-gray-600",
+    bgColor: "bg-gray-100",
+  },
+  partial_paid: {
+    label: "Partial Payment",
+    color: "text-orange-600",
+    bgColor: "bg-orange-100",
+  },
+  completed: {
+    label: "Payment Completed",
+    color: "text-green-600",
+    bgColor: "bg-green-100",
+  },
+  canceled: {
+    label: "Cancelled",
+    color: "text-red-600",
+    bgColor: "bg-red-100",
+  },
+  // Fulfillment statuses
+  pending: {
+    label: "Awaiting Fulfillment",
     color: "text-gray-600",
     bgColor: "bg-gray-100",
   },
@@ -456,23 +527,18 @@ const TIMELINE_STATUS_CONFIG: Record<
   },
   preparing: {
     label: "Preparing",
-    color: "text-orange-600",
-    bgColor: "bg-orange-100",
+    color: "text-purple-600",
+    bgColor: "bg-purple-100",
   },
   ready: {
     label: "Ready",
     color: "text-green-600",
     bgColor: "bg-green-100",
   },
-  completed: {
-    label: "Completed",
+  fulfilled: {
+    label: "Fulfilled",
     color: "text-green-600",
     bgColor: "bg-green-100",
-  },
-  cancelled: {
-    label: "Cancelled",
-    color: "text-red-600",
-    bgColor: "bg-red-100",
   },
 };
 
@@ -502,7 +568,11 @@ function OrderTimeline({
       <CardContent>
         <div className="relative">
           {sortedTimeline.map((event, index) => {
-            const config = TIMELINE_STATUS_CONFIG[event.status];
+            const config = TIMELINE_STATUS_CONFIG[event.status] || {
+              label: event.status,
+              color: "text-gray-600",
+              bgColor: "bg-gray-100",
+            };
             const isLast = index === sortedTimeline.length - 1;
 
             return (
@@ -521,7 +591,7 @@ function OrderTimeline({
                   <p className="text-sm text-gray-400">
                     {formatDate(event.timestamp)} at {formatTime(event.timestamp)}
                   </p>
-                  {event.status === "cancelled" && cancelReason && (
+                  {event.status === "canceled" && cancelReason && (
                     <p className="text-sm text-red-500 mt-1">Reason: {cancelReason}</p>
                   )}
                 </div>
@@ -552,7 +622,8 @@ export function DashboardOrderDetailClient({ order, imageMap }: Props) {
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Order #{order.orderNumber}</h1>
-            <StatusBadge status={order.status as OrderStatus} />
+            <PaymentStatusBadge status={order.status as OrderStatus} />
+            <FulfillmentStatusBadge status={order.fulfillmentStatus as FulfillmentStatus} />
           </div>
           <p className="text-sm text-gray-500 mt-1">
             {orderModeLabels[order.orderMode as OrderMode]} &bull; {salesChannelLabels[order.salesChannel as SalesChannel]} &bull; {order.merchant.name}
@@ -562,7 +633,8 @@ export function DashboardOrderDetailClient({ order, imageMap }: Props) {
 
       {/* Status Progress */}
       <OrderStatusProgress
-        currentStatus={order.status as OrderStatus}
+        paymentStatus={order.status as OrderStatus}
+        fulfillmentStatus={order.fulfillmentStatus as FulfillmentStatus}
         orderMode={order.orderMode as OrderMode}
       />
 
