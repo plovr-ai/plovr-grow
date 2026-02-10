@@ -180,8 +180,8 @@ export async function POST(
       }
     }
 
-    // Create order with merchantId and payment breakdown
-    const order = await orderService.createOrder(tenantId, {
+    // Create merchant order with payment breakdown
+    const order = await orderService.createMerchantOrder(tenantId, {
       companyId: merchant.company.id,
       merchantId: merchant.id,
       loyaltyMemberId: body.loyaltyMemberId,

@@ -68,19 +68,15 @@ export async function POST(
       taxes: [], // Giftcards are tax-exempt
     };
 
-    // Create order with salesChannel="giftcard"
-    const order = await orderService.createOrder(company.tenantId, {
+    // Create company order for giftcard
+    const order = await orderService.createCompanyOrder(company.tenantId, {
       companyId: company.id,
-      merchantId: undefined, // Company-level order
       customerFirstName: data.buyerFirstName,
       customerLastName: data.buyerLastName,
       customerPhone: data.buyerPhone,
       customerEmail: data.buyerEmail,
-      orderMode: "pickup", // Generic fulfillment (actual: digital delivery)
-      salesChannel: "giftcard",
       items: [giftcardItem],
       notes: data.message || undefined,
-      tipAmount: 0,
     });
 
     // Create payment record if payment was made

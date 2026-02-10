@@ -1,4 +1,3 @@
-import type { Order } from "@prisma/client";
 import type {
   OrderMode,
   OrderStatus,
@@ -47,23 +46,34 @@ export interface OrderData {
   updatedAt: Date;
 }
 
-export interface CreateOrderInput {
+// Base order input fields shared by both merchant and company orders
+interface BaseOrderInput {
   companyId: string;
-  merchantId?: string; // Optional for Company-level orders (e.g., giftcards)
   loyaltyMemberId?: string;
   customerFirstName: string;
   customerLastName: string;
   customerPhone: string;
   customerEmail?: string;
-  orderMode: OrderMode;
-  salesChannel?: SalesChannel;
   items: OrderItemData[];
   notes?: string;
+  giftCardPayment?: number; // Amount paid with gift card
+}
+
+// Input for creating a merchant order (regular orders with menu items)
+export interface CreateMerchantOrderInput extends BaseOrderInput {
+  merchantId: string; // Required for merchant orders
+  orderMode: OrderMode;
+  salesChannel?: Exclude<SalesChannel, "giftcard">; // Defaults to "online_order"
   deliveryAddress?: DeliveryAddress;
   scheduledAt?: Date;
   tipAmount?: number;
   discountCode?: string;
-  giftCardPayment?: number; // Amount paid with gift card
+}
+
+// Input for creating a company order (e.g., giftcards, virtual products)
+export interface CreateCompanyOrderInput extends BaseOrderInput {
+  // merchantId is not needed for company orders
+  // salesChannel is always "giftcard" for now
 }
 
 export interface OrderCalculation {
@@ -76,50 +86,6 @@ export interface OrderCalculation {
   deliveryFee: number;
   discount: number;
   totalAmount: number;
-}
-
-export interface OrderWithCalculation extends Order {
-  calculation: OrderCalculation;
-}
-
-// Update payment status (user behavior)
-export interface UpdateOrderStatusInput {
-  status: OrderStatus;
-  cancelReason?: string;
-}
-
-// Update fulfillment status (merchant behavior)
-export interface UpdateFulfillmentStatusInput {
-  fulfillmentStatus: FulfillmentStatus;
-}
-
-export interface OrderListOptions {
-  merchantId?: string;
-  status?: OrderStatus;
-  fulfillmentStatus?: FulfillmentStatus;
-  orderMode?: OrderMode;
-  salesChannel?: SalesChannel;
-  dateFrom?: Date;
-  dateTo?: Date;
-  search?: string;
-  page?: number;
-  pageSize?: number;
-  orderBy?: "createdAt" | "updatedAt" | "totalAmount";
-  orderDirection?: "asc" | "desc";
-}
-
-export interface MerchantOrderListOptions {
-  status?: OrderStatus;
-  fulfillmentStatus?: FulfillmentStatus;
-  orderMode?: OrderMode;
-  salesChannel?: SalesChannel;
-  dateFrom?: Date;
-  dateTo?: Date;
-  search?: string;
-  page?: number;
-  pageSize?: number;
-  orderBy?: "createdAt" | "updatedAt" | "totalAmount";
-  orderDirection?: "asc" | "desc";
 }
 
 export interface CompanyOrderListOptions {
@@ -135,32 +101,6 @@ export interface CompanyOrderListOptions {
   pageSize?: number;
   orderBy?: "createdAt" | "updatedAt" | "totalAmount";
   orderDirection?: "asc" | "desc";
-}
-
-export interface OrderWithMerchant extends Order {
-  merchant: {
-    id: string;
-    name: string;
-    slug: string;
-    timezone: string;
-  } | null;
-}
-
-export interface OrderStats {
-  totalOrders: number;
-  totalRevenue: number;
-  averageOrderValue: number;
-  ordersByStatus: Partial<Record<OrderStatus, number>>;
-  ordersByFulfillmentStatus: Partial<Record<FulfillmentStatus, number>>;
-  ordersByMode: Partial<Record<OrderMode, number>>;
-}
-
-export interface PaginatedOrders {
-  items: Order[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
 }
 
 // Timeline types for Order Detail page
