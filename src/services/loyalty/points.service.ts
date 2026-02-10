@@ -6,6 +6,7 @@ import {
   loyaltyMemberRepository,
   type LoyaltyMemberRepository,
 } from "@/repositories/loyalty-member.repository";
+import { AppError, ErrorCodes } from "@/lib/errors";
 import type {
   AwardPointsInput,
   AwardCustomPointsInput,
@@ -55,14 +56,14 @@ export class PointsService {
         input.orderId
       );
       if (existing) {
-        throw new Error("Points already awarded for this order");
+        throw new AppError(ErrorCodes.LOYALTY_POINTS_ALREADY_AWARDED, undefined, 409);
       }
     }
 
     // Get current member balance
     const member = await this.memberRepository.getById(tenantId, memberId);
     if (!member) {
-      throw new Error("Loyalty member not found");
+      throw new AppError(ErrorCodes.LOYALTY_MEMBER_NOT_FOUND, undefined, 404);
     }
 
     // Calculate points
@@ -120,14 +121,14 @@ export class PointsService {
         input.orderId
       );
       if (existing) {
-        throw new Error("Points already awarded for this order");
+        throw new AppError(ErrorCodes.LOYALTY_POINTS_ALREADY_AWARDED, undefined, 409);
       }
     }
 
     // Get current member balance
     const member = await this.memberRepository.getById(tenantId, memberId);
     if (!member) {
-      throw new Error("Loyalty member not found");
+      throw new AppError(ErrorCodes.LOYALTY_MEMBER_NOT_FOUND, undefined, 404);
     }
 
     const pointsEarned = input.points;
@@ -177,7 +178,7 @@ export class PointsService {
     // Get current member balance
     const member = await this.memberRepository.getById(tenantId, memberId);
     if (!member) {
-      throw new Error("Loyalty member not found");
+      throw new AppError(ErrorCodes.LOYALTY_MEMBER_NOT_FOUND, undefined, 404);
     }
 
     const balanceBefore = member.points;
@@ -185,7 +186,7 @@ export class PointsService {
 
     // Prevent negative balance
     if (balanceAfter < 0) {
-      throw new Error("Adjustment would result in negative balance");
+      throw new AppError(ErrorCodes.LOYALTY_NEGATIVE_BALANCE, undefined, 400);
     }
 
     // Create transaction record

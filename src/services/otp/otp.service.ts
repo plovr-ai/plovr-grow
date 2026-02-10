@@ -3,6 +3,7 @@ import {
   type OtpVerificationRepository,
 } from "@/repositories/otp-verification.repository";
 import { smsService, type SmsService } from "@/services/sms";
+import { ErrorCodes } from "@/lib/errors";
 import type { SendOtpResult, VerifyOtpResult, OtpPurpose } from "./otp.types";
 
 // Configuration
@@ -64,7 +65,7 @@ export class OtpService {
       return {
         success: false,
         expiresInSeconds: 0,
-        error: "Invalid phone number format. Use E.164 format (e.g., +14155551234)",
+        errorCode: ErrorCodes.OTP_INVALID_PHONE,
       };
     }
 
@@ -82,7 +83,7 @@ export class OtpService {
       return {
         success: false,
         expiresInSeconds: 0,
-        error: smsResult.error ?? "Failed to send SMS",
+        errorCode: ErrorCodes.OTP_SMS_FAILED,
       };
     }
 
@@ -120,7 +121,7 @@ export class OtpService {
         success: false,
         verified: false,
         reason: validation.reason,
-        error: this.getErrorMessage(validation.reason),
+        errorCode: this.getErrorCode(validation.reason),
       };
     }
 
@@ -134,24 +135,24 @@ export class OtpService {
   }
 
   /**
-   * Get human-readable error message
+   * Get error code from validation reason
    */
-  private getErrorMessage(
+  private getErrorCode(
     reason?: "not_found" | "expired" | "invalid_code" | "max_attempts" | "already_verified"
   ): string {
     switch (reason) {
       case "not_found":
-        return "Verification code not found. Please request a new code.";
+        return ErrorCodes.OTP_NOT_FOUND;
       case "expired":
-        return "Verification code has expired. Please request a new code.";
+        return ErrorCodes.OTP_EXPIRED;
       case "invalid_code":
-        return "Invalid verification code. Please try again.";
+        return ErrorCodes.OTP_INVALID;
       case "max_attempts":
-        return "Too many failed attempts. Please request a new code.";
+        return ErrorCodes.OTP_MAX_ATTEMPTS;
       case "already_verified":
-        return "This code has already been verified.";
+        return ErrorCodes.OTP_ALREADY_VERIFIED;
       default:
-        return "Verification failed.";
+        return ErrorCodes.VALIDATION_FAILED;
     }
   }
 

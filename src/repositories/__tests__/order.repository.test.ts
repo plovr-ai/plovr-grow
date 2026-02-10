@@ -58,9 +58,7 @@ describe("OrderRepository", () => {
       expect(prisma.order.findMany).toHaveBeenCalledWith({
         where: {
           tenantId: "tenant-1",
-          merchant: {
-            companyId: "company-1",
-          },
+          companyId: "company-1",
         },
         orderBy: { createdAt: "desc" },
         skip: 0,
@@ -96,10 +94,8 @@ describe("OrderRepository", () => {
         expect.objectContaining({
           where: {
             tenantId: "tenant-1",
-            merchant: {
-              companyId: "company-1",
-              id: "merchant-1",
-            },
+            companyId: "company-1",
+            merchantId: "merchant-1",
           },
         })
       );
@@ -176,7 +172,8 @@ describe("OrderRepository", () => {
           where: expect.objectContaining({
             OR: [
               { orderNumber: { contains: "john" } },
-              { customerName: { contains: "john" } },
+              { customerFirstName: { contains: "john" } },
+              { customerLastName: { contains: "john" } },
               { customerPhone: { contains: "john" } },
             ],
           }),
@@ -252,10 +249,8 @@ describe("OrderRepository", () => {
       expect(prisma.order.findMany).toHaveBeenCalledWith({
         where: {
           tenantId: "tenant-1",
-          merchant: {
-            companyId: "company-1",
-            id: "merchant-1",
-          },
+          companyId: "company-1",
+          merchantId: "merchant-1",
           status: "completed",
           orderMode: "delivery",
           createdAt: {

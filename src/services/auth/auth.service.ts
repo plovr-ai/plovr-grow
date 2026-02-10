@@ -6,6 +6,7 @@ import {
   mockCompanyStore,
   mockPasswordResetTokenStore,
 } from "./mock-store";
+import { AppError, ErrorCodes } from "@/lib/errors";
 import type { RegisterInput, ResetPasswordInput } from "@/lib/validations/auth";
 
 const BCRYPT_ROUNDS = 12;
@@ -20,7 +21,7 @@ export class AuthService {
     const existingUser = mockUserStore.findByEmail(input.email);
 
     if (existingUser) {
-      throw new Error("An account with this email already exists");
+      throw new AppError(ErrorCodes.AUTH_EMAIL_EXISTS, undefined, 409);
     }
 
     // Hash password
@@ -87,20 +88,20 @@ export class AuthService {
     const resetToken = mockPasswordResetTokenStore.findByToken(input.token);
 
     if (!resetToken) {
-      throw new Error("Invalid or expired reset token");
+      throw new AppError(ErrorCodes.AUTH_INVALID_RESET_TOKEN, undefined, 400);
     }
 
     if (resetToken.expiresAt < new Date()) {
       // Clean up expired token
       mockPasswordResetTokenStore.deleteByToken(input.token);
-      throw new Error("Reset token has expired");
+      throw new AppError(ErrorCodes.AUTH_RESET_TOKEN_EXPIRED, undefined, 400);
     }
 
     // Find user
     const user = mockUserStore.findByEmail(resetToken.email);
 
     if (!user || user.status !== "active") {
-      throw new Error("User not found");
+      throw new AppError(ErrorCodes.AUTH_USER_NOT_FOUND, undefined, 404);
     }
 
     // Hash new password

@@ -15,6 +15,7 @@ import type {
   FeaturedItemData,
 } from "./menu.types";
 import type { RoundingMethod } from "./tax-config.types";
+import { AppError, ErrorCodes } from "@/lib/errors";
 
 // Lazy load repositories to avoid Prisma initialization at module load time
 async function getRepositories() {
@@ -110,13 +111,13 @@ export class MenuService {
     // Get merchant to find companyId
     const merchant = await merchantRepository.getById(merchantId);
     if (!merchant) {
-      throw new Error("Merchant not found");
+      throw new AppError(ErrorCodes.MERCHANT_NOT_FOUND, undefined, 404);
     }
 
     // Get all active menus for the company
     const menus = await menuEntityRepository.getMenusByCompany(tenantId, merchant.companyId);
     if (menus.length === 0) {
-      throw new Error("No menus found");
+      throw new AppError(ErrorCodes.MENU_NOT_FOUND, undefined, 404);
     }
 
     // Use provided menuId or default to first menu
@@ -302,7 +303,7 @@ export class MenuService {
 
     const merchant = await merchantRepository.getById(merchantId);
     if (!merchant) {
-      throw new Error("Merchant not found");
+      throw new AppError(ErrorCodes.MERCHANT_NOT_FOUND, undefined, 404);
     }
 
     return menuRepository.getItemsByIdsByCompany(tenantId, merchant.companyId, itemIds);

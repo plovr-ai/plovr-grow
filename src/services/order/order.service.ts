@@ -14,14 +14,10 @@ import { orderEventEmitter } from "./order-events";
 import type {
   CreateOrderInput,
   OrderCalculation,
-  UpdateOrderStatusInput,
-  UpdateFulfillmentStatusInput,
-  MerchantOrderListOptions,
   CompanyOrderListOptions,
   TimelineEvent,
   OrderWithTimeline,
 } from "./order.types";
-import type { OrderStatus, FulfillmentStatus } from "@/types";
 
 export class OrderService {
   /**
@@ -192,13 +188,6 @@ export class OrderService {
   }
 
   /**
-   * Get order by order number
-   */
-  async getOrderByNumber(tenantId: string, orderNumber: string) {
-    return orderRepository.getByOrderNumber(tenantId, orderNumber);
-  }
-
-  /**
    * Get order with timeline for Order Detail page
    */
   async getOrderWithTimeline(
@@ -332,7 +321,7 @@ export class OrderService {
     // Get current order to validate transition and get merchantId
     const currentOrder = await this.getOrder(tenantId, orderId);
     if (!currentOrder) {
-      throw new Error("Order not found");
+      throw new AppError(ErrorCodes.ORDER_NOT_FOUND, undefined, 404);
     }
 
     const previousStatus = currentOrder.status as OrderStatus;
@@ -340,8 +329,10 @@ export class OrderService {
     // Validate payment status transition
     const isValid = this.validatePaymentStatusTransition(previousStatus, input.status);
     if (!isValid) {
-      throw new Error(
-        `Invalid payment status transition from ${previousStatus} to ${input.status}`
+      throw new AppError(
+        ErrorCodes.INVALID_PAYMENT_STATUS_TRANSITION,
+        { from: previousStatus, to: input.status },
+        400
       );
     }
 
@@ -412,12 +403,12 @@ export class OrderService {
     // Get current order to validate transition and get merchantId
     const currentOrder = await this.getOrder(tenantId, orderId);
     if (!currentOrder) {
-      throw new Error("Order not found");
+      throw new AppError(ErrorCodes.ORDER_NOT_FOUND, undefined, 404);
     }
 
     // Business rule: Only paid orders can have fulfillment status changed
     if (currentOrder.status !== "completed") {
-      throw new Error("Cannot update fulfillment status: order is not fully paid");
+      throw new AppError(ErrorCodes.FULFILLMENT_REQUIRES_PAYMENT, undefined, 400);
     }
 
     const previousFulfillmentStatus = currentOrder.fulfillmentStatus as FulfillmentStatus;
@@ -428,8 +419,10 @@ export class OrderService {
       input.fulfillmentStatus
     );
     if (!isValid) {
-      throw new Error(
-        `Invalid fulfillment status transition from ${previousFulfillmentStatus} to ${input.fulfillmentStatus}`
+      throw new AppError(
+        ErrorCodes.INVALID_FULFILLMENT_STATUS_TRANSITION,
+        { from: previousFulfillmentStatus, to: input.fulfillmentStatus },
+        400
       );
     }
 

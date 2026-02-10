@@ -1,0 +1,61 @@
+{
+  "errors.ORDER_NOT_FOUND": "Order not found",
+  "errors.ORDER_ALREADY_PAID": "Order has already been paid",
+  "errors.ORDER_CANCELLED": "Order has been cancelled",
+  "errors.INVALID_PAYMENT_STATUS_TRANSITION": "Invalid payment status transition from {from} to {to}",
+  "errors.INVALID_FULFILLMENT_STATUS_TRANSITION": "Invalid fulfillment status transition from {from} to {to}",
+  "errors.FULFILLMENT_REQUIRES_PAYMENT": "Cannot update fulfillment status: order is not fully paid",
+  "errors.MENU_ITEMS_UNAVAILABLE": "Some menu items are not available",
+  "errors.MERCHANT_ID_REQUIRED": "Merchant ID is required for this order type",
+
+  "errors.MERCHANT_NOT_FOUND": "Restaurant not found",
+  "errors.MERCHANT_SLUG_TAKEN": "This URL slug is already in use",
+  "errors.COMPANY_NOT_FOUND": "Company not found",
+  "errors.COMPANY_SLUG_TAKEN": "This URL slug is already in use",
+  "errors.COMPANY_ALREADY_EXISTS": "Tenant already has a company",
+
+  "errors.MENU_NOT_FOUND": "Menu not found",
+  "errors.CATEGORY_NOT_FOUND": "Category not found",
+  "errors.MENU_ITEM_NOT_FOUND": "Menu item not found",
+
+  "errors.AUTH_EMAIL_EXISTS": "An account with this email already exists",
+  "errors.AUTH_INVALID_CREDENTIALS": "Invalid email or password",
+  "errors.AUTH_USER_NOT_FOUND": "User not found",
+  "errors.AUTH_INVALID_RESET_TOKEN": "Invalid or expired reset token",
+  "errors.AUTH_RESET_TOKEN_EXPIRED": "Reset token has expired",
+
+  "errors.OTP_NOT_FOUND": "Verification code not found. Please request a new code.",
+  "errors.OTP_EXPIRED": "Verification code has expired. Please request a new code.",
+  "errors.OTP_INVALID": "Invalid verification code. Please try again.",
+  "errors.OTP_MAX_ATTEMPTS": "Too many failed attempts. Please request a new code.",
+  "errors.OTP_ALREADY_VERIFIED": "This code has already been verified.",
+  "errors.OTP_INVALID_PHONE": "Invalid phone number format. Use format like (555) 123-4567",
+  "errors.OTP_SMS_FAILED": "Failed to send SMS. Please try again.",
+
+  "errors.GIFTCARD_NOT_FOUND": "Gift card not found",
+  "errors.GIFTCARD_NO_BALANCE": "Gift card has no balance",
+  "errors.GIFTCARD_INSUFFICIENT_BALANCE": "Insufficient gift card balance",
+  "errors.GIFTCARD_GENERATION_FAILED": "Failed to generate unique gift card number",
+
+  "errors.LOYALTY_MEMBER_NOT_FOUND": "Loyalty member not found",
+  "errors.LOYALTY_POINTS_ALREADY_AWARDED": "Points have already been awarded for this order",
+  "errors.LOYALTY_NEGATIVE_BALANCE": "Adjustment would result in negative balance",
+
+  "errors.PAYMENT_NOT_FOUND": "Payment not found",
+  "errors.PAYMENT_VERIFICATION_FAILED": "Payment verification failed",
+  "errors.PAYMENT_AMOUNT_MISMATCH": "Payment amount does not match expected amount",
+  "errors.PAYMENT_STATUS_INVALID": "Payment status is invalid",
+
+  "errors.SUBSCRIPTION_NOT_FOUND": "No subscription found",
+  "errors.SUBSCRIPTION_NOT_CANCELLABLE": "Subscription is not scheduled for cancellation",
+  "errors.SUBSCRIPTION_PRICE_NOT_CONFIGURED": "Subscription price not configured",
+  "errors.TENANT_NOT_FOUND": "Tenant not found",
+
+  "errors.INVOICE_NOT_FOUND": "Invoice not found",
+  "errors.INVOICE_ALREADY_EXISTS": "Invoice already exists for this order",
+  "errors.CATERING_ORDER_NOT_FOUND": "Catering order not found",
+
+  "errors.VALIDATION_FAILED": "Validation failed",
+  "errors.INTERNAL_ERROR": "An unexpected error occurred. Please try again.",
+  "errors.NETWORK_ERROR": "Network error. Please check your connection."
+}

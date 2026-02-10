@@ -52,7 +52,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
     // Mock OTP verification
     vi.mocked(otpService.verifyOtp).mockResolvedValue({
       verified: true,
-      error: null,
+      success: true,
       reason: null,
     });
 
@@ -124,7 +124,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
 
     vi.mocked(otpService.verifyOtp).mockResolvedValue({
       verified: true,
-      error: null,
+      success: true,
       reason: null,
     });
 
@@ -242,7 +242,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
 
     vi.mocked(otpService.verifyOtp).mockResolvedValue({
       verified: true,
-      error: null,
+      success: true,
       reason: null,
     });
 
@@ -337,8 +337,9 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
     vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue(null);
 
     vi.mocked(otpService.verifyOtp).mockResolvedValue({
+      success: false,
       verified: false,
-      error: "Invalid or expired code",
+      errorCode: "OTP_EXPIRED",
       reason: "expired",
     });
 
@@ -362,6 +363,6 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
 
     expect(response.status).toBe(400);
     expect(data.success).toBe(false);
-    expect(data.error).toBe("Invalid or expired code");
+    expect(data.error.code).toBe("OTP_EXPIRED");
   });
 });

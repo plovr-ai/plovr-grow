@@ -1,6 +1,7 @@
 import { companyRepository } from "@/repositories/company.repository";
 import { merchantRepository } from "@/repositories/merchant.repository";
 import prisma from "@/lib/db";
+import { AppError, ErrorCodes } from "@/lib/errors";
 import type { Prisma } from "@prisma/client";
 import type {
   CreateTenantWithCompanyInput,
@@ -59,7 +60,7 @@ export class CompanyService {
     // Check if tenant already has a company
     const existing = await companyRepository.getByTenantId(tenantId);
     if (existing) {
-      throw new Error("Tenant already has a company");
+      throw new AppError(ErrorCodes.COMPANY_ALREADY_EXISTS, undefined, 409);
     }
 
     return companyRepository.create(tenantId, {
@@ -85,13 +86,13 @@ export class CompanyService {
     // Validate company exists
     const company = await companyRepository.getById(companyId);
     if (!company) {
-      throw new Error("Company not found");
+      throw new AppError(ErrorCodes.COMPANY_NOT_FOUND, undefined, 404);
     }
 
     // Validate slug availability
     const isAvailable = await merchantRepository.isSlugAvailable(input.slug);
     if (!isAvailable) {
-      throw new Error(`Slug "${input.slug}" is already taken`);
+      throw new AppError(ErrorCodes.MERCHANT_SLUG_TAKEN, { slug: input.slug }, 409);
     }
 
     return merchantRepository.create(companyId, {
@@ -192,7 +193,7 @@ export class CompanyService {
     const company = await companyRepository.getById(companyId);
 
     if (!company) {
-      throw new Error("Company not found");
+      throw new AppError(ErrorCodes.COMPANY_NOT_FOUND, undefined, 404);
     }
 
     return {
@@ -210,7 +211,7 @@ export class CompanyService {
     const company = await companyRepository.getById(companyId);
 
     if (!company) {
-      throw new Error("Company not found");
+      throw new AppError(ErrorCodes.COMPANY_NOT_FOUND, undefined, 404);
     }
 
     // Only initialize if not started
@@ -236,7 +237,7 @@ export class CompanyService {
     const company = await companyRepository.getById(companyId);
 
     if (!company) {
-      throw new Error("Company not found");
+      throw new AppError(ErrorCodes.COMPANY_NOT_FOUND, undefined, 404);
     }
 
     // Get current data or initialize

@@ -1,13 +1,13 @@
 export interface SendOtpResult {
   success: boolean;
   expiresInSeconds: number;
-  error?: string;
+  errorCode?: string;
 }
 
 export interface VerifyOtpResult {
   success: boolean;
   verified: boolean;
-  error?: string;
+  errorCode?: string;
   reason?: "not_found" | "expired" | "invalid_code" | "max_attempts" | "already_verified";
 }
 

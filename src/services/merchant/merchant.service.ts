@@ -5,6 +5,7 @@ import { merchantRepository } from "@/repositories/merchant.repository";
 import { companyRepository } from "@/repositories/company.repository";
 import { menuService } from "@/services/menu";
 import { toMerchantWithCompany, toCompanyWithMerchants } from "./merchant.mapper";
+import { AppError, ErrorCodes } from "@/lib/errors";
 import type { Prisma } from "@prisma/client";
 import type {
   MerchantWithCompany,
@@ -222,13 +223,13 @@ export class MerchantService {
     // 验证 company 属于 tenant
     const company = await companyRepository.getById(companyId);
     if (!company || company.tenantId !== tenantId) {
-      throw new Error("Company not found");
+      throw new AppError(ErrorCodes.COMPANY_NOT_FOUND, undefined, 404);
     }
 
     // 验证 slug 可用
     const isAvailable = await merchantRepository.isSlugAvailable(input.slug);
     if (!isAvailable) {
-      throw new Error(`Slug "${input.slug}" is already taken`);
+      throw new AppError(ErrorCodes.MERCHANT_SLUG_TAKEN, { slug: input.slug }, 409);
     }
 
     const merchant = await merchantRepository.create(companyId, {
@@ -270,7 +271,7 @@ export class MerchantService {
     // 验证权限
     const existing = await this.getMerchant(tenantId, merchantId);
     if (!existing) {
-      throw new Error("Merchant not found");
+      throw new AppError(ErrorCodes.MERCHANT_NOT_FOUND, undefined, 404);
     }
 
     // Slug 变更检查
@@ -280,7 +281,7 @@ export class MerchantService {
         merchantId
       );
       if (!isAvailable) {
-        throw new Error(`Slug "${input.slug}" is already taken`);
+        throw new AppError(ErrorCodes.MERCHANT_SLUG_TAKEN, { slug: input.slug }, 409);
       }
     }
 
@@ -338,7 +339,7 @@ export class MerchantService {
     // 验证权限
     const existing = await this.getMerchant(tenantId, merchantId);
     if (!existing) {
-      throw new Error("Merchant not found");
+      throw new AppError(ErrorCodes.MERCHANT_NOT_FOUND, undefined, 404);
     }
 
     const data = await merchantRepository.updateSettings(
@@ -357,7 +358,7 @@ export class MerchantService {
     // 验证权限
     const existing = await this.getMerchant(tenantId, merchantId);
     if (!existing) {
-      throw new Error("Merchant not found");
+      throw new AppError(ErrorCodes.MERCHANT_NOT_FOUND, undefined, 404);
     }
 
     await merchantRepository.delete(merchantId);

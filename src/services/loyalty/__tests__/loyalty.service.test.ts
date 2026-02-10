@@ -68,7 +68,8 @@ describe("LoyaltyService", () => {
     const orderData = {
       merchantId: "merchant-1",
       customerPhone: "+12025551234",
-      customerName: "John Doe",
+      customerFirstName: "John",
+      customerLastName: "Doe",
       customerEmail: "john@example.com",
       totalAmount: 50.0,
     };
@@ -107,7 +108,8 @@ describe("LoyaltyService", () => {
         "+12025551234",
         expect.objectContaining({
           phone: "+12025551234",
-          name: "John Doe",
+          firstName: "John",
+          lastName: "Doe",
         })
       );
 
@@ -305,7 +307,7 @@ describe("LoyaltyService", () => {
         "tenant-1",
         "company-1",
         "+12025559999",
-        { name: "Jane Doe", email: "jane@example.com" }
+        { firstName: "Jane", lastName: "Doe", email: "jane@example.com" }
       );
 
       expect(result.isNew).toBe(true);
@@ -315,7 +317,8 @@ describe("LoyaltyService", () => {
         "+12025559999",
         expect.objectContaining({
           phone: "+12025559999",
-          name: "Jane Doe",
+          firstName: "Jane",
+          lastName: "Doe",
           email: "jane@example.com",
         })
       );

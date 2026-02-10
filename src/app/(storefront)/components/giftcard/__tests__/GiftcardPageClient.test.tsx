@@ -27,6 +27,32 @@ vi.mock("@storefront/components/checkout", () => ({
       );
     }
   ),
+  ErrorAlert: ({ message }: { message?: string | null }) =>
+    message ? <div data-testid="error-alert">{message}</div> : null,
+  SubmitButton: ({
+    isSubmitting,
+    disabled,
+    amount,
+    label,
+    type,
+  }: {
+    isSubmitting: boolean;
+    disabled: boolean;
+    amount?: number | null;
+    label?: string;
+    type?: "button" | "submit";
+  }) => (
+    <button
+      data-testid="submit-button"
+      disabled={disabled}
+      type={type || "button"}
+    >
+      {isSubmitting ? "Processing..." : label || "Pay"} {amount != null && `$${amount.toFixed(2)}`}
+    </button>
+  ),
+  PaymentLoadingState: () => (
+    <div data-testid="payment-loading">Loading payment...</div>
+  ),
 }));
 
 function createWrapper() {
