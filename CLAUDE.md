@@ -424,16 +424,22 @@ src/
 
 ### 翻译文件格式
 
-使用 **JSON 扁平格式**，key 使用点号分隔命名空间：
+使用 **JSON 嵌套格式**，按命名空间分组：
 
 ```json
 {
-  "checkout.title": "Checkout",
-  "checkout.firstName": "First Name",
-  "checkout.placeOrder": "Place Order",
-  "menu.addToCart": "Add to Cart",
-  "common.loading": "Loading...",
-  "common.cancel": "Cancel"
+  "checkout": {
+    "title": "Checkout",
+    "firstName": "First Name",
+    "placeOrder": "Place Order"
+  },
+  "menu": {
+    "addToCart": "Add to Cart"
+  },
+  "common": {
+    "loading": "Loading...",
+    "cancel": "Cancel"
+  }
 }
 ```
 
