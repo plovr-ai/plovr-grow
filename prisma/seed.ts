@@ -725,7 +725,7 @@ async function main() {
       price: 8.99,
       imageUrl: "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=800&h=600&fit=crop",
       tags: ["vegetarian", "vegan"],
-      options: [],
+      modifiers: [],
     },
     {
       id: "bella-item-baguette",
@@ -736,7 +736,7 @@ async function main() {
       price: 4.49,
       imageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&h=600&fit=crop",
       tags: ["vegetarian", "vegan"],
-      options: [],
+      modifiers: [],
     },
     {
       id: "bella-item-focaccia",
@@ -747,7 +747,7 @@ async function main() {
       price: 6.99,
       imageUrl: "https://images.unsplash.com/photo-1621583441131-ec7572d5e6ae?w=800&h=600&fit=crop",
       tags: ["vegetarian", "vegan"],
-      options: [],
+      modifiers: [],
     },
     // Pastries
     {
@@ -759,7 +759,7 @@ async function main() {
       price: 4.49,
       imageUrl: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
-      options: [],
+      modifiers: [],
     },
     {
       id: "bella-item-almond-danish",
@@ -770,7 +770,7 @@ async function main() {
       price: 5.29,
       imageUrl: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
-      options: [],
+      modifiers: [],
     },
     {
       id: "bella-item-chocolate-croissant",
@@ -781,7 +781,7 @@ async function main() {
       price: 4.99,
       imageUrl: "https://images.unsplash.com/photo-1623334044303-241021148842?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
-      options: [],
+      modifiers: [],
     },
     {
       id: "bella-item-cinnamon-roll",
@@ -792,7 +792,7 @@ async function main() {
       price: 5.49,
       imageUrl: "https://images.unsplash.com/photo-1619985632461-f33748ef8df3?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
-      options: [],
+      modifiers: [],
     },
     // Coffee & Drinks
     {
@@ -804,7 +804,7 @@ async function main() {
       price: 4.99,
       imageUrl: "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
-      options: [
+      modifiers: [
         {
           id: "size",
           name: "Size",
@@ -837,7 +837,7 @@ async function main() {
       price: 5.49,
       imageUrl: "https://images.unsplash.com/photo-1561882468-9110e03e0f78?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
-      options: [
+      modifiers: [
         {
           id: "size",
           name: "Size",
@@ -859,7 +859,7 @@ async function main() {
       price: 2.99,
       imageUrl: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&h=600&fit=crop",
       tags: ["vegetarian", "vegan"],
-      options: [
+      modifiers: [
         {
           id: "size",
           name: "Size",
@@ -1114,7 +1114,7 @@ async function main() {
       price: 18.99,
       imageUrl: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop",
       tags: ["vegetarian", "popular"],
-      options: [
+      modifiers: [
         {
           id: "size",
           name: "Size",
@@ -1152,7 +1152,7 @@ async function main() {
       price: 21.99,
       imageUrl: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop",
       tags: ["popular"],
-      options: [
+      modifiers: [
         {
           id: "size",
           name: "Size",
@@ -1175,7 +1175,7 @@ async function main() {
       price: 19.99,
       imageUrl: "https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=400&h=300&fit=crop",
       tags: ["vegetarian"],
-      options: [
+      modifiers: [
         {
           id: "size",
           name: "Size",
@@ -1198,7 +1198,7 @@ async function main() {
       price: 24.99,
       imageUrl: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop",
       tags: [],
-      options: [
+      modifiers: [
         {
           id: "size",
           name: "Size",
@@ -1222,7 +1222,7 @@ async function main() {
       price: 16.99,
       imageUrl: "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=300&fit=crop",
       tags: [],
-      options: [],
+      modifiers: [],
     },
     {
       id: "item-fettuccine-alfredo",
@@ -1233,7 +1233,7 @@ async function main() {
       price: 15.99,
       imageUrl: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=400&h=300&fit=crop",
       tags: ["vegetarian"],
-      options: [
+      modifiers: [
         {
           id: "protein",
           name: "Add Protein",
@@ -1256,7 +1256,7 @@ async function main() {
       price: 14.99,
       imageUrl: "https://images.unsplash.com/photo-1629115916087-7e8c114a24ed?w=400&h=300&fit=crop",
       tags: ["vegetarian"],
-      options: [],
+      modifiers: [],
     },
     // Sides
     {
@@ -1268,7 +1268,7 @@ async function main() {
       price: 5.99,
       imageUrl: "https://images.unsplash.com/photo-1619531040576-f9416740661b?w=400&h=300&fit=crop",
       tags: ["vegetarian", "popular"],
-      options: [],
+      modifiers: [],
     },
     {
       id: "item-mozzarella-sticks",
@@ -1279,7 +1279,7 @@ async function main() {
       price: 7.99,
       imageUrl: "https://images.unsplash.com/photo-1531749668029-2db88e4276c7?w=400&h=300&fit=crop",
       tags: ["vegetarian"],
-      options: [],
+      modifiers: [],
     },
     {
       id: "item-caesar-salad",
@@ -1290,7 +1290,7 @@ async function main() {
       price: 8.99,
       imageUrl: "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400&h=300&fit=crop",
       tags: ["vegetarian"],
-      options: [
+      modifiers: [
         {
           id: "dressing",
           name: "Dressing",
@@ -1325,7 +1325,7 @@ async function main() {
       description: "Coca-Cola, Sprite, Fanta, or Lemonade",
       price: 2.99,
       tags: [],
-      options: [
+      modifiers: [
         {
           id: "size-drink",
           name: "Size",
@@ -1347,7 +1347,7 @@ async function main() {
       description: "Sparkling water with your choice of flavor",
       price: 3.99,
       tags: [],
-      options: [
+      modifiers: [
         {
           id: "size-drink",
           name: "Size",
@@ -1369,7 +1369,7 @@ async function main() {
       description: "Purified spring water",
       price: 1.99,
       tags: [],
-      options: [],
+      modifiers: [],
     },
   ];
 

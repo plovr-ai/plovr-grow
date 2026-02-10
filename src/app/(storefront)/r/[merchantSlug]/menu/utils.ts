@@ -126,7 +126,7 @@ export function convertToMenuDisplayData(
           itemCount: category.menuItems.length,
         },
         items: category.menuItems.map((item): MenuItemViewModel => {
-          const modifierGroups = parseModifierGroups(item.options);
+          const modifierGroups = parseModifierGroups(item.modifiers);
           return {
             id: item.id,
             name: item.name,

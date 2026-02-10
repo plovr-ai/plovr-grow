@@ -326,8 +326,9 @@ describe("MenuPageClient", () => {
       );
 
       // Find the sticky wrapper inside sidebar
+      // When only 1 menu exists, showMenuNav is false, so top-20 is used
       const sidebar = container.querySelector("aside.hidden.lg\\:block");
-      const stickyWrapper = sidebar?.querySelector(".sticky.top-32");
+      const stickyWrapper = sidebar?.querySelector(".sticky.top-20");
       expect(stickyWrapper).toBeInTheDocument();
     });
 

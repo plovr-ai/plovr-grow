@@ -236,9 +236,9 @@ export class MenuService {
             price: fi.menuItem.price,
             imageUrl: fi.menuItem.imageUrl,
             status: fi.menuItem.status,
-            options: null,
-            nutrition: null,
-            tags: null,
+            modifiers: fi.menuItem.modifiers,
+            nutrition: fi.menuItem.nutrition,
+            tags: fi.menuItem.tags,
             createdAt: new Date(),
             updatedAt: new Date(),
             sortOrder: index,
@@ -365,7 +365,7 @@ export class MenuService {
       description: input.description,
       price: input.price,
       imageUrl: input.imageUrl,
-      options: input.modifierGroups ? JSON.parse(JSON.stringify(input.modifierGroups)) : null,
+      modifiers: input.modifierGroups ? JSON.parse(JSON.stringify(input.modifierGroups)) : null,
       tags: input.tags ? JSON.parse(JSON.stringify(input.tags)) : null,
     });
 
@@ -395,7 +395,7 @@ export class MenuService {
     if (input.imageUrl !== undefined) data.imageUrl = input.imageUrl;
     if (input.status !== undefined) data.status = input.status;
     if (input.modifierGroups !== undefined)
-      data.options = JSON.parse(JSON.stringify(input.modifierGroups));
+      data.modifiers = JSON.parse(JSON.stringify(input.modifierGroups));
     if (input.tags !== undefined)
       data.tags = JSON.parse(JSON.stringify(input.tags));
 
@@ -524,7 +524,7 @@ export class MenuService {
           imageUrl: item.imageUrl,
           sortOrder: ci.sortOrder,
           status: item.status as "active" | "inactive" | "out_of_stock" | "archived",
-          modifierGroups: (item.options as unknown as ModifierGroupInput[]) || [],
+          modifierGroups: (item.modifiers as unknown as ModifierGroupInput[]) || [],
           tags: (item.tags as unknown as string[]) || [],
           taxConfigIds: itemTaxMap.get(item.id) || [],
           categoryIds: itemCategoryMap.get(item.id) || [],
