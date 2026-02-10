@@ -8,12 +8,14 @@ import { OrderCard } from "./OrderCard";
 import { Pagination } from "./Pagination";
 
 // Serialized order type with Decimal fields converted to numbers
-export type SerializedOrder = Omit<Order, "tenant" | "subtotal" | "taxAmount" | "tipAmount" | "deliveryFee" | "discount" | "totalAmount"> & {
+export type SerializedOrder = Omit<Order, "tenant" | "subtotal" | "taxAmount" | "tipAmount" | "deliveryFee" | "discount" | "giftCardPayment" | "cashPayment" | "totalAmount"> & {
   subtotal: number;
   taxAmount: number;
   tipAmount: number;
   deliveryFee: number;
   discount: number;
+  giftCardPayment: number;
+  cashPayment: number;
   totalAmount: number;
   merchant?: {
     id: string;

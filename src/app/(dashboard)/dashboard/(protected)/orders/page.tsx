@@ -88,6 +88,8 @@ export default async function OrdersManagementPage({
     tipAmount: Number(order.tipAmount),
     deliveryFee: Number(order.deliveryFee),
     discount: Number(order.discount),
+    giftCardPayment: Number(order.giftCardPayment),
+    cashPayment: Number(order.cashPayment),
     totalAmount: Number(order.totalAmount),
   })) as SerializedOrder[];
 

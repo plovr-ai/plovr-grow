@@ -37,6 +37,8 @@ describe("OrdersManagementClient", () => {
       tipAmount: 0.0,
       deliveryFee: 0.0,
       discount: 0.0,
+      giftCardPayment: 0.0,
+      cashPayment: 10.88,
       totalAmount: 10.88,
       notes: null,
       deliveryAddress: null,
@@ -305,6 +307,35 @@ describe("OrdersManagementClient", () => {
       expect(lastCall).toContain("status=created");
       // Should add new mode filter
       expect(lastCall).toContain("mode=delivery");
+    });
+  });
+
+  describe("SerializedOrder Type", () => {
+    it("should have all Decimal fields as number type", () => {
+      const order: SerializedOrder = mockOrders[0];
+
+      // All Decimal fields should be serialized as numbers
+      expect(typeof order.subtotal).toBe("number");
+      expect(typeof order.taxAmount).toBe("number");
+      expect(typeof order.tipAmount).toBe("number");
+      expect(typeof order.deliveryFee).toBe("number");
+      expect(typeof order.discount).toBe("number");
+      expect(typeof order.giftCardPayment).toBe("number");
+      expect(typeof order.cashPayment).toBe("number");
+      expect(typeof order.totalAmount).toBe("number");
+    });
+
+    it("should correctly handle orders with gift card payments", () => {
+      const orderWithGiftCard: SerializedOrder = {
+        ...mockOrders[0],
+        giftCardPayment: 5.0,
+        cashPayment: 5.88,
+        totalAmount: 10.88,
+      };
+
+      expect(orderWithGiftCard.giftCardPayment).toBe(5.0);
+      expect(orderWithGiftCard.cashPayment).toBe(5.88);
+      expect(orderWithGiftCard.giftCardPayment + orderWithGiftCard.cashPayment).toBeCloseTo(10.88);
     });
   });
 
