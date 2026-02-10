@@ -8,6 +8,7 @@ import {
   useCompanySlug,
   useCompanyId,
   useTimezone,
+  useCountry,
 } from "../MerchantContext";
 import { DEFAULT_TIP_CONFIG, DEFAULT_FEE_CONFIG } from "@/types";
 import type { ReactNode } from "react";
@@ -640,6 +641,115 @@ describe("MerchantContext", () => {
 
       expect(() => {
         renderHook(() => useTimezone());
+      }).toThrow("useMerchantConfig must be used within MerchantProvider");
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("country", () => {
+    it("should provide country when set", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+        country: "CA",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useMerchantConfig(), { wrapper });
+
+      expect(result.current.country).toBe("CA");
+    });
+
+    it("should default country to US when not provided", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useMerchantConfig(), { wrapper });
+
+      expect(result.current.country).toBe("US");
+    });
+
+    it("should default country to US when explicitly set to undefined", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+        country: undefined,
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useMerchantConfig(), { wrapper });
+
+      expect(result.current.country).toBe("US");
+    });
+  });
+
+  describe("useCountry", () => {
+    it("should return country value", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "EUR",
+        locale: "de-DE",
+        timezone: "Europe/Berlin",
+        country: "DE",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useCountry(), { wrapper });
+
+      expect(result.current).toBe("DE");
+    });
+
+    it("should return US when country is not set", () => {
+      const config = {
+        name: "Test",
+        logoUrl: null,
+        currency: "USD",
+        locale: "en-US",
+        timezone: "America/New_York",
+      };
+
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MerchantProvider config={config}>{children}</MerchantProvider>
+      );
+
+      const { result } = renderHook(() => useCountry(), { wrapper });
+
+      expect(result.current).toBe("US");
+    });
+
+    it("should throw error when used outside provider", () => {
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      expect(() => {
+        renderHook(() => useCountry());
       }).toThrow("useMerchantConfig must be used within MerchantProvider");
 
       consoleSpy.mockRestore();

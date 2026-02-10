@@ -44,6 +44,7 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
           currency: merchant?.currency ?? "USD",
           locale: merchant?.locale ?? "en-US",
           timezone: merchant?.timezone ?? "America/New_York",
+          country: merchant?.country ?? "US",
           tipConfig: merchant?.settings?.tipConfig,
           feeConfig: merchant?.settings?.feeConfig,
           companySlug: merchant?.company?.slug ?? null,

@@ -12,10 +12,11 @@ const stripePromise = STRIPE_PUBLISHABLE_KEY
 
 interface StripeProviderProps {
   clientSecret: string;
+  defaultCountry?: string;
   children: ReactNode;
 }
 
-export function StripeProvider({ clientSecret, children }: StripeProviderProps) {
+export function StripeProvider({ clientSecret, defaultCountry, children }: StripeProviderProps) {
   // Show warning if Stripe is not configured
   if (!stripePromise) {
     return (
@@ -70,6 +71,13 @@ export function StripeProvider({ clientSecret, children }: StripeProviderProps) 
         ".Label": {
           fontWeight: "500",
           color: "#374151",
+        },
+      },
+    },
+    defaultValues: {
+      billingDetails: {
+        address: {
+          country: defaultCountry || "US",
         },
       },
     },

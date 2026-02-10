@@ -19,12 +19,13 @@ interface CardPaymentFormProps {
   onReady?: () => void;
   onError?: (error: string) => void;
   disabled?: boolean;
+  defaultCountry?: string;
 }
 
 export const CardPaymentForm = forwardRef<
   CardPaymentFormRef,
   CardPaymentFormProps
->(function CardPaymentForm({ onReady, onError, disabled }, ref) {
+>(function CardPaymentForm({ onReady, onError, disabled, defaultCountry }, ref) {
   const stripe = useStripe();
   const elements = useElements();
   const { member } = useLoyalty();
@@ -49,10 +50,21 @@ export const CardPaymentForm = forwardRef<
       }
 
       try {
+        // First submit the elements to validate and collect payment details
+        const { error: submitError } = await elements.submit();
+        if (submitError) {
+          const errorMessage = submitError.message || "Please check your card details";
+          onError?.(errorMessage);
+          return {
+            success: false,
+            error: errorMessage,
+          };
+        }
+
+        // Then confirm the payment
         const { error, paymentIntent } = await stripe.confirmPayment({
           elements,
           confirmParams: {
-            // No return_url needed since we handle confirmation inline
             return_url: window.location.href,
           },
           redirect: "if_required",
@@ -102,6 +114,13 @@ export const CardPaymentForm = forwardRef<
           wallets: {
             applePay: "auto",
             googlePay: "auto",
+          },
+          defaultValues: {
+            billingDetails: {
+              address: {
+                country: defaultCountry || "US",
+              },
+            },
           },
         }}
         onReady={() => setIsReady(true)}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCartStore, useCartHydration } from "@/stores";
 import { useFormatPrice, usePricing } from "@/hooks";
-import { useFeeConfig, useLoyalty } from "@/contexts";
+import { useFeeConfig, useLoyalty, useCountry } from "@/contexts";
 import type { FeeInput } from "@/lib/pricing";
 import {
   OrderTypeSelector,
@@ -93,6 +93,7 @@ export default function CheckoutPage() {
 
   const hydrated = useCartHydration();
   const formatPrice = useFormatPrice();
+  const country = useCountry();
   const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
 
@@ -647,12 +648,13 @@ export default function CheckoutPage() {
 
                 {/* Card Payment Form */}
                 {formState.paymentMethod === "card" && clientSecret && (
-                  <StripeProvider clientSecret={clientSecret}>
+                  <StripeProvider clientSecret={clientSecret} defaultCountry={country}>
                     <CardPaymentForm
                       ref={cardPaymentFormRef}
                       onReady={() => setIsPaymentReady(true)}
                       onError={(error) => setSubmitError(error)}
                       disabled={isSubmitting}
+                      defaultCountry={country}
                     />
                   </StripeProvider>
                 )}
