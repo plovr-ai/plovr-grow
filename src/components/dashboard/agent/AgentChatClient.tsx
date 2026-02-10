@@ -58,7 +58,7 @@ function generateWelcomeMessage(
       `Ready to get started?`;
 
     return {
-      id: `welcome_${Date.now()}`,
+      id: "welcome",
       role: "assistant",
       content: [
         { type: "text", text: welcomeText },
@@ -94,7 +94,7 @@ function generateWelcomeMessage(
       `What would you like to do first?`;
 
     return {
-      id: `welcome_${Date.now()}`,
+      id: "welcome",
       role: "assistant",
       content: [
         { type: "text", text: welcomeText },
@@ -121,7 +121,7 @@ function generateWelcomeMessage(
   const welcomeText = `Welcome back to ${companyName}! I'm your AI assistant.\n\nHow can I help you today?`;
 
   return {
-    id: `welcome_${Date.now()}`,
+    id: "welcome",
     role: "assistant",
     content: [
       { type: "text", text: welcomeText },
