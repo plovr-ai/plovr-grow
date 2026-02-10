@@ -238,7 +238,7 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
 
       {/* Actions */}
       <div
-        className="flex items-center justify-between border-t px-3 py-2"
+        className="flex items-center justify-between border-t px-3 py-3"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Status dropdown */}
