@@ -137,7 +137,7 @@ describe("PointsService", () => {
           pointsPerDollar: 1,
           orderId: "order-1",
         })
-      ).rejects.toThrow("Points already awarded for this order");
+      ).rejects.toThrow("LOYALTY_POINTS_ALREADY_AWARDED");
     });
 
     it("should throw error if member not found", async () => {
@@ -149,7 +149,7 @@ describe("PointsService", () => {
           orderAmount: 25,
           pointsPerDollar: 1,
         })
-      ).rejects.toThrow("Loyalty member not found");
+      ).rejects.toThrow("LOYALTY_MEMBER_NOT_FOUND");
     });
 
     it("should return 0 points for small amounts", async () => {
@@ -215,7 +215,7 @@ describe("PointsService", () => {
 
       await expect(
         service.adjustPoints("tenant-1", "member-1", -150, "Too many points")
-      ).rejects.toThrow("Adjustment would result in negative balance");
+      ).rejects.toThrow("LOYALTY_NEGATIVE_BALANCE");
     });
 
     it("should throw error if member not found", async () => {
@@ -223,7 +223,7 @@ describe("PointsService", () => {
 
       await expect(
         service.adjustPoints("tenant-1", "member-1", 50, "Bonus")
-      ).rejects.toThrow("Loyalty member not found");
+      ).rejects.toThrow("LOYALTY_MEMBER_NOT_FOUND");
     });
   });
 

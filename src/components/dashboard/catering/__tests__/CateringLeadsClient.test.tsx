@@ -128,7 +128,7 @@ describe("CateringLeadsClient", () => {
       expect(locationSelect).toBeInTheDocument();
     });
 
-    it("should not render location filter when single merchant", () => {
+    it("should render location filter even with single merchant", () => {
       render(
         <CateringLeadsClient
           {...defaultProps}
@@ -136,7 +136,8 @@ describe("CateringLeadsClient", () => {
         />
       );
 
-      expect(screen.queryByDisplayValue("All Locations")).not.toBeInTheDocument();
+      // Location filter is always shown regardless of merchant count
+      expect(screen.getByDisplayValue("All Locations")).toBeInTheDocument();
     });
 
     it("should render status filter", () => {
@@ -163,7 +164,7 @@ describe("CateringLeadsClient", () => {
       expect(screen.getByText("Location")).toBeInTheDocument();
     });
 
-    it("should not render location column when single merchant", () => {
+    it("should render location column even with single merchant", () => {
       render(
         <CateringLeadsClient
           {...defaultProps}
@@ -171,7 +172,8 @@ describe("CateringLeadsClient", () => {
         />
       );
 
-      expect(screen.queryByText("Location")).not.toBeInTheDocument();
+      // Location column is always shown regardless of merchant count
+      expect(screen.getByText("Location")).toBeInTheDocument();
     });
 
     it("should render lead data in table rows", () => {

@@ -51,7 +51,7 @@ describe("OtpService", () => {
       const result = await service.sendOtp("tenant-1", "invalid-phone", "login");
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Invalid phone number format");
+      expect(result.errorCode).toBe("OTP_INVALID_PHONE");
       expect(otpVerificationRepository.upsert).not.toHaveBeenCalled();
       expect(smsService.sendOtp).not.toHaveBeenCalled();
     });
@@ -67,7 +67,7 @@ describe("OtpService", () => {
       const result = await service.sendOtp("tenant-1", "+12025551234", "login");
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe("SMS provider error");
+      expect(result.errorCode).toBe("OTP_SMS_FAILED");
     });
 
     it("should store OTP with correct expiration", async () => {
@@ -125,7 +125,7 @@ describe("OtpService", () => {
 
       expect(result.verified).toBe(false);
       expect(result.reason).toBe("expired");
-      expect(result.error).toContain("expired");
+      expect(result.errorCode).toBe("OTP_EXPIRED");
     });
 
     it("should increment attempts for invalid code", async () => {
@@ -184,7 +184,7 @@ describe("OtpService", () => {
 
       expect(result.verified).toBe(false);
       expect(result.reason).toBe("not_found");
-      expect(result.error).toContain("not found");
+      expect(result.errorCode).toBe("OTP_NOT_FOUND");
     });
 
     it("should return error for already verified OTP", async () => {
@@ -202,7 +202,7 @@ describe("OtpService", () => {
 
       expect(result.verified).toBe(false);
       expect(result.reason).toBe("already_verified");
-      expect(result.error).toContain("already been verified");
+      expect(result.errorCode).toBe("OTP_ALREADY_VERIFIED");
     });
   });
 

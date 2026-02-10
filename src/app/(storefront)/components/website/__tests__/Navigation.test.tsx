@@ -101,9 +101,10 @@ describe("Navigation", () => {
       );
 
       expect(screen.getByText("Menu")).toBeInTheDocument();
+      expect(screen.getByText("Catering")).toBeInTheDocument();
+      expect(screen.getByText("Gift Cards")).toBeInTheDocument();
       expect(screen.getByText("Locations")).toBeInTheDocument();
       expect(screen.getByText("Our Story")).toBeInTheDocument();
-      expect(screen.getByText("Contact")).toBeInTheDocument();
     });
   });
 

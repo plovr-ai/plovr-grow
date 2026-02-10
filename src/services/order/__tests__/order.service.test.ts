@@ -279,7 +279,7 @@ describe("OrderService", () => {
       vi.mocked(menuService.getMenuItemsByIds).mockResolvedValue([]);
 
       await expect(orderService.createOrder("tenant-1", mockInput)).rejects.toThrow(
-        "Some menu items are not available"
+        "MENU_ITEMS_UNAVAILABLE"
       );
     });
 
@@ -356,7 +356,7 @@ describe("OrderService", () => {
         orderService.updatePaymentStatus("tenant-1", "order-1", {
           status: "canceled",
         })
-      ).rejects.toThrow("Invalid payment status transition from completed to canceled");
+      ).rejects.toThrow("INVALID_PAYMENT_STATUS_TRANSITION");
     });
 
     it("should throw error if order not found", async () => {
@@ -366,7 +366,7 @@ describe("OrderService", () => {
         orderService.updatePaymentStatus("tenant-1", "order-1", {
           status: "completed",
         })
-      ).rejects.toThrow("Order not found");
+      ).rejects.toThrow("ORDER_NOT_FOUND");
     });
 
     it("should emit order.paid event when status becomes completed", async () => {
@@ -468,7 +468,7 @@ describe("OrderService", () => {
         orderService.updateFulfillmentStatus("tenant-1", "order-1", {
           fulfillmentStatus: "confirmed",
         })
-      ).rejects.toThrow("Cannot update fulfillment status: order is not fully paid");
+      ).rejects.toThrow("FULFILLMENT_REQUIRES_PAYMENT");
     });
 
     it("should throw error for invalid fulfillment status transition", async () => {
@@ -481,7 +481,7 @@ describe("OrderService", () => {
         orderService.updateFulfillmentStatus("tenant-1", "order-1", {
           fulfillmentStatus: "confirmed", // Can't go backward
         })
-      ).rejects.toThrow("Invalid fulfillment status transition from preparing to confirmed");
+      ).rejects.toThrow("INVALID_FULFILLMENT_STATUS_TRANSITION");
     });
 
     it("should emit fulfillment status change event", async () => {
@@ -1169,7 +1169,7 @@ describe("OrderService", () => {
           status: "canceled",
           cancelReason: "Test",
         })
-      ).rejects.toThrow("Invalid payment status transition from completed to canceled");
+      ).rejects.toThrow("INVALID_PAYMENT_STATUS_TRANSITION");
     });
 
     it("should NOT allow fulfillment update after cancellation", async () => {
@@ -1188,7 +1188,7 @@ describe("OrderService", () => {
         orderService.updateFulfillmentStatus("tenant-1", "order-1", {
           fulfillmentStatus: "confirmed",
         })
-      ).rejects.toThrow("Cannot update fulfillment status: order is not fully paid");
+      ).rejects.toThrow("FULFILLMENT_REQUIRES_PAYMENT");
     });
 
     it("should preserve fulfillment status when order is canceled", async () => {
@@ -1237,7 +1237,7 @@ describe("OrderService", () => {
         orderService.updateFulfillmentStatus("tenant-1", "order-1", {
           fulfillmentStatus: "confirmed",
         })
-      ).rejects.toThrow("Cannot update fulfillment status: order is not fully paid");
+      ).rejects.toThrow("FULFILLMENT_REQUIRES_PAYMENT");
     });
 
     it("should not allow fulfillment update for partial_paid order", async () => {
@@ -1256,7 +1256,7 @@ describe("OrderService", () => {
         orderService.updateFulfillmentStatus("tenant-1", "order-1", {
           fulfillmentStatus: "confirmed",
         })
-      ).rejects.toThrow("Cannot update fulfillment status: order is not fully paid");
+      ).rejects.toThrow("FULFILLMENT_REQUIRES_PAYMENT");
     });
 
     it("should allow fulfillment update only for completed order", async () => {

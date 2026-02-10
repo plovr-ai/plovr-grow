@@ -319,7 +319,7 @@ describe("MenuService", () => {
       vi.mocked(merchantRepository.getById).mockResolvedValue(null as never);
 
       await expect(menuService.getMenu("tenant-1", "non-existent")).rejects.toThrow(
-        "Merchant not found"
+        "MERCHANT_NOT_FOUND"
       );
     });
 
@@ -465,7 +465,7 @@ describe("MenuService", () => {
 
       await expect(
         menuService.getMenuItemsByIds("tenant-1", "non-existent", ["item-1"])
-      ).rejects.toThrow("Merchant not found");
+      ).rejects.toThrow("MERCHANT_NOT_FOUND");
     });
 
     it("should return empty array when no items match", async () => {

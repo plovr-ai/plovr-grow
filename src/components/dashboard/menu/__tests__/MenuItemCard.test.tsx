@@ -39,9 +39,6 @@ vi.mock("@/app/(dashboard)/dashboard/(protected)/menu/actions", () => ({
   updateMenuItemAction: (...args: unknown[]) => mockUpdateMenuItemAction(...args),
 }));
 
-// Mock window.confirm
-const mockConfirm = vi.fn();
-window.confirm = mockConfirm;
 
 // Mock @dnd-kit/sortable
 vi.mock("@dnd-kit/sortable", () => ({
@@ -107,7 +104,6 @@ describe("MenuItemCard", () => {
   beforeEach(() => {
     mockDeleteMenuItemAction.mockClear();
     mockUpdateMenuItemAction.mockClear();
-    mockConfirm.mockClear();
     defaultProps.onEdit.mockClear();
   });
 
@@ -213,41 +209,43 @@ describe("MenuItemCard", () => {
       return buttons.find((btn) => btn.classList.contains("text-red-500"));
     };
 
-    it("should show standard delete confirmation for single-category item", () => {
-      mockConfirm.mockReturnValue(true);
-      mockDeleteMenuItemAction.mockResolvedValue({ success: true });
-
+    it("should show action choice dialog for single-category item", () => {
       render(<MenuItemCard {...defaultProps} />, { wrapper: Wrapper });
 
       const deleteButton = findDeleteButton();
       fireEvent.click(deleteButton!);
 
-      expect(mockConfirm).toHaveBeenCalledWith(
-        "Are you sure you want to delete this item?"
-      );
+      // Dialog should open
+      expect(screen.getByText("Remove or Archive Item?")).toBeInTheDocument();
+      expect(screen.getByText("This item is only in this category.")).toBeInTheDocument();
     });
 
-    it("should call deleteMenuItemAction without categoryId for single-category item", async () => {
-      mockConfirm.mockReturnValue(true);
+    it("should call deleteMenuItemAction when Archive Item is clicked for single-category item", async () => {
       mockDeleteMenuItemAction.mockResolvedValue({ success: true });
 
       render(<MenuItemCard {...defaultProps} />, { wrapper: Wrapper });
 
       const deleteButton = findDeleteButton();
       fireEvent.click(deleteButton!);
+
+      // Click Archive Item button
+      const archiveButton = screen.getByRole("button", { name: "Archive Item" });
+      fireEvent.click(archiveButton);
 
       await waitFor(() => {
         expect(mockDeleteMenuItemAction).toHaveBeenCalledWith("item-1");
       });
     });
 
-    it("should NOT call deleteMenuItemAction when confirmation is cancelled", () => {
-      mockConfirm.mockReturnValue(false);
-
+    it("should NOT call deleteMenuItemAction when Cancel is clicked", () => {
       render(<MenuItemCard {...defaultProps} />, { wrapper: Wrapper });
 
       const deleteButton = findDeleteButton();
       fireEvent.click(deleteButton!);
+
+      // Click Cancel button
+      const cancelButton = screen.getByRole("button", { name: "Cancel" });
+      fireEvent.click(cancelButton);
 
       expect(mockDeleteMenuItemAction).not.toHaveBeenCalled();
     });
@@ -260,10 +258,7 @@ describe("MenuItemCard", () => {
       return buttons.find((btn) => btn.classList.contains("text-red-500"));
     };
 
-    it("should show multi-category confirmation message", () => {
-      mockConfirm.mockReturnValue(true);
-      mockDeleteMenuItemAction.mockResolvedValue({ success: true });
-
+    it("should show multi-category message in action choice dialog", () => {
       render(
         <MenuItemCard {...defaultProps} item={multiCategoryItem} />,
         { wrapper: Wrapper }
@@ -272,16 +267,11 @@ describe("MenuItemCard", () => {
       const deleteButton = findDeleteButton();
       fireEvent.click(deleteButton!);
 
-      expect(mockConfirm).toHaveBeenCalledWith(
-        expect.stringContaining("This item is in 3 categories")
-      );
-      expect(mockConfirm).toHaveBeenCalledWith(
-        expect.stringContaining("Click OK to remove from this category only")
-      );
+      expect(screen.getByText("Remove or Archive Item?")).toBeInTheDocument();
+      expect(screen.getByText("This item is in 3 categories.")).toBeInTheDocument();
     });
 
-    it("should call deleteMenuItemAction with categoryId for multi-category item", async () => {
-      mockConfirm.mockReturnValue(true);
+    it("should call deleteMenuItemAction with categoryId when Remove from Category is clicked", async () => {
       mockDeleteMenuItemAction.mockResolvedValue({ success: true });
 
       render(
@@ -291,15 +281,17 @@ describe("MenuItemCard", () => {
 
       const deleteButton = findDeleteButton();
       fireEvent.click(deleteButton!);
+
+      // Click Remove from Category button
+      const removeButton = screen.getByRole("button", { name: "Remove from Category" });
+      fireEvent.click(removeButton);
 
       await waitFor(() => {
         expect(mockDeleteMenuItemAction).toHaveBeenCalledWith("item-2", { categoryId: "cat-1" });
       });
     });
 
-    it("should NOT call deleteMenuItemAction when multi-category confirmation is cancelled", () => {
-      mockConfirm.mockReturnValue(false);
-
+    it("should NOT call deleteMenuItemAction when Cancel is clicked for multi-category item", () => {
       render(
         <MenuItemCard {...defaultProps} item={multiCategoryItem} />,
         { wrapper: Wrapper }
@@ -307,6 +299,10 @@ describe("MenuItemCard", () => {
 
       const deleteButton = findDeleteButton();
       fireEvent.click(deleteButton!);
+
+      // Click Cancel button
+      const cancelButton = screen.getByRole("button", { name: "Cancel" });
+      fireEvent.click(cancelButton);
 
       expect(mockDeleteMenuItemAction).not.toHaveBeenCalled();
     });
@@ -364,14 +360,16 @@ describe("MenuItemCard", () => {
     });
 
     it("should NOT call onEdit when delete button is clicked", () => {
-      mockConfirm.mockReturnValue(false);
-
       render(<MenuItemCard {...defaultProps} />, { wrapper: Wrapper });
 
       // Find delete button by red color class
       const buttons = screen.getAllByRole("button");
       const deleteButton = buttons.find((btn) => btn.classList.contains("text-red-500"));
       fireEvent.click(deleteButton!);
+
+      // Cancel the dialog
+      const cancelButton = screen.getByRole("button", { name: "Cancel" });
+      fireEvent.click(cancelButton);
 
       expect(defaultProps.onEdit).not.toHaveBeenCalled();
     });

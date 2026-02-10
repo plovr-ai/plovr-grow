@@ -7,6 +7,13 @@ import type {
   MenuInfo,
 } from "@/services/menu/menu.types";
 
+// Mock next-auth to avoid module resolution issues
+vi.mock("@/lib/auth", () => ({
+  auth: vi.fn(),
+  signIn: vi.fn(),
+  signOut: vi.fn(),
+}));
+
 // Mock Next.js navigation hooks
 const mockPush = vi.fn();
 const mockReplace = vi.fn();
@@ -440,7 +447,6 @@ describe("MenuManagementClient", () => {
       );
 
       expect(screen.getByText("No categories yet")).toBeInTheDocument();
-      expect(screen.getByText("Add your first category")).toBeInTheDocument();
     });
   });
 

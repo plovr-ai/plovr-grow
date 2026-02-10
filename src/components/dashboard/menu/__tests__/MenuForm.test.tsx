@@ -186,12 +186,18 @@ describe("MenuForm", () => {
 
   describe("Delete", () => {
     it("should call deleteMenuAction on delete with confirmation", async () => {
-      vi.spyOn(window, "confirm").mockReturnValue(true);
-
       render(<MenuForm {...defaultProps} menu={mockMenu} />);
 
+      // Click "Delete Menu" button to open confirm dialog
       const deleteButton = screen.getByText("Delete Menu");
       fireEvent.click(deleteButton);
+
+      // Confirm dialog should appear
+      expect(screen.getByText("Are you sure you want to delete this menu? All categories and items in this menu will be hidden.")).toBeInTheDocument();
+
+      // Click the "Delete" confirmation button
+      const confirmButton = screen.getByRole("button", { name: "Delete" });
+      fireEvent.click(confirmButton);
 
       await waitFor(() => {
         expect(deleteMenuAction).toHaveBeenCalledWith("menu-1");
@@ -199,12 +205,21 @@ describe("MenuForm", () => {
     });
 
     it("should not delete when confirmation is cancelled", () => {
-      vi.spyOn(window, "confirm").mockReturnValue(false);
-
       render(<MenuForm {...defaultProps} menu={mockMenu} />);
 
+      // Click "Delete Menu" button to open confirm dialog
       const deleteButton = screen.getByText("Delete Menu");
       fireEvent.click(deleteButton);
+
+      // Click Cancel inside the confirm dialog (not the main form's Cancel)
+      const dialog = screen.getByRole("dialog");
+      const cancelButton = dialog.querySelector('button');
+      const dialogButtons = dialog.querySelectorAll('button');
+      // The Cancel button in the dialog footer (second to last button, after X close)
+      const dialogCancelButton = Array.from(dialogButtons).find(
+        (btn) => btn.textContent === "Cancel"
+      );
+      fireEvent.click(dialogCancelButton!);
 
       expect(deleteMenuAction).not.toHaveBeenCalled();
     });

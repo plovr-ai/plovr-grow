@@ -54,7 +54,8 @@ describe("LoyaltyMemberDetailClient", () => {
     id: "member-1",
     phone: "2125551234",
     email: "john@example.com",
-    name: "John Doe",
+    firstName: "John",
+    lastName: "Doe",
     points: 150,
     totalOrders: 5,
     totalSpent: 234.5,
@@ -156,7 +157,7 @@ describe("LoyaltyMemberDetailClient", () => {
     });
 
     it("should display phone number as header when name is not available", () => {
-      const memberWithoutName = { ...mockMember, name: null };
+      const memberWithoutName = { ...mockMember, firstName: null, lastName: null };
       render(
         <LoyaltyMemberDetailClient
           member={memberWithoutName}
@@ -193,7 +194,7 @@ describe("LoyaltyMemberDetailClient", () => {
     });
 
     it("should display dash for empty name field", () => {
-      const memberWithoutName = { ...mockMember, name: null };
+      const memberWithoutName = { ...mockMember, firstName: null, lastName: null };
       render(
         <LoyaltyMemberDetailClient
           member={memberWithoutName}

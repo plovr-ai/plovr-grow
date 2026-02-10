@@ -139,9 +139,10 @@ describe("CompanyInfoCard", () => {
       expect(screen.getByText("en-US")).toBeInTheDocument();
     });
 
-    it("should render store count", () => {
+    it("should render stores section header with count", () => {
       render(<CompanyInfoCard company={mockCompany} />);
-      expect(screen.getByText("2 active / 3 total")).toBeInTheDocument();
+      // The store count is shown in the Stores section header
+      expect(screen.getByText("Stores (3)")).toBeInTheDocument();
     });
 
     it("should render created date", () => {

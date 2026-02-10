@@ -61,22 +61,29 @@ describe("LocationCard", () => {
     it("should link to menu page without addItem param by default", () => {
       render(<LocationCard {...defaultProps} />);
 
-      const link = screen.getByRole("link");
+      const link = screen.getByRole("link", { name: /View Menu/i });
       expect(link).toHaveAttribute("href", "/r/downtown/menu");
     });
 
     it("should link to menu page with addItem param when provided", () => {
       render(<LocationCard {...defaultProps} addItem="item-pizza-123" />);
 
-      const link = screen.getByRole("link");
+      const link = screen.getByRole("link", { name: /View Menu/i });
       expect(link).toHaveAttribute("href", "/r/downtown/menu?addItem=item-pizza-123");
     });
 
     it("should include addItem param with special characters encoded", () => {
       render(<LocationCard {...defaultProps} addItem="item-special" />);
 
-      const link = screen.getByRole("link");
+      const link = screen.getByRole("link", { name: /View Menu/i });
       expect(link).toHaveAttribute("href", "/r/downtown/menu?addItem=item-special");
+    });
+
+    it("should render Catering link", () => {
+      render(<LocationCard {...defaultProps} />);
+
+      const link = screen.getByRole("link", { name: /Catering/i });
+      expect(link).toHaveAttribute("href", "/r/downtown/catering");
     });
   });
 

@@ -48,11 +48,20 @@ describe("LocationList", () => {
       expect(screen.getByText("No locations found.")).toBeInTheDocument();
     });
 
-    it("should render location cards as links", () => {
+    it("should render location cards with View Menu and Catering links", () => {
       render(<LocationList locations={mockLocations} currentMerchantId="" />);
 
+      // Each location card has 2 links (View Menu and Catering)
       const links = screen.getAllByRole("link");
-      expect(links).toHaveLength(2);
+      expect(links).toHaveLength(4);
+
+      // Check View Menu links
+      const viewMenuLinks = screen.getAllByRole("link", { name: /View Menu/i });
+      expect(viewMenuLinks).toHaveLength(2);
+
+      // Check Catering links
+      const cateringLinks = screen.getAllByRole("link", { name: /Catering/i });
+      expect(cateringLinks).toHaveLength(2);
     });
   });
 
@@ -66,17 +75,17 @@ describe("LocationList", () => {
         />
       );
 
-      const links = screen.getAllByRole("link");
-      expect(links[0]).toHaveAttribute("href", "/r/downtown/menu?addItem=item-pizza-123");
-      expect(links[1]).toHaveAttribute("href", "/r/midtown/menu?addItem=item-pizza-123");
+      const viewMenuLinks = screen.getAllByRole("link", { name: /View Menu/i });
+      expect(viewMenuLinks[0]).toHaveAttribute("href", "/r/downtown/menu?addItem=item-pizza-123");
+      expect(viewMenuLinks[1]).toHaveAttribute("href", "/r/midtown/menu?addItem=item-pizza-123");
     });
 
     it("should not include addItem param when not provided", () => {
       render(<LocationList locations={mockLocations} currentMerchantId="" />);
 
-      const links = screen.getAllByRole("link");
-      expect(links[0]).toHaveAttribute("href", "/r/downtown/menu");
-      expect(links[1]).toHaveAttribute("href", "/r/midtown/menu");
+      const viewMenuLinks = screen.getAllByRole("link", { name: /View Menu/i });
+      expect(viewMenuLinks[0]).toHaveAttribute("href", "/r/downtown/menu");
+      expect(viewMenuLinks[1]).toHaveAttribute("href", "/r/midtown/menu");
     });
 
     it("should not include addItem param when undefined", () => {
@@ -88,9 +97,9 @@ describe("LocationList", () => {
         />
       );
 
-      const links = screen.getAllByRole("link");
-      expect(links[0]).toHaveAttribute("href", "/r/downtown/menu");
-      expect(links[1]).toHaveAttribute("href", "/r/midtown/menu");
+      const viewMenuLinks = screen.getAllByRole("link", { name: /View Menu/i });
+      expect(viewMenuLinks[0]).toHaveAttribute("href", "/r/downtown/menu");
+      expect(viewMenuLinks[1]).toHaveAttribute("href", "/r/midtown/menu");
     });
   });
 
