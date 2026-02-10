@@ -19,13 +19,6 @@ describe("MenuTabs", () => {
       sortOrder: 1,
       status: "active",
     },
-    {
-      id: "menu-3",
-      name: "Hidden Menu",
-      description: null,
-      sortOrder: 2,
-      status: "inactive",
-    },
   ];
 
   const defaultProps = {
@@ -43,13 +36,6 @@ describe("MenuTabs", () => {
 
       expect(screen.getByText("Main Menu")).toBeInTheDocument();
       expect(screen.getByText("Lunch Menu")).toBeInTheDocument();
-      expect(screen.getByText("Hidden Menu")).toBeInTheDocument();
-    });
-
-    it("should show (hidden) label for inactive menus", () => {
-      render(<MenuTabs {...defaultProps} />);
-
-      expect(screen.getByText("(hidden)")).toBeInTheDocument();
     });
 
     it("should render add menu button", () => {
@@ -63,7 +49,7 @@ describe("MenuTabs", () => {
 
       // Each menu tab should have a drag handle (GripVertical icon)
       const dragHandles = container.querySelectorAll(".cursor-grab");
-      expect(dragHandles).toHaveLength(3);
+      expect(dragHandles).toHaveLength(2);
     });
   });
 
@@ -130,7 +116,7 @@ describe("MenuTabs", () => {
       const { container } = render(<MenuTabs {...defaultProps} />);
 
       const dragHandles = container.querySelectorAll(".cursor-grab");
-      expect(dragHandles).toHaveLength(3);
+      expect(dragHandles).toHaveLength(2);
 
       // Verify they have touch-none for better mobile support
       dragHandles.forEach((handle) => {
@@ -166,7 +152,7 @@ describe("MenuTabs", () => {
 
       // Each menu tab should be draggable (wrapped in sortable div)
       const sortableTabs = container.querySelectorAll(".group");
-      expect(sortableTabs).toHaveLength(3);
+      expect(sortableTabs).toHaveLength(2);
     });
   });
 

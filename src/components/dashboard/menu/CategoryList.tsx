@@ -77,9 +77,7 @@ function SortableCategoryItem({
         isSelected
           ? "border-theme-primary bg-theme-primary-light"
           : "border-gray-200 bg-white hover:border-gray-300"
-      } ${isDragging ? "opacity-50" : ""} ${
-        category.status === "inactive" ? "opacity-60" : ""
-      }`}
+      } ${isDragging ? "opacity-50" : ""}`}
     >
       {/* Drag handle */}
       <button
@@ -104,7 +102,6 @@ function SortableCategoryItem({
         </span>
         <span className="text-xs text-gray-500">
           {activeCount} item{activeCount !== 1 ? "s" : ""}
-          {category.status === "inactive" && " (Hidden)"}
         </span>
       </button>
 

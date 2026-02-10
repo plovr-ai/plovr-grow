@@ -85,9 +85,6 @@ function SortableMenuTab({
         title="Double-click to edit"
       >
         {menu.name}
-        {menu.status === "inactive" && (
-          <span className="ml-1.5 text-xs text-gray-400">(hidden)</span>
-        )}
       </button>
     </div>
   );

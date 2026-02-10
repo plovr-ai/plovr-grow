@@ -120,14 +120,6 @@ describe("MenuForm", () => {
       expect(descInput.value).toBe("The main menu");
     });
 
-    it("should show status field in edit mode", () => {
-      render(<MenuForm {...defaultProps} menu={mockMenu} />);
-
-      expect(screen.getByText("Status")).toBeInTheDocument();
-      expect(screen.getByText("Active")).toBeInTheDocument();
-      expect(screen.getByText("Hidden")).toBeInTheDocument();
-    });
-
     it("should show delete button when canDelete is true", () => {
       render(<MenuForm {...defaultProps} menu={mockMenu} canDelete={true} />);
 
@@ -153,7 +145,6 @@ describe("MenuForm", () => {
         expect(updateMenuAction).toHaveBeenCalledWith("menu-1", {
           name: "Updated Menu",
           description: "The main menu",
-          status: "active",
         });
       });
     });

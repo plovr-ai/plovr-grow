@@ -8,7 +8,7 @@ export interface MenuInfo {
   name: string;
   description: string | null;
   sortOrder: number;
-  status: "active" | "inactive";
+  status: "active";
 }
 
 export interface CreateMenuInput {
@@ -21,7 +21,7 @@ export interface UpdateMenuInput {
   name?: string;
   description?: string;
   sortOrder?: number;
-  status?: "active" | "inactive";
+  status?: "active";
 }
 
 // ==================== Category & Item Types ====================
@@ -56,7 +56,7 @@ export interface UpdateCategoryInput {
   description?: string;
   imageUrl?: string;
   sortOrder?: number;
-  status?: "active" | "inactive";
+  status?: "active";
 }
 
 export interface CreateMenuItemInput {
@@ -75,7 +75,7 @@ export interface UpdateMenuItemInput {
   description?: string;
   price?: number;
   imageUrl?: string;
-  status?: "active" | "inactive" | "out_of_stock" | "archived";
+  status?: "active" | "out_of_stock" | "archived";
   modifierGroups?: ModifierGroupInput[];
   tags?: string[];
   taxConfigId?: string | null;
@@ -115,7 +115,7 @@ export interface DashboardMenuItem {
   price: number;
   imageUrl: string | null;
   sortOrder: number;
-  status: "active" | "inactive" | "out_of_stock" | "archived";
+  status: "active" | "out_of_stock" | "archived";
   modifierGroups: ModifierGroupInput[];
   tags: string[];
   taxConfigIds: string[];
@@ -137,7 +137,7 @@ export interface DashboardCategory {
   description: string | null;
   imageUrl: string | null;
   sortOrder: number;
-  status: "active" | "inactive";
+  status: "active";
   menuItems: DashboardMenuItem[];
 }
 

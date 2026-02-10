@@ -51,7 +51,7 @@ export function MenuItemFormPage({
   const [description, setDescription] = useState(item?.description ?? "");
   const [price, setPrice] = useState(item ? item.price.toString() : "");
   const [imageUrl, setImageUrl] = useState(item?.imageUrl ?? "");
-  const [status, setStatus] = useState<"active" | "inactive" | "out_of_stock" | "archived">(
+  const [status, setStatus] = useState<"active" | "out_of_stock" | "archived">(
     item?.status ?? "active"
   );
   const [modifierGroups, setModifierGroups] = useState<ModifierGroupInput[]>(
@@ -190,12 +190,11 @@ export function MenuItemFormPage({
                 label="Status"
                 value={status}
                 onChange={(value) =>
-                  setStatus(value as "active" | "inactive" | "out_of_stock")
+                  setStatus(value as "active" | "out_of_stock")
                 }
                 options={[
                   { value: "active", label: "Active" },
                   { value: "out_of_stock", label: "Out of Stock" },
-                  { value: "inactive", label: "Hidden" },
                 ]}
                 disabled={isPending}
               />

@@ -49,7 +49,7 @@ interface UpdateMenuInput {
   name?: string;
   description?: string;
   sortOrder?: number;
-  status?: "active" | "inactive";
+  status?: "active";
 }
 
 export async function updateMenuAction(
@@ -182,7 +182,7 @@ interface UpdateCategoryInput {
   description?: string;
   imageUrl?: string;
   sortOrder?: number;
-  status?: "active" | "inactive";
+  status?: "active";
 }
 
 export async function updateCategoryAction(
@@ -319,7 +319,7 @@ interface UpdateMenuItemInput {
   description?: string;
   price?: number;
   imageUrl?: string;
-  status?: "active" | "inactive" | "out_of_stock" | "archived";
+  status?: "active" | "out_of_stock" | "archived";
   modifierGroups?: ModifierGroupInput[];
   tags?: string[];
   taxConfigIds?: string[];

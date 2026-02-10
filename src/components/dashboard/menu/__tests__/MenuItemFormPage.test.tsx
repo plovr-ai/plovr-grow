@@ -281,7 +281,6 @@ describe("MenuItemFormPage", () => {
 
       expect(screen.getByLabelText("Active")).toBeInTheDocument();
       expect(screen.getByLabelText("Out of Stock")).toBeInTheDocument();
-      expect(screen.getByLabelText("Hidden")).toBeInTheDocument();
     });
 
     it("should call updateMenuItemAction on submit", async () => {

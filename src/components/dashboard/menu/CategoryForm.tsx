@@ -5,7 +5,6 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   TextField,
-  RadioGroupField,
   FormField,
 } from "@/components/dashboard/Form";
 import { ImageUploader } from "./ImageUploader";
@@ -30,9 +29,6 @@ export function CategoryForm({ menuId, category, onClose }: CategoryFormProps) {
   const [name, setName] = useState(category?.name ?? "");
   const [description, setDescription] = useState(category?.description ?? "");
   const [imageUrl, setImageUrl] = useState(category?.imageUrl ?? "");
-  const [status, setStatus] = useState<"active" | "inactive">(
-    category?.status ?? "active"
-  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +46,6 @@ export function CategoryForm({ menuId, category, onClose }: CategoryFormProps) {
             name: name.trim(),
             description: description.trim() || undefined,
             imageUrl: imageUrl.trim() || undefined,
-            status,
           })
         : await createCategoryAction({
             menuId,
@@ -116,22 +111,6 @@ export function CategoryForm({ menuId, category, onClose }: CategoryFormProps) {
                 disabled={isPending}
               />
             </FormField>
-
-            {/* Status (only for editing) */}
-            {isEditing && (
-              <RadioGroupField
-                id="status"
-                name="status"
-                label="Status"
-                value={status}
-                onChange={(value) => setStatus(value as "active" | "inactive")}
-                options={[
-                  { value: "active", label: "Active" },
-                  { value: "inactive", label: "Hidden" },
-                ]}
-                disabled={isPending}
-              />
-            )}
           </div>
 
           <div className="mt-6 flex justify-end gap-3 border-t pt-4">

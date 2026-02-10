@@ -127,7 +127,7 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
   };
 
   const handleStatusChange = (
-    newStatus: "active" | "inactive" | "out_of_stock" | "archived"
+    newStatus: "active" | "out_of_stock" | "archived"
   ) => {
     startTransition(async () => {
       await updateMenuItemAction(item.id, { status: newStatus });
@@ -140,12 +140,6 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
         return (
           <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
             Active
-          </span>
-        );
-      case "inactive":
-        return (
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-            Hidden
           </span>
         );
       case "out_of_stock":
@@ -175,7 +169,7 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
       onClick={onEdit}
       className={`group relative cursor-pointer overflow-hidden rounded-lg border bg-white shadow-sm transition-shadow hover:shadow-md ${
         isDragging ? "opacity-50" : ""
-      } ${item.status === "inactive" ? "opacity-60" : ""}`}
+      }`}
     >
       {/* Drag handle - positioned absolute */}
       <button
@@ -246,7 +240,7 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
           value={item.status}
           onChange={(e) =>
             handleStatusChange(
-              e.target.value as "active" | "inactive" | "out_of_stock" | "archived"
+              e.target.value as "active" | "out_of_stock" | "archived"
             )
           }
           disabled={isPending}
@@ -254,7 +248,6 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
         >
           <option value="active">Active</option>
           <option value="out_of_stock">Out of Stock</option>
-          <option value="inactive">Hidden</option>
           <option value="archived">Archived</option>
         </Select>
 

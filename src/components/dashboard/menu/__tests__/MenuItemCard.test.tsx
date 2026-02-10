@@ -164,16 +164,6 @@ describe("MenuItemCard", () => {
       expect(badge).toBeInTheDocument();
     });
 
-    it("should show Hidden badge for inactive items", () => {
-      render(
-        <MenuItemCard {...defaultProps} item={{ ...singleCategoryItem, status: "inactive" }} />,
-        { wrapper: Wrapper }
-      );
-      const badges = screen.getAllByText("Hidden");
-      const badge = badges.find((el) => el.classList.contains("rounded-full"));
-      expect(badge).toBeInTheDocument();
-    });
-
     it("should show Out of Stock badge", () => {
       render(
         <MenuItemCard {...defaultProps} item={{ ...singleCategoryItem, status: "out_of_stock" }} />,
@@ -324,20 +314,6 @@ describe("MenuItemCard", () => {
       });
     });
 
-    it("should call updateMenuItemAction when setting to inactive", async () => {
-      mockUpdateMenuItemAction.mockResolvedValue({ success: true });
-
-      render(<MenuItemCard {...defaultProps} />, { wrapper: Wrapper });
-
-      const statusSelect = screen.getByRole("combobox");
-      fireEvent.change(statusSelect, { target: { value: "inactive" } });
-
-      await waitFor(() => {
-        expect(mockUpdateMenuItemAction).toHaveBeenCalledWith("item-1", {
-          status: "inactive",
-        });
-      });
-    });
   });
 
   describe("Edit Navigation", () => {

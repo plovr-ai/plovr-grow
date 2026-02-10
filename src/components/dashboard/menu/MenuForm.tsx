@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { TextField, TextareaField, RadioGroupField } from "@/components/dashboard/Form";
+import { TextField, TextareaField } from "@/components/dashboard/Form";
 import {
   createMenuAction,
   updateMenuAction,
@@ -27,9 +27,6 @@ export function MenuForm({ menu, onClose, canDelete = true }: MenuFormProps) {
   // Form state
   const [name, setName] = useState(menu?.name ?? "");
   const [description, setDescription] = useState(menu?.description ?? "");
-  const [status, setStatus] = useState<"active" | "inactive">(
-    menu?.status ?? "active"
-  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +42,6 @@ export function MenuForm({ menu, onClose, canDelete = true }: MenuFormProps) {
         ? await updateMenuAction(menu!.id, {
             name: name.trim(),
             description: description.trim() || undefined,
-            status,
           })
         : await createMenuAction({
             name: name.trim(),
@@ -116,21 +112,6 @@ export function MenuForm({ menu, onClose, canDelete = true }: MenuFormProps) {
               placeholder="Optional description"
               disabled={isPending}
             />
-
-            {isEditing && (
-              <RadioGroupField
-                id="status"
-                name="status"
-                label="Status"
-                value={status}
-                onChange={(value) => setStatus(value as "active" | "inactive")}
-                options={[
-                  { value: "active", label: "Active" },
-                  { value: "inactive", label: "Hidden" },
-                ]}
-                disabled={isPending}
-              />
-            )}
           </div>
 
           <div className="mt-6 flex justify-between border-t pt-4">
