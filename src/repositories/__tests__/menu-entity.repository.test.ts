@@ -51,6 +51,7 @@ describe("MenuEntityRepository", () => {
         description: null,
         sortOrder: 3, // Should be max + 1 = 2 + 1 = 3
         status: "active",
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -62,7 +63,7 @@ describe("MenuEntityRepository", () => {
 
       // Verify aggregate was called to get max sortOrder
       expect(prisma.menu.aggregate).toHaveBeenCalledWith({
-        where: { tenantId: "tenant-1", companyId: "company-1" },
+        where: { tenantId: "tenant-1", companyId: "company-1", deleted: false },
         _max: { sortOrder: true },
       });
 
@@ -99,6 +100,7 @@ describe("MenuEntityRepository", () => {
         description: null,
         sortOrder: 0,
         status: "active",
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -130,6 +132,7 @@ describe("MenuEntityRepository", () => {
         description: "A menu with custom order",
         sortOrder: 5,
         status: "active",
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -174,6 +177,7 @@ describe("MenuEntityRepository", () => {
         description: "Available 11am-3pm",
         sortOrder: 1,
         status: "active",
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -215,6 +219,7 @@ describe("MenuEntityRepository", () => {
           tenantId: "tenant-1",
           companyId: "company-1",
           status: "active",
+          deleted: false,
         },
         orderBy: {
           sortOrder: "asc",
@@ -253,6 +258,7 @@ describe("MenuEntityRepository", () => {
         where: {
           tenantId: "tenant-1",
           companyId: "company-1",
+          deleted: false,
         },
         orderBy: {
           sortOrder: "asc",
@@ -307,6 +313,7 @@ describe("MenuEntityRepository", () => {
           tenantId: "tenant-1",
           companyId: "company-1",
           status: "active",
+          deleted: false,
         },
       });
 
@@ -327,6 +334,8 @@ describe("MenuEntityRepository", () => {
         },
         data: {
           status: "inactive",
+          deleted: true,
+          updatedAt: expect.any(Date),
         },
       });
     });

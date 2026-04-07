@@ -34,6 +34,7 @@ describe("TaxConfigService", () => {
       description: "Standard sales tax",
       roundingMethod: "half_up",
       status: "active",
+      deleted: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -45,6 +46,7 @@ describe("TaxConfigService", () => {
       description: "Additional alcohol tax",
       roundingMethod: "half_up",
       status: "active",
+      deleted: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -56,6 +58,7 @@ describe("TaxConfigService", () => {
       description: "Reduced rate for groceries",
       roundingMethod: "always_round_down",
       status: "active",
+      deleted: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -234,6 +237,7 @@ describe("TaxConfigService", () => {
         description: "A new tax",
         roundingMethod: "half_up",
         status: "active",
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -244,6 +248,7 @@ describe("TaxConfigService", () => {
         merchantId: "merchant-1",
         taxConfigId: "tax-new",
         rate: { toNumber: () => 0.09 } as unknown as import("@prisma/client/runtime/library").Decimal,
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -320,6 +325,7 @@ describe("TaxConfigService", () => {
         merchantId: "merchant-1",
         taxConfigId: "tax-standard",
         rate: { toNumber: () => 0.0825 } as unknown as import("@prisma/client/runtime/library").Decimal,
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -340,12 +346,13 @@ describe("TaxConfigService", () => {
         undefined
       );
 
-      await service.setMenuItemTaxConfigs("item-1", [
+      await service.setMenuItemTaxConfigs("tenant-1", "item-1", [
         "tax-standard",
         "tax-alcohol",
       ]);
 
       expect(taxConfigRepository.setMenuItemTaxConfigs).toHaveBeenCalledWith(
+        "tenant-1",
         "item-1",
         ["tax-standard", "tax-alcohol"]
       );

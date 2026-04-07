@@ -232,7 +232,7 @@ export class MerchantService {
       throw new AppError(ErrorCodes.MERCHANT_SLUG_TAKEN, { slug: input.slug }, 409);
     }
 
-    const merchant = await merchantRepository.create(companyId, {
+    const merchant = await merchantRepository.create(companyId, tenantId, {
       slug: input.slug,
       name: input.name,
       description: input.description,

@@ -34,6 +34,7 @@ describe("LoyaltyMemberService", () => {
     lastOrderAt: new Date("2024-01-15"),
     enrolledAt: new Date("2024-01-01"),
     status: "active",
+    deleted: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

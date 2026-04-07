@@ -59,6 +59,7 @@ describe("OrderRepository", () => {
         where: {
           tenantId: "tenant-1",
           companyId: "company-1",
+          deleted: false,
         },
         orderBy: { createdAt: "desc" },
         skip: 0,
@@ -95,6 +96,7 @@ describe("OrderRepository", () => {
           where: {
             tenantId: "tenant-1",
             companyId: "company-1",
+            deleted: false,
             merchantId: "merchant-1",
           },
         })
@@ -250,6 +252,7 @@ describe("OrderRepository", () => {
         where: {
           tenantId: "tenant-1",
           companyId: "company-1",
+          deleted: false,
           merchantId: "merchant-1",
           status: "completed",
           orderMode: "delivery",
@@ -324,6 +327,7 @@ describe("OrderRepository", () => {
         where: {
           tenantId: "tenant-1",
           loyaltyMemberId: "member-1",
+          deleted: false,
         },
         orderBy: { createdAt: "desc" },
         skip: 0,
@@ -410,6 +414,7 @@ describe("OrderRepository", () => {
         where: {
           tenantId: "tenant-1",
           loyaltyMemberId: "member-1",
+          deleted: false,
         },
       });
     });

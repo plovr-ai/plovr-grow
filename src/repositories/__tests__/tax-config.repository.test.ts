@@ -13,10 +13,12 @@ vi.mock("@/lib/db", () => ({
     merchantTaxRate: {
       findMany: vi.fn(),
       upsert: vi.fn(),
+      updateMany: vi.fn(),
     },
     menuItemTax: {
       findMany: vi.fn(),
       deleteMany: vi.fn(),
+      updateMany: vi.fn(),
       createMany: vi.fn(),
     },
   },
@@ -43,6 +45,7 @@ describe("TaxConfigRepository", () => {
           description: "Standard sales tax",
           roundingMethod: "half_up",
           status: "active",
+          deleted: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -54,6 +57,7 @@ describe("TaxConfigRepository", () => {
           description: "Additional alcohol tax",
           roundingMethod: "half_up",
           status: "active",
+          deleted: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -71,6 +75,7 @@ describe("TaxConfigRepository", () => {
           tenantId: "tenant-1",
           companyId: "company-1",
           status: "active",
+          deleted: false,
         },
         orderBy: {
           createdAt: "asc",
@@ -102,6 +107,7 @@ describe("TaxConfigRepository", () => {
         description: "Standard sales tax",
         roundingMethod: "half_up",
         status: "active",
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -114,6 +120,7 @@ describe("TaxConfigRepository", () => {
         where: {
           id: "tax-1",
           tenantId: "tenant-1",
+          deleted: false,
         },
       });
       expect(result?.name).toBe("Standard Tax");
@@ -142,6 +149,7 @@ describe("TaxConfigRepository", () => {
           description: null,
           roundingMethod: "half_up",
           status: "active",
+          deleted: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -153,6 +161,7 @@ describe("TaxConfigRepository", () => {
           description: null,
           roundingMethod: "half_up",
           status: "active",
+          deleted: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -170,6 +179,7 @@ describe("TaxConfigRepository", () => {
           id: { in: ["tax-1", "tax-2"] },
           tenantId: "tenant-1",
           status: "active",
+          deleted: false,
         },
       });
       expect(result).toHaveLength(2);
@@ -214,6 +224,7 @@ describe("TaxConfigRepository", () => {
       expect(prisma.merchantTaxRate.findMany).toHaveBeenCalledWith({
         where: {
           merchantId: "merchant-1",
+          deleted: false,
         },
         include: {
           taxConfig: true,
@@ -250,6 +261,7 @@ describe("TaxConfigRepository", () => {
       expect(prisma.merchantTaxRate.findMany).toHaveBeenCalledWith({
         where: {
           merchantId: "merchant-1",
+          deleted: false,
         },
         select: {
           taxConfigId: true,
@@ -290,6 +302,7 @@ describe("TaxConfigRepository", () => {
       expect(prisma.menuItemTax.findMany).toHaveBeenCalledWith({
         where: {
           menuItemId: "item-1",
+          deleted: false,
         },
         select: {
           taxConfigId: true,
@@ -324,6 +337,7 @@ describe("TaxConfigRepository", () => {
       expect(prisma.menuItemTax.findMany).toHaveBeenCalledWith({
         where: {
           menuItemId: { in: ["item-1", "item-2", "item-3"] },
+          deleted: false,
         },
         select: {
           menuItemId: true,
@@ -351,6 +365,7 @@ describe("TaxConfigRepository", () => {
         merchantId: "merchant-1",
         taxConfigId: "tax-1",
         rate: { toNumber: () => 0.09 },
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -374,6 +389,7 @@ describe("TaxConfigRepository", () => {
         },
         update: {
           rate: 0.09,
+          deleted: false,
         },
         create: {
           id: expect.any(String),
@@ -387,38 +403,48 @@ describe("TaxConfigRepository", () => {
 
   describe("setMenuItemTaxConfigs", () => {
     it("should replace all tax configs for a menu item", async () => {
-      vi.mocked(prisma.menuItemTax.deleteMany).mockResolvedValue({
+      vi.mocked(prisma.menuItemTax.updateMany).mockResolvedValue({
         count: 1,
       });
       vi.mocked(prisma.menuItemTax.createMany).mockResolvedValue({
         count: 2,
       });
 
-      await repository.setMenuItemTaxConfigs("item-1", ["tax-1", "tax-2"]);
+      await repository.setMenuItemTaxConfigs("tenant-1", "item-1", ["tax-1", "tax-2"]);
 
-      expect(prisma.menuItemTax.deleteMany).toHaveBeenCalledWith({
+      expect(prisma.menuItemTax.updateMany).toHaveBeenCalledWith({
         where: {
           menuItemId: "item-1",
+          deleted: false,
+        },
+        data: {
+          deleted: true,
+          updatedAt: expect.any(Date),
         },
       });
       expect(prisma.menuItemTax.createMany).toHaveBeenCalledWith({
         data: [
-          { id: expect.any(String), menuItemId: "item-1", taxConfigId: "tax-1" },
-          { id: expect.any(String), menuItemId: "item-1", taxConfigId: "tax-2" },
+          { id: expect.any(String), tenantId: "tenant-1", menuItemId: "item-1", taxConfigId: "tax-1" },
+          { id: expect.any(String), tenantId: "tenant-1", menuItemId: "item-1", taxConfigId: "tax-2" },
         ],
       });
     });
 
-    it("should only delete when tax config IDs array is empty", async () => {
-      vi.mocked(prisma.menuItemTax.deleteMany).mockResolvedValue({
+    it("should only soft delete when tax config IDs array is empty", async () => {
+      vi.mocked(prisma.menuItemTax.updateMany).mockResolvedValue({
         count: 2,
       });
 
-      await repository.setMenuItemTaxConfigs("item-1", []);
+      await repository.setMenuItemTaxConfigs("tenant-1", "item-1", []);
 
-      expect(prisma.menuItemTax.deleteMany).toHaveBeenCalledWith({
+      expect(prisma.menuItemTax.updateMany).toHaveBeenCalledWith({
         where: {
           menuItemId: "item-1",
+          deleted: false,
+        },
+        data: {
+          deleted: true,
+          updatedAt: expect.any(Date),
         },
       });
       expect(prisma.menuItemTax.createMany).not.toHaveBeenCalled();
@@ -435,6 +461,7 @@ describe("TaxConfigRepository", () => {
         description: "A new tax",
         roundingMethod: "half_up",
         status: "active",
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -469,6 +496,7 @@ describe("TaxConfigRepository", () => {
         description: null,
         roundingMethod: "half_up",
         status: "active",
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -515,7 +543,7 @@ describe("TaxConfigRepository", () => {
   });
 
   describe("deleteTaxConfig", () => {
-    it("should soft delete a tax config by setting status to inactive", async () => {
+    it("should soft delete a tax config by setting status to inactive and deleted to true", async () => {
       vi.mocked(prisma.taxConfig.updateMany).mockResolvedValue({ count: 1 });
 
       await repository.deleteTaxConfig("tenant-1", "tax-1");
@@ -527,6 +555,8 @@ describe("TaxConfigRepository", () => {
         },
         data: {
           status: "inactive",
+          deleted: true,
+          updatedAt: expect.any(Date),
         },
       });
     });

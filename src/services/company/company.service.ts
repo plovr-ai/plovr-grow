@@ -95,7 +95,7 @@ export class CompanyService {
       throw new AppError(ErrorCodes.MERCHANT_SLUG_TAKEN, { slug: input.slug }, 409);
     }
 
-    return merchantRepository.create(companyId, {
+    return merchantRepository.create(companyId, company.tenantId, {
       slug: input.slug,
       name: input.name,
       description: input.description,

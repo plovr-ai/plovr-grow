@@ -137,13 +137,15 @@ export class MerchantRepository {
    */
   async create(
     companyId: string,
-    data: Omit<Prisma.MerchantCreateInput, "id" | "company">
+    tenantId: string,
+    data: Omit<Prisma.MerchantCreateInput, "id" | "company" | "tenant">
   ) {
     return prisma.merchant.create({
       data: {
         id: generateEntityId(),
         ...data,
         company: { connect: { id: companyId } },
+        tenant: { connect: { id: tenantId } },
       },
     });
   }

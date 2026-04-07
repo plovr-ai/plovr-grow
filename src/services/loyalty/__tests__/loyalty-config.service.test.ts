@@ -23,6 +23,7 @@ describe("LoyaltyConfigService", () => {
     companyId: "company-1",
     pointsPerDollar: new Decimal(1.5),
     status: "active",
+    deleted: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

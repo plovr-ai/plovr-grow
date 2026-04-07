@@ -35,6 +35,7 @@ describe("OtpService", () => {
     attempts: 0,
     expiresAt: new Date(Date.now() + 300000),
     verifiedAt: null,
+    deleted: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

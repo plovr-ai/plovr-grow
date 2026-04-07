@@ -39,6 +39,7 @@ describe("PointsService", () => {
     lastOrderAt: new Date() as Date | null,
     enrolledAt: new Date(),
     status: "active",
+    deleted: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -54,7 +55,9 @@ describe("PointsService", () => {
     balanceBefore: 100,
     balanceAfter: 125,
     description: "Earned 25 points from order" as string | null,
+    deleted: false,
     createdAt: new Date(),
+    updatedAt: new Date(),
     merchant: { id: "merchant-1", name: "Test Merchant", slug: "test-merchant" } as { id: string; name: string; slug: string } | null,
     order: { id: "order-1", orderNumber: "ORD-001" } as { id: string; orderNumber: string } | null,
   };

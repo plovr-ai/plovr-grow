@@ -65,6 +65,8 @@ describe("PaymentService", () => {
     totalSpent: new Decimal(150),
     lastOrderAt: null,
     enrolledAt: new Date(),
+    status: "active",
+    deleted: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
