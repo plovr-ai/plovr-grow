@@ -299,7 +299,7 @@ export async function createMenuItemAction(
 
     // Set tax configs if provided
     if (input.taxConfigIds && input.taxConfigIds.length > 0) {
-      await menuService.setMenuItemTaxConfigs(item.id, input.taxConfigIds);
+      await menuService.setMenuItemTaxConfigs(tenantId, item.id, input.taxConfigIds);
     }
 
     revalidatePath("/dashboard/menu", "page");
@@ -345,7 +345,7 @@ export async function updateMenuItemAction(
 
     // Update tax configs if provided
     if (taxConfigIds !== undefined) {
-      await menuService.setMenuItemTaxConfigs(id, taxConfigIds);
+      await menuService.setMenuItemTaxConfigs(tenantId, id, taxConfigIds);
     }
 
     revalidatePath("/dashboard/menu", "page");

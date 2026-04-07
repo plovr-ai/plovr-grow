@@ -97,7 +97,6 @@ export default async function NewCateringOrderPage({
         merchants={merchants.map((m) => ({
           id: m.id,
           name: m.name,
-          taxRate: Number(m.taxRate),
           currency: m.currency,
           locale: m.locale,
         }))}

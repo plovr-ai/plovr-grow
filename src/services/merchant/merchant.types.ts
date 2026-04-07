@@ -32,7 +32,7 @@ export interface MerchantWithCompany {
   timezone: string;
   currency: string;
   locale: string;
-  taxRate: number;
+
   status: MerchantStatus;
   settings?: MerchantSettings;
   company: {
@@ -89,7 +89,7 @@ export interface MerchantBasic {
   timezone: string;
   currency: string;
   locale: string;
-  taxRate: number;
+
   status: MerchantStatus;
   settings?: MerchantSettings;
   createdAt: Date;
@@ -118,7 +118,7 @@ export interface CreateMerchantInput {
   timezone?: string;
   currency?: string;
   locale?: string;
-  taxRate?: number;
+
   settings?: MerchantSettings;
 }
 
@@ -142,7 +142,7 @@ export interface UpdateMerchantInput {
   timezone?: string;
   currency?: string;
   locale?: string;
-  taxRate?: number;
+
   settings?: Partial<MerchantSettings>;
   status?: MerchantStatus;
 }

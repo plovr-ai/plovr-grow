@@ -47,7 +47,6 @@ export interface MerchantInfo {
   timezone: string;
   currency: string;
   locale: string;
-  taxRate: number;
   status: MerchantStatus;
   settings: MerchantSettings | null;
   createdAt: Date;

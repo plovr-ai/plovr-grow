@@ -249,7 +249,6 @@ export class MerchantService {
       timezone: input.timezone ?? "America/New_York",
       currency: input.currency ?? "USD",
       locale: input.locale ?? "en-US",
-      taxRate: input.taxRate ?? 0,
       settings: input.settings as unknown as Prisma.InputJsonValue,
     });
 
@@ -307,7 +306,6 @@ export class MerchantService {
     if (input.timezone !== undefined) updateData.timezone = input.timezone;
     if (input.currency !== undefined) updateData.currency = input.currency;
     if (input.locale !== undefined) updateData.locale = input.locale;
-    if (input.taxRate !== undefined) updateData.taxRate = input.taxRate;
     if (input.status !== undefined) updateData.status = input.status;
 
     // Settings 需要 merge
@@ -374,13 +372,6 @@ export class MerchantService {
     excludeMerchantId?: string
   ): Promise<boolean> {
     return merchantRepository.isSlugAvailable(slug, excludeMerchantId);
-  }
-
-  /**
-   * 获取 Merchant 税率
-   */
-  async getTaxRate(merchantId: string): Promise<number> {
-    return merchantRepository.getTaxRate(merchantId);
   }
 
   /**

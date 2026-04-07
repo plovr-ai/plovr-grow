@@ -112,7 +112,6 @@ export class CompanyService {
       timezone: input.timezone ?? "America/New_York",
       currency: input.currency ?? "USD",
       locale: input.locale ?? "en-US",
-      taxRate: input.taxRate ?? 0,
       settings: input.settings as unknown as Prisma.InputJsonValue,
     });
   }

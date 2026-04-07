@@ -39,6 +39,7 @@ export class GiftCardRepository {
       where: {
         id,
         tenantId,
+        deleted: false,
       },
     });
   }
@@ -52,6 +53,7 @@ export class GiftCardRepository {
         tenantId,
         companyId,
         cardNumber,
+        deleted: false,
       },
     });
   }
@@ -60,8 +62,8 @@ export class GiftCardRepository {
    * Check if a card number already exists (globally unique)
    */
   async cardNumberExists(cardNumber: string): Promise<boolean> {
-    const card = await prisma.giftCard.findUnique({
-      where: { cardNumber },
+    const card = await prisma.giftCard.findFirst({
+      where: { cardNumber, deleted: false },
     });
     return card !== null;
   }
@@ -112,6 +114,7 @@ export class GiftCardRepository {
       where: {
         tenantId,
         giftCardId,
+        deleted: false,
       },
       orderBy: { createdAt: "desc" },
       include: {
@@ -153,7 +156,7 @@ export class GiftCardRepository {
           }
         : {};
 
-    const giftCardWhere = { tenantId, companyId, ...dateFilter };
+    const giftCardWhere = { tenantId, companyId, deleted: false, ...dateFilter };
 
     const [totals, activeBalanceSum, redemptionTotal] = await Promise.all([
       // Sum initial amounts and count total
@@ -171,6 +174,7 @@ export class GiftCardRepository {
       prisma.giftCardTransaction.aggregate({
         where: {
           tenantId,
+          deleted: false,
           giftCard: { companyId, ...dateFilter },
           type: "redemption",
         },
@@ -205,6 +209,7 @@ export class GiftCardRepository {
     const where: Prisma.GiftCardWhereInput = {
       tenantId,
       companyId,
+      deleted: false,
       ...(search && {
         OR: [
           { cardNumber: { contains: search } },
@@ -260,6 +265,7 @@ export class GiftCardRepository {
       where: {
         tenantId,
         purchaseOrderId,
+        deleted: false,
       },
     });
   }

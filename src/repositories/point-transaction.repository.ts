@@ -14,6 +14,7 @@ export class PointTransactionRepository {
       where: {
         id,
         tenantId,
+        deleted: false,
       },
     });
   }
@@ -67,6 +68,7 @@ export class PointTransactionRepository {
     const where: Prisma.PointTransactionWhereInput = {
       tenantId,
       memberId,
+      deleted: false,
     };
 
     if (type) {
@@ -115,6 +117,7 @@ export class PointTransactionRepository {
       where: {
         tenantId,
         orderId,
+        deleted: false,
       },
     });
   }
@@ -128,6 +131,7 @@ export class PointTransactionRepository {
         tenantId,
         orderId,
         type: "earn",
+        deleted: false,
       },
     });
     return transaction !== null;
@@ -142,6 +146,7 @@ export class PointTransactionRepository {
         tenantId,
         memberId,
         type: "earn",
+        deleted: false,
       },
       _sum: {
         points: true,
@@ -161,6 +166,7 @@ export class PointTransactionRepository {
   ) {
     const where: Prisma.PointTransactionWhereInput = {
       tenantId,
+      deleted: false,
       loyaltyMember: {
         companyId,
       },

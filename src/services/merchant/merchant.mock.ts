@@ -24,7 +24,7 @@ export interface MockMerchant {
   timezone: string;
   currency: string;
   locale: string;
-  taxRate: number;
+
   status: "active" | "inactive" | "temporarily_closed";
   settings?: MerchantSettings;
   company: MockCompanyRef;
@@ -128,7 +128,7 @@ const MOCK_COMPANIES: Record<string, MockCompany> = {
         timezone: "America/New_York",
         currency: "USD",
         locale: "en-US",
-        taxRate: 0.08875,
+
         status: "active",
         settings: DEFAULT_MERCHANT_SETTINGS,
         company: JOES_PIZZA_COMPANY_REF,
@@ -149,7 +149,7 @@ const MOCK_COMPANIES: Record<string, MockCompany> = {
         timezone: "America/New_York",
         currency: "USD",
         locale: "en-US",
-        taxRate: 0.08875,
+
         status: "active",
         settings: DEFAULT_MERCHANT_SETTINGS,
         company: JOES_PIZZA_COMPANY_REF,

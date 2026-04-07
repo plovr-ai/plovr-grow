@@ -98,6 +98,7 @@ export class CateringOrderRepository {
       where: {
         id: orderId,
         tenantId,
+        deleted: false,
       },
       include: {
         merchant: {
@@ -142,6 +143,7 @@ export class CateringOrderRepository {
     const where: Prisma.CateringOrderWhereInput = {
       tenantId,
       merchantId,
+      deleted: false,
     };
 
     if (status && status !== "all") {
@@ -214,6 +216,7 @@ export class CateringOrderRepository {
 
     const where: Prisma.CateringOrderWhereInput = {
       tenantId,
+      deleted: false,
       merchant: {
         companyId,
       },
@@ -286,7 +289,7 @@ export class CateringOrderRepository {
   async update(tenantId: string, orderId: string, data: UpdateCateringOrderData) {
     // First verify the order belongs to the tenant
     const order = await prisma.cateringOrder.findFirst({
-      where: { id: orderId, tenantId },
+      where: { id: orderId, tenantId, deleted: false },
       select: { id: true },
     });
 
@@ -328,7 +331,7 @@ export class CateringOrderRepository {
   ) {
     // First verify the order belongs to the tenant
     const order = await prisma.cateringOrder.findFirst({
-      where: { id: orderId, tenantId },
+      where: { id: orderId, tenantId, deleted: false },
       select: { id: true },
     });
 
@@ -356,6 +359,7 @@ export class CateringOrderRepository {
       where: {
         tenantId,
         merchantId,
+        deleted: false,
         createdAt: {
           gte: today,
         },
@@ -371,7 +375,7 @@ export class CateringOrderRepository {
   async delete(tenantId: string, orderId: string) {
     // First verify the order belongs to the tenant and is a draft
     const order = await prisma.cateringOrder.findFirst({
-      where: { id: orderId, tenantId },
+      where: { id: orderId, tenantId, deleted: false },
       select: { id: true, status: true },
     });
 
@@ -383,8 +387,9 @@ export class CateringOrderRepository {
       throw new Error(`Cannot delete catering order with status: ${order.status}`);
     }
 
-    return prisma.cateringOrder.delete({
+    return prisma.cateringOrder.update({
       where: { id: orderId },
+      data: { deleted: true, updatedAt: new Date() },
     });
   }
 }
