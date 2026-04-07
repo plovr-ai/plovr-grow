@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 function createWrapper(currency: string, locale: string) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <MerchantProvider config={{ name: "Test Restaurant", logoUrl: null, currency, locale }}>
+      <MerchantProvider config={{ name: "Test Restaurant", logoUrl: null, currency, locale, timezone: "America/New_York" }}>
         {children}
       </MerchantProvider>
     );
@@ -330,6 +330,7 @@ describe("CartPage", () => {
                 modifierId: "large",
                 modifierName: "Large",
                 price: 3,
+                quantity: 1,
               },
               {
                 groupId: "topping",
@@ -337,6 +338,7 @@ describe("CartPage", () => {
                 modifierId: "cheese",
                 modifierName: "Extra Cheese",
                 price: 1.5,
+                quantity: 1,
               },
             ],
             totalPrice: 23.49,

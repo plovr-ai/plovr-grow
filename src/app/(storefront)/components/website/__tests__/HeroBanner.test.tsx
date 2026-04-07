@@ -8,7 +8,6 @@ const mockMerchant: MerchantInfo = {
   logo: "/images/logo.png",
   heroImage: "/images/hero.jpg",
   tagline: "Authentic New York Style Pizza Since 1975",
-  description: "The best pizza in town",
   address: "123 Main St",
   city: "New York",
   state: "NY",
@@ -25,6 +24,8 @@ const mockMerchant: MerchantInfo = {
     sun: { open: "12:00", close: "21:00", closed: false },
   },
   socialLinks: [],
+  currency: "USD",
+  locale: "en-US",
 };
 
 describe("HeroBanner", () => {
@@ -60,7 +61,7 @@ describe("HeroBanner", () => {
     });
 
     it("should not render tagline when not provided", () => {
-      const merchantWithoutTagline = { ...mockMerchant, tagline: undefined };
+      const merchantWithoutTagline = { ...mockMerchant, tagline: "" };
       render(
         <HeroBanner
           merchant={merchantWithoutTagline}

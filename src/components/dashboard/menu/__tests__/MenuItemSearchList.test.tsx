@@ -210,7 +210,7 @@ describe("MenuItemSearchList", () => {
 
     it("should show emptyMessage when items array is empty", () => {
       render(
-        <MenuItemSearchList
+        <MenuItemSearchList<TestItem>
           items={[]}
           filterFn={() => true}
           renderItem={(item) => <div>{item.name}</div>}
@@ -315,7 +315,7 @@ describe("MenuItemSearchList", () => {
 
     it("should use default emptyMessage", () => {
       render(
-        <MenuItemSearchList
+        <MenuItemSearchList<TestItem>
           items={[]}
           filterFn={() => true}
           renderItem={(item) => <div>{item.name}</div>}

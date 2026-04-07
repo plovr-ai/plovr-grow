@@ -40,7 +40,7 @@ describe("MenuEntityRepository", () => {
         _min: { sortOrder: null },
         _avg: { sortOrder: null },
         _sum: { sortOrder: null },
-        _count: 3,
+        _count: { _all: 3 },
       });
 
       const mockCreatedMenu = {
@@ -88,7 +88,7 @@ describe("MenuEntityRepository", () => {
         _min: { sortOrder: null },
         _avg: { sortOrder: null },
         _sum: { sortOrder: null },
-        _count: 0,
+        _count: { _all: 0 },
       });
 
       const mockCreatedMenu = {
@@ -163,7 +163,7 @@ describe("MenuEntityRepository", () => {
         _min: { sortOrder: null },
         _avg: { sortOrder: null },
         _sum: { sortOrder: null },
-        _count: 1,
+        _count: { _all: 1 },
       });
 
       const mockCreatedMenu = {
@@ -272,9 +272,9 @@ describe("MenuEntityRepository", () => {
       ];
 
       vi.mocked(prisma.menu.updateMany).mockResolvedValue({ count: 1 });
-      vi.mocked(prisma.$transaction).mockImplementation((queries) =>
+      vi.mocked(prisma.$transaction).mockImplementation(((queries: unknown[]) =>
         Promise.all(queries)
-      );
+      ) as unknown as typeof prisma.$transaction);
 
       await repository.updateMenuSortOrders("tenant-1", updates);
 

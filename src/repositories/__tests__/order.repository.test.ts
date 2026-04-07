@@ -106,13 +106,13 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
       await repository.getCompanyOrders("tenant-1", "company-1", {
-        status: "pending",
+        status: "created",
       });
 
       expect(prisma.order.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            status: "pending",
+            status: "created",
           }),
         })
       );

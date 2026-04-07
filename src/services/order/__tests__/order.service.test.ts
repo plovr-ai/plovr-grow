@@ -85,7 +85,7 @@ describe("OrderService", () => {
       ] as never);
 
       vi.mocked(taxConfigService.getTaxConfigsMap).mockResolvedValue(
-        new Map([["tax-1", { rate: 0.08875, roundingMethod: "standard" }]])
+        new Map([["tax-1", { id: "tax-1", name: "Sales Tax", description: null, roundingMethod: "half_up", status: "active" as const }]])
       );
 
       vi.mocked(merchantService.getMerchant).mockResolvedValue({

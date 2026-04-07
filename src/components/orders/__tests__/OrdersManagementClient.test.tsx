@@ -23,12 +23,16 @@ describe("OrdersManagementClient", () => {
     {
       id: "order1",
       tenantId: "tenant1",
+      companyId: "company1",
       merchantId: "merchant1",
+      loyaltyMemberId: null,
       orderNumber: "ORD-001",
-      customerName: "John Doe",
+      customerFirstName: "John",
+      customerLastName: "Doe",
       customerPhone: "+1234567890",
       customerEmail: "john@example.com",
       orderMode: "pickup",
+      salesChannel: "online_order",
       status: "created",
       fulfillmentStatus: "pending",
       items: [{ name: "Test Item", quantity: 1 }],
@@ -43,10 +47,13 @@ describe("OrdersManagementClient", () => {
       notes: null,
       deliveryAddress: null,
       scheduledAt: null,
+      paidAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       confirmedAt: null,
-      completedAt: null,
+      preparingAt: null,
+      readyAt: null,
+      fulfilledAt: null,
       cancelledAt: null,
       cancelReason: null,
       merchant: {
@@ -343,7 +350,7 @@ describe("OrdersManagementClient", () => {
     it("should call showPicker when clicking on From Date input", () => {
       render(<OrdersManagementClient {...defaultProps} />);
 
-      const dateFromInput = screen.getByLabelText("From Date");
+      const dateFromInput = screen.getByLabelText("From Date") as HTMLInputElement;
       const showPickerMock = vi.fn();
       dateFromInput.showPicker = showPickerMock;
 
@@ -355,7 +362,7 @@ describe("OrdersManagementClient", () => {
     it("should call showPicker when clicking on To Date input", () => {
       render(<OrdersManagementClient {...defaultProps} />);
 
-      const dateToInput = screen.getByLabelText("To Date");
+      const dateToInput = screen.getByLabelText("To Date") as HTMLInputElement;
       const showPickerMock = vi.fn();
       dateToInput.showPicker = showPickerMock;
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Decimal } from "@prisma/client/runtime/library";
 import { LoyaltyMemberService } from "../loyalty-member.service";
 
 // Mock repository
@@ -29,7 +30,7 @@ describe("LoyaltyMemberService", () => {
     email: "john@example.com",
     points: 150,
     totalOrders: 5,
-    totalSpent: 250.0,
+    totalSpent: new Decimal(250.0),
     lastOrderAt: new Date("2024-01-15"),
     enrolledAt: new Date("2024-01-01"),
     status: "active",
@@ -123,7 +124,7 @@ describe("LoyaltyMemberService", () => {
 
     it("should create new member", async () => {
       vi.mocked(loyaltyMemberRepository.findOrCreate).mockResolvedValue({
-        member: { ...mockMember, points: 0, totalOrders: 0, totalSpent: 0 },
+        member: { ...mockMember, points: 0, totalOrders: 0, totalSpent: new Decimal(0) },
         isNew: true,
       });
 
@@ -131,7 +132,7 @@ describe("LoyaltyMemberService", () => {
         "tenant-1",
         "company-1",
         "+12025559999",
-        { firstName: "Jane", lastName: "Doe", email: "jane@example.com" }
+        { phone: "+12025559999", firstName: "Jane", lastName: "Doe", email: "jane@example.com" }
       );
 
       expect(result.isNew).toBe(true);
@@ -157,7 +158,7 @@ describe("LoyaltyMemberService", () => {
         lastName: "Doe",
         points: 150,
         totalOrders: 5,
-        totalSpent: 250.0,
+        totalSpent: 250,
         enrolledAt: mockMember.enrolledAt,
         pointsValue: 1.5, // 150 points * 0.01 default
       });
@@ -212,7 +213,7 @@ describe("LoyaltyMemberService", () => {
 
   describe("updateMember", () => {
     it("should update member profile", async () => {
-      vi.mocked(loyaltyMemberRepository.update).mockResolvedValue();
+      vi.mocked(loyaltyMemberRepository.update).mockResolvedValue({ count: 1 });
 
       await service.updateMember("tenant-1", "member-1", {
         firstName: "John",
@@ -234,7 +235,7 @@ describe("LoyaltyMemberService", () => {
 
   describe("updateOrderStats", () => {
     it("should update order stats", async () => {
-      vi.mocked(loyaltyMemberRepository.updateOrderStats).mockResolvedValue();
+      vi.mocked(loyaltyMemberRepository.updateOrderStats).mockResolvedValue(mockMember);
 
       await service.updateOrderStats("tenant-1", "member-1", 50.0);
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Decimal } from "@prisma/client/runtime/library";
 import { PaymentService } from "../payment.service";
 import { stripeService } from "@/services/stripe";
 import { paymentRepository } from "@/repositories/payment.repository";
@@ -60,6 +61,12 @@ describe("PaymentService", () => {
     firstName: "John",
     lastName: "Doe",
     points: 100,
+    totalOrders: 5,
+    totalSpent: new Decimal(150),
+    lastOrderAt: null,
+    enrolledAt: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   const mockStripeCustomer = {
@@ -68,6 +75,8 @@ describe("PaymentService", () => {
     companyId: mockCompanyId,
     loyaltyMemberId: mockLoyaltyMemberId,
     stripeCustomerId: "cus_123abc",
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   const mockPaymentIntentResult = {
@@ -255,9 +264,16 @@ describe("PaymentService", () => {
       tenantId: mockTenantId,
       orderId: mockOrderId,
       stripePaymentIntentId: "pi_test123",
-      amount: 25.99,
+      stripeCustomerId: null,
+      amount: new Decimal(25.99),
       currency: "USD",
       status: "pending",
+      paymentMethod: null,
+      cardBrand: null,
+      cardLast4: null,
+      failureCode: null,
+      failureMessage: null,
+      paidAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -270,13 +286,13 @@ describe("PaymentService", () => {
           orderNumber: "ORD-001",
           tenantId: mockTenantId,
           companyId: mockCompanyId,
-          merchantId: mockMerchantId,
+          merchantId: mockMerchantId as string | null,
         },
-      });
+      } as unknown as Awaited<ReturnType<typeof paymentRepository.getByPaymentIntentId>> & {});
       vi.mocked(paymentRepository.updateStatus).mockResolvedValue({
         ...mockPayment,
         status: "succeeded",
-      });
+      } as unknown as Awaited<ReturnType<typeof paymentRepository.updateStatus>>);
 
       await service.handlePaymentSucceeded({
         paymentIntentId: "pi_test123",
@@ -306,9 +322,9 @@ describe("PaymentService", () => {
           orderNumber: "ORD-001",
           tenantId: mockTenantId,
           companyId: mockCompanyId,
-          merchantId: mockMerchantId,
+          merchantId: mockMerchantId as string | null,
         },
-      });
+      } as unknown as Awaited<ReturnType<typeof paymentRepository.getByPaymentIntentId>> & {});
 
       await service.handlePaymentSucceeded({
         paymentIntentId: "pi_test123",
@@ -332,33 +348,40 @@ describe("PaymentService", () => {
   });
 
   describe("handlePaymentFailed", () => {
-    const mockPayment = {
+    const mockPaymentFailed = {
       id: "payment-1",
       tenantId: mockTenantId,
       orderId: mockOrderId,
       stripePaymentIntentId: "pi_test123",
-      amount: 25.99,
+      stripeCustomerId: null,
+      amount: new Decimal(25.99),
       currency: "USD",
       status: "pending",
+      paymentMethod: null,
+      cardBrand: null,
+      cardLast4: null,
+      failureCode: null,
+      failureMessage: null,
+      paidAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
     it("should update payment status to failed with error info", async () => {
       vi.mocked(paymentRepository.getByPaymentIntentId).mockResolvedValue({
-        ...mockPayment,
+        ...mockPaymentFailed,
         order: {
           id: mockOrderId,
           orderNumber: "ORD-001",
           tenantId: mockTenantId,
           companyId: mockCompanyId,
-          merchantId: mockMerchantId,
+          merchantId: mockMerchantId as string | null,
         },
-      });
+      } as unknown as Awaited<ReturnType<typeof paymentRepository.getByPaymentIntentId>> & {});
       vi.mocked(paymentRepository.updateStatus).mockResolvedValue({
-        ...mockPayment,
+        ...mockPaymentFailed,
         status: "failed",
-      });
+      } as unknown as Awaited<ReturnType<typeof paymentRepository.updateStatus>>);
 
       await service.handlePaymentFailed({
         paymentIntentId: "pi_test123",
@@ -384,9 +407,16 @@ describe("PaymentService", () => {
         tenantId: mockTenantId,
         orderId: mockOrderId,
         stripePaymentIntentId: "pi_test123",
-        amount: 25.99,
+        stripeCustomerId: null,
+        amount: new Decimal(25.99),
         currency: "USD",
         status: "pending",
+        paymentMethod: null,
+        cardBrand: null,
+        cardLast4: null,
+        failureCode: null,
+        failureMessage: null,
+        paidAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

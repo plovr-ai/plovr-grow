@@ -216,7 +216,7 @@ describe("AdjustPointsModal", () => {
 
     it("should show loading state while submitting", async () => {
       const slowConfirm = vi.fn(
-        () => new Promise((resolve) => setTimeout(resolve, 100))
+        (_points: number, _description: string) => new Promise<void>((resolve) => setTimeout(resolve, 100))
       );
       render(<AdjustPointsModal {...defaultProps} onConfirm={slowConfirm} />);
 

@@ -67,7 +67,7 @@ const createMenuItem = (
   tags: [],
   hasModifiers: false,
   isAvailable: true,
-  taxConfigId: null,
+  taxes: [],
   modifierGroups: [],
   ...overrides,
 });

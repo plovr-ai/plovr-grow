@@ -240,7 +240,10 @@ describe("StripeService", () => {
     });
 
     it("should handle missing card details gracefully", () => {
-      const stripePaymentMethod = {
+      const stripePaymentMethod: {
+        id: string;
+        card: { brand: string; last4: string; exp_month: number; exp_year: number } | null;
+      } = {
         id: "pm_123",
         card: null,
       };

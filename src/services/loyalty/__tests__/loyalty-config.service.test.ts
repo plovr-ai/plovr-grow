@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Decimal } from "@prisma/client/runtime/library";
 import { LoyaltyConfigService } from "../loyalty-config.service";
 
 // Mock repository
@@ -20,7 +21,7 @@ describe("LoyaltyConfigService", () => {
     id: "config-1",
     tenantId: "tenant-1",
     companyId: "company-1",
-    pointsPerDollar: 1.5,
+    pointsPerDollar: new Decimal(1.5),
     status: "active",
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -113,7 +114,7 @@ describe("LoyaltyConfigService", () => {
     it("should create or update loyalty config", async () => {
       vi.mocked(loyaltyConfigRepository.upsert).mockResolvedValue({
         ...mockConfig,
-        pointsPerDollar: 2.0,
+        pointsPerDollar: new Decimal(2.0),
       });
 
       const result = await service.upsertLoyaltyConfig("tenant-1", "company-1", {

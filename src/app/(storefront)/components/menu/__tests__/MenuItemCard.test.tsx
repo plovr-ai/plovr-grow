@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 function createWrapper(currency: string, locale: string) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <MerchantProvider config={{ name: "Test Restaurant", logoUrl: null, currency, locale }}>
+      <MerchantProvider config={{ name: "Test Restaurant", logoUrl: null, currency, locale, timezone: "America/New_York" }}>
         {children}
       </MerchantProvider>
     );
@@ -25,7 +25,7 @@ const mockItem: MenuItemViewModel = {
   hasModifiers: true,
   modifierGroups: [],
   isAvailable: true,
-  taxConfigId: null,
+  taxes: [],
 };
 
 describe("MenuItemCard", () => {

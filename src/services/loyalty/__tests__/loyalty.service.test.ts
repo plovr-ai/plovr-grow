@@ -3,6 +3,7 @@ import { LoyaltyService } from "../loyalty.service";
 import { loyaltyConfigService } from "../loyalty-config.service";
 import { loyaltyMemberService } from "../loyalty-member.service";
 import { pointsService } from "../points.service";
+import type { LoyaltyMemberData, LoyaltyStatus } from "../loyalty.types";
 
 // Mock sub-services
 vi.mock("../loyalty-config.service", () => ({
@@ -32,19 +33,19 @@ vi.mock("../points.service", () => ({
 describe("LoyaltyService", () => {
   let service: LoyaltyService;
 
-  const mockMember = {
+  const mockMember: LoyaltyMemberData = {
     id: "member-1",
     tenantId: "tenant-1",
     companyId: "company-1",
     phone: "+12025551234",
-    name: "John Doe",
+    firstName: "John",
+    lastName: "Doe",
     email: "john@example.com",
     points: 100,
     totalOrders: 5,
     totalSpent: 150.0,
     lastOrderAt: new Date(),
     enrolledAt: new Date(),
-    status: "active",
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -260,10 +261,11 @@ describe("LoyaltyService", () => {
 
   describe("getCustomerLoyaltyStatus", () => {
     it("should return loyalty status", async () => {
-      const mockStatus = {
+      const mockStatus: LoyaltyStatus = {
         memberId: "member-1",
         phone: "+12025551234",
-        name: "John Doe",
+        firstName: "John",
+        lastName: "Doe",
         points: 100,
         totalOrders: 5,
         totalSpent: 150.0,

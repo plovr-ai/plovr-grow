@@ -514,14 +514,14 @@ describe("CheckoutPage", () => {
       // Wait for the submission to complete and find the order API call
       await waitFor(() => {
         const orderApiCalls = mockFetch.mock.calls.filter(
-          (call: [string, RequestInit?]) => call[0].includes("/orders") && !call[0].includes("/loyalty")
+          (call: unknown[]) => (call[0] as string).includes("/orders") && !(call[0] as string).includes("/loyalty")
         );
         expect(orderApiCalls.length).toBeGreaterThan(0);
       });
 
       // Get the order API call
       const orderApiCalls = mockFetch.mock.calls.filter(
-        (call: [string, RequestInit?]) => call[0].includes("/orders") && !call[0].includes("/loyalty")
+        (call: unknown[]) => (call[0] as string).includes("/orders") && !(call[0] as string).includes("/loyalty")
       );
       const orderApiCall = orderApiCalls[0];
       const requestBody = JSON.parse(orderApiCall[1]?.body as string);

@@ -110,6 +110,8 @@ describe("GiftcardOverviewClient", () => {
     total: 50,
     initialFilters: {
       search: "",
+      dateFrom: "",
+      dateTo: "",
     },
   };
 
@@ -322,7 +324,7 @@ describe("GiftcardOverviewClient", () => {
       render(
         <GiftcardOverviewClient
           {...defaultProps}
-          initialFilters={{ search: "test query" }}
+          initialFilters={{ search: "test query", dateFrom: "", dateTo: "" }}
         />,
         { wrapper: Wrapper }
       );

@@ -26,6 +26,19 @@ import { smsService } from "@/services/sms";
 describe("OtpService", () => {
   let service: OtpService;
 
+  const mockOtpRecord = {
+    id: "otp-1",
+    tenantId: "tenant-1",
+    phone: "+12025551234",
+    purpose: "login",
+    code: "123456",
+    attempts: 0,
+    expiresAt: new Date(Date.now() + 300000),
+    verifiedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     service = new OtpService();
@@ -34,7 +47,7 @@ describe("OtpService", () => {
   describe("sendOtp", () => {
     it("should send OTP successfully", async () => {
       vi.mocked(smsService.verifyPhoneFormat).mockReturnValue(true);
-      vi.mocked(otpVerificationRepository.upsert).mockResolvedValue();
+      vi.mocked(otpVerificationRepository.upsert).mockResolvedValue(mockOtpRecord);
       vi.mocked(smsService.sendOtp).mockResolvedValue({ success: true });
 
       const result = await service.sendOtp("tenant-1", "+12025551234", "login");
@@ -58,7 +71,7 @@ describe("OtpService", () => {
 
     it("should return error when SMS sending fails", async () => {
       vi.mocked(smsService.verifyPhoneFormat).mockReturnValue(true);
-      vi.mocked(otpVerificationRepository.upsert).mockResolvedValue();
+      vi.mocked(otpVerificationRepository.upsert).mockResolvedValue(mockOtpRecord);
       vi.mocked(smsService.sendOtp).mockResolvedValue({
         success: false,
         error: "SMS provider error",
@@ -72,7 +85,7 @@ describe("OtpService", () => {
 
     it("should store OTP with correct expiration", async () => {
       vi.mocked(smsService.verifyPhoneFormat).mockReturnValue(true);
-      vi.mocked(otpVerificationRepository.upsert).mockResolvedValue();
+      vi.mocked(otpVerificationRepository.upsert).mockResolvedValue(mockOtpRecord);
       vi.mocked(smsService.sendOtp).mockResolvedValue({ success: true });
 
       await service.sendOtp("tenant-1", "+12025551234", "register");
@@ -92,7 +105,7 @@ describe("OtpService", () => {
       vi.mocked(otpVerificationRepository.isValid).mockResolvedValue({
         valid: true,
       });
-      vi.mocked(otpVerificationRepository.markVerified).mockResolvedValue();
+      vi.mocked(otpVerificationRepository.markVerified).mockResolvedValue(mockOtpRecord);
 
       const result = await service.verifyOtp(
         "tenant-1",
@@ -133,7 +146,7 @@ describe("OtpService", () => {
         valid: false,
         reason: "invalid_code",
       });
-      vi.mocked(otpVerificationRepository.incrementAttempts).mockResolvedValue();
+      vi.mocked(otpVerificationRepository.incrementAttempts).mockResolvedValue(mockOtpRecord);
 
       const result = await service.verifyOtp(
         "tenant-1",
