@@ -59,6 +59,7 @@ export class PaymentRepository {
       where: {
         id,
         tenantId,
+        deleted: false,
       },
     });
   }
@@ -67,9 +68,10 @@ export class PaymentRepository {
    * Get payment by Stripe PaymentIntent ID
    */
   async getByPaymentIntentId(stripePaymentIntentId: string) {
-    return prisma.payment.findUnique({
+    return prisma.payment.findFirst({
       where: {
         stripePaymentIntentId,
+        deleted: false,
       },
       include: {
         order: {
@@ -93,6 +95,7 @@ export class PaymentRepository {
       where: {
         tenantId,
         orderId,
+        deleted: false,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -107,6 +110,7 @@ export class PaymentRepository {
         tenantId,
         orderId,
         status: "succeeded",
+        deleted: false,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -185,8 +189,8 @@ export class PaymentRepository {
    * Check if payment already exists for a PaymentIntent
    */
   async paymentIntentExists(stripePaymentIntentId: string): Promise<boolean> {
-    const payment = await prisma.payment.findUnique({
-      where: { stripePaymentIntentId },
+    const payment = await prisma.payment.findFirst({
+      where: { stripePaymentIntentId, deleted: false },
     });
     return payment !== null;
   }

@@ -50,6 +50,7 @@ export class CateringRepository {
     const where: Prisma.CateringLeadWhereInput = {
       tenantId,
       merchantId,
+      deleted: false,
     };
 
     if (status && status !== "all") {
@@ -102,6 +103,7 @@ export class CateringRepository {
 
     const where: Prisma.CateringLeadWhereInput = {
       tenantId,
+      deleted: false,
       merchant: {
         companyId,
       },
@@ -167,7 +169,7 @@ export class CateringRepository {
    */
   async getById(tenantId: string, leadId: string) {
     return prisma.cateringLead.findFirst({
-      where: { id: leadId, tenantId },
+      where: { id: leadId, tenantId, deleted: false },
       include: {
         merchant: {
           select: {

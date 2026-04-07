@@ -182,6 +182,7 @@ async function main() {
     update: {},
     create: {
       id: "merchant-joes-pizza-main",
+      tenantId: tenant.id,
       companyId: company.id,
       slug: "joes-pizza",
       name: "Joe's Pizza - Main Street",
@@ -198,7 +199,6 @@ async function main() {
       timezone: "America/New_York",
       currency: "USD",
       locale: "en-US",
-      taxRate: 0.08875, // NYC tax rate
       businessHours: {
         mon: { open: "11:00", close: "22:00" },
         tue: { open: "11:00", close: "22:00" },
@@ -242,6 +242,7 @@ async function main() {
     update: {},
     create: {
       id: "merchant-joes-downtown",
+      tenantId: tenant.id,
       companyId: company.id,
       slug: "joes-pizza-downtown",
       name: "Joe's Pizza - Downtown",
@@ -258,7 +259,6 @@ async function main() {
       timezone: "America/New_York",
       currency: "USD",
       locale: "en-US",
-      taxRate: 0.08875,
       businessHours: {
         mon: { open: "11:00", close: "22:00" },
         tue: { open: "11:00", close: "22:00" },
@@ -301,6 +301,7 @@ async function main() {
     update: {},
     create: {
       id: "merchant-joes-midtown",
+      tenantId: tenant.id,
       companyId: company.id,
       slug: "joes-pizza-midtown",
       name: "Joe's Pizza - Midtown",
@@ -317,7 +318,6 @@ async function main() {
       timezone: "America/New_York",
       currency: "USD",
       locale: "en-US",
-      taxRate: 0.08875,
       businessHours: {
         mon: { open: "10:00", close: "23:00" },
         tue: { open: "10:00", close: "23:00" },
@@ -608,6 +608,7 @@ async function main() {
     update: {},
     create: {
       id: "merchant-bellas-sf",
+      tenantId: bellaTenant.id,
       companyId: bellaCompany.id,
       slug: "bellas-bakery-sf",
       name: "Bella's Bakery",
@@ -624,7 +625,6 @@ async function main() {
       timezone: "America/Los_Angeles",
       currency: "USD",
       locale: "en-US",
-      taxRate: 0.0875, // SF tax rate
       businessHours: {
         mon: { open: "07:00", close: "18:00" },
         tue: { open: "07:00", close: "18:00" },
@@ -913,6 +913,7 @@ async function main() {
       update: { sortOrder: link.sortOrder },
       create: {
         id: `mci-${link.menuItemId}`,
+        tenantId: bellaTenant.id,
         categoryId: link.categoryId,
         menuItemId: link.menuItemId,
         sortOrder: link.sortOrder,
@@ -996,6 +997,7 @@ async function main() {
       update: {},
       create: {
         id: `mit-${item.id}-standard`,
+        tenantId: bellaTenant.id,
         menuItemId: item.id,
         taxConfigId: bellaTax.id,
       },
@@ -1415,6 +1417,7 @@ async function main() {
       update: { sortOrder: link.sortOrder },
       create: {
         id: `mci-${link.menuItemId}`,
+        tenantId: tenant.id,
         categoryId: link.categoryId,
         menuItemId: link.menuItemId,
         sortOrder: link.sortOrder,
@@ -1466,6 +1469,7 @@ async function main() {
       update: {},
       create: {
         id: `mit-${item.id}-standard`,
+        tenantId: tenant.id,
         menuItemId: item.id,
         taxConfigId: standardTax.id,
       },
@@ -1517,6 +1521,7 @@ async function main() {
     update: {},
     create: {
       id: "merchant-onboarding-test",
+      tenantId: onboardingTenant.id,
       companyId: onboardingCompany.id,
       slug: "test-restaurant",
       name: "Test Restaurant - Main Location",
@@ -1531,7 +1536,6 @@ async function main() {
       timezone: "America/Los_Angeles",
       currency: "USD",
       locale: "en-US",
-      taxRate: 0.0875,
     },
   });
 

@@ -27,9 +27,10 @@ export class StripeCustomerRepository {
    * Get Stripe customer by loyalty member ID
    */
   async getByLoyaltyMemberId(loyaltyMemberId: string) {
-    return prisma.stripeCustomer.findUnique({
+    return prisma.stripeCustomer.findFirst({
       where: {
         loyaltyMemberId,
+        deleted: false,
       },
     });
   }
@@ -38,9 +39,10 @@ export class StripeCustomerRepository {
    * Get Stripe customer by Stripe customer ID
    */
   async getByStripeCustomerId(stripeCustomerId: string) {
-    return prisma.stripeCustomer.findUnique({
+    return prisma.stripeCustomer.findFirst({
       where: {
         stripeCustomerId,
+        deleted: false,
       },
     });
   }
@@ -49,9 +51,10 @@ export class StripeCustomerRepository {
    * Get Stripe customer with loyalty member details
    */
   async getWithMemberByLoyaltyMemberId(loyaltyMemberId: string) {
-    return prisma.stripeCustomer.findUnique({
+    return prisma.stripeCustomer.findFirst({
       where: {
         loyaltyMemberId,
+        deleted: false,
       },
       include: {
         loyaltyMember: {
@@ -71,8 +74,9 @@ export class StripeCustomerRepository {
    * Delete Stripe customer mapping
    */
   async delete(id: string) {
-    return prisma.stripeCustomer.delete({
+    return prisma.stripeCustomer.update({
       where: { id },
+      data: { deleted: true, updatedAt: new Date() },
     });
   }
 
@@ -80,8 +84,9 @@ export class StripeCustomerRepository {
    * Delete Stripe customer mapping by loyalty member ID
    */
   async deleteByLoyaltyMemberId(loyaltyMemberId: string) {
-    return prisma.stripeCustomer.delete({
+    return prisma.stripeCustomer.update({
       where: { loyaltyMemberId },
+      data: { deleted: true, updatedAt: new Date() },
     });
   }
 }

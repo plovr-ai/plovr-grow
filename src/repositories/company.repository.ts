@@ -8,7 +8,7 @@ export class CompanyRepository {
    */
   async getById(companyId: string) {
     return prisma.company.findUnique({
-      where: { id: companyId },
+      where: { id: companyId, deleted: false },
     });
   }
 
@@ -17,7 +17,7 @@ export class CompanyRepository {
    */
   async getByTenantId(tenantId: string) {
     return prisma.company.findUnique({
-      where: { tenantId },
+      where: { tenantId, deleted: false },
     });
   }
 
@@ -26,7 +26,7 @@ export class CompanyRepository {
    */
   async getBySlug(slug: string) {
     return prisma.company.findUnique({
-      where: { slug },
+      where: { slug, deleted: false },
     });
   }
 
@@ -35,11 +35,11 @@ export class CompanyRepository {
    */
   async getBySlugWithMerchants(slug: string) {
     return prisma.company.findUnique({
-      where: { slug },
+      where: { slug, deleted: false },
       include: {
         tenant: true,
         merchants: {
-          where: { status: "active" },
+          where: { status: "active", deleted: false },
           orderBy: { name: "asc" },
         },
       },
@@ -51,9 +51,10 @@ export class CompanyRepository {
    */
   async getWithMerchants(companyId: string) {
     return prisma.company.findUnique({
-      where: { id: companyId },
+      where: { id: companyId, deleted: false },
       include: {
         merchants: {
+          where: { deleted: false },
           orderBy: { name: "asc" },
         },
       },
@@ -65,7 +66,7 @@ export class CompanyRepository {
    */
   async getWithTenant(companyId: string) {
     return prisma.company.findUnique({
-      where: { id: companyId },
+      where: { id: companyId, deleted: false },
       include: {
         tenant: true,
       },
@@ -99,11 +100,12 @@ export class CompanyRepository {
   }
 
   /**
-   * Delete company (cascades to merchants)
+   * Soft delete company
    */
   async delete(companyId: string) {
-    return prisma.company.delete({
+    return prisma.company.update({
       where: { id: companyId },
+      data: { deleted: true, updatedAt: new Date() },
     });
   }
 
@@ -112,11 +114,11 @@ export class CompanyRepository {
    */
   async getBySlugWithFullMerchants(slug: string) {
     return prisma.company.findUnique({
-      where: { slug },
+      where: { slug, deleted: false },
       include: {
         tenant: true,
         merchants: {
-          where: { status: "active" },
+          where: { status: "active", deleted: false },
           orderBy: { name: "asc" },
         },
       },

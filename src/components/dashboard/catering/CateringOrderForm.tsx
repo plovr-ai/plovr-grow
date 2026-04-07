@@ -28,7 +28,6 @@ interface MenuItem {
 interface Merchant {
   id: string;
   name: string;
-  taxRate: number;
   currency: string;
   locale: string;
 }
@@ -83,11 +82,11 @@ export function CateringOrderForm({
 
   // Get current merchant
   const currentMerchant = merchants.find((m) => m.id === merchantId) || merchants[0];
-  const taxRate = currentMerchant?.taxRate || 0;
 
   // Calculate totals
+  // TODO: Use tax-config system for proper tax calculation
   const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
-  const taxAmount = subtotal * taxRate;
+  const taxAmount = 0;
   const totalAmount = subtotal + taxAmount;
 
   const handleAddItem = () => {
@@ -445,7 +444,7 @@ export function CateringOrderForm({
                   <span>{priceFormatter(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Tax ({(taxRate * 100).toFixed(2)}%)</span>
+                  <span className="text-gray-600">Tax</span>
                   <span>{priceFormatter(taxAmount)}</span>
                 </div>
                 <div className="flex justify-between font-semibold text-lg border-t pt-2">

@@ -32,8 +32,8 @@ export class SubscriptionRepository {
    * Get subscription by tenant ID
    */
   async getByTenantId(tenantId: string) {
-    return prisma.subscription.findUnique({
-      where: { tenantId },
+    return prisma.subscription.findFirst({
+      where: { tenantId, deleted: false },
     });
   }
 
@@ -41,8 +41,8 @@ export class SubscriptionRepository {
    * Get subscription by Stripe customer ID
    */
   async getByStripeCustomerId(stripeCustomerId: string) {
-    return prisma.subscription.findUnique({
-      where: { stripeCustomerId },
+    return prisma.subscription.findFirst({
+      where: { stripeCustomerId, deleted: false },
     });
   }
 
@@ -50,8 +50,8 @@ export class SubscriptionRepository {
    * Get subscription by Stripe subscription ID
    */
   async getByStripeSubscriptionId(stripeSubscriptionId: string) {
-    return prisma.subscription.findUnique({
-      where: { stripeSubscriptionId },
+    return prisma.subscription.findFirst({
+      where: { stripeSubscriptionId, deleted: false },
     });
   }
 
@@ -59,8 +59,8 @@ export class SubscriptionRepository {
    * Get subscription with tenant details
    */
   async getWithTenant(tenantId: string) {
-    return prisma.subscription.findUnique({
-      where: { tenantId },
+    return prisma.subscription.findFirst({
+      where: { tenantId, deleted: false },
       include: {
         tenant: {
           select: {
@@ -145,8 +145,9 @@ export class SubscriptionRepository {
    * Delete subscription by ID
    */
   async delete(id: string) {
-    return prisma.subscription.delete({
+    return prisma.subscription.update({
       where: { id },
+      data: { deleted: true, updatedAt: new Date() },
     });
   }
 
@@ -154,8 +155,9 @@ export class SubscriptionRepository {
    * Delete subscription by tenant ID
    */
   async deleteByTenantId(tenantId: string) {
-    return prisma.subscription.delete({
+    return prisma.subscription.update({
       where: { tenantId },
+      data: { deleted: true, updatedAt: new Date() },
     });
   }
 
@@ -181,7 +183,7 @@ export class SubscriptionRepository {
    */
   async exists(tenantId: string): Promise<boolean> {
     const count = await prisma.subscription.count({
-      where: { tenantId },
+      where: { tenantId, deleted: false },
     });
     return count > 0;
   }

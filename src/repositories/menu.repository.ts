@@ -19,14 +19,16 @@ export class MenuRepository {
       where: {
         tenantId,
         menuId,
+        deleted: false,
       },
       include: {
         categoryItems: {
           where: {
+            deleted: false,
             menuItem: {
               is: showArchived
-                ? { status: "archived" }
-                : { status: { not: "archived" } },
+                ? { status: "archived", deleted: false }
+                : { status: { not: "archived" }, deleted: false },
             },
           },
           include: {
@@ -53,13 +55,16 @@ export class MenuRepository {
         tenantId,
         menuId,
         status: "active",
+        deleted: false,
       },
       include: {
         categoryItems: {
           where: {
+            deleted: false,
             menuItem: {
               is: {
                 status: { in: ["active", "out_of_stock"] },
+                deleted: false,
               },
             },
           },
@@ -89,9 +94,13 @@ export class MenuRepository {
       where: {
         tenantId,
         companyId,
+        deleted: false,
       },
       include: {
         categoryItems: {
+          where: {
+            deleted: false,
+          },
           include: {
             menuItem: true,
           },
@@ -117,13 +126,16 @@ export class MenuRepository {
         tenantId,
         companyId,
         status: "active",
+        deleted: false,
       },
       include: {
         categoryItems: {
           where: {
+            deleted: false,
             menuItem: {
               is: {
                 status: "active",
+                deleted: false,
               },
             },
           },
@@ -149,13 +161,16 @@ export class MenuRepository {
       where: {
         id: categoryId,
         tenantId,
+        deleted: false,
       },
       include: {
         categoryItems: {
           where: {
+            deleted: false,
             menuItem: {
               is: {
                 status: "active",
+                deleted: false,
               },
             },
           },
@@ -178,9 +193,13 @@ export class MenuRepository {
       where: {
         id: itemId,
         tenantId,
+        deleted: false,
       },
       include: {
         categories: {
+          where: {
+            deleted: false,
+          },
           include: {
             category: true,
           },
@@ -203,6 +222,7 @@ export class MenuRepository {
         tenantId,
         companyId,
         status: "active",
+        deleted: false,
       },
     });
   }
@@ -283,7 +303,7 @@ export class MenuRepository {
   }
 
   /**
-   * Delete a menu item (soft delete by setting status)
+   * Delete a menu item (soft delete)
    */
   async deleteItem(tenantId: string, itemId: string) {
     return prisma.menuItem.updateMany({
@@ -293,12 +313,14 @@ export class MenuRepository {
       },
       data: {
         status: "archived",
+        deleted: true,
+        updatedAt: new Date(),
       },
     });
   }
 
   /**
-   * Delete a category (soft delete by setting status)
+   * Delete a category (soft delete)
    */
   async deleteCategory(tenantId: string, categoryId: string) {
     return prisma.menuCategory.updateMany({
@@ -308,6 +330,8 @@ export class MenuRepository {
       },
       data: {
         status: "inactive",
+        deleted: true,
+        updatedAt: new Date(),
       },
     });
   }
@@ -364,9 +388,13 @@ export class MenuRepository {
         tenantId,
         companyId,
         status: { in: ["active", "out_of_stock"] },
+        deleted: false,
       },
       include: {
         categories: {
+          where: {
+            deleted: false,
+          },
           include: {
             category: {
               select: { id: true, name: true },

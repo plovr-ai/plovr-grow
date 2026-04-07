@@ -59,6 +59,7 @@ export class InvoiceRepository {
       where: {
         id: invoiceId,
         tenantId,
+        deleted: false,
       },
       include: {
         cateringOrder: {
@@ -92,6 +93,7 @@ export class InvoiceRepository {
       where: {
         cateringOrderId,
         tenantId,
+        deleted: false,
       },
       include: {
         cateringOrder: {
@@ -121,9 +123,10 @@ export class InvoiceRepository {
    * Get invoice by invoice number
    */
   async getByInvoiceNumber(invoiceNumber: string) {
-    return prisma.invoice.findUnique({
+    return prisma.invoice.findFirst({
       where: {
         invoiceNumber,
+        deleted: false,
       },
       include: {
         cateringOrder: {
@@ -164,7 +167,7 @@ export class InvoiceRepository {
   ) {
     // First verify the invoice belongs to the tenant
     const invoice = await prisma.invoice.findFirst({
-      where: { id: invoiceId, tenantId },
+      where: { id: invoiceId, tenantId, deleted: false },
       select: { id: true },
     });
 
@@ -187,7 +190,7 @@ export class InvoiceRepository {
   async updatePaymentLink(tenantId: string, invoiceId: string, paymentLink: string) {
     // First verify the invoice belongs to the tenant
     const invoice = await prisma.invoice.findFirst({
-      where: { id: invoiceId, tenantId },
+      where: { id: invoiceId, tenantId, deleted: false },
       select: { id: true },
     });
 
@@ -207,7 +210,7 @@ export class InvoiceRepository {
   async markAsSent(tenantId: string, invoiceId: string) {
     // First verify the invoice belongs to the tenant
     const invoice = await prisma.invoice.findFirst({
-      where: { id: invoiceId, tenantId },
+      where: { id: invoiceId, tenantId, deleted: false },
       select: { id: true },
     });
 
@@ -227,7 +230,7 @@ export class InvoiceRepository {
   async markAsPaid(tenantId: string, invoiceId: string) {
     // First verify the invoice belongs to the tenant
     const invoice = await prisma.invoice.findFirst({
-      where: { id: invoiceId, tenantId },
+      where: { id: invoiceId, tenantId, deleted: false },
       select: { id: true, cateringOrderId: true },
     });
 
@@ -263,7 +266,7 @@ export class InvoiceRepository {
    */
   async getNextInvoiceSequence(tenantId: string): Promise<number> {
     const count = await prisma.invoice.count({
-      where: { tenantId },
+      where: { tenantId, deleted: false },
     });
 
     return count + 1;

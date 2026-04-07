@@ -14,6 +14,7 @@ export class TaxConfigRepository {
         tenantId,
         companyId,
         status: "active",
+        deleted: false,
       },
       orderBy: {
         createdAt: "asc",
@@ -29,6 +30,7 @@ export class TaxConfigRepository {
       where: {
         id,
         tenantId,
+        deleted: false,
       },
     });
   }
@@ -43,6 +45,7 @@ export class TaxConfigRepository {
         id: { in: ids },
         tenantId,
         status: "active",
+        deleted: false,
       },
     });
   }
@@ -56,6 +59,7 @@ export class TaxConfigRepository {
     return prisma.merchantTaxRate.findMany({
       where: {
         merchantId,
+        deleted: false,
       },
       include: {
         taxConfig: true,
@@ -70,6 +74,7 @@ export class TaxConfigRepository {
     const rates = await prisma.merchantTaxRate.findMany({
       where: {
         merchantId,
+        deleted: false,
       },
       select: {
         taxConfigId: true,
@@ -97,6 +102,7 @@ export class TaxConfigRepository {
       },
       update: {
         rate,
+        deleted: false,
       },
       create: {
         id: generateEntityId(),
@@ -108,15 +114,18 @@ export class TaxConfigRepository {
   }
 
   /**
-   * Delete tax rate for a merchant
+   * Delete tax rate for a merchant (soft delete)
    */
   async deleteMerchantTaxRate(merchantId: string, taxConfigId: string) {
-    return prisma.merchantTaxRate.delete({
+    return prisma.merchantTaxRate.updateMany({
       where: {
-        merchantId_taxConfigId: {
-          merchantId,
-          taxConfigId,
-        },
+        merchantId,
+        taxConfigId,
+        deleted: false,
+      },
+      data: {
+        deleted: true,
+        updatedAt: new Date(),
       },
     });
   }
@@ -128,6 +137,7 @@ export class TaxConfigRepository {
     return prisma.merchantTaxRate.findMany({
       where: {
         taxConfigId,
+        deleted: false,
       },
     });
   }
@@ -141,6 +151,7 @@ export class TaxConfigRepository {
     const relations = await prisma.menuItemTax.findMany({
       where: {
         menuItemId: itemId,
+        deleted: false,
       },
       select: {
         taxConfigId: true,
@@ -159,6 +170,7 @@ export class TaxConfigRepository {
     const relations = await prisma.menuItemTax.findMany({
       where: {
         menuItemId: { in: itemIds },
+        deleted: false,
       },
       select: {
         menuItemId: true,
@@ -181,12 +193,18 @@ export class TaxConfigRepository {
 
   /**
    * Set tax configs for a menu item (replace all)
+   * Soft deletes existing relations, then creates new ones
    */
-  async setMenuItemTaxConfigs(itemId: string, taxConfigIds: string[]) {
-    // Delete existing relations
-    await prisma.menuItemTax.deleteMany({
+  async setMenuItemTaxConfigs(tenantId: string, itemId: string, taxConfigIds: string[]) {
+    // Soft delete existing relations
+    await prisma.menuItemTax.updateMany({
       where: {
         menuItemId: itemId,
+        deleted: false,
+      },
+      data: {
+        deleted: true,
+        updatedAt: new Date(),
       },
     });
 
@@ -195,6 +213,7 @@ export class TaxConfigRepository {
       await prisma.menuItemTax.createMany({
         data: taxConfigIds.map((taxConfigId) => ({
           id: generateEntityId(),
+          tenantId,
           menuItemId: itemId,
           taxConfigId,
         })),
@@ -256,6 +275,8 @@ export class TaxConfigRepository {
       },
       data: {
         status: "inactive",
+        deleted: true,
+        updatedAt: new Date(),
       },
     });
   }

@@ -11,6 +11,7 @@ export class LoyaltyMemberRepository {
       where: {
         id,
         tenantId,
+        deleted: false,
       },
     });
   }
@@ -24,6 +25,7 @@ export class LoyaltyMemberRepository {
         tenantId,
         companyId,
         phone,
+        deleted: false,
       },
     });
   }
@@ -151,6 +153,7 @@ export class LoyaltyMemberRepository {
     const where: Prisma.LoyaltyMemberWhereInput = {
       tenantId,
       companyId,
+      deleted: false,
     };
 
     if (search) {
@@ -189,6 +192,7 @@ export class LoyaltyMemberRepository {
       where: {
         tenantId,
         companyId,
+        deleted: false,
       },
     });
   }
