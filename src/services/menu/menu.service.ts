@@ -373,7 +373,7 @@ export class MenuService {
     // Link item to categories via junction table
     for (const categoryId of input.categoryIds) {
       const sortOrder = await menuCategoryItemRepository.getNextSortOrder(categoryId);
-      await menuCategoryItemRepository.linkItemToCategory(categoryId, item.id, sortOrder);
+      await menuCategoryItemRepository.linkItemToCategory(tenantId, categoryId, item.id, sortOrder);
     }
 
     return item;
@@ -405,7 +405,7 @@ export class MenuService {
 
     // Update category associations if provided
     if (input.categoryIds !== undefined) {
-      await menuCategoryItemRepository.setItemCategories(itemId, input.categoryIds);
+      await menuCategoryItemRepository.setItemCategories(tenantId, itemId, input.categoryIds);
     }
   }
 
@@ -549,9 +549,9 @@ export class MenuService {
   /**
    * Set tax configs for a menu item
    */
-  async setMenuItemTaxConfigs(itemId: string, taxConfigIds: string[]) {
+  async setMenuItemTaxConfigs(tenantId: string, itemId: string, taxConfigIds: string[]) {
     const { taxConfigRepository } = await getRepositories();
-    return taxConfigRepository.setMenuItemTaxConfigs(itemId, taxConfigIds);
+    return taxConfigRepository.setMenuItemTaxConfigs(tenantId, itemId, taxConfigIds);
   }
 
   /**
@@ -564,7 +564,7 @@ export class MenuService {
   ) {
     const { menuCategoryItemRepository } = await getRepositories();
     const sortOrder = await menuCategoryItemRepository.getNextSortOrder(categoryId);
-    return menuCategoryItemRepository.linkItemToCategory(categoryId, itemId, sortOrder);
+    return menuCategoryItemRepository.linkItemToCategory(tenantId, categoryId, itemId, sortOrder);
   }
 
   /**

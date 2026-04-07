@@ -36,6 +36,7 @@ export class OrderRepository {
       where: {
         id: orderId,
         tenantId,
+        deleted: false,
       },
       include: {
         merchant: {
@@ -89,6 +90,7 @@ export class OrderRepository {
     const where: Prisma.OrderWhereInput = {
       tenantId,
       companyId,
+      deleted: false,
       ...(merchantId && { merchantId }),
       ...(status && { status }),
       ...(fulfillmentStatus && { fulfillmentStatus }),
@@ -150,7 +152,7 @@ export class OrderRepository {
   ) {
     // First verify the order belongs to the tenant
     const order = await prisma.order.findFirst({
-      where: { id: orderId, tenantId },
+      where: { id: orderId, tenantId, deleted: false },
       select: { id: true },
     });
 
@@ -182,6 +184,7 @@ export class OrderRepository {
     const where: Prisma.OrderWhereInput = {
       tenantId,
       loyaltyMemberId,
+      deleted: false,
     };
 
     const [items, total] = await Promise.all([

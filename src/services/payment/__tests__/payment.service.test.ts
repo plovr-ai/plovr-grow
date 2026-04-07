@@ -75,6 +75,7 @@ describe("PaymentService", () => {
     companyId: mockCompanyId,
     loyaltyMemberId: mockLoyaltyMemberId,
     stripeCustomerId: "cus_123abc",
+    deleted: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -163,6 +164,7 @@ describe("PaymentService", () => {
         companyId: mockCompanyId,
         loyaltyMemberId: mockLoyaltyMemberId,
         stripeCustomerId: "cus_new456",
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -274,6 +276,7 @@ describe("PaymentService", () => {
       failureCode: null,
       failureMessage: null,
       paidAt: null,
+      deleted: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -363,6 +366,7 @@ describe("PaymentService", () => {
       failureCode: null,
       failureMessage: null,
       paidAt: null,
+      deleted: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -417,6 +421,7 @@ describe("PaymentService", () => {
         failureCode: null,
         failureMessage: null,
         paidAt: null,
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

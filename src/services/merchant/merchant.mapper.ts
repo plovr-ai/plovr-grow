@@ -53,7 +53,6 @@ export function toMerchantWithCompany(
     timezone: data.timezone,
     currency: data.currency,
     locale: data.locale,
-    taxRate: Number(data.taxRate), // Decimal → number
     status: data.status as MerchantStatus,
     settings: (data.settings as unknown) as MerchantSettings | undefined,
     company: {
@@ -119,7 +118,6 @@ function toMerchantFromCompany(
     timezone: merchant.timezone,
     currency: merchant.currency,
     locale: merchant.locale,
-    taxRate: Number(merchant.taxRate),
     status: merchant.status as MerchantStatus,
     settings: (merchant.settings as unknown) as MerchantSettings | undefined,
     company: {

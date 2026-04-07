@@ -10,6 +10,7 @@ export class FeaturedItemRepository {
       where: {
         tenantId,
         companyId,
+        deleted: false,
       },
       include: {
         menuItem: true,
@@ -22,7 +23,7 @@ export class FeaturedItemRepository {
 
   /**
    * Set featured items for a company (replace all)
-   * Uses a transaction to delete existing and insert new items
+   * Soft deletes existing items, then inserts new ones
    */
   async setFeaturedItems(
     tenantId: string,
@@ -30,11 +31,16 @@ export class FeaturedItemRepository {
     menuItemIds: string[]
   ) {
     return prisma.$transaction(async (tx) => {
-      // Delete all existing featured items for this company
-      await tx.featuredItem.deleteMany({
+      // Soft delete all existing featured items for this company
+      await tx.featuredItem.updateMany({
         where: {
           tenantId,
           companyId,
+          deleted: false,
+        },
+        data: {
+          deleted: true,
+          updatedAt: new Date(),
         },
       });
 
@@ -66,6 +72,7 @@ export class FeaturedItemRepository {
       where: {
         tenantId,
         companyId,
+        deleted: false,
       },
       _max: {
         sortOrder: true,
@@ -86,18 +93,23 @@ export class FeaturedItemRepository {
   }
 
   /**
-   * Remove a single featured item
+   * Remove a single featured item (soft delete)
    */
   async removeFeaturedItem(
     tenantId: string,
     companyId: string,
     menuItemId: string
   ) {
-    return prisma.featuredItem.deleteMany({
+    return prisma.featuredItem.updateMany({
       where: {
         tenantId,
         companyId,
         menuItemId,
+        deleted: false,
+      },
+      data: {
+        deleted: true,
+        updatedAt: new Date(),
       },
     });
   }

@@ -127,20 +127,6 @@ describe.skip("MerchantService (integration)", () => {
     });
   });
 
-  describe("getTaxRate", () => {
-    it("should return tax rate for valid merchant", async () => {
-      const taxRate = await merchantService.getTaxRate("merchant-joes-downtown");
-
-      expect(taxRate).toBe(0.08875);
-    });
-
-    it("should return 0 for non-existent merchant", async () => {
-      const taxRate = await merchantService.getTaxRate("non-existent-id");
-
-      expect(taxRate).toBe(0);
-    });
-  });
-
   describe("isOpen", () => {
     it("should return true for active merchant", async () => {
       const isOpen = await merchantService.isOpen("merchant-joes-downtown");

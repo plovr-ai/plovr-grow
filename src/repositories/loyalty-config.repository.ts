@@ -10,6 +10,7 @@ export class LoyaltyConfigRepository {
       where: {
         tenantId,
         companyId,
+        deleted: false,
       },
     });
   }
@@ -22,6 +23,7 @@ export class LoyaltyConfigRepository {
       where: {
         id,
         tenantId,
+        deleted: false,
       },
     });
   }

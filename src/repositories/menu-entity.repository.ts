@@ -14,6 +14,7 @@ export class MenuEntityRepository {
         tenantId,
         companyId,
         status: "active",
+        deleted: false,
       },
       orderBy: {
         sortOrder: "asc",
@@ -29,6 +30,7 @@ export class MenuEntityRepository {
       where: {
         tenantId,
         companyId,
+        deleted: false,
       },
       orderBy: {
         sortOrder: "asc",
@@ -44,6 +46,7 @@ export class MenuEntityRepository {
       where: {
         id: menuId,
         tenantId,
+        deleted: false,
       },
     });
   }
@@ -56,9 +59,13 @@ export class MenuEntityRepository {
       where: {
         id: menuId,
         tenantId,
+        deleted: false,
       },
       include: {
         categories: {
+          where: {
+            deleted: false,
+          },
           orderBy: {
             sortOrder: "asc",
           },
@@ -81,7 +88,7 @@ export class MenuEntityRepository {
     let sortOrder = data.sortOrder;
     if (sortOrder === undefined) {
       const maxResult = await prisma.menu.aggregate({
-        where: { tenantId, companyId },
+        where: { tenantId, companyId, deleted: false },
         _max: { sortOrder: true },
       });
       sortOrder = (maxResult._max.sortOrder ?? -1) + 1;
@@ -117,7 +124,7 @@ export class MenuEntityRepository {
   }
 
   /**
-   * Delete a menu (soft delete by setting status to inactive)
+   * Delete a menu (soft delete)
    */
   async deleteMenu(tenantId: string, menuId: string) {
     return prisma.menu.updateMany({
@@ -127,18 +134,24 @@ export class MenuEntityRepository {
       },
       data: {
         status: "inactive",
+        deleted: true,
+        updatedAt: new Date(),
       },
     });
   }
 
   /**
-   * Hard delete a menu (use with caution)
+   * Hard delete a menu - now uses soft delete (sets deleted flag)
    */
   async hardDeleteMenu(tenantId: string, menuId: string) {
-    return prisma.menu.deleteMany({
+    return prisma.menu.updateMany({
       where: {
         id: menuId,
         tenantId,
+      },
+      data: {
+        deleted: true,
+        updatedAt: new Date(),
       },
     });
   }
@@ -173,6 +186,7 @@ export class MenuEntityRepository {
         tenantId,
         companyId,
         status: "active",
+        deleted: false,
       },
     });
   }

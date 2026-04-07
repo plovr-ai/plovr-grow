@@ -6,6 +6,7 @@ export class MenuCategoryItemRepository {
    * Link an existing menu item to a category
    */
   async linkItemToCategory(
+    tenantId: string,
     categoryId: string,
     menuItemId: string,
     sortOrder: number = 0
@@ -13,6 +14,7 @@ export class MenuCategoryItemRepository {
     return prisma.menuCategoryItem.create({
       data: {
         id: generateEntityId(),
+        tenantId,
         categoryId,
         menuItemId,
         sortOrder,
@@ -21,13 +23,18 @@ export class MenuCategoryItemRepository {
   }
 
   /**
-   * Unlink a menu item from a category (remove association only)
+   * Unlink a menu item from a category (soft delete)
    */
   async unlinkItemFromCategory(categoryId: string, menuItemId: string) {
-    return prisma.menuCategoryItem.deleteMany({
+    return prisma.menuCategoryItem.updateMany({
       where: {
         categoryId,
         menuItemId,
+        deleted: false,
+      },
+      data: {
+        deleted: true,
+        updatedAt: new Date(),
       },
     });
   }
@@ -37,7 +44,7 @@ export class MenuCategoryItemRepository {
    */
   async getNextSortOrder(categoryId: string): Promise<number> {
     const maxItem = await prisma.menuCategoryItem.findFirst({
-      where: { categoryId },
+      where: { categoryId, deleted: false },
       orderBy: { sortOrder: "desc" },
       select: { sortOrder: true },
     });
@@ -49,7 +56,7 @@ export class MenuCategoryItemRepository {
    */
   async getItemCategoryIds(menuItemId: string): Promise<string[]> {
     const links = await prisma.menuCategoryItem.findMany({
-      where: { menuItemId },
+      where: { menuItemId, deleted: false },
       select: { categoryId: true },
     });
     return links.map((l) => l.categoryId);
@@ -62,7 +69,7 @@ export class MenuCategoryItemRepository {
     menuItemIds: string[]
   ): Promise<Map<string, string[]>> {
     const links = await prisma.menuCategoryItem.findMany({
-      where: { menuItemId: { in: menuItemIds } },
+      where: { menuItemId: { in: menuItemIds }, deleted: false },
       select: { menuItemId: true, categoryId: true },
     });
 
@@ -77,21 +84,25 @@ export class MenuCategoryItemRepository {
 
   /**
    * Set all categories for an item (replaces existing associations)
+   * Soft deletes existing associations, then creates new ones
    */
   async setItemCategories(
+    tenantId: string,
     menuItemId: string,
     categoryIds: string[]
   ): Promise<void> {
     await prisma.$transaction(async (tx) => {
-      // Remove existing associations
-      await tx.menuCategoryItem.deleteMany({
-        where: { menuItemId },
+      // Soft delete existing associations
+      await tx.menuCategoryItem.updateMany({
+        where: { menuItemId, deleted: false },
+        data: { deleted: true, updatedAt: new Date() },
       });
 
       // Create new associations
       if (categoryIds.length > 0) {
         const creates = categoryIds.map((categoryId, index) => ({
           id: generateEntityId(),
+          tenantId,
           categoryId,
           menuItemId,
           sortOrder: index,
@@ -130,7 +141,7 @@ export class MenuCategoryItemRepository {
    */
   async getCategoryItems(categoryId: string) {
     return prisma.menuCategoryItem.findMany({
-      where: { categoryId },
+      where: { categoryId, deleted: false },
       include: {
         menuItem: true,
       },
@@ -148,7 +159,7 @@ export class MenuCategoryItemRepository {
   ) {
     // Get item IDs already in this category
     const existingLinks = await prisma.menuCategoryItem.findMany({
-      where: { categoryId },
+      where: { categoryId, deleted: false },
       select: { menuItemId: true },
     });
     const existingItemIds = existingLinks.map((l) => l.menuItemId);
@@ -159,10 +170,14 @@ export class MenuCategoryItemRepository {
         tenantId,
         companyId,
         status: "active",
+        deleted: false,
         id: { notIn: existingItemIds },
       },
       include: {
         categories: {
+          where: {
+            deleted: false,
+          },
           include: {
             category: {
               select: { id: true, name: true },
@@ -181,12 +196,11 @@ export class MenuCategoryItemRepository {
     categoryId: string,
     menuItemId: string
   ): Promise<boolean> {
-    const link = await prisma.menuCategoryItem.findUnique({
+    const link = await prisma.menuCategoryItem.findFirst({
       where: {
-        categoryId_menuItemId: {
-          categoryId,
-          menuItemId,
-        },
+        categoryId,
+        menuItemId,
+        deleted: false,
       },
     });
     return link !== null;
@@ -197,7 +211,7 @@ export class MenuCategoryItemRepository {
    */
   async countItemCategories(menuItemId: string): Promise<number> {
     return prisma.menuCategoryItem.count({
-      where: { menuItemId },
+      where: { menuItemId, deleted: false },
     });
   }
 }

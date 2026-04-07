@@ -44,13 +44,12 @@ export class OtpVerificationRepository {
    * Get OTP verification record
    */
   async get(tenantId: string, phone: string, purpose: OtpPurpose) {
-    return prisma.otpVerification.findUnique({
+    return prisma.otpVerification.findFirst({
       where: {
-        tenantId_phone_purpose: {
-          tenantId,
-          phone,
-          purpose,
-        },
+        tenantId,
+        phone,
+        purpose,
+        deleted: false,
       },
     });
   }
@@ -95,7 +94,7 @@ export class OtpVerificationRepository {
    * Delete OTP verification record
    */
   async delete(tenantId: string, phone: string, purpose: OtpPurpose) {
-    return prisma.otpVerification.delete({
+    return prisma.otpVerification.update({
       where: {
         tenantId_phone_purpose: {
           tenantId,
@@ -103,6 +102,7 @@ export class OtpVerificationRepository {
           purpose,
         },
       },
+      data: { deleted: true, updatedAt: new Date() },
     });
   }
 
@@ -110,12 +110,14 @@ export class OtpVerificationRepository {
    * Delete expired OTP records (for cleanup job)
    */
   async deleteExpired() {
-    return prisma.otpVerification.deleteMany({
+    return prisma.otpVerification.updateMany({
       where: {
         expiresAt: {
           lt: new Date(),
         },
+        deleted: false,
       },
+      data: { deleted: true, updatedAt: new Date() },
     });
   }
 

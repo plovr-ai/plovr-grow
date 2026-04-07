@@ -12,6 +12,7 @@ model Tenant {
   name                    String
   subscriptionPlan        String                 @default("free") @map("subscription_plan")
   subscriptionStatus      String                 @default("active") @map("subscription_status")
+  deleted                 Boolean                @default(false)
   createdAt               DateTime               @default(now()) @map("created_at")
   updatedAt               DateTime               @updatedAt @map("updated_at")
   company                 Company?
@@ -38,6 +39,10 @@ model Tenant {
   payments                Payment[]
   stripeCustomers         StripeCustomer[]
   subscription            Subscription?
+  merchants               Merchant[]
+  passwordResetTokens     PasswordResetToken[]
+  menuCategoryItems       MenuCategoryItem[]
+  menuItemTaxes           MenuItemTax[]
 
   @@map("tenants")
 }
@@ -61,9 +66,10 @@ model Company {
   onboardingStatus      String          @default("not_started") @map("onboarding_status")
   onboardingData        Json?           @map("onboarding_data")
   onboardingCompletedAt DateTime?       @map("onboarding_completed_at")
+  deleted               Boolean         @default(false)
   createdAt             DateTime        @default(now()) @map("created_at")
   updatedAt             DateTime        @updatedAt @map("updated_at")
-  tenant                Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant                Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   menus                 Menu[]
   menuCategories        MenuCategory[]
   menuItems             MenuItem[]
@@ -91,10 +97,11 @@ model Menu {
   description String?        @db.Text
   sortOrder   Int            @default(0) @map("sort_order")
   status      String         @default("active")
+  deleted     Boolean        @default(false)
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
-  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company     Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  company     Company        @relation(fields: [companyId], references: [id], onDelete: Restrict)
   categories  MenuCategory[]
 
   @@index([tenantId])
@@ -113,11 +120,12 @@ model MenuCategory {
   imageUrl      String?            @map("image_url")
   sortOrder     Int                @default(0) @map("sort_order")
   status        String             @default("active")
+  deleted       Boolean            @default(false)
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
-  company       Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  menu          Menu               @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  company       Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  menu          Menu               @relation(fields: [menuId], references: [id], onDelete: Restrict)
   categoryItems MenuCategoryItem[]
 
   @@index([companyId])
@@ -139,10 +147,11 @@ model MenuItem {
   modifiers     Json?
   nutrition     Json?
   tags          Json?
+  deleted       Boolean            @default(false)
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
-  company       Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company       Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   menuItemTaxes MenuItemTax[]
   categories    MenuCategoryItem[]
   featuredItems FeaturedItem[]
@@ -155,14 +164,19 @@ model MenuItem {
 
 model MenuCategoryItem {
   id         String       @id
+  tenantId   String       @map("tenant_id")
   categoryId String       @map("category_id")
   menuItemId String       @map("menu_item_id")
   sortOrder  Int          @default(0) @map("sort_order")
+  deleted    Boolean      @default(false)
   createdAt  DateTime     @default(now()) @map("created_at")
-  category   MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  menuItem   MenuItem     @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  category   MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  menuItem   MenuItem     @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
 
   @@unique([categoryId, menuItemId])
+  @@index([tenantId])
   @@index([categoryId])
   @@index([menuItemId])
   @@map("menu_category_items")
@@ -170,6 +184,7 @@ model MenuCategoryItem {
 
 model Merchant {
   id                String             @id
+  tenantId          String             @map("tenant_id")
   companyId         String             @map("company_id")
   slug              String             @unique
   name              String
@@ -187,12 +202,13 @@ model Merchant {
   timezone          String             @default("America/New_York")
   currency          String             @default("USD")
   locale            String             @default("en-US")
-  taxRate           Decimal            @default(0.0000) @map("tax_rate") @db.Decimal(5, 4)
   status            String             @default("active")
   settings          Json?
+  deleted           Boolean            @default(false)
   createdAt         DateTime           @default(now()) @map("created_at")
   updatedAt         DateTime           @updatedAt @map("updated_at")
-  company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  company           Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
   orders            Order[]
   merchantTaxRates  MerchantTaxRate[]
   pointTransactions PointTransaction[]
@@ -201,6 +217,7 @@ model Merchant {
   orderSequences         OrderSequence[]
   cateringOrderSequences CateringOrderSequence[]
 
+  @@index([tenantId])
   @@index([companyId])
   @@index([slug])
   @@index([status])
@@ -241,12 +258,13 @@ model Order {
   fulfilledAt           DateTime?              @map("fulfilled_at")
   cancelledAt           DateTime?              @map("cancelled_at")
   cancelReason          String?                @map("cancel_reason")
+  deleted               Boolean                @default(false)
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at")
-  company               Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  merchant              Merchant?              @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  loyaltyMember         LoyaltyMember?         @relation(fields: [loyaltyMemberId], references: [id], onDelete: SetNull)
+  company               Company                @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  merchant              Merchant?              @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  loyaltyMember         LoyaltyMember?         @relation(fields: [loyaltyMemberId], references: [id], onDelete: Restrict)
   pointTransactions     PointTransaction[]
   giftCardPurchase      GiftCard?              @relation("GiftCardPurchase")
   giftCardRedemptions   GiftCardTransaction[]  @relation("GiftCardRedemption")
@@ -266,11 +284,17 @@ model Order {
 
 model PasswordResetToken {
   id        String   @id
+  tenantId  String   @map("tenant_id")
   email     String
   token     String   @unique
   expiresAt DateTime @map("expires_at")
+  deleted   Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
   @@index([email])
   @@index([token])
   @@map("password_reset_tokens")
@@ -286,10 +310,11 @@ model User {
   role         String    @default("staff")
   status       String    @default("active")
   lastLoginAt  DateTime? @map("last_login_at")
+  deleted      Boolean   @default(false)
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
-  company      Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company      Company?  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@unique([tenantId, email])
   @@index([companyId])
@@ -307,10 +332,11 @@ model TaxConfig {
   description      String?           @db.Text
   roundingMethod   String            @default("half_up") @map("rounding_method")
   status           String            @default("active")
+  deleted          Boolean           @default(false)
   createdAt        DateTime          @default(now()) @map("created_at")
   updatedAt        DateTime          @updatedAt @map("updated_at")
-  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
   merchantTaxRates MerchantTaxRate[]
   menuItemTaxes    MenuItemTax[]
 
@@ -325,10 +351,11 @@ model MerchantTaxRate {
   merchantId  String    @map("merchant_id")
   taxConfigId String    @map("tax_config_id")
   rate        Decimal   @db.Decimal(5, 4)
+  deleted     Boolean   @default(false)
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
-  merchant    Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  taxConfig   TaxConfig @relation(fields: [taxConfigId], references: [id], onDelete: Cascade)
+  merchant    Merchant  @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  taxConfig   TaxConfig @relation(fields: [taxConfigId], references: [id], onDelete: Restrict)
 
   @@unique([merchantId, taxConfigId])
   @@index([merchantId])
@@ -338,13 +365,18 @@ model MerchantTaxRate {
 
 model MenuItemTax {
   id          String    @id
+  tenantId    String    @map("tenant_id")
   menuItemId  String    @map("menu_item_id")
   taxConfigId String    @map("tax_config_id")
+  deleted     Boolean   @default(false)
   createdAt   DateTime  @default(now()) @map("created_at")
-  menuItem    MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  taxConfig   TaxConfig @relation(fields: [taxConfigId], references: [id], onDelete: Cascade)
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  menuItem    MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  taxConfig   TaxConfig @relation(fields: [taxConfigId], references: [id], onDelete: Restrict)
 
   @@unique([menuItemId, taxConfigId])
+  @@index([tenantId])
   @@index([menuItemId])
   @@index([taxConfigId])
   @@map("menu_item_taxes")
@@ -358,11 +390,12 @@ model LoyaltyConfig {
   companyId       String   @unique @map("company_id")
   pointsPerDollar Decimal  @default(1) @map("points_per_dollar") @db.Decimal(5, 2)
   status          String   @default("active")
+  deleted         Boolean  @default(false)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
 
   @@index([tenantId])
   @@map("loyalty_configs")
@@ -381,11 +414,12 @@ model LoyaltyMember {
   totalSpent  Decimal   @default(0.00) @map("total_spent") @db.Decimal(10, 2)
   lastOrderAt DateTime? @map("last_order_at")
   enrolledAt  DateTime  @default(now()) @map("enrolled_at")
+  deleted     Boolean   @default(false)
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company           Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   pointTransactions PointTransaction[]
   orders            Order[]
   stripeCustomer    StripeCustomer?
@@ -408,12 +442,14 @@ model PointTransaction {
   balanceBefore Int      @map("balance_before")
   balanceAfter  Int      @map("balance_after")
   description   String?
+  deleted       Boolean  @default(false)
   createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  loyaltyMember LoyaltyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  merchant      Merchant?     @relation(fields: [merchantId], references: [id], onDelete: SetNull)
-  order         Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  loyaltyMember LoyaltyMember @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  merchant      Merchant?     @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  order         Order?        @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
   @@index([tenantId])
   @@index([memberId])
@@ -430,9 +466,11 @@ model OtpVerification {
   attempts   Int       @default(0)
   expiresAt  DateTime  @map("expires_at")
   verifiedAt DateTime? @map("verified_at")
+  deleted    Boolean   @default(false)
   createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@unique([tenantId, phone, purpose])
   @@index([tenantId])
@@ -448,12 +486,13 @@ model FeaturedItem {
   companyId  String   @map("company_id")
   menuItemId String   @map("menu_item_id")
   sortOrder  Int      @default(0) @map("sort_order")
+  deleted    Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
 
   @@unique([companyId, menuItemId])
   @@index([tenantId])
@@ -473,11 +512,12 @@ model CateringLead {
   email      String
   notes      String?  @db.Text
   status     String   @default("pending")
+  deleted    Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  merchant      Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  merchant      Merchant       @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   cateringOrder CateringOrder?
 
   @@index([tenantId])
@@ -520,15 +560,16 @@ model CateringOrder {
   notes             String?   @db.Text
 
   // Timestamps
+  deleted           Boolean   @default(false)
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
   sentAt            DateTime? @map("sent_at")
   paidAt            DateTime? @map("paid_at")
 
   // Relations
-  tenant            Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  merchant          Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  lead              CateringLead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  tenant            Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  merchant          Merchant      @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  lead              CateringLead? @relation(fields: [leadId], references: [id], onDelete: Restrict)
   invoice           Invoice?
 
   @@index([tenantId])
@@ -556,11 +597,12 @@ model Invoice {
   openedAt        DateTime? @map("opened_at")
   paidAt          DateTime? @map("paid_at")
 
+  deleted         Boolean   @default(false)
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  cateringOrder   CateringOrder @relation(fields: [cateringOrderId], references: [id], onDelete: Cascade)
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  cateringOrder   CateringOrder @relation(fields: [cateringOrderId], references: [id], onDelete: Restrict)
 
   @@index([tenantId])
   @@index([status])
@@ -577,12 +619,13 @@ model GiftCard {
   initialAmount   Decimal               @map("initial_amount") @db.Decimal(10, 2)
   currentBalance  Decimal               @map("current_balance") @db.Decimal(10, 2)
   purchaseOrderId String                @unique @map("purchase_order_id")
+  deleted         Boolean               @default(false)
   createdAt       DateTime              @default(now()) @map("created_at")
   updatedAt       DateTime              @updatedAt @map("updated_at")
 
-  tenant        Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company       Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  purchaseOrder Order                   @relation("GiftCardPurchase", fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  tenant        Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  company       Company                 @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  purchaseOrder Order                   @relation("GiftCardPurchase", fields: [purchaseOrderId], references: [id], onDelete: Restrict)
   transactions  GiftCardTransaction[]
 
   @@index([tenantId])
@@ -600,11 +643,13 @@ model GiftCardTransaction {
   amount        Decimal  @db.Decimal(10, 2)
   balanceBefore Decimal  @map("balance_before") @db.Decimal(10, 2)
   balanceAfter  Decimal  @map("balance_after") @db.Decimal(10, 2)
+  deleted       Boolean  @default(false)
   createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  giftCard GiftCard  @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
-  order    Order?    @relation("GiftCardRedemption", fields: [orderId], references: [id], onDelete: SetNull)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  giftCard GiftCard  @relation(fields: [giftCardId], references: [id], onDelete: Restrict)
+  order    Order?    @relation("GiftCardRedemption", fields: [orderId], references: [id], onDelete: Restrict)
 
   @@index([tenantId])
   @@index([giftCardId])
@@ -621,11 +666,12 @@ model OrderSequence {
   merchantId String   @map("merchant_id")
   date       String   // Format: "2026-01-27"
   sequence   Int      @default(0)
+  deleted    Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Restrict)
 
   @@unique([tenantId, merchantId, date])
   @@index([tenantId])
@@ -641,11 +687,12 @@ model CompanyOrderSequence {
   companyId String   @map("company_id")
   date      String   // Format: "2026-01-27"
   sequence  Int      @default(0)
+  deleted   Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
 
   @@unique([tenantId, companyId, date])
   @@index([tenantId])
@@ -661,11 +708,12 @@ model CateringOrderSequence {
   merchantId String   @map("merchant_id")
   date       String   // Format: "2026-01-27"
   sequence   Int      @default(0)
+  deleted    Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Restrict)
 
   @@unique([tenantId, merchantId, date])
   @@index([tenantId])
@@ -679,10 +727,11 @@ model InvoiceSequence {
   id        String   @id
   tenantId  String   @unique @map("tenant_id")
   sequence  Int      @default(0)
+  deleted   Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([tenantId])
   @@map("invoice_sequences")
@@ -716,12 +765,13 @@ model Payment {
 
   // Timestamps
   paidAt                DateTime? @map("paid_at")
+  deleted               Boolean   @default(false)
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  order                 Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  order                 Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
   @@index([tenantId])
   @@index([orderId])
@@ -737,12 +787,13 @@ model StripeCustomer {
   companyId         String   @map("company_id")
   loyaltyMemberId   String   @unique @map("loyalty_member_id")
   stripeCustomerId  String   @unique @map("stripe_customer_id")
+  deleted           Boolean  @default(false)
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
-  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  loyaltyMember LoyaltyMember @relation(fields: [loyaltyMemberId], references: [id], onDelete: Cascade)
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  loyaltyMember LoyaltyMember @relation(fields: [loyaltyMemberId], references: [id], onDelete: Restrict)
 
   @@index([tenantId])
   @@index([companyId])
@@ -784,11 +835,12 @@ model Subscription {
   gracePeriodEnd          DateTime? @map("grace_period_end")
 
   // Timestamps
+  deleted                 Boolean   @default(false)
   createdAt               DateTime  @default(now()) @map("created_at")
   updatedAt               DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  tenant                  Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant                  Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([status])
   @@map("subscriptions")

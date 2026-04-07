@@ -264,11 +264,12 @@ export class TaxConfigService {
    * Set tax configs for a menu item
    */
   async setMenuItemTaxConfigs(
+    tenantId: string,
     itemId: string,
     taxConfigIds: string[]
   ): Promise<void> {
     const repository = await getRepository();
-    await repository.setMenuItemTaxConfigs(itemId, taxConfigIds);
+    await repository.setMenuItemTaxConfigs(tenantId, itemId, taxConfigIds);
   }
 }
 

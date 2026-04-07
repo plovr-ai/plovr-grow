@@ -8,7 +8,7 @@ export class MerchantRepository {
    */
   async getById(merchantId: string) {
     return prisma.merchant.findUnique({
-      where: { id: merchantId },
+      where: { id: merchantId, deleted: false },
     });
   }
 
@@ -18,9 +18,10 @@ export class MerchantRepository {
    */
   async getByTenantId(tenantId: string) {
     const company = await prisma.company.findUnique({
-      where: { tenantId },
+      where: { tenantId, deleted: false },
       include: {
         merchants: {
+          where: { deleted: false },
           take: 1,
         },
       },
@@ -32,8 +33,8 @@ export class MerchantRepository {
    * Get merchant by slug (for public URL routing)
    */
   async getBySlug(slug: string) {
-    return prisma.merchant.findUnique({
-      where: { slug },
+    return prisma.merchant.findFirst({
+      where: { slug, deleted: false },
     });
   }
 
@@ -41,8 +42,8 @@ export class MerchantRepository {
    * Get merchant by slug with company info
    */
   async getBySlugWithCompany(slug: string) {
-    return prisma.merchant.findUnique({
-      where: { slug },
+    return prisma.merchant.findFirst({
+      where: { slug, deleted: false },
       include: {
         company: {
           include: {
@@ -58,7 +59,7 @@ export class MerchantRepository {
    */
   async getByCompanyId(companyId: string) {
     return prisma.merchant.findMany({
-      where: { companyId },
+      where: { companyId, deleted: false },
       orderBy: { name: "asc" },
     });
   }
@@ -71,6 +72,7 @@ export class MerchantRepository {
       where: {
         companyId,
         status: "active",
+        deleted: false,
       },
       orderBy: { name: "asc" },
     });
@@ -81,7 +83,7 @@ export class MerchantRepository {
    */
   async getByIdWithCompany(merchantId: string) {
     return prisma.merchant.findUnique({
-      where: { id: merchantId },
+      where: { id: merchantId, deleted: false },
       include: {
         company: {
           include: {
@@ -97,7 +99,7 @@ export class MerchantRepository {
    */
   async getByCompanyIdWithCompany(companyId: string) {
     return prisma.merchant.findMany({
-      where: { companyId },
+      where: { companyId, deleted: false },
       orderBy: { name: "asc" },
       include: {
         company: {
@@ -117,6 +119,7 @@ export class MerchantRepository {
       where: {
         companyId,
         status: "active",
+        deleted: false,
       },
       orderBy: { name: "asc" },
       include: {
@@ -176,8 +179,8 @@ export class MerchantRepository {
    * Check if merchant slug is available
    */
   async isSlugAvailable(slug: string, excludeMerchantId?: string) {
-    const existing = await prisma.merchant.findUnique({
-      where: { slug },
+    const existing = await prisma.merchant.findFirst({
+      where: { slug, deleted: false },
       select: { id: true },
     });
 
@@ -210,19 +213,12 @@ export class MerchantRepository {
   }
 
   /**
-   * Get merchant tax rate
-   */
-  async getTaxRate(merchantId: string): Promise<number> {
-    const merchant = await this.getById(merchantId);
-    return merchant?.taxRate ? Number(merchant.taxRate) : 0;
-  }
-
-  /**
-   * Delete merchant
+   * Soft delete merchant
    */
   async delete(merchantId: string) {
-    return prisma.merchant.delete({
+    return prisma.merchant.update({
       where: { id: merchantId },
+      data: { deleted: true, updatedAt: new Date() },
     });
   }
 }
