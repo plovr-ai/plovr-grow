@@ -14,7 +14,7 @@ export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
 
 // ==================== Subscription Plan ====================
 
-export const SUBSCRIPTION_PLANS = ["free", "standard"] as const;
+export const SUBSCRIPTION_PLANS = ["free", "starter", "pro", "enterprise"] as const;
 
 export type SubscriptionPlan = (typeof SUBSCRIPTION_PLANS)[number];
 
@@ -43,6 +43,7 @@ export interface SubscriptionInfo {
 // ==================== API Request/Response Types ====================
 
 export interface CreateCheckoutSessionRequest {
+  planCode: string;
   successUrl?: string;
   cancelUrl?: string;
 }
@@ -62,6 +63,10 @@ export interface CreateBillingPortalResponse {
 
 export interface CancelSubscriptionRequest {
   cancelImmediately?: boolean;
+}
+
+export interface ChangePlanRequest {
+  planCode: string;
 }
 
 export interface SubscriptionResponse {
