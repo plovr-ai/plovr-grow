@@ -6,7 +6,6 @@ import {
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
-import { useLoyalty } from "@/contexts";
 
 export interface CardPaymentFormRef {
   confirmPayment: () => Promise<{
@@ -28,8 +27,6 @@ export const CardPaymentForm = forwardRef<
 >(function CardPaymentForm({ onReady, onError, disabled, defaultCountry }, ref) {
   const stripe = useStripe();
   const elements = useElements();
-  const { member } = useLoyalty();
-  const [saveCard, setSaveCard] = useState(false);
   const [isReady, setIsReady] = useState(false);
 
   // Notify parent when Stripe is ready
@@ -125,20 +122,6 @@ export const CardPaymentForm = forwardRef<
         }}
         onReady={() => setIsReady(true)}
       />
-
-      {/* Save card option (only show for loyalty members) */}
-      {member && (
-        <label className="flex items-center gap-2 mt-4 text-sm text-gray-600 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={saveCard}
-            onChange={(e) => setSaveCard(e.target.checked)}
-            disabled={disabled}
-            className="w-4 h-4 rounded border-gray-300 text-theme-primary focus:ring-theme-primary"
-          />
-          Save card for future orders
-        </label>
-      )}
 
       {/* Security notice */}
       <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
