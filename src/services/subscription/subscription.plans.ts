@@ -94,5 +94,5 @@ export function getAllPlans(): PlanDefinition[] {
 }
 
 export function getPlanTier(planCode: string): number {
-  return PLAN_TIER_MAP[planCode] ?? -1;
+  return PLAN_TIER_MAP[planCode] ?? 0;
 }
