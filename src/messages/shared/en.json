@@ -39,6 +39,7 @@
     "PAYMENT_VERIFICATION_FAILED": "Payment verification failed",
     "PAYMENT_AMOUNT_MISMATCH": "Payment amount does not match expected amount",
     "PAYMENT_STATUS_INVALID": "Payment status is invalid",
+    "PAYMENT_ALREADY_PROCESSED": "This payment has already been used for an order",
     "STRIPE_CONNECT_NOT_CONFIGURED": "Stripe Connect is not configured",
     "STRIPE_CONNECT_ACCOUNT_NOT_FOUND": "Stripe Connect account not found",
     "STRIPE_CONNECT_CHARGES_NOT_ENABLED": "Online payments are not available for this restaurant",

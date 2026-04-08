@@ -6,6 +6,8 @@ import { giftCardService } from "@/services/giftcard";
 import { paymentService } from "@/services/payment";
 import { stripeConnectService } from "@/services/stripe-connect";
 import { checkoutFormSchema } from "@storefront/lib/validations/checkout";
+import { AppError } from "@/lib/errors";
+import { ErrorCodes } from "@/lib/errors/error-codes";
 import type { OrderItemData, OrderMode } from "@/types";
 
 type PaymentMethodType = "cash" | "card";
@@ -186,6 +188,17 @@ export async function POST(
           cardBrand: paymentResult.cardBrand,
           cardLast4: paymentResult.cardLast4,
         };
+
+        // Check if this PaymentIntent has already been used for another order
+        const alreadyUsed = await paymentService.paymentIntentExists(
+          verifiedPayment.paymentIntentId
+        );
+        if (alreadyUsed) {
+          return NextResponse.json(
+            { success: false, error: { code: ErrorCodes.PAYMENT_ALREADY_PROCESSED } },
+            { status: 409 }
+          );
+        }
       }
     }
 
@@ -287,11 +300,15 @@ export async function POST(
   } catch (error) {
     console.error("Order creation failed:", error);
 
-    const message =
-      error instanceof Error ? error.message : "Failed to create order";
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { success: false, error: { code: error.code } },
+        { status: error.statusCode }
+      );
+    }
 
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: { code: ErrorCodes.INTERNAL_ERROR } },
       { status: 500 }
     );
   }

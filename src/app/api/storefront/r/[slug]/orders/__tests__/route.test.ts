@@ -25,6 +25,7 @@ vi.mock("@/services/giftcard", () => ({
 vi.mock("@/services/payment", () => ({
   paymentService: {
     verifyPayment: vi.fn(),
+    paymentIntentExists: vi.fn(),
   },
 }));
 
@@ -56,6 +57,8 @@ import { giftCardService } from "@/services/giftcard";
 import { paymentService } from "@/services/payment";
 import { stripeConnectService } from "@/services/stripe-connect";
 import { checkoutFormSchema } from "@storefront/lib/validations/checkout";
+import { AppError } from "@/lib/errors";
+import { ErrorCodes } from "@/lib/errors/error-codes";
 
 function createRequest(body: Record<string, unknown>): NextRequest {
   return new NextRequest("http://localhost/api/storefront/r/test-merchant/orders", {
@@ -252,7 +255,116 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
 
     expect(response.status).toBe(500);
     expect(json.success).toBe(false);
-    expect(json.error).toBe("Gift card has no balance");
+    expect(json.error).toEqual({ code: "INTERNAL_ERROR" });
+  });
+
+  it("should return 409 when PaymentIntent has already been used", async () => {
+    vi.mocked(orderService.calculateOrderTotals).mockResolvedValue({
+      subtotal: 20,
+      taxAmount: 0,
+      taxBreakdown: [],
+      feesAmount: 0,
+      feesBreakdown: [],
+      tipAmount: 0,
+      deliveryFee: 0,
+      discount: 0,
+      totalAmount: 20,
+    } as never);
+
+    vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue({
+      stripeAccountId: "acct_test123",
+      accessToken: "access_token",
+      refreshToken: "refresh_token",
+      scope: "read_write",
+    } as never);
+
+    vi.mocked(paymentService.verifyPayment).mockResolvedValue({
+      success: true,
+      paymentIntentId: "pi_duplicate",
+      status: "succeeded",
+      amount: 2000,
+      cardBrand: "visa",
+      cardLast4: "4242",
+    } as never);
+
+    // PaymentIntent already used
+    vi.mocked(paymentService.paymentIntentExists).mockResolvedValue(true);
+
+    const bodyWithPayment = {
+      ...validBody,
+      paymentMethod: "card",
+      stripePaymentIntentId: "pi_duplicate",
+    };
+
+    const request = createRequest(bodyWithPayment);
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(json.success).toBe(false);
+    expect(json.error).toEqual({ code: "PAYMENT_ALREADY_PROCESSED" });
+    expect(orderService.createMerchantOrderAtomic).not.toHaveBeenCalled();
+  });
+
+  it("should proceed normally when PaymentIntent has not been used", async () => {
+    vi.mocked(orderService.calculateOrderTotals).mockResolvedValue({
+      subtotal: 20,
+      taxAmount: 0,
+      taxBreakdown: [],
+      feesAmount: 0,
+      feesBreakdown: [],
+      tipAmount: 0,
+      deliveryFee: 0,
+      discount: 0,
+      totalAmount: 20,
+    } as never);
+
+    vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue({
+      stripeAccountId: "acct_test123",
+      accessToken: "access_token",
+      refreshToken: "refresh_token",
+      scope: "read_write",
+    } as never);
+
+    vi.mocked(paymentService.verifyPayment).mockResolvedValue({
+      success: true,
+      paymentIntentId: "pi_new",
+      status: "succeeded",
+      amount: 2000,
+      cardBrand: "visa",
+      cardLast4: "4242",
+    } as never);
+
+    // PaymentIntent not yet used
+    vi.mocked(paymentService.paymentIntentExists).mockResolvedValue(false);
+
+    const bodyWithPayment = {
+      ...validBody,
+      paymentMethod: "card",
+      stripePaymentIntentId: "pi_new",
+    };
+
+    const request = createRequest(bodyWithPayment);
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(json.success).toBe(true);
+    expect(orderService.createMerchantOrderAtomic).toHaveBeenCalledTimes(1);
+  });
+
+  it("should return AppError status and code when createMerchantOrderAtomic throws AppError", async () => {
+    vi.mocked(orderService.createMerchantOrderAtomic).mockRejectedValue(
+      new AppError(ErrorCodes.PAYMENT_ALREADY_PROCESSED, undefined, 409)
+    );
+
+    const request = createRequest(validBody);
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(json.success).toBe(false);
+    expect(json.error).toEqual({ code: "PAYMENT_ALREADY_PROCESSED" });
   });
 
   it("should still succeed when loyalty points awarding fails (outside transaction)", async () => {
