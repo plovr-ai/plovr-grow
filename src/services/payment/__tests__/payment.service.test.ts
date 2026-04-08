@@ -31,6 +31,7 @@ vi.mock("@/repositories/payment.repository", () => ({
     getSuccessfulPaymentByOrderId: vi.fn(),
     updateStatus: vi.fn(),
     updateByPaymentIntentId: vi.fn(),
+    atomicUpdateStatus: vi.fn(),
   },
 }));
 
@@ -263,44 +264,8 @@ describe("PaymentService", () => {
   });
 
   describe("handlePaymentSucceeded", () => {
-    const mockPayment = {
-      id: "payment-1",
-      tenantId: mockTenantId,
-      orderId: mockOrderId,
-      stripePaymentIntentId: "pi_test123",
-      stripeAccountId: mockStripeAccountId,
-      stripeCustomerId: null,
-      amount: new Decimal(25.99),
-      currency: "USD",
-      status: "pending",
-      paymentMethod: null,
-      cardBrand: null,
-      cardLast4: null,
-      failureCode: null,
-      failureMessage: null,
-      paidAt: null,
-      deleted: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    it("should update payment status to succeeded", async () => {
-      vi.mocked(paymentRepository.getByPaymentIntentId).mockResolvedValue({
-        ...mockPayment,
-        order: {
-          id: mockOrderId,
-          orderNumber: "ORD-001",
-          tenantId: mockTenantId,
-          companyId: mockCompanyId,
-          merchantId: mockMerchantId as string | null,
-        },
-      } as unknown as Awaited<
-        ReturnType<typeof paymentRepository.getByPaymentIntentId>
-      > & {});
-      vi.mocked(paymentRepository.updateStatus).mockResolvedValue({
-        ...mockPayment,
-        status: "succeeded",
-      } as unknown as Awaited<ReturnType<typeof paymentRepository.updateStatus>>);
+    it("should update payment status to succeeded via atomic CAS", async () => {
+      vi.mocked(paymentRepository.atomicUpdateStatus).mockResolvedValue(1);
 
       await service.handlePaymentSucceeded({
         paymentIntentId: "pi_test123",
@@ -310,8 +275,9 @@ describe("PaymentService", () => {
         cardLast4: "4242",
       });
 
-      expect(paymentRepository.updateStatus).toHaveBeenCalledWith(
-        "payment-1",
+      expect(paymentRepository.atomicUpdateStatus).toHaveBeenCalledWith(
+        "pi_test123",
+        "pending",
         expect.objectContaining({
           status: "succeeded",
           paymentMethod: "card",
@@ -321,80 +287,27 @@ describe("PaymentService", () => {
       );
     });
 
-    it("should skip if payment already succeeded (idempotency)", async () => {
-      vi.mocked(paymentRepository.getByPaymentIntentId).mockResolvedValue({
-        ...mockPayment,
-        status: "succeeded",
-        order: {
-          id: mockOrderId,
-          orderNumber: "ORD-001",
-          tenantId: mockTenantId,
-          companyId: mockCompanyId,
-          merchantId: mockMerchantId as string | null,
-        },
-      } as unknown as Awaited<
-        ReturnType<typeof paymentRepository.getByPaymentIntentId>
-      > & {});
-
-      await service.handlePaymentSucceeded({
-        paymentIntentId: "pi_test123",
-        status: "succeeded",
-      });
-
-      expect(paymentRepository.updateStatus).not.toHaveBeenCalled();
-    });
-
-    it("should handle payment not found gracefully", async () => {
-      vi.mocked(paymentRepository.getByPaymentIntentId).mockResolvedValue(null);
+    it("should skip if payment already processed or not found (atomic CAS returns 0)", async () => {
+      vi.mocked(paymentRepository.atomicUpdateStatus).mockResolvedValue(0);
 
       await expect(
         service.handlePaymentSucceeded({
-          paymentIntentId: "pi_notfound",
+          paymentIntentId: "pi_test123",
           status: "succeeded",
         })
       ).resolves.not.toThrow();
+
+      expect(paymentRepository.atomicUpdateStatus).toHaveBeenCalledWith(
+        "pi_test123",
+        "pending",
+        expect.objectContaining({ status: "succeeded" })
+      );
     });
   });
 
   describe("handlePaymentFailed", () => {
-    const mockPaymentFailed = {
-      id: "payment-1",
-      tenantId: mockTenantId,
-      orderId: mockOrderId,
-      stripePaymentIntentId: "pi_test123",
-      stripeAccountId: mockStripeAccountId,
-      stripeCustomerId: null,
-      amount: new Decimal(25.99),
-      currency: "USD",
-      status: "pending",
-      paymentMethod: null,
-      cardBrand: null,
-      cardLast4: null,
-      failureCode: null,
-      failureMessage: null,
-      paidAt: null,
-      deleted: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    it("should update payment status to failed with error info", async () => {
-      vi.mocked(paymentRepository.getByPaymentIntentId).mockResolvedValue({
-        ...mockPaymentFailed,
-        order: {
-          id: mockOrderId,
-          orderNumber: "ORD-001",
-          tenantId: mockTenantId,
-          companyId: mockCompanyId,
-          merchantId: mockMerchantId as string | null,
-        },
-      } as unknown as Awaited<
-        ReturnType<typeof paymentRepository.getByPaymentIntentId>
-      > & {});
-      vi.mocked(paymentRepository.updateStatus).mockResolvedValue({
-        ...mockPaymentFailed,
-        status: "failed",
-      } as unknown as Awaited<ReturnType<typeof paymentRepository.updateStatus>>);
+    it("should update payment status to failed with error info via atomic CAS", async () => {
+      vi.mocked(paymentRepository.atomicUpdateStatus).mockResolvedValue(1);
 
       await service.handlePaymentFailed({
         paymentIntentId: "pi_test123",
@@ -402,14 +315,27 @@ describe("PaymentService", () => {
         failureMessage: "Your card was declined.",
       });
 
-      expect(paymentRepository.updateStatus).toHaveBeenCalledWith(
-        "payment-1",
+      expect(paymentRepository.atomicUpdateStatus).toHaveBeenCalledWith(
+        "pi_test123",
+        "pending",
         expect.objectContaining({
           status: "failed",
           failureCode: "card_declined",
           failureMessage: "Your card was declined.",
         })
       );
+    });
+
+    it("should skip if payment already processed or not found (atomic CAS returns 0)", async () => {
+      vi.mocked(paymentRepository.atomicUpdateStatus).mockResolvedValue(0);
+
+      await expect(
+        service.handlePaymentFailed({
+          paymentIntentId: "pi_test123",
+          failureCode: "card_declined",
+          failureMessage: "Your card was declined.",
+        })
+      ).resolves.not.toThrow();
     });
   });
 
