@@ -205,6 +205,52 @@ export class IntegrationRepository {
       },
     });
   }
+
+  /**
+   * Reverse lookup: find external ID by internal ID and type.
+   * Used for order push to resolve internal item IDs to Square catalog IDs.
+   */
+  async getIdMappingByInternalId(
+    tenantId: string,
+    externalSource: string,
+    internalType: string,
+    internalId: string,
+    externalType?: string
+  ) {
+    return prisma.externalIdMapping.findFirst({
+      where: {
+        tenantId,
+        externalSource,
+        internalType,
+        internalId,
+        ...(externalType && { externalType }),
+        deleted: false,
+      },
+    });
+  }
+
+  /**
+   * Batch reverse lookup: find external IDs for multiple internal IDs.
+   * Optimized for order push where we need to resolve many items at once.
+   */
+  async getIdMappingsByInternalIds(
+    tenantId: string,
+    externalSource: string,
+    internalType: string,
+    internalIds: string[],
+    externalType?: string
+  ) {
+    return prisma.externalIdMapping.findMany({
+      where: {
+        tenantId,
+        externalSource,
+        internalType,
+        internalId: { in: internalIds },
+        ...(externalType && { externalType }),
+        deleted: false,
+      },
+    });
+  }
 }
 
 export const integrationRepository = new IntegrationRepository();
