@@ -56,5 +56,33 @@
     "VALIDATION_FAILED": "Validation failed",
     "INTERNAL_ERROR": "An unexpected error occurred. Please try again.",
     "NETWORK_ERROR": "Network error. Please check your connection."
+  },
+  "calculator": {
+    "pageTitle": "How Much Are You Losing to Delivery Fees?",
+    "pageDescription": "Calculate how much your restaurant loses to delivery platform fees every month.",
+    "headline": "How much are you losing to delivery fees?",
+    "subheadline": "Most restaurants lose $1k–$3k/month",
+    "revenueLabel": "Monthly delivery revenue",
+    "revenuePlaceholder": "Enter your monthly delivery revenue",
+    "aovLabel": "Average order value",
+    "platformLabel": "Platform",
+    "platformDoordash": "DoorDash",
+    "platformUbereats": "Uber Eats",
+    "platformBoth": "Both",
+    "calculateButton": "Calculate my loss",
+    "trustMessage": "Based on industry averages",
+    "resultHeadline": "You're losing {amount}/month",
+    "resultYearly": "That's {amount}/year",
+    "chartPlatform": "Platform fees",
+    "chartDirect": "Direct ordering",
+    "sellingPoint1": "Direct ordering — no fees",
+    "sellingPoint2": "Customer retention",
+    "ctaHeadline": "Start saving today",
+    "emailPlaceholder": "your@email.com",
+    "continueButton": "Continue",
+    "submitting": "Submitting...",
+    "emailRequired": "Email is required",
+    "emailInvalid": "Please enter a valid email",
+    "submitError": "Something went wrong. Please try again."
   }
 }
