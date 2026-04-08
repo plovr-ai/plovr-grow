@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 
 describe("useFormatDateTime", () => {
   const createWrapper = (timezone: string, locale: string) => {
-    return ({ children }: { children: ReactNode }) => (
+    const Wrapper = ({ children }: { children: ReactNode }) => (
       <MerchantProvider
         config={{
           name: "Test Store",
@@ -19,6 +19,8 @@ describe("useFormatDateTime", () => {
         {children}
       </MerchantProvider>
     );
+    Wrapper.displayName = "TestMerchantWrapper";
+    return Wrapper;
   };
 
   describe("formatDate", () => {

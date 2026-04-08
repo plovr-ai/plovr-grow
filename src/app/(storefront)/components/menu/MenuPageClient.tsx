@@ -77,10 +77,12 @@ export function MenuPageClient({
 
     if (!menuItem) return;
 
-    // If item has modifiers, open the modal
+    // If item has modifiers, open the modal (defer to avoid synchronous setState in effect)
     if (menuItem.hasModifiers && menuItem.modifierGroups.length > 0) {
-      setModalItem(menuItem);
-      setIsModalOpen(true);
+      queueMicrotask(() => {
+        setModalItem(menuItem);
+        setIsModalOpen(true);
+      });
     } else {
       // Add item without modifiers directly to cart (with proper tax info)
       addItem({

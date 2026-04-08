@@ -36,20 +36,23 @@ function ResetPasswordContent() {
 
   // Validate token on mount
   useEffect(() => {
-    if (!token) {
-      setIsValidating(false);
-      return;
-    }
+    const validateToken = async () => {
+      if (!token) {
+        setIsValidating(false);
+        return;
+      }
 
-    fetch(`/api/auth/validate-reset-token?token=${token}`)
-      .then((res) => res.json())
-      .then((data) => {
+      try {
+        const res = await fetch(`/api/auth/validate-reset-token?token=${token}`);
+        const data = await res.json();
         setIsTokenValid(data.valid);
+      } catch {
+        // Token validation failed
+      } finally {
         setIsValidating(false);
-      })
-      .catch(() => {
-        setIsValidating(false);
-      });
+      }
+    };
+    validateToken();
   }, [token]);
 
   const handleChange = (field: string, value: string) => {

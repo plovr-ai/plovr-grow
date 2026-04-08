@@ -43,7 +43,7 @@ export function StripeProvider({ clientSecret, stripeAccountId, defaultCountry, 
               Payment Not Available
             </h3>
             <p className="mt-1 text-sm text-yellow-700">
-              Online payment is not configured. Please select "Pay at Pickup/Delivery" or contact the restaurant.
+              Online payment is not configured. Please select &ldquo;Pay at Pickup/Delivery&rdquo; or contact the restaurant.
             </p>
           </div>
         </div>

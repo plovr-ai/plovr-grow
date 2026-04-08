@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function AdminPage() {
   return (
     <div>
@@ -6,22 +8,22 @@ export default function AdminPage() {
         <div className="rounded-lg bg-white p-6 shadow">
           <h3 className="text-lg font-semibold">Tenants</h3>
           <p className="text-gray-600">Manage SaaS tenants</p>
-          <a
+          <Link
             href="/admin/tenants"
             className="mt-2 inline-block text-indigo-600 hover:text-indigo-800"
           >
             View All &rarr;
-          </a>
+          </Link>
         </div>
         <div className="rounded-lg bg-white p-6 shadow">
           <h3 className="text-lg font-semibold">Merchants</h3>
           <p className="text-gray-600">Manage merchant accounts</p>
-          <a
+          <Link
             href="/admin/merchants"
             className="mt-2 inline-block text-indigo-600 hover:text-indigo-800"
           >
             View All &rarr;
-          </a>
+          </Link>
         </div>
       </div>
       {/* TODO: 统计数据 */}

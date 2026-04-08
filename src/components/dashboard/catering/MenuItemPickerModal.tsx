@@ -84,7 +84,8 @@ export function MenuItemPickerModal({
   // Auto-select first category when categories change or selectedCategory is invalid
   useEffect(() => {
     if (categories.length > 0 && (!selectedCategory || !categories.includes(selectedCategory))) {
-      setSelectedCategory(categories[0]);
+      // Defer to avoid synchronous setState in effect
+      queueMicrotask(() => setSelectedCategory(categories[0]));
     }
   }, [categories, selectedCategory]);
 

@@ -26,7 +26,7 @@ type CompanyWithMerchantsAndTenant = Prisma.CompanyGetPayload<{
 }>;
 
 // Merchant item from company query (without nested company)
-type MerchantFromCompanyQuery = Prisma.MerchantGetPayload<{}>;
+type MerchantFromCompanyQuery = Prisma.MerchantGetPayload<object>;
 
 /**
  * 将 Prisma Merchant (with Company) 转换为 Service 类型

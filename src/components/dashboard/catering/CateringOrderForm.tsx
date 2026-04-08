@@ -384,7 +384,7 @@ export function CateringOrderForm({
 
         {items.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            No items added yet. Click "Add Item" to start.
+            No items added yet. Click &ldquo;Add Item&rdquo; to start.
           </div>
         ) : (
           <div className="space-y-4">
