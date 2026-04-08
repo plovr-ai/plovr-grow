@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import type { DbClient } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
 
@@ -76,8 +77,9 @@ export class LoyaltyMemberRepository {
   /**
    * Update points balance
    */
-  async updatePoints(tenantId: string, id: string, pointsDelta: number) {
-    return prisma.loyaltyMember.update({
+  async updatePoints(tenantId: string, id: string, pointsDelta: number, tx?: DbClient) {
+    const client = tx ?? prisma;
+    return client.loyaltyMember.update({
       where: {
         id,
         tenantId,

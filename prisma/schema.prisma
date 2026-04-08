@@ -453,9 +453,9 @@ model PointTransaction {
   merchant      Merchant?     @relation(fields: [merchantId], references: [id], onDelete: Restrict)
   order         Order?        @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
+  @@unique([tenantId, orderId, type], map: "point_transactions_tenant_order_type_unique")
   @@index([tenantId])
   @@index([memberId])
-  @@index([orderId])
   @@map("point_transactions")
 }
 

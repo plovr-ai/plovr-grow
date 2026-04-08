@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import type { DbClient } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
 
@@ -33,9 +34,11 @@ export class PointTransactionRepository {
       balanceBefore: number;
       balanceAfter: number;
       description?: string | null;
-    }
+    },
+    tx?: DbClient
   ) {
-    return prisma.pointTransaction.create({
+    const client = tx ?? prisma;
+    return client.pointTransaction.create({
       data: {
         id: generateEntityId(),
         tenantId,
@@ -117,6 +120,20 @@ export class PointTransactionRepository {
       where: {
         tenantId,
         orderId,
+        deleted: false,
+      },
+    });
+  }
+
+  /**
+   * Get earn transaction for an order (used for idempotent returns)
+   */
+  async getEarnTransactionForOrder(tenantId: string, orderId: string) {
+    return prisma.pointTransaction.findFirst({
+      where: {
+        tenantId,
+        orderId,
+        type: "earn",
         deleted: false,
       },
     });

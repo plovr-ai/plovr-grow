@@ -6,6 +6,8 @@ import {
   loyaltyMemberRepository,
   type LoyaltyMemberRepository,
 } from "@/repositories/loyalty-member.repository";
+import prisma from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import type {
   AwardPointsInput,
@@ -43,20 +45,21 @@ export class PointsService {
 
   /**
    * Award points to a member
+   * Idempotent: duplicate calls for the same order return the existing result.
    */
   async awardPoints(
     tenantId: string,
     memberId: string,
     input: AwardPointsInput
   ): Promise<PointsEarnResult> {
-    // Check if points already awarded for this order
+    // Fast-path: check if points already awarded for this order
     if (input.orderId) {
-      const existing = await this.transactionRepository.hasEarnedForOrder(
+      const alreadyAwarded = await this.transactionRepository.hasEarnedForOrder(
         tenantId,
         input.orderId
       );
-      if (existing) {
-        throw new AppError(ErrorCodes.LOYALTY_POINTS_ALREADY_AWARDED, undefined, 409);
+      if (alreadyAwarded) {
+        return this.buildIdempotentResult(tenantId, input.orderId);
       }
     }
 
@@ -83,45 +86,61 @@ export class PointsService {
     const balanceBefore = member.points;
     const balanceAfter = balanceBefore + pointsEarned;
 
-    // Create transaction record
-    const transaction = await this.transactionRepository.create(tenantId, {
-      memberId,
-      merchantId: input.merchantId,
-      orderId: input.orderId,
-      type: "earn",
-      points: pointsEarned,
-      balanceBefore,
-      balanceAfter,
-      description: input.description ?? `Earned ${pointsEarned} points from order`,
-    });
+    try {
+      // Atomic: create transaction record + update member balance
+      const transaction = await prisma.$transaction(async (tx) => {
+        const txn = await this.transactionRepository.create(tenantId, {
+          memberId,
+          merchantId: input.merchantId,
+          orderId: input.orderId,
+          type: "earn",
+          points: pointsEarned,
+          balanceBefore,
+          balanceAfter,
+          description: input.description ?? `Earned ${pointsEarned} points from order`,
+        }, tx);
 
-    // Update member balance
-    await this.memberRepository.updatePoints(tenantId, memberId, pointsEarned);
+        await this.memberRepository.updatePoints(tenantId, memberId, pointsEarned, tx);
 
-    return {
-      pointsEarned,
-      newBalance: balanceAfter,
-      transactionId: transaction.id,
-    };
+        return txn;
+      });
+
+      return {
+        pointsEarned,
+        newBalance: balanceAfter,
+        transactionId: transaction.id,
+      };
+    } catch (error) {
+      // DB-level duplicate protection: unique constraint on (tenantId, orderId, type)
+      if (
+        input.orderId &&
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return this.buildIdempotentResult(tenantId, input.orderId);
+      }
+      throw error;
+    }
   }
 
   /**
    * Award a custom points amount (for special cases like gift card double points)
-   * Unlike awardPoints, this accepts a pre-calculated points value
+   * Unlike awardPoints, this accepts a pre-calculated points value.
+   * Idempotent: duplicate calls for the same order return the existing result.
    */
   async awardPointsWithCustomAmount(
     tenantId: string,
     memberId: string,
     input: AwardCustomPointsInput
   ): Promise<PointsEarnResult> {
-    // Check if points already awarded for this order
+    // Fast-path: check if points already awarded for this order
     if (input.orderId) {
-      const existing = await this.transactionRepository.hasEarnedForOrder(
+      const alreadyAwarded = await this.transactionRepository.hasEarnedForOrder(
         tenantId,
         input.orderId
       );
-      if (existing) {
-        throw new AppError(ErrorCodes.LOYALTY_POINTS_ALREADY_AWARDED, undefined, 409);
+      if (alreadyAwarded) {
+        return this.buildIdempotentResult(tenantId, input.orderId);
       }
     }
 
@@ -144,26 +163,41 @@ export class PointsService {
     const balanceBefore = member.points;
     const balanceAfter = balanceBefore + pointsEarned;
 
-    // Create transaction record
-    const transaction = await this.transactionRepository.create(tenantId, {
-      memberId,
-      merchantId: input.merchantId,
-      orderId: input.orderId,
-      type: "earn",
-      points: pointsEarned,
-      balanceBefore,
-      balanceAfter,
-      description: input.description ?? `Earned ${pointsEarned} points`,
-    });
+    try {
+      // Atomic: create transaction record + update member balance
+      const transaction = await prisma.$transaction(async (tx) => {
+        const txn = await this.transactionRepository.create(tenantId, {
+          memberId,
+          merchantId: input.merchantId,
+          orderId: input.orderId,
+          type: "earn",
+          points: pointsEarned,
+          balanceBefore,
+          balanceAfter,
+          description: input.description ?? `Earned ${pointsEarned} points`,
+        }, tx);
 
-    // Update member balance
-    await this.memberRepository.updatePoints(tenantId, memberId, pointsEarned);
+        await this.memberRepository.updatePoints(tenantId, memberId, pointsEarned, tx);
 
-    return {
-      pointsEarned,
-      newBalance: balanceAfter,
-      transactionId: transaction.id,
-    };
+        return txn;
+      });
+
+      return {
+        pointsEarned,
+        newBalance: balanceAfter,
+        transactionId: transaction.id,
+      };
+    } catch (error) {
+      // DB-level duplicate protection: unique constraint on (tenantId, orderId, type)
+      if (
+        input.orderId &&
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return this.buildIdempotentResult(tenantId, input.orderId);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -257,6 +291,28 @@ export class PointsService {
    */
   async hasEarnedForOrder(tenantId: string, orderId: string): Promise<boolean> {
     return this.transactionRepository.hasEarnedForOrder(tenantId, orderId);
+  }
+
+  /**
+   * Build an idempotent result from an existing earn transaction for an order.
+   * Used when a duplicate award is detected (either via pre-check or P2002).
+   */
+  private async buildIdempotentResult(
+    tenantId: string,
+    orderId: string
+  ): Promise<PointsEarnResult> {
+    const existing = await this.transactionRepository.getEarnTransactionForOrder(
+      tenantId,
+      orderId
+    );
+    if (!existing) {
+      throw new AppError(ErrorCodes.LOYALTY_POINTS_ALREADY_AWARDED, undefined, 409);
+    }
+    return {
+      pointsEarned: existing.points,
+      newBalance: existing.balanceAfter,
+      transactionId: existing.id,
+    };
   }
 }
 
