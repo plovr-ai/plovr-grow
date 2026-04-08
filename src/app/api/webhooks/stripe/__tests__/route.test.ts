@@ -15,16 +15,8 @@ vi.mock("@/services/invoice", () => ({
   },
 }));
 
-vi.mock("@/services/payment", () => ({
-  paymentService: {
-    handlePaymentSucceeded: vi.fn(),
-    handlePaymentFailed: vi.fn(),
-  },
-}));
-
 import { stripeService } from "@/services/stripe";
 import { invoiceService } from "@/services/invoice";
-import { paymentService } from "@/services/payment";
 
 describe("POST /api/webhooks/stripe", () => {
   beforeEach(() => {
@@ -131,257 +123,6 @@ describe("POST /api/webhooks/stripe", () => {
     });
   });
 
-  describe("payment_intent.succeeded", () => {
-    it("should handle invoice payment from payment intent", async () => {
-      const event = {
-        type: "payment_intent.succeeded",
-        data: {
-          object: {
-            id: "pi_test123",
-            status: "succeeded",
-            metadata: {
-              invoiceNumber: "INV-002",
-            },
-            charges: {
-              data: [
-                {
-                  payment_method_details: {
-                    type: "card",
-                    card: {
-                      brand: "visa",
-                      last4: "4242",
-                    },
-                  },
-                },
-              ],
-            },
-          },
-        },
-      };
-
-      vi.mocked(stripeService.verifyWebhookSignature).mockReturnValue(
-        event as never
-      );
-      vi.mocked(invoiceService.handlePaymentCompleted).mockResolvedValue(
-        undefined
-      );
-
-      const request = new NextRequest(
-        "http://localhost:3000/api/webhooks/stripe",
-        {
-          method: "POST",
-          body: JSON.stringify(event),
-          headers: {
-            "stripe-signature": "valid_sig",
-          },
-        }
-      );
-
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.received).toBe(true);
-      expect(invoiceService.handlePaymentCompleted).toHaveBeenCalledWith(
-        "INV-002"
-      );
-      // paymentService should NOT be called for invoice payments
-      expect(paymentService.handlePaymentSucceeded).not.toHaveBeenCalled();
-    });
-
-    it("should handle order payment from payment intent", async () => {
-      const event = {
-        type: "payment_intent.succeeded",
-        data: {
-          object: {
-            id: "pi_test123",
-            status: "succeeded",
-            metadata: {
-              // No invoiceNumber - this is an order payment
-            },
-            charges: {
-              data: [
-                {
-                  payment_method_details: {
-                    type: "card",
-                    card: {
-                      brand: "visa",
-                      last4: "4242",
-                    },
-                  },
-                },
-              ],
-            },
-          },
-        },
-      };
-
-      vi.mocked(stripeService.verifyWebhookSignature).mockReturnValue(
-        event as never
-      );
-      vi.mocked(paymentService.handlePaymentSucceeded).mockResolvedValue(
-        undefined
-      );
-
-      const request = new NextRequest(
-        "http://localhost:3000/api/webhooks/stripe",
-        {
-          method: "POST",
-          body: JSON.stringify(event),
-          headers: {
-            "stripe-signature": "valid_sig",
-          },
-        }
-      );
-
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.received).toBe(true);
-      expect(paymentService.handlePaymentSucceeded).toHaveBeenCalledWith({
-        paymentIntentId: "pi_test123",
-        status: "succeeded",
-        paymentMethodType: "card",
-        cardBrand: "visa",
-        cardLast4: "4242",
-      });
-    });
-
-    it("should handle payment without card details", async () => {
-      const event = {
-        type: "payment_intent.succeeded",
-        data: {
-          object: {
-            id: "pi_test123",
-            status: "succeeded",
-            metadata: {},
-            charges: {
-              data: [],
-            },
-          },
-        },
-      };
-
-      vi.mocked(stripeService.verifyWebhookSignature).mockReturnValue(
-        event as never
-      );
-      vi.mocked(paymentService.handlePaymentSucceeded).mockResolvedValue(
-        undefined
-      );
-
-      const request = new NextRequest(
-        "http://localhost:3000/api/webhooks/stripe",
-        {
-          method: "POST",
-          body: JSON.stringify(event),
-          headers: {
-            "stripe-signature": "valid_sig",
-          },
-        }
-      );
-
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.received).toBe(true);
-      expect(paymentService.handlePaymentSucceeded).toHaveBeenCalledWith({
-        paymentIntentId: "pi_test123",
-        status: "succeeded",
-        paymentMethodType: undefined,
-        cardBrand: undefined,
-        cardLast4: undefined,
-      });
-    });
-  });
-
-  describe("payment_intent.payment_failed", () => {
-    it("should handle payment failure", async () => {
-      const event = {
-        type: "payment_intent.payment_failed",
-        data: {
-          object: {
-            id: "pi_test123",
-            last_payment_error: {
-              code: "card_declined",
-              message: "Your card was declined.",
-            },
-          },
-        },
-      };
-
-      vi.mocked(stripeService.verifyWebhookSignature).mockReturnValue(
-        event as never
-      );
-      vi.mocked(paymentService.handlePaymentFailed).mockResolvedValue(
-        undefined
-      );
-
-      const request = new NextRequest(
-        "http://localhost:3000/api/webhooks/stripe",
-        {
-          method: "POST",
-          body: JSON.stringify(event),
-          headers: {
-            "stripe-signature": "valid_sig",
-          },
-        }
-      );
-
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.received).toBe(true);
-      expect(paymentService.handlePaymentFailed).toHaveBeenCalledWith({
-        paymentIntentId: "pi_test123",
-        failureCode: "card_declined",
-        failureMessage: "Your card was declined.",
-      });
-    });
-
-    it("should handle payment failure without error details", async () => {
-      const event = {
-        type: "payment_intent.payment_failed",
-        data: {
-          object: {
-            id: "pi_test123",
-          },
-        },
-      };
-
-      vi.mocked(stripeService.verifyWebhookSignature).mockReturnValue(
-        event as never
-      );
-      vi.mocked(paymentService.handlePaymentFailed).mockResolvedValue(
-        undefined
-      );
-
-      const request = new NextRequest(
-        "http://localhost:3000/api/webhooks/stripe",
-        {
-          method: "POST",
-          body: JSON.stringify(event),
-          headers: {
-            "stripe-signature": "valid_sig",
-          },
-        }
-      );
-
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.received).toBe(true);
-      expect(paymentService.handlePaymentFailed).toHaveBeenCalledWith({
-        paymentIntentId: "pi_test123",
-        failureCode: undefined,
-        failureMessage: undefined,
-      });
-    });
-  });
-
   describe("Unhandled Events", () => {
     it("should acknowledge unhandled event types", async () => {
       const event = {
@@ -419,13 +160,13 @@ describe("POST /api/webhooks/stripe", () => {
   describe("Error Handling", () => {
     it("should return 500 when handler throws error", async () => {
       const event = {
-        type: "payment_intent.succeeded",
+        type: "checkout.session.completed",
         data: {
           object: {
-            id: "pi_test123",
-            status: "succeeded",
-            metadata: {},
-            charges: { data: [] },
+            id: "cs_test123",
+            metadata: {
+              invoiceNumber: "INV-ERR",
+            },
           },
         },
       };
@@ -433,7 +174,7 @@ describe("POST /api/webhooks/stripe", () => {
       vi.mocked(stripeService.verifyWebhookSignature).mockReturnValue(
         event as never
       );
-      vi.mocked(paymentService.handlePaymentSucceeded).mockRejectedValue(
+      vi.mocked(invoiceService.handlePaymentCompleted).mockRejectedValue(
         new Error("Database error")
       );
 

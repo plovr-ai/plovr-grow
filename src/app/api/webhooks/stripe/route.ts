@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripeService } from "@/services/stripe";
 import { invoiceService } from "@/services/invoice";
-import { paymentService } from "@/services/payment";
 import { subscriptionService } from "@/services/subscription";
 import type {
   StripeSubscriptionData,
@@ -88,49 +87,6 @@ export async function POST(request: NextRequest) {
           console.log(`[Stripe Webhook] Subscription invoice payment failed: ${invoice.id}`);
           await subscriptionService.handleInvoicePaymentFailed(invoice);
         }
-        break;
-      }
-
-      // ==================== Payment Intent Events ====================
-
-      case "payment_intent.succeeded": {
-        const paymentIntent = event.data.object;
-        const invoiceNumber = paymentIntent.metadata?.invoiceNumber;
-
-        // Handle invoice payment (catering)
-        if (invoiceNumber) {
-          console.log(`[Stripe Webhook] Payment intent succeeded for invoice: ${invoiceNumber}`);
-          await invoiceService.handlePaymentCompleted(invoiceNumber);
-        }
-
-        // Handle order payment (checkout)
-        // Note: Payment record should already exist from order creation
-        // This is a backup to ensure status is updated
-        if (!invoiceNumber) {
-          console.log(`[Stripe Webhook] Payment intent succeeded: ${paymentIntent.id}`);
-          const cardDetails = paymentIntent.charges?.data[0]?.payment_method_details?.card;
-          const paymentMethodType = paymentIntent.charges?.data[0]?.payment_method_details?.type;
-
-          await paymentService.handlePaymentSucceeded({
-            paymentIntentId: paymentIntent.id,
-            status: paymentIntent.status || "succeeded",
-            paymentMethodType: paymentMethodType,
-            cardBrand: cardDetails?.brand,
-            cardLast4: cardDetails?.last4,
-          });
-        }
-        break;
-      }
-
-      case "payment_intent.payment_failed": {
-        const paymentIntent = event.data.object;
-        console.log(`[Stripe Webhook] Payment intent failed: ${paymentIntent.id}`);
-
-        await paymentService.handlePaymentFailed({
-          paymentIntentId: paymentIntent.id,
-          failureCode: paymentIntent.last_payment_error?.code,
-          failureMessage: paymentIntent.last_payment_error?.message,
-        });
         break;
       }
 
