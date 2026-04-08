@@ -141,3 +141,9 @@ export interface StripeAccountInfo {
   payouts_enabled: boolean;
   details_submitted: boolean;
 }
+
+export interface UpdateSubscriptionPriceInput {
+  subscriptionId: string;
+  currentPriceId: string;
+  newPriceId: string;
+}

@@ -15,6 +15,7 @@ import type {
   StripeSubscriptionInfo,
   StripeOAuthTokenResponse,
   StripeAccountInfo,
+  UpdateSubscriptionPriceInput,
 } from "./stripe.types";
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
@@ -612,6 +613,100 @@ export class StripeService {
       signature,
       STRIPE_CONNECT_WEBHOOK_SECRET
     );
+  }
+
+  /**
+   * Update subscription to a new price (plan change with proration)
+   */
+  async updateSubscriptionPrice(
+    input: UpdateSubscriptionPriceInput
+  ): Promise<StripeSubscriptionInfo | null> {
+    if (this.isMockMode()) {
+      console.log("[Stripe Mock] Updating subscription price:", {
+        subscriptionId: input.subscriptionId,
+        currentPriceId: input.currentPriceId,
+        newPriceId: input.newPriceId,
+      });
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      return {
+        id: input.subscriptionId,
+        status: "active",
+        customerId: "mock_cus_123",
+        priceId: input.newPriceId,
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+        trialStart: null,
+        trialEnd: null,
+        cancelAtPeriodEnd: false,
+        canceledAt: null,
+      };
+    }
+
+    try {
+      // Retrieve the subscription to find the item ID
+      const subscription = await stripe!.subscriptions.retrieve(
+        input.subscriptionId
+      );
+
+      // Find the subscription item with the current price
+      const item = subscription.items.data.find(
+        (si) => si.price.id === input.currentPriceId
+      );
+
+      if (!item) {
+        console.error(
+          "[Stripe] Could not find subscription item with price:",
+          input.currentPriceId
+        );
+        return null;
+      }
+
+      // Update the subscription item's price with proration
+      const updated = await stripe!.subscriptions.update(
+        input.subscriptionId,
+        {
+          items: [
+            {
+              id: item.id,
+              price: input.newPriceId,
+            },
+          ],
+          proration_behavior: "create_prorations",
+        }
+      );
+
+      const firstItem = updated.items.data[0];
+      return {
+        id: updated.id,
+        status: updated.status,
+        customerId:
+          typeof updated.customer === "string"
+            ? updated.customer
+            : updated.customer.id,
+        priceId: firstItem?.price?.id || null,
+        currentPeriodStart: firstItem
+          ? new Date(firstItem.current_period_start * 1000)
+          : new Date(),
+        currentPeriodEnd: firstItem
+          ? new Date(firstItem.current_period_end * 1000)
+          : new Date(),
+        trialStart: updated.trial_start
+          ? new Date(updated.trial_start * 1000)
+          : null,
+        trialEnd: updated.trial_end
+          ? new Date(updated.trial_end * 1000)
+          : null,
+        cancelAtPeriodEnd: updated.cancel_at_period_end,
+        canceledAt: updated.canceled_at
+          ? new Date(updated.canceled_at * 1000)
+          : null,
+      };
+    } catch (err) {
+      console.error("Failed to update subscription price:", err);
+      return null;
+    }
   }
 }
 
