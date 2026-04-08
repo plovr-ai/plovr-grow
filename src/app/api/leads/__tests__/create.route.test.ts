@@ -54,6 +54,7 @@ describe("POST /api/leads", () => {
   });
 
   it("returns 400 for missing email", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { email: _, ...noEmail } = validBody;
     const res = await POST(makeRequest(noEmail));
     expect(res.status).toBe(400);
