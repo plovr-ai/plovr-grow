@@ -130,7 +130,9 @@ export class GiftCardService {
     tx?: DbClient
   ): Promise<GiftCardRedemptionResult> {
     // Get the gift card
-    const giftCard = await this.repository.getById(tenantId, giftCardId, tx);
+    const giftCard = tx
+      ? await this.repository.getByIdForUpdate(tenantId, giftCardId, tx)
+      : await this.repository.getById(tenantId, giftCardId);
 
     if (!giftCard) {
       throw new Error("Gift card not found");
