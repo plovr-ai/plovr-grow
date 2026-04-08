@@ -84,5 +84,30 @@
     "emailRequired": "Email is required",
     "emailInvalid": "Please enter a valid email",
     "submitError": "Something went wrong. Please try again."
+  },
+  "customerLoss": {
+    "pageTitle": "Restaurant Customer Loss Calculator — How Many Regulars Are You Losing?",
+    "pageDescription": "Most restaurants lose 20-30% of repeat customers monthly. Calculate your customer churn and revenue impact in seconds.",
+    "headline": "How many customers are you losing?",
+    "subheadline": "Most restaurants lose 20–30% of repeat customers monthly",
+    "ordersLabel": "Monthly orders",
+    "ordersPlaceholder": "Enter your monthly order count",
+    "aovLabel": "Average order value",
+    "calculateButton": "Analyze customer loss",
+    "trustMessage": "Based on industry averages",
+    "resultLostCustomers": "You're losing ~{count} customers/month",
+    "resultMonthlyLoss": "That's {amount}/month in lost revenue",
+    "resultYearlyLoss": "{amount}/year",
+    "chartTotalCustomers": "Your customers",
+    "chartLostCustomers": "Lost monthly",
+    "sellingPoint1": "Loyalty programs retain customers",
+    "sellingPoint2": "Direct ordering builds relationships",
+    "ctaHeadline": "Stop losing customers",
+    "emailPlaceholder": "your@email.com",
+    "continueButton": "Continue",
+    "submitting": "Submitting...",
+    "emailRequired": "Email is required",
+    "emailInvalid": "Please enter a valid email",
+    "submitError": "Something went wrong. Please try again."
   }
 }
