@@ -21,7 +21,6 @@ function Wrapper({ children }: { children: ReactNode }) {
         merchants: [],
         currency: "USD",
         locale: "en-US",
-        timezone: "America/New_York",
         subscription: null,
       }}
     >
@@ -392,8 +391,8 @@ describe("MenuItemCard", () => {
       const itemWithModifiers: DashboardMenuItem = {
         ...singleCategoryItem,
         modifierGroups: [
-          { name: "Size", required: true, multiSelect: false, maxSelections: 1, modifiers: [] },
-          { name: "Extras", required: false, multiSelect: true, maxSelections: 3, modifiers: [] },
+          { id: "mg-1", name: "Size", required: true, type: "single", modifiers: [] },
+          { id: "mg-2", name: "Extras", required: false, type: "multiple", modifiers: [] },
         ],
       };
 
@@ -409,7 +408,7 @@ describe("MenuItemCard", () => {
       const itemWithOneModifier: DashboardMenuItem = {
         ...singleCategoryItem,
         modifierGroups: [
-          { name: "Size", required: true, multiSelect: false, maxSelections: 1, modifiers: [] },
+          { id: "mg-1", name: "Size", required: true, type: "single", modifiers: [] },
         ],
       };
 

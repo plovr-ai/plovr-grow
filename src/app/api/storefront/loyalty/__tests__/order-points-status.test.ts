@@ -71,7 +71,7 @@ describe("GET /api/storefront/loyalty/order-points-status", () => {
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as ReturnType<typeof merchantService.getCompanyBySlug> extends Promise<infer T> ? T : never);
+    } as any);
 
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(true);
 
@@ -98,7 +98,7 @@ describe("GET /api/storefront/loyalty/order-points-status", () => {
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as ReturnType<typeof merchantService.getCompanyBySlug> extends Promise<infer T> ? T : never);
+    } as any);
 
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
 

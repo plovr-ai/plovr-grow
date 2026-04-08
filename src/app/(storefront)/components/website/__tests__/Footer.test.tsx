@@ -6,7 +6,7 @@ import type { MerchantInfo } from "@/types/website";
 
 const renderWithProvider = (ui: React.ReactElement, locale = "en-US") => {
   return render(
-    <MerchantProvider config={{ currency: "USD", locale }}>
+    <MerchantProvider config={{ name: "Test Restaurant", logoUrl: null, currency: "USD", locale, timezone: "America/New_York" }}>
       {ui}
     </MerchantProvider>
   );
@@ -17,7 +17,6 @@ const mockMerchant: MerchantInfo = {
   logo: "/images/logo.png",
   heroImage: "/images/hero.jpg",
   tagline: "Authentic New York Style Pizza Since 1975",
-  description: "The best pizza in town",
   address: "123 Main St",
   city: "New York",
   state: "NY",
@@ -38,6 +37,8 @@ const mockMerchant: MerchantInfo = {
     { platform: "instagram", url: "https://instagram.com/joespizza" },
     { platform: "twitter", url: "https://twitter.com/joespizza" },
   ],
+  currency: "USD",
+  locale: "en-US",
 };
 
 describe("Footer", () => {

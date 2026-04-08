@@ -40,7 +40,6 @@ function Wrapper({ children }: { children: ReactNode }) {
         ],
         currency: "USD",
         locale: "en-US",
-        timezone: "America/New_York",
         subscription: null,
       }}
     >

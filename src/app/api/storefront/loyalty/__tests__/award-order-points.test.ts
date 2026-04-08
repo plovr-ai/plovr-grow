@@ -148,7 +148,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as ReturnType<typeof merchantService.getCompanyBySlug> extends Promise<infer T> ? T : never);
+    } as any);
 
     vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(false);
 
@@ -179,7 +179,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as ReturnType<typeof merchantService.getCompanyBySlug> extends Promise<infer T> ? T : never);
+    } as any);
 
     vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(true);
@@ -211,7 +211,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as ReturnType<typeof merchantService.getCompanyBySlug> extends Promise<infer T> ? T : never);
+    } as any);
 
     vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
@@ -244,7 +244,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as ReturnType<typeof merchantService.getCompanyBySlug> extends Promise<infer T> ? T : never);
+    } as any);
 
     vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
@@ -256,12 +256,13 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       totalAmount: 50.0,
     };
     vi.mocked(orderService.getOrder).mockResolvedValue(
-      mockOrder as Awaited<ReturnType<typeof orderService.getOrder>>
+      mockOrder as any
     );
     vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(1);
     vi.mocked(pointsService.awardPoints).mockResolvedValue({
       pointsEarned: 50,
       newBalance: 150,
+      transactionId: "tx-1",
     });
 
     const request = new NextRequest(

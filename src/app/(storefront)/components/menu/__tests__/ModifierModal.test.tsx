@@ -27,7 +27,7 @@ describe("ModifierModal", () => {
     tags: [],
     hasModifiers: true,
     isAvailable: true,
-    taxConfigId: null,
+    taxes: [],
     modifierGroups: [],
     ...overrides,
   });

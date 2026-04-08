@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Decimal } from "@prisma/client/runtime/library";
 import { PointsService } from "../points.service";
 
 // Mock repositories
@@ -29,14 +30,16 @@ describe("PointsService", () => {
     tenantId: "tenant-1",
     companyId: "company-1",
     phone: "+12025551234",
-    name: "John Doe",
-    email: "john@example.com",
+    firstName: "John" as string | null,
+    lastName: "Doe" as string | null,
+    email: "john@example.com" as string | null,
     points: 100,
     totalOrders: 5,
-    totalSpent: 150.0,
-    lastOrderAt: new Date(),
+    totalSpent: new Decimal(150.0),
+    lastOrderAt: new Date() as Date | null,
     enrolledAt: new Date(),
     status: "active",
+    deleted: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -45,14 +48,18 @@ describe("PointsService", () => {
     id: "tx-1",
     tenantId: "tenant-1",
     memberId: "member-1",
-    merchantId: "merchant-1",
-    orderId: "order-1",
+    merchantId: "merchant-1" as string | null,
+    orderId: "order-1" as string | null,
     type: "earn",
     points: 25,
     balanceBefore: 100,
     balanceAfter: 125,
-    description: "Earned 25 points from order",
+    description: "Earned 25 points from order" as string | null,
+    deleted: false,
     createdAt: new Date(),
+    updatedAt: new Date(),
+    merchant: { id: "merchant-1", name: "Test Merchant", slug: "test-merchant" } as { id: string; name: string; slug: string } | null,
+    order: { id: "order-1", orderNumber: "ORD-001" } as { id: string; orderNumber: string } | null,
   };
 
   beforeEach(() => {
@@ -97,7 +104,7 @@ describe("PointsService", () => {
       vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
       vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(false);
       vi.mocked(pointTransactionRepository.create).mockResolvedValue(mockTransaction);
-      vi.mocked(loyaltyMemberRepository.updatePoints).mockResolvedValue();
+      vi.mocked(loyaltyMemberRepository.updatePoints).mockResolvedValue(mockMember);
 
       const result = await service.awardPoints("tenant-1", "member-1", {
         orderAmount: 25,
@@ -176,7 +183,7 @@ describe("PointsService", () => {
         points: 50,
         balanceAfter: 150,
       });
-      vi.mocked(loyaltyMemberRepository.updatePoints).mockResolvedValue();
+      vi.mocked(loyaltyMemberRepository.updatePoints).mockResolvedValue(mockMember);
 
       const result = await service.adjustPoints(
         "tenant-1",
@@ -197,7 +204,7 @@ describe("PointsService", () => {
         points: -50,
         balanceAfter: 50,
       });
-      vi.mocked(loyaltyMemberRepository.updatePoints).mockResolvedValue();
+      vi.mocked(loyaltyMemberRepository.updatePoints).mockResolvedValue(mockMember);
 
       const result = await service.adjustPoints(
         "tenant-1",

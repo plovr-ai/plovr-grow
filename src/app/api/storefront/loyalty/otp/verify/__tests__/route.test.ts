@@ -53,7 +53,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
     vi.mocked(otpService.verifyOtp).mockResolvedValue({
       verified: true,
       success: true,
-      reason: null,
+      reason: undefined,
     });
 
     // Mock member enrollment
@@ -125,7 +125,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
     vi.mocked(otpService.verifyOtp).mockResolvedValue({
       verified: true,
       success: true,
-      reason: null,
+      reason: undefined,
     });
 
     vi.mocked(loyaltyService.enrollCustomer).mockResolvedValue({
@@ -243,7 +243,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
     vi.mocked(otpService.verifyOtp).mockResolvedValue({
       verified: true,
       success: true,
-      reason: null,
+      reason: undefined,
     });
 
     vi.mocked(loyaltyService.enrollCustomer).mockResolvedValue({

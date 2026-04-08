@@ -15,6 +15,7 @@ function createWrapper(tipConfig?: TipConfig) {
           logoUrl: null,
           currency: "USD",
           locale: "en-US",
+          timezone: "America/New_York",
           tipConfig,
         }}
       >

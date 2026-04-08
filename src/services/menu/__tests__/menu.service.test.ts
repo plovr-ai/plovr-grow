@@ -555,10 +555,12 @@ describe("MenuService", () => {
       tags: ["vegetarian"],
       createdAt: new Date(),
       updatedAt: new Date(),
-      category: {
-        id: "cat-pizza",
-        name: "Pizza",
-      },
+      categories: [{
+        category: {
+          id: "cat-pizza",
+          name: "Pizza",
+        },
+      }],
     };
 
     beforeEach(() => {
@@ -571,7 +573,7 @@ describe("MenuService", () => {
       expect(result).not.toBeNull();
       expect(result?.id).toBe("item-cheese-pizza");
       expect(result?.name).toBe("Classic Cheese Pizza");
-      expect(result?.category.name).toBe("Pizza");
+      expect(result?.categories[0]?.category.name).toBe("Pizza");
     });
 
     it("should call menuRepository.getItemById with correct params", async () => {

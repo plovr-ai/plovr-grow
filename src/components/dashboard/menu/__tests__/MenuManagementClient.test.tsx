@@ -238,6 +238,7 @@ describe("MenuManagementClient", () => {
     currentMenuId: "menu-1",
     categories: mockCategories,
     taxConfigs: mockTaxConfigs,
+    showArchived: false,
   };
 
   beforeEach(() => {
@@ -285,6 +286,7 @@ describe("MenuManagementClient", () => {
           currentMenuId="menu-1"
           categories={[]}
           taxConfigs={mockTaxConfigs}
+          showArchived={false}
         />
       );
 
@@ -443,6 +445,7 @@ describe("MenuManagementClient", () => {
           currentMenuId="menu-1"
           categories={[]}
           taxConfigs={mockTaxConfigs}
+          showArchived={false}
         />
       );
 
@@ -518,6 +521,7 @@ describe("MenuManagementClient", () => {
           currentMenuId="menu-1"
           categories={[]}
           taxConfigs={mockTaxConfigs}
+          showArchived={false}
         />
       );
 

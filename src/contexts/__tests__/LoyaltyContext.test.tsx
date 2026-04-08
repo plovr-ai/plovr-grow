@@ -238,7 +238,9 @@ describe("LoyaltyContext", () => {
       const newMember = {
         id: "new-member-456",
         phone: "+10987654321",
-        name: "New User",
+        email: null,
+        firstName: "New",
+        lastName: "User",
         points: 50,
       };
 

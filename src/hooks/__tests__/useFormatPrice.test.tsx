@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { MerchantProvider } from "@/contexts";
 import { useFormatPrice } from "../useFormatPrice";
@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 function createWrapper(currency: string, locale: string) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <MerchantProvider config={{ currency, locale }}>
+      <MerchantProvider config={{ currency, locale, name: "Test", logoUrl: null, timezone: "America/New_York" }}>
         {children}
       </MerchantProvider>
     );

@@ -51,7 +51,7 @@ export class MenuService {
       name: m.name,
       description: m.description,
       sortOrder: m.sortOrder,
-      status: m.status as "active" | "inactive",
+      status: m.status as MenuInfo["status"],
     }));
   }
 
@@ -273,7 +273,7 @@ export class MenuService {
         name: m.name,
         description: m.description,
         sortOrder: m.sortOrder,
-        status: m.status as "active" | "inactive",
+        status: m.status as MenuInfo["status"],
       })),
       currentMenuId,
       categories: finalCategories,
@@ -514,7 +514,7 @@ export class MenuService {
       description: category.description,
       imageUrl: category.imageUrl,
       sortOrder: category.sortOrder,
-      status: category.status as "active" | "inactive",
+      status: category.status as DashboardCategory["status"],
       menuItems: category.categoryItems.map((ci): DashboardMenuItem => {
         const item = ci.menuItem;
         return {
@@ -524,7 +524,7 @@ export class MenuService {
           price: Number(item.price),
           imageUrl: item.imageUrl,
           sortOrder: ci.sortOrder,
-          status: item.status as "active" | "inactive" | "out_of_stock" | "archived",
+          status: item.status as DashboardMenuItem["status"],
           modifierGroups: (item.modifiers as unknown as ModifierGroupInput[]) || [],
           tags: (item.tags as unknown as string[]) || [],
           taxConfigIds: itemTaxMap.get(item.id) || [],
@@ -539,7 +539,7 @@ export class MenuService {
         name: m.name,
         description: m.description,
         sortOrder: m.sortOrder,
-        status: m.status as "active" | "inactive",
+        status: m.status as MenuInfo["status"],
       })),
       currentMenuId,
       categories: dashboardCategories,

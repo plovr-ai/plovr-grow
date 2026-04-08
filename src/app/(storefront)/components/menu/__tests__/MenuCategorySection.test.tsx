@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 
 function Wrapper({ children }: { children: ReactNode }) {
   return (
-    <MerchantProvider config={{ name: "Test Restaurant", logoUrl: null, currency: "USD", locale: "en-US" }}>
+    <MerchantProvider config={{ name: "Test Restaurant", logoUrl: null, currency: "USD", locale: "en-US", timezone: "America/New_York" }}>
       {children}
     </MerchantProvider>
   );
@@ -31,7 +31,7 @@ const mockFeaturedCategory: MenuCategoryWithItemsViewModel = {
       hasModifiers: true,
       modifierGroups: [],
       isAvailable: true,
-      taxConfigId: null,
+      taxes: [],
     },
     {
       id: "item-2",
@@ -43,7 +43,7 @@ const mockFeaturedCategory: MenuCategoryWithItemsViewModel = {
       hasModifiers: true,
       modifierGroups: [],
       isAvailable: true,
-      taxConfigId: null,
+      taxes: [],
     },
   ],
 };
@@ -66,7 +66,7 @@ const mockPizzaCategory: MenuCategoryWithItemsViewModel = {
       hasModifiers: true,
       modifierGroups: [],
       isAvailable: true,
-      taxConfigId: null,
+      taxes: [],
     },
   ],
 };
@@ -225,7 +225,7 @@ describe("MenuCategorySection", () => {
             hasModifiers: true,
             modifierGroups: [],
             isAvailable: true,
-            taxConfigId: null,
+            taxes: [],
           },
         ],
       };
