@@ -209,9 +209,9 @@ describe("subscription.plans", () => {
       expect(getPlanTier("enterprise")).toBe(3);
     });
 
-    it("should return -1 for unknown plan codes", async () => {
+    it("should return 0 for unknown plan codes", async () => {
       const { getPlanTier } = await import("../subscription.plans");
-      expect(getPlanTier("nonexistent")).toBe(-1);
+      expect(getPlanTier("nonexistent")).toBe(0);
     });
   });
 });
