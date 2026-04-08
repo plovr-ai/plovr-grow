@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { merchantService } from "@/services/merchant";
 import { MerchantProvider, ThemeProvider, LoyaltyProvider } from "@/contexts";
+import { TrialBanner } from "@storefront/components/trial/TrialBanner";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -38,6 +39,8 @@ export default async function CompanyLayout({ children, params }: LayoutProps) {
     notFound();
   }
 
+  const isTrial = company.tenant.subscriptionStatus === "trial";
+
   // Use company info for brand-level pages
   const defaultTipConfig = {
     mode: "percentage" as const,
@@ -47,6 +50,7 @@ export default async function CompanyLayout({ children, params }: LayoutProps) {
 
   return (
     <ThemeProvider preset={company.settings?.themePreset}>
+      {isTrial && <TrialBanner tenantId={company.tenantId} />}
       <MerchantProvider
         config={{
           name: company.name,
