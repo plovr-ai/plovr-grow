@@ -31,7 +31,7 @@ describe("POST /api/storefront/r/[slug]/payment-intent", () => {
   const mockPaymentIntentResult = {
     paymentIntentId: "pi_test123",
     clientSecret: "pi_test123_secret_abc",
-    stripeCustomerId: undefined,
+    stripeAccountId: "acct_test123",
   };
 
   beforeEach(() => {
@@ -66,48 +66,7 @@ describe("POST /api/storefront/r/[slug]/payment-intent", () => {
     expect(data.success).toBe(true);
     expect(data.data.clientSecret).toBe("pi_test123_secret_abc");
     expect(data.data.paymentIntentId).toBe("pi_test123");
-  });
-
-  it("should create PaymentIntent with loyalty member and save card", async () => {
-    vi.mocked(merchantService.getMerchantBySlug).mockResolvedValue(
-      mockMerchant as never
-    );
-    vi.mocked(paymentService.createPaymentIntent).mockResolvedValue({
-      ...mockPaymentIntentResult,
-      stripeCustomerId: "cus_123",
-    });
-
-    const request = new NextRequest(
-      "http://localhost:3000/api/storefront/r/test-restaurant/payment-intent",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          amount: 50.0,
-          currency: "USD",
-          loyaltyMemberId: "member-1",
-          saveCard: true,
-        }),
-      }
-    );
-
-    const response = await POST(request, {
-      params: Promise.resolve({ slug: "test-restaurant" }),
-    });
-    const data = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(data.success).toBe(true);
-    expect(data.data.stripeCustomerId).toBe("cus_123");
-
-    expect(paymentService.createPaymentIntent).toHaveBeenCalledWith({
-      tenantId: "tenant-1",
-      companyId: "company-1",
-      merchantId: "merchant-1",
-      amount: 50.0,
-      currency: "USD",
-      loyaltyMemberId: "member-1",
-      saveCard: true,
-    });
+    expect(data.data.stripeAccountId).toBe("acct_test123");
   });
 
   it("should return 404 when merchant not found", async () => {

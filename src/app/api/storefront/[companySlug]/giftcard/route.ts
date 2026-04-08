@@ -3,6 +3,7 @@ import { orderService } from "@/services/order";
 import { merchantService } from "@/services/merchant";
 import { giftCardService } from "@/services/giftcard";
 import { paymentService } from "@/services/payment";
+import { stripeConnectService } from "@/services/stripe-connect";
 import { giftcardApiSchema } from "@storefront/lib/validations/giftcard";
 import type { OrderItemData } from "@/types";
 
@@ -41,9 +42,17 @@ export async function POST(
 
     // Verify payment if stripePaymentIntentId is provided
     if (data.stripePaymentIntentId) {
+      const connectAccount = await stripeConnectService.getConnectAccount(company.tenantId);
+      if (!connectAccount) {
+        return NextResponse.json(
+          { success: false, error: "Payment provider not configured" },
+          { status: 400 }
+        );
+      }
       const verification = await paymentService.verifyPayment(
         data.stripePaymentIntentId,
-        data.amount
+        data.amount,
+        connectAccount.stripeAccountId
       );
 
       if (!verification.success) {

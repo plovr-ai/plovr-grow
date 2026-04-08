@@ -18,6 +18,7 @@ export type PaymentMethodType = (typeof PAYMENT_METHODS)[number];
 export interface CreatePaymentInput {
   orderId: string;
   stripePaymentIntentId: string;
+  stripeAccountId?: string | null;
   stripeCustomerId?: string | null;
   amount: number;
   currency: string;
@@ -45,6 +46,7 @@ export class PaymentRepository {
         tenantId,
         orderId: data.orderId,
         stripePaymentIntentId: data.stripePaymentIntentId,
+        stripeAccountId: data.stripeAccountId,
         stripeCustomerId: data.stripeCustomerId,
         amount: data.amount,
         currency: data.currency,

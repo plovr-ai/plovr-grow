@@ -1,21 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Decimal } from "@prisma/client/runtime/library";
 import { PaymentService } from "../payment.service";
-import { stripeService } from "@/services/stripe";
 import { paymentRepository } from "@/repositories/payment.repository";
-import { stripeCustomerRepository } from "@/repositories/stripe-customer.repository";
-import { loyaltyMemberRepository } from "@/repositories/loyalty-member.repository";
 
-// Mock dependencies
-vi.mock("@/services/stripe", () => ({
-  stripeService: {
-    createPaymentIntent: vi.fn(),
-    retrievePaymentIntent: vi.fn(),
-    createCustomer: vi.fn(),
-    listPaymentMethods: vi.fn(),
-    detachPaymentMethod: vi.fn(),
-  },
+const { mockCreatePaymentIntent, mockRetrievePaymentIntent, mockGetConnectAccount } = vi.hoisted(() => ({
+  mockCreatePaymentIntent: vi.fn(),
+  mockRetrievePaymentIntent: vi.fn(),
+  mockGetConnectAccount: vi.fn(),
 }));
+
+vi.mock("@/services/stripe-connect", () => {
+  class MockStripeConnectStandardProvider {
+    createPaymentIntent = mockCreatePaymentIntent;
+    retrievePaymentIntent = mockRetrievePaymentIntent;
+  }
+  return {
+    stripeConnectService: {
+      getConnectAccount: mockGetConnectAccount,
+    },
+    StripeConnectStandardProvider: MockStripeConnectStandardProvider,
+  };
+});
 
 vi.mock("@/repositories/payment.repository", () => ({
   paymentRepository: {
@@ -29,20 +34,6 @@ vi.mock("@/repositories/payment.repository", () => ({
   },
 }));
 
-vi.mock("@/repositories/stripe-customer.repository", () => ({
-  stripeCustomerRepository: {
-    create: vi.fn(),
-    getByLoyaltyMemberId: vi.fn(),
-    getByStripeCustomerId: vi.fn(),
-  },
-}));
-
-vi.mock("@/repositories/loyalty-member.repository", () => ({
-  loyaltyMemberRepository: {
-    getById: vi.fn(),
-  },
-}));
-
 describe("PaymentService", () => {
   let service: PaymentService;
 
@@ -50,42 +41,23 @@ describe("PaymentService", () => {
   const mockCompanyId = "company-1";
   const mockMerchantId = "merchant-1";
   const mockOrderId = "order-1";
-  const mockLoyaltyMemberId = "member-1";
+  const mockStripeAccountId = "acct_test123";
 
-  const mockLoyaltyMember = {
-    id: mockLoyaltyMemberId,
+  const mockConnectAccount = {
+    id: "ca-1",
     tenantId: mockTenantId,
-    companyId: mockCompanyId,
-    phone: "+12025551234",
-    email: "test@example.com",
-    firstName: "John",
-    lastName: "Doe",
-    points: 100,
-    totalOrders: 5,
-    totalSpent: new Decimal(150),
-    lastOrderAt: null,
-    enrolledAt: new Date(),
-    status: "active",
+    stripeAccountId: mockStripeAccountId,
+    chargesEnabled: true,
+    payoutsEnabled: true,
+    detailsSubmitted: true,
+    accessToken: "tok_xxx" as string | null,
+    refreshToken: "ref_xxx" as string | null,
+    scope: "read_write" as string | null,
+    connectedAt: null as Date | null,
+    disconnectedAt: null as Date | null,
     deleted: false,
     createdAt: new Date(),
     updatedAt: new Date(),
-  };
-
-  const mockStripeCustomer = {
-    id: "sc-1",
-    tenantId: mockTenantId,
-    companyId: mockCompanyId,
-    loyaltyMemberId: mockLoyaltyMemberId,
-    stripeCustomerId: "cus_123abc",
-    deleted: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  const mockPaymentIntentResult = {
-    id: "pi_test123",
-    clientSecret: "pi_test123_secret_abc",
-    status: "requires_payment_method",
   };
 
   beforeEach(() => {
@@ -94,10 +66,15 @@ describe("PaymentService", () => {
   });
 
   describe("createPaymentIntent", () => {
-    it("should create a PaymentIntent without customer", async () => {
-      vi.mocked(stripeService.createPaymentIntent).mockResolvedValue(
-        mockPaymentIntentResult
+    it("should create a PaymentIntent via provider using connect account", async () => {
+      mockGetConnectAccount.mockResolvedValue(
+        mockConnectAccount
       );
+      mockCreatePaymentIntent.mockResolvedValue({
+        paymentIntentId: "pi_test123",
+        clientSecret: "pi_test123_secret_abc",
+        stripeAccountId: mockStripeAccountId,
+      });
 
       const result = await service.createPaymentIntent({
         tenantId: mockTenantId,
@@ -110,14 +87,16 @@ describe("PaymentService", () => {
       expect(result).toEqual({
         paymentIntentId: "pi_test123",
         clientSecret: "pi_test123_secret_abc",
-        stripeCustomerId: undefined,
+        stripeAccountId: mockStripeAccountId,
       });
 
-      expect(stripeService.createPaymentIntent).toHaveBeenCalledWith({
+      expect(mockGetConnectAccount).toHaveBeenCalledWith(
+        mockTenantId
+      );
+      expect(mockCreatePaymentIntent).toHaveBeenCalledWith({
         amount: 25.99,
         currency: "USD",
-        customerId: undefined,
-        saveCard: undefined,
+        stripeAccountId: mockStripeAccountId,
         metadata: {
           tenantId: mockTenantId,
           companyId: mockCompanyId,
@@ -126,79 +105,79 @@ describe("PaymentService", () => {
       });
     });
 
-    it("should create a PaymentIntent with existing Stripe customer", async () => {
-      vi.mocked(stripeCustomerRepository.getByLoyaltyMemberId).mockResolvedValue(
-        mockStripeCustomer
+    it("should use default currency USD when not specified", async () => {
+      mockGetConnectAccount.mockResolvedValue(
+        mockConnectAccount
       );
-      vi.mocked(stripeService.createPaymentIntent).mockResolvedValue(
-        mockPaymentIntentResult
-      );
-
-      const result = await service.createPaymentIntent({
-        tenantId: mockTenantId,
-        companyId: mockCompanyId,
-        amount: 50.0,
-        currency: "USD",
-        loyaltyMemberId: mockLoyaltyMemberId,
-        saveCard: true,
+      mockCreatePaymentIntent.mockResolvedValue({
+        paymentIntentId: "pi_test123",
+        clientSecret: "pi_test123_secret_abc",
+        stripeAccountId: mockStripeAccountId,
       });
 
-      expect(result.stripeCustomerId).toBe("cus_123abc");
-      expect(stripeService.createPaymentIntent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          customerId: "cus_123abc",
-          saveCard: true,
-        })
+      await service.createPaymentIntent({
+        tenantId: mockTenantId,
+        companyId: mockCompanyId,
+        amount: 10.0,
+      });
+
+      expect(mockCreatePaymentIntent).toHaveBeenCalledWith(
+        expect.objectContaining({ currency: "USD" })
       );
     });
 
-    it("should create a new Stripe customer for loyalty member", async () => {
-      vi.mocked(stripeCustomerRepository.getByLoyaltyMemberId).mockResolvedValue(
-        null
-      );
-      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(
-        mockLoyaltyMember
-      );
-      vi.mocked(stripeService.createCustomer).mockResolvedValue("cus_new456");
-      vi.mocked(stripeCustomerRepository.create).mockResolvedValue({
-        id: "sc-new",
-        tenantId: mockTenantId,
-        companyId: mockCompanyId,
-        loyaltyMemberId: mockLoyaltyMemberId,
-        stripeCustomerId: "cus_new456",
-        deleted: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      vi.mocked(stripeService.createPaymentIntent).mockResolvedValue(
-        mockPaymentIntentResult
-      );
+    it("should throw STRIPE_CONNECT_CHARGES_NOT_ENABLED when connect account not found", async () => {
+      mockGetConnectAccount.mockResolvedValue(null);
 
-      const result = await service.createPaymentIntent({
-        tenantId: mockTenantId,
-        companyId: mockCompanyId,
-        amount: 75.0,
-        currency: "USD",
-        loyaltyMemberId: mockLoyaltyMemberId,
-      });
-
-      expect(stripeService.createCustomer).toHaveBeenCalledWith({
-        email: "test@example.com",
-        name: "John Doe",
-        metadata: expect.objectContaining({
+      await expect(
+        service.createPaymentIntent({
           tenantId: mockTenantId,
           companyId: mockCompanyId,
-          loyaltyMemberId: mockLoyaltyMemberId,
-        }),
+          amount: 25.99,
+        })
+      ).rejects.toThrow();
+    });
+
+    it("should throw STRIPE_CONNECT_CHARGES_NOT_ENABLED when charges not enabled", async () => {
+      mockGetConnectAccount.mockResolvedValue({
+        ...mockConnectAccount,
+        chargesEnabled: false,
       });
-      expect(stripeCustomerRepository.create).toHaveBeenCalled();
-      expect(result.stripeCustomerId).toBe("cus_new456");
+
+      await expect(
+        service.createPaymentIntent({
+          tenantId: mockTenantId,
+          companyId: mockCompanyId,
+          amount: 25.99,
+        })
+      ).rejects.toThrow();
+    });
+
+    it("should not include undefined fields in metadata", async () => {
+      mockGetConnectAccount.mockResolvedValue(
+        mockConnectAccount
+      );
+      mockCreatePaymentIntent.mockResolvedValue({
+        paymentIntentId: "pi_test123",
+        clientSecret: "pi_test123_secret_abc",
+        stripeAccountId: mockStripeAccountId,
+      });
+
+      await service.createPaymentIntent({
+        tenantId: mockTenantId,
+        companyId: mockCompanyId,
+        amount: 10.0,
+      });
+
+      const callArg = mockCreatePaymentIntent.mock.calls[0][0];
+      expect(callArg.metadata).not.toHaveProperty("merchantId");
+      expect(callArg.metadata).not.toHaveProperty("orderId");
     });
   });
 
   describe("verifyPayment", () => {
     it("should return success for succeeded payment with correct amount", async () => {
-      vi.mocked(stripeService.retrievePaymentIntent).mockResolvedValue({
+      mockRetrievePaymentIntent.mockResolvedValue({
         id: "pi_test123",
         status: "succeeded",
         amount: 2599, // $25.99 in cents
@@ -207,7 +186,11 @@ describe("PaymentService", () => {
         cardLast4: "4242",
       });
 
-      const result = await service.verifyPayment("pi_test123", 25.99);
+      const result = await service.verifyPayment(
+        "pi_test123",
+        25.99,
+        mockStripeAccountId
+      );
 
       expect(result).toEqual({
         success: true,
@@ -217,12 +200,21 @@ describe("PaymentService", () => {
         cardBrand: "visa",
         cardLast4: "4242",
       });
+
+      expect(mockRetrievePaymentIntent).toHaveBeenCalledWith(
+        "pi_test123",
+        mockStripeAccountId
+      );
     });
 
     it("should return failure for payment not found", async () => {
-      vi.mocked(stripeService.retrievePaymentIntent).mockResolvedValue(null);
+      mockRetrievePaymentIntent.mockResolvedValue(null);
 
-      const result = await service.verifyPayment("pi_notfound", 25.99);
+      const result = await service.verifyPayment(
+        "pi_notfound",
+        25.99,
+        mockStripeAccountId
+      );
 
       expect(result).toEqual({
         success: false,
@@ -234,28 +226,36 @@ describe("PaymentService", () => {
     });
 
     it("should return failure for non-succeeded payment", async () => {
-      vi.mocked(stripeService.retrievePaymentIntent).mockResolvedValue({
+      mockRetrievePaymentIntent.mockResolvedValue({
         id: "pi_test123",
         status: "requires_payment_method",
         amount: 2599,
         currency: "usd",
       });
 
-      const result = await service.verifyPayment("pi_test123", 25.99);
+      const result = await service.verifyPayment(
+        "pi_test123",
+        25.99,
+        mockStripeAccountId
+      );
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("requires_payment_method");
     });
 
     it("should return failure for amount mismatch", async () => {
-      vi.mocked(stripeService.retrievePaymentIntent).mockResolvedValue({
+      mockRetrievePaymentIntent.mockResolvedValue({
         id: "pi_test123",
         status: "succeeded",
         amount: 1000, // $10.00
         currency: "usd",
       });
 
-      const result = await service.verifyPayment("pi_test123", 25.99);
+      const result = await service.verifyPayment(
+        "pi_test123",
+        25.99,
+        mockStripeAccountId
+      );
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("amount mismatch");
@@ -268,6 +268,7 @@ describe("PaymentService", () => {
       tenantId: mockTenantId,
       orderId: mockOrderId,
       stripePaymentIntentId: "pi_test123",
+      stripeAccountId: mockStripeAccountId,
       stripeCustomerId: null,
       amount: new Decimal(25.99),
       currency: "USD",
@@ -293,7 +294,9 @@ describe("PaymentService", () => {
           companyId: mockCompanyId,
           merchantId: mockMerchantId as string | null,
         },
-      } as unknown as Awaited<ReturnType<typeof paymentRepository.getByPaymentIntentId>> & {});
+      } as unknown as Awaited<
+        ReturnType<typeof paymentRepository.getByPaymentIntentId>
+      > & {});
       vi.mocked(paymentRepository.updateStatus).mockResolvedValue({
         ...mockPayment,
         status: "succeeded",
@@ -329,7 +332,9 @@ describe("PaymentService", () => {
           companyId: mockCompanyId,
           merchantId: mockMerchantId as string | null,
         },
-      } as unknown as Awaited<ReturnType<typeof paymentRepository.getByPaymentIntentId>> & {});
+      } as unknown as Awaited<
+        ReturnType<typeof paymentRepository.getByPaymentIntentId>
+      > & {});
 
       await service.handlePaymentSucceeded({
         paymentIntentId: "pi_test123",
@@ -342,7 +347,6 @@ describe("PaymentService", () => {
     it("should handle payment not found gracefully", async () => {
       vi.mocked(paymentRepository.getByPaymentIntentId).mockResolvedValue(null);
 
-      // Should not throw
       await expect(
         service.handlePaymentSucceeded({
           paymentIntentId: "pi_notfound",
@@ -358,6 +362,7 @@ describe("PaymentService", () => {
       tenantId: mockTenantId,
       orderId: mockOrderId,
       stripePaymentIntentId: "pi_test123",
+      stripeAccountId: mockStripeAccountId,
       stripeCustomerId: null,
       amount: new Decimal(25.99),
       currency: "USD",
@@ -383,7 +388,9 @@ describe("PaymentService", () => {
           companyId: mockCompanyId,
           merchantId: mockMerchantId as string | null,
         },
-      } as unknown as Awaited<ReturnType<typeof paymentRepository.getByPaymentIntentId>> & {});
+      } as unknown as Awaited<
+        ReturnType<typeof paymentRepository.getByPaymentIntentId>
+      > & {});
       vi.mocked(paymentRepository.updateStatus).mockResolvedValue({
         ...mockPaymentFailed,
         status: "failed",
@@ -407,14 +414,14 @@ describe("PaymentService", () => {
   });
 
   describe("createPaymentRecord", () => {
-    it("should create a payment record", async () => {
+    it("should create a payment record with stripeAccountId", async () => {
       const mockCreatedPayment = {
         id: "payment-new",
         tenantId: mockTenantId,
         orderId: mockOrderId,
         stripePaymentIntentId: "pi_test123",
         stripeCustomerId: null,
-        stripeAccountId: null,
+        stripeAccountId: mockStripeAccountId,
         amount: new Decimal(25.99),
         currency: "USD",
         status: "pending",
@@ -435,100 +442,24 @@ describe("PaymentService", () => {
         tenantId: mockTenantId,
         orderId: mockOrderId,
         stripePaymentIntentId: "pi_test123",
+        stripeAccountId: mockStripeAccountId,
         amount: 25.99,
         currency: "USD",
       });
 
       expect(result).toEqual(mockCreatedPayment);
-      expect(paymentRepository.create).toHaveBeenCalledWith(mockTenantId, {
-        orderId: mockOrderId,
-        stripePaymentIntentId: "pi_test123",
-        stripeCustomerId: undefined,
-        amount: 25.99,
-        currency: "USD",
-      }, undefined);
-    });
-  });
-
-  describe("getSavedPaymentMethods", () => {
-    it("should return empty array if no Stripe customer", async () => {
-      vi.mocked(stripeCustomerRepository.getByLoyaltyMemberId).mockResolvedValue(
-        null
+      expect(paymentRepository.create).toHaveBeenCalledWith(
+        mockTenantId,
+        {
+          orderId: mockOrderId,
+          stripePaymentIntentId: "pi_test123",
+          stripeAccountId: mockStripeAccountId,
+          stripeCustomerId: undefined,
+          amount: 25.99,
+          currency: "USD",
+        },
+        undefined
       );
-
-      const result = await service.getSavedPaymentMethods(mockLoyaltyMemberId);
-
-      expect(result).toEqual([]);
-      expect(stripeService.listPaymentMethods).not.toHaveBeenCalled();
-    });
-
-    it("should return payment methods for existing Stripe customer", async () => {
-      const mockPaymentMethods = [
-        { id: "pm_1", brand: "visa", last4: "4242", expMonth: 12, expYear: 2025 },
-        { id: "pm_2", brand: "mastercard", last4: "5555", expMonth: 6, expYear: 2026 },
-      ];
-
-      vi.mocked(stripeCustomerRepository.getByLoyaltyMemberId).mockResolvedValue(
-        mockStripeCustomer
-      );
-      vi.mocked(stripeService.listPaymentMethods).mockResolvedValue(
-        mockPaymentMethods
-      );
-
-      const result = await service.getSavedPaymentMethods(mockLoyaltyMemberId);
-
-      expect(result).toEqual(mockPaymentMethods);
-      expect(stripeService.listPaymentMethods).toHaveBeenCalledWith("cus_123abc");
-    });
-  });
-
-  describe("deleteSavedPaymentMethod", () => {
-    it("should return false if no Stripe customer", async () => {
-      vi.mocked(stripeCustomerRepository.getByLoyaltyMemberId).mockResolvedValue(
-        null
-      );
-
-      const result = await service.deleteSavedPaymentMethod(
-        mockLoyaltyMemberId,
-        "pm_123"
-      );
-
-      expect(result).toBe(false);
-    });
-
-    it("should return false if payment method not found", async () => {
-      vi.mocked(stripeCustomerRepository.getByLoyaltyMemberId).mockResolvedValue(
-        mockStripeCustomer
-      );
-      vi.mocked(stripeService.listPaymentMethods).mockResolvedValue([
-        { id: "pm_other", brand: "visa", last4: "4242", expMonth: 12, expYear: 2025 },
-      ]);
-
-      const result = await service.deleteSavedPaymentMethod(
-        mockLoyaltyMemberId,
-        "pm_notfound"
-      );
-
-      expect(result).toBe(false);
-      expect(stripeService.detachPaymentMethod).not.toHaveBeenCalled();
-    });
-
-    it("should delete payment method successfully", async () => {
-      vi.mocked(stripeCustomerRepository.getByLoyaltyMemberId).mockResolvedValue(
-        mockStripeCustomer
-      );
-      vi.mocked(stripeService.listPaymentMethods).mockResolvedValue([
-        { id: "pm_123", brand: "visa", last4: "4242", expMonth: 12, expYear: 2025 },
-      ]);
-      vi.mocked(stripeService.detachPaymentMethod).mockResolvedValue();
-
-      const result = await service.deleteSavedPaymentMethod(
-        mockLoyaltyMemberId,
-        "pm_123"
-      );
-
-      expect(result).toBe(true);
-      expect(stripeService.detachPaymentMethod).toHaveBeenCalledWith("pm_123");
     });
   });
 });

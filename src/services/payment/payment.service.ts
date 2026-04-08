@@ -1,14 +1,14 @@
-import { stripeService } from "@/services/stripe";
 import type { DbClient } from "@/lib/db";
 import {
   paymentRepository,
   type PaymentStatus,
 } from "@/repositories/payment.repository";
+import { AppError } from "@/lib/errors/app-error";
+import { ErrorCodes } from "@/lib/errors/error-codes";
 import {
-  stripeCustomerRepository,
-  type CreateStripeCustomerInput,
-} from "@/repositories/stripe-customer.repository";
-import { loyaltyMemberRepository } from "@/repositories/loyalty-member.repository";
+  StripeConnectStandardProvider,
+  stripeConnectService,
+} from "@/services/stripe-connect";
 import type {
   CreatePaymentIntentRequest,
   CreatePaymentIntentResponse,
@@ -19,6 +19,8 @@ import type {
 } from "./payment.types";
 
 export class PaymentService {
+  private provider = new StripeConnectStandardProvider();
+
   /**
    * Create a PaymentIntent for checkout
    * This is called when user selects "Pay Now" and we need to create a Stripe PaymentIntent
@@ -26,38 +28,35 @@ export class PaymentService {
   async createPaymentIntent(
     request: CreatePaymentIntentRequest
   ): Promise<CreatePaymentIntentResponse> {
-    let stripeCustomerId: string | undefined;
+    // Get connect account for tenant
+    const connectAccount = await stripeConnectService.getConnectAccount(
+      request.tenantId
+    );
 
-    // If loyalty member provided, get or create Stripe customer
-    if (request.loyaltyMemberId) {
-      stripeCustomerId = await this.getOrCreateStripeCustomer(
-        request.tenantId,
-        request.companyId,
-        request.loyaltyMemberId
+    if (!connectAccount || !connectAccount.chargesEnabled) {
+      throw new AppError(
+        ErrorCodes.STRIPE_CONNECT_CHARGES_NOT_ENABLED,
+        undefined,
+        400
       );
     }
 
-    // Create PaymentIntent with Stripe
-    const paymentIntent = await stripeService.createPaymentIntent({
+    const result = await this.provider.createPaymentIntent({
       amount: request.amount,
-      currency: request.currency,
-      customerId: stripeCustomerId,
-      saveCard: request.saveCard,
+      currency: request.currency ?? "USD",
+      stripeAccountId: connectAccount.stripeAccountId,
       metadata: {
         tenantId: request.tenantId,
         companyId: request.companyId,
         ...(request.merchantId && { merchantId: request.merchantId }),
         ...(request.orderId && { orderId: request.orderId }),
-        ...(request.loyaltyMemberId && {
-          loyaltyMemberId: request.loyaltyMemberId,
-        }),
       },
     });
 
     return {
-      paymentIntentId: paymentIntent.id,
-      clientSecret: paymentIntent.clientSecret,
-      stripeCustomerId,
+      paymentIntentId: result.paymentIntentId,
+      clientSecret: result.clientSecret,
+      stripeAccountId: result.stripeAccountId,
     };
   }
 
@@ -66,13 +65,18 @@ export class PaymentService {
    * This is called after order is created to link payment with order
    */
   async createPaymentRecord(input: CreatePaymentRecordInput, tx?: DbClient) {
-    return paymentRepository.create(input.tenantId, {
-      orderId: input.orderId,
-      stripePaymentIntentId: input.stripePaymentIntentId,
-      stripeCustomerId: input.stripeCustomerId,
-      amount: input.amount,
-      currency: input.currency,
-    }, tx);
+    return paymentRepository.create(
+      input.tenantId,
+      {
+        orderId: input.orderId,
+        stripePaymentIntentId: input.stripePaymentIntentId,
+        stripeAccountId: input.stripeAccountId,
+        stripeCustomerId: input.stripeCustomerId,
+        amount: input.amount,
+        currency: input.currency,
+      },
+      tx
+    );
   }
 
   /**
@@ -81,10 +85,13 @@ export class PaymentService {
    */
   async verifyPayment(
     paymentIntentId: string,
-    expectedAmount: number
+    expectedAmount: number,
+    stripeAccountId: string
   ): Promise<VerifyPaymentResult> {
-    const paymentIntent =
-      await stripeService.retrievePaymentIntent(paymentIntentId);
+    const paymentIntent = await this.provider.retrievePaymentIntent(
+      paymentIntentId,
+      stripeAccountId
+    );
 
     if (!paymentIntent) {
       return {
@@ -210,94 +217,6 @@ export class PaymentService {
    */
   async getPaymentByIntentId(paymentIntentId: string) {
     return paymentRepository.getByPaymentIntentId(paymentIntentId);
-  }
-
-  // ==================== Stripe Customer Methods ====================
-
-  /**
-   * Get or create a Stripe customer for a loyalty member
-   */
-  private async getOrCreateStripeCustomer(
-    tenantId: string,
-    companyId: string,
-    loyaltyMemberId: string
-  ): Promise<string> {
-    // Check if we already have a Stripe customer mapping
-    const existingMapping =
-      await stripeCustomerRepository.getByLoyaltyMemberId(loyaltyMemberId);
-    if (existingMapping) {
-      return existingMapping.stripeCustomerId;
-    }
-
-    // Get loyalty member details
-    const member = await loyaltyMemberRepository.getById(
-      tenantId,
-      loyaltyMemberId
-    );
-    if (!member) {
-      throw new Error(`Loyalty member not found: ${loyaltyMemberId}`);
-    }
-
-    // Create Stripe customer
-    const name = [member.firstName, member.lastName].filter(Boolean).join(" ");
-    const stripeCustomerId = await stripeService.createCustomer({
-      email: member.email || `${member.phone}@placeholder.local`,
-      name: name || member.phone,
-      metadata: {
-        tenantId,
-        companyId,
-        loyaltyMemberId,
-        phone: member.phone,
-      },
-    });
-
-    // Save mapping
-    await stripeCustomerRepository.create(tenantId, {
-      companyId,
-      loyaltyMemberId,
-      stripeCustomerId,
-    });
-
-    return stripeCustomerId;
-  }
-
-  /**
-   * Get saved payment methods for a loyalty member
-   */
-  async getSavedPaymentMethods(loyaltyMemberId: string) {
-    const stripeCustomer =
-      await stripeCustomerRepository.getByLoyaltyMemberId(loyaltyMemberId);
-    if (!stripeCustomer) {
-      return [];
-    }
-
-    return stripeService.listPaymentMethods(stripeCustomer.stripeCustomerId);
-  }
-
-  /**
-   * Delete a saved payment method
-   */
-  async deleteSavedPaymentMethod(
-    loyaltyMemberId: string,
-    paymentMethodId: string
-  ): Promise<boolean> {
-    const stripeCustomer =
-      await stripeCustomerRepository.getByLoyaltyMemberId(loyaltyMemberId);
-    if (!stripeCustomer) {
-      return false;
-    }
-
-    // Verify the payment method belongs to this customer
-    const methods = await stripeService.listPaymentMethods(
-      stripeCustomer.stripeCustomerId
-    );
-    const method = methods.find((m) => m.id === paymentMethodId);
-    if (!method) {
-      return false;
-    }
-
-    await stripeService.detachPaymentMethod(paymentMethodId);
-    return true;
   }
 }
 

@@ -3,16 +3,14 @@ export interface CreatePaymentIntentRequest {
   companyId: string;
   merchantId?: string;
   amount: number;
-  currency: string;
+  currency?: string;
   orderId?: string;
-  loyaltyMemberId?: string;
-  saveCard?: boolean;
 }
 
 export interface CreatePaymentIntentResponse {
   paymentIntentId: string;
   clientSecret: string;
-  stripeCustomerId?: string;
+  stripeAccountId: string;
 }
 
 export interface PaymentSucceededData {
@@ -33,6 +31,7 @@ export interface CreatePaymentRecordInput {
   tenantId: string;
   orderId: string;
   stripePaymentIntentId: string;
+  stripeAccountId?: string;
   stripeCustomerId?: string | null;
   amount: number;
   currency: string;
