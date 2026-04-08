@@ -12,10 +12,12 @@ model Tenant {
   name                    String
   subscriptionPlan        String                 @default("free") @map("subscription_plan")
   subscriptionStatus      String                 @default("active") @map("subscription_status")
+  stripeConnectStatus     String?                @map("stripe_connect_status")
   deleted                 Boolean                @default(false)
   createdAt               DateTime               @default(now()) @map("created_at")
   updatedAt               DateTime               @updatedAt @map("updated_at")
   company                 Company?
+  stripeConnectAccount    StripeConnectAccount?
   menus                   Menu[]
   menuCategories          MenuCategory[]
   menuItems               MenuItem[]
@@ -748,6 +750,7 @@ model Payment {
   // Stripe fields
   stripePaymentIntentId String    @unique @map("stripe_payment_intent_id")
   stripeCustomerId      String?   @map("stripe_customer_id")
+  stripeAccountId       String?   @map("stripe_account_id")
 
   // Payment info
   amount                Decimal   @db.Decimal(10, 2)
@@ -799,6 +802,31 @@ model StripeCustomer {
   @@index([companyId])
   @@index([stripeCustomerId])
   @@map("stripe_customers")
+}
+
+model StripeConnectAccount {
+  id                    String    @id
+  tenantId              String    @unique @map("tenant_id")
+  stripeAccountId       String    @unique @map("stripe_account_id")
+
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  scope                 String?
+
+  chargesEnabled        Boolean   @default(false) @map("charges_enabled")
+  payoutsEnabled        Boolean   @default(false) @map("payouts_enabled")
+  detailsSubmitted      Boolean   @default(false) @map("details_submitted")
+
+  connectedAt           DateTime? @map("connected_at")
+  disconnectedAt        DateTime? @map("disconnected_at")
+  deleted               Boolean   @default(false)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([stripeAccountId])
+  @@map("stripe_connect_accounts")
 }
 
 // ==================== Subscription System ====================
