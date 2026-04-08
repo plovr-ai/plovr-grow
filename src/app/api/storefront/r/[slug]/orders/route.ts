@@ -4,6 +4,7 @@ import { merchantService } from "@/services/merchant";
 import { pointsService, loyaltyConfigService } from "@/services/loyalty";
 import { giftCardService } from "@/services/giftcard";
 import { paymentService } from "@/services/payment";
+import { stripeConnectService } from "@/services/stripe-connect";
 import { checkoutFormSchema } from "@storefront/lib/validations/checkout";
 import type { OrderItemData, OrderMode } from "@/types";
 
@@ -156,9 +157,17 @@ export async function POST(
 
       // Only verify if there's an amount to pay
       if (expectedCardPayment > 0) {
+        const connectAccount = await stripeConnectService.getConnectAccount(tenantId);
+        if (!connectAccount) {
+          return NextResponse.json(
+            { success: false, error: "Payment provider not configured" },
+            { status: 400 }
+          );
+        }
         const paymentResult = await paymentService.verifyPayment(
           body.stripePaymentIntentId,
-          expectedCardPayment
+          expectedCardPayment,
+          connectAccount.stripeAccountId
         );
 
         if (!paymentResult.success) {

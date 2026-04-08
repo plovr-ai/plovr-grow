@@ -6,7 +6,6 @@ import { z } from "zod";
 const createPaymentIntentSchema = z.object({
   amount: z.number().positive("Amount must be positive"),
   currency: z.string().default("USD"),
-  loyaltyMemberId: z.string().optional(),
 });
 
 export async function POST(
@@ -41,7 +40,7 @@ export async function POST(
       );
     }
 
-    const { amount, currency, loyaltyMemberId } = validation.data;
+    const { amount, currency } = validation.data;
 
     // Create PaymentIntent at company level (no merchantId)
     const result = await paymentService.createPaymentIntent({
@@ -50,7 +49,6 @@ export async function POST(
       merchantId: undefined,
       amount,
       currency,
-      loyaltyMemberId,
     });
 
     return NextResponse.json(
@@ -59,7 +57,7 @@ export async function POST(
         data: {
           clientSecret: result.clientSecret,
           paymentIntentId: result.paymentIntentId,
-          stripeCustomerId: result.stripeCustomerId,
+          stripeAccountId: result.stripeAccountId,
         },
       },
       { status: 200 }

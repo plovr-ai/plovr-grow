@@ -29,7 +29,7 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
   const mockPaymentIntentResult = {
     paymentIntentId: "pi_test123",
     clientSecret: "pi_test123_secret_abc",
-    stripeCustomerId: undefined,
+    stripeAccountId: "acct_test123",
   };
 
   beforeEach(() => {
@@ -64,6 +64,7 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
     expect(data.success).toBe(true);
     expect(data.data.clientSecret).toBe("pi_test123_secret_abc");
     expect(data.data.paymentIntentId).toBe("pi_test123");
+    expect(data.data.stripeAccountId).toBe("acct_test123");
   });
 
   it("should create PaymentIntent with merchantId undefined (company-level)", async () => {
@@ -95,47 +96,6 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
       merchantId: undefined,
       amount: 25.0,
       currency: "USD",
-      loyaltyMemberId: undefined,
-    });
-  });
-
-  it("should create PaymentIntent with loyalty member", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
-      mockCompany as never
-    );
-    vi.mocked(paymentService.createPaymentIntent).mockResolvedValue({
-      ...mockPaymentIntentResult,
-      stripeCustomerId: "cus_123",
-    });
-
-    const request = new NextRequest(
-      "http://localhost:3000/api/storefront/test-company/payment-intent",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          amount: 100.0,
-          currency: "USD",
-          loyaltyMemberId: "member-1",
-        }),
-      }
-    );
-
-    const response = await POST(request, {
-      params: Promise.resolve({ companySlug: "test-company" }),
-    });
-    const data = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(data.success).toBe(true);
-    expect(data.data.stripeCustomerId).toBe("cus_123");
-
-    expect(paymentService.createPaymentIntent).toHaveBeenCalledWith({
-      tenantId: "tenant-1",
-      companyId: "company-1",
-      merchantId: undefined,
-      amount: 100.0,
-      currency: "USD",
-      loyaltyMemberId: "member-1",
     });
   });
 
