@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { getAllPlans } from "@/services/subscription";
 
 // GET: List available subscription plans
 export async function GET() {
+  const session = await auth();
+  if (!session?.user?.tenantId) {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   const plans = getAllPlans();
 
   return NextResponse.json({

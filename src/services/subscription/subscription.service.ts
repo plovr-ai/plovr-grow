@@ -302,6 +302,7 @@ export class SubscriptionService {
       await subscriptionRepository.updateByTenantId(tenantId, {
         stripeSubscriptionId: stripeSubscription.id,
         stripePriceId: stripeSubscription.priceId ?? undefined,
+        plan: planCode,
         status: stripeSubscription.status as SubscriptionStatus,
         currentPeriodStart: stripeSubscription.currentPeriodStart,
         currentPeriodEnd: stripeSubscription.currentPeriodEnd,
