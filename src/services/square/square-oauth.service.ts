@@ -8,7 +8,7 @@ import type {
   OAuthState,
 } from "./square.types";
 
-const SCOPES = ["ITEMS_READ", "MERCHANT_PROFILE_READ"];
+const SCOPES = ["ITEMS_READ", "MERCHANT_PROFILE_READ", "ORDERS_WRITE"];
 
 export class SquareOAuthService {
   private getClient(accessToken?: string): SquareClient {

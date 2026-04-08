@@ -124,3 +124,9 @@ if (process.env.NODE_ENV === "development") {
 import("@/services/loyalty/loyalty-event-handler").then(({ registerLoyaltyEventHandlers }) => {
   registerLoyaltyEventHandlers();
 });
+
+// Register Square order push event handlers
+// Use dynamic import to avoid circular dependency
+import("@/services/square/square-order-listener").then(({ registerSquareOrderEventHandlers }) => {
+  registerSquareOrderEventHandlers();
+});

@@ -59,6 +59,12 @@
     "SQUARE_CATALOG_SYNC_FAILED": "Failed to sync catalog from Square",
     "SQUARE_SYNC_ALREADY_RUNNING": "A catalog sync is already in progress",
     "SQUARE_NOT_CONFIGURED": "Square integration is not configured",
+    "SQUARE_ORDER_PUSH_FAILED": "Failed to push order to Square",
+    "SQUARE_ORDER_NOT_FOUND": "Square order not found",
+    "SQUARE_ORDER_UPDATE_FAILED": "Failed to update order status on Square",
+    "SQUARE_ORDER_CANCEL_FAILED": "Failed to cancel order on Square",
+    "SQUARE_MISSING_EXTERNAL_MAPPING": "Missing external ID mapping for Square catalog item",
+    "SQUARE_MISSING_LOCATION": "No Square location configured for this merchant",
     "VALIDATION_FAILED": "Validation failed",
     "INTERNAL_ERROR": "An unexpected error occurred. Please try again.",
     "NETWORK_ERROR": "Network error. Please check your connection."

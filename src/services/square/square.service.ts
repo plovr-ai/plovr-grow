@@ -1,11 +1,17 @@
 import { squareConfig } from "./square.config";
 import { squareOAuthService } from "./square-oauth.service";
 import { squareCatalogService } from "./square-catalog.service";
+import { squareOrderService } from "./square-order.service";
 import { integrationRepository } from "@/repositories/integration.repository";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import { generateEntityId } from "@/lib/id";
 import prisma from "@/lib/db";
-import type { SquareLocation, SquareConnectionStatus } from "./square.types";
+import type {
+  SquareLocation,
+  SquareConnectionStatus,
+  SquareOrderPushInput,
+  SquareOrderPushResult,
+} from "./square.types";
 
 const INTEGRATION_TYPE = "POS_SQUARE";
 const INTEGRATION_CATEGORY = "POS";
@@ -45,7 +51,7 @@ export class SquareService {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       tokenExpiresAt: tokens.expiresAt,
-      scopes: "ITEMS_READ MERCHANT_PROFILE_READ",
+      scopes: "ITEMS_READ MERCHANT_PROFILE_READ ORDERS_WRITE",
     });
 
     return { returnUrl, locations };
@@ -344,6 +350,86 @@ export class SquareService {
       });
       throw new AppError(ErrorCodes.SQUARE_CATALOG_SYNC_FAILED, undefined, 500);
     }
+  }
+
+  // ==================== Order Push ====================
+
+  /**
+   * Push an order to Square POS.
+   * Ensures token is valid before delegating to the order service.
+   */
+  async pushOrder(
+    tenantId: string,
+    merchantId: string,
+    input: SquareOrderPushInput
+  ): Promise<SquareOrderPushResult> {
+    const connection = await integrationRepository.getConnection(
+      tenantId,
+      merchantId,
+      INTEGRATION_TYPE
+    );
+    if (!connection) {
+      throw new AppError(ErrorCodes.INTEGRATION_NOT_CONNECTED, undefined, 404);
+    }
+
+    // Ensure token is valid before pushing
+    await this.ensureValidToken(connection);
+
+    return squareOrderService.createOrder(tenantId, merchantId, input);
+  }
+
+  /**
+   * Update order fulfillment status on Square.
+   */
+  async updateOrderStatus(
+    tenantId: string,
+    merchantId: string,
+    orderId: string,
+    fulfillmentStatus: string
+  ): Promise<void> {
+    const connection = await integrationRepository.getConnection(
+      tenantId,
+      merchantId,
+      INTEGRATION_TYPE
+    );
+    if (!connection) {
+      throw new AppError(ErrorCodes.INTEGRATION_NOT_CONNECTED, undefined, 404);
+    }
+
+    await this.ensureValidToken(connection);
+    return squareOrderService.updateOrderStatus(
+      tenantId,
+      merchantId,
+      orderId,
+      fulfillmentStatus
+    );
+  }
+
+  /**
+   * Cancel an order on Square.
+   */
+  async cancelOrder(
+    tenantId: string,
+    merchantId: string,
+    orderId: string,
+    reason?: string
+  ): Promise<void> {
+    const connection = await integrationRepository.getConnection(
+      tenantId,
+      merchantId,
+      INTEGRATION_TYPE
+    );
+    if (!connection) {
+      throw new AppError(ErrorCodes.INTEGRATION_NOT_CONNECTED, undefined, 404);
+    }
+
+    await this.ensureValidToken(connection);
+    return squareOrderService.cancelOrder(
+      tenantId,
+      merchantId,
+      orderId,
+      reason
+    );
   }
 
   private async ensureValidToken(connection: {
