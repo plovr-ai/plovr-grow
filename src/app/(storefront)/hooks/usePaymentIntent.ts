@@ -12,6 +12,7 @@ interface UsePaymentIntentOptions {
 interface UsePaymentIntentReturn {
   clientSecret: string | null;
   paymentIntentId: string | null;
+  stripeAccountId: string | null;
   isCreatingPaymentIntent: boolean;
   error: string | null;
   reset: () => void;
@@ -25,6 +26,7 @@ export function usePaymentIntent({
 }: UsePaymentIntentOptions): UsePaymentIntentReturn {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,6 +36,7 @@ export function usePaymentIntent({
   const reset = useCallback(() => {
     setClientSecret(null);
     setPaymentIntentId(null);
+    setStripeAccountId(null);
     setError(null);
     lastAmountRef.current = null;
   }, []);
@@ -67,6 +70,7 @@ export function usePaymentIntent({
       if (data.success) {
         setClientSecret(data.data.clientSecret);
         setPaymentIntentId(data.data.paymentIntentId);
+        setStripeAccountId(data.data.stripeAccountId ?? null);
         lastAmountRef.current = amount;
       } else {
         setError(data.error || "Failed to initialize payment");
@@ -112,6 +116,7 @@ export function usePaymentIntent({
   return {
     clientSecret,
     paymentIntentId,
+    stripeAccountId,
     isCreatingPaymentIntent,
     error,
     reset,
