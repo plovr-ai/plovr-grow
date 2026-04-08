@@ -9,5 +9,15 @@ export type {
   CreateBillingPortalRequest,
   CreateBillingPortalResponse,
   CancelSubscriptionRequest,
+  ChangePlanRequest,
   SubscriptionResponse,
 } from "./subscription.types";
+
+export {
+  getPlanByCode,
+  getStripePriceId,
+  getPlanByStripePriceId,
+  getAllPlans,
+  getPlanTier,
+} from "./subscription.plans";
+export type { PlanDefinition } from "./subscription.plans";
