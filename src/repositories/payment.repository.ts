@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import type { DbClient } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
 
@@ -36,8 +37,9 @@ export class PaymentRepository {
   /**
    * Create a new payment record
    */
-  async create(tenantId: string, data: CreatePaymentInput) {
-    return prisma.payment.create({
+  async create(tenantId: string, data: CreatePaymentInput, tx?: DbClient) {
+    const db = tx ?? prisma;
+    return db.payment.create({
       data: {
         id: generateEntityId(),
         tenantId,

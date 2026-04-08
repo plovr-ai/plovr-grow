@@ -1,4 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
+
+export type DbClient = PrismaClient | Prisma.TransactionClient;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

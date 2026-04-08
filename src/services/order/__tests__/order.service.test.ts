@@ -4,12 +4,31 @@ import { orderEventEmitter } from "../order-events";
 import type { OrderStatus, FulfillmentStatus } from "@/types";
 
 // Mock dependencies
+vi.mock("@/lib/db", () => {
+  const mockPrisma = {
+    $transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(Symbol("tx"))),
+  };
+  return { default: mockPrisma, prisma: mockPrisma };
+});
+
 vi.mock("@/repositories/order.repository", () => ({
   orderRepository: {
     create: vi.fn(),
     getByIdWithMerchant: vi.fn(),
     getCompanyOrders: vi.fn(),
     getOrdersByLoyaltyMember: vi.fn(),
+  },
+}));
+
+vi.mock("@/services/giftcard", () => ({
+  giftCardService: {
+    redeemGiftCard: vi.fn(),
+  },
+}));
+
+vi.mock("@/services/payment", () => ({
+  paymentService: {
+    createPaymentRecord: vi.fn(),
   },
 }));
 
@@ -47,6 +66,9 @@ import { orderRepository } from "@/repositories/order.repository";
 import { sequenceRepository } from "@/repositories/sequence.repository";
 import { menuService, taxConfigService } from "@/services/menu";
 import { merchantService } from "@/services/merchant";
+import { giftCardService } from "@/services/giftcard";
+import { paymentService } from "@/services/payment";
+import prisma from "@/lib/db";
 
 describe("OrderService", () => {
   let orderService: OrderService;
@@ -146,7 +168,8 @@ describe("OrderService", () => {
           status: "created",
           fulfillmentStatus: "pending",
         }),
-        undefined // loyaltyMemberId
+        undefined, // loyaltyMemberId
+        undefined // tx
       );
 
       expect(order.id).toBe("order-1");
@@ -198,7 +221,8 @@ describe("OrderService", () => {
           status: "created",
           fulfillmentStatus: "pending",
         }),
-        "loyalty-member-123"
+        "loyalty-member-123",
+        undefined // tx
       );
 
       expect(order.id).toBe("order-1");
@@ -274,7 +298,8 @@ describe("OrderService", () => {
           deliveryFee: 3.99,
           deliveryAddress: deliveryInput.deliveryAddress,
         }),
-        undefined
+        undefined,
+        undefined // tx
       );
     });
 
@@ -308,7 +333,8 @@ describe("OrderService", () => {
           giftCardPayment: 20,
           cashPayment: expect.any(Number),
         }),
-        undefined
+        undefined,
+        undefined // tx
       );
     });
 
@@ -322,7 +348,8 @@ describe("OrderService", () => {
         expect.objectContaining({
           salesChannel: "online_order",
         }),
-        undefined
+        undefined,
+        undefined // tx
       );
     });
 
@@ -341,7 +368,8 @@ describe("OrderService", () => {
         expect.objectContaining({
           notes: "No onions please",
         }),
-        undefined
+        undefined,
+        undefined // tx
       );
     });
 
@@ -361,7 +389,8 @@ describe("OrderService", () => {
         expect.objectContaining({
           scheduledAt: scheduledTime,
         }),
-        undefined
+        undefined,
+        undefined // tx
       );
     });
   });
@@ -842,6 +871,231 @@ describe("OrderService", () => {
 
       expect(result.items).toHaveLength(1);
       expect(result.total).toBe(1);
+    });
+  });
+
+  describe("createMerchantOrderAtomic()", () => {
+    const mockInput = {
+      companyId: "company-1",
+      merchantId: "merchant-1",
+      customerFirstName: "John",
+      customerLastName: "Doe",
+      customerPhone: "123-456-7890",
+      customerEmail: "john@example.com",
+      orderMode: "pickup" as const,
+      items: [
+        {
+          menuItemId: "item-1",
+          name: "Margherita Pizza",
+          price: 18.99,
+          quantity: 2,
+          selectedModifiers: [],
+          totalPrice: 37.98,
+          taxes: [{ taxConfigId: "tax-1", name: "Standard Tax", rate: 0.08875, roundingMethod: "half_up" as const }],
+        },
+      ],
+      tipAmount: 5,
+    };
+
+    const mockOrder = {
+      id: "order-1",
+      orderNumber: "20260127-0001",
+      tenantId: "tenant-1",
+      merchantId: "merchant-1",
+      status: "created",
+      fulfillmentStatus: "pending",
+      customerFirstName: "John",
+      customerLastName: "Doe",
+      customerPhone: "123-456-7890",
+      customerEmail: "john@example.com",
+      orderMode: "pickup",
+      items: mockInput.items,
+      subtotal: 37.98,
+      taxAmount: 0,
+      tipAmount: 5,
+      deliveryFee: 0,
+      discount: 0,
+      giftCardPayment: 0,
+      cashPayment: 42.98,
+      totalAmount: 42.98,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    beforeEach(() => {
+      vi.mocked(menuService.getMenuItemsByIds).mockResolvedValue([
+        { id: "item-1", name: "Margherita Pizza" },
+      ] as never);
+
+      vi.mocked(merchantService.getMerchantById).mockResolvedValue({
+        id: "merchant-1",
+        name: "Test Merchant",
+        slug: "test-merchant",
+        timezone: "America/New_York",
+      } as never);
+
+      vi.mocked(sequenceRepository.getNextOrderSequence).mockResolvedValue(1);
+
+      vi.mocked(orderRepository.create).mockResolvedValue(mockOrder as never);
+
+      vi.mocked(giftCardService.redeemGiftCard).mockResolvedValue({
+        success: true,
+        amountRedeemed: 20,
+        remainingBalance: 30,
+        transactionId: "gc-tx-1",
+      } as never);
+
+      vi.mocked(paymentService.createPaymentRecord).mockResolvedValue({
+        id: "payment-1",
+      } as never);
+    });
+
+    it("should wrap order creation in a transaction", async () => {
+      await orderService.createMerchantOrderAtomic("tenant-1", mockInput);
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function));
+    });
+
+    it("should create order and return it", async () => {
+      const order = await orderService.createMerchantOrderAtomic("tenant-1", mockInput);
+
+      expect(order.id).toBe("order-1");
+      expect(orderRepository.create).toHaveBeenCalled();
+    });
+
+    it("should redeem gift card within the transaction when provided", async () => {
+      await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
+        giftCard: { id: "gc-1", amount: 20 },
+      });
+
+      expect(giftCardService.redeemGiftCard).toHaveBeenCalledWith(
+        "tenant-1",
+        "gc-1",
+        "order-1",
+        20,
+        expect.anything() // tx
+      );
+    });
+
+    it("should create payment record within the transaction when provided", async () => {
+      await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
+        payment: {
+          stripePaymentIntentId: "pi_123",
+          amount: 42.98,
+          currency: "USD",
+        },
+      });
+
+      expect(paymentService.createPaymentRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: "tenant-1",
+          orderId: "order-1",
+          stripePaymentIntentId: "pi_123",
+          amount: 42.98,
+          currency: "USD",
+        }),
+        expect.anything() // tx
+      );
+    });
+
+    it("should not call gift card or payment services when options are not provided", async () => {
+      await orderService.createMerchantOrderAtomic("tenant-1", mockInput);
+
+      expect(giftCardService.redeemGiftCard).not.toHaveBeenCalled();
+      expect(paymentService.createPaymentRecord).not.toHaveBeenCalled();
+    });
+
+    it("should handle both gift card and payment in the same transaction", async () => {
+      await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
+        giftCard: { id: "gc-1", amount: 20 },
+        payment: {
+          stripePaymentIntentId: "pi_123",
+          amount: 22.98,
+          currency: "USD",
+        },
+      });
+
+      expect(giftCardService.redeemGiftCard).toHaveBeenCalled();
+      expect(paymentService.createPaymentRecord).toHaveBeenCalled();
+    });
+
+    it("should rollback all operations when gift card redemption fails", async () => {
+      const transactionError = new Error("Insufficient gift card balance");
+      vi.mocked(giftCardService.redeemGiftCard).mockRejectedValue(transactionError);
+
+      // Mock $transaction to actually propagate the error (simulating real Prisma behavior)
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        return (fn as (tx: unknown) => Promise<unknown>)(Symbol("tx"));
+      });
+
+      await expect(
+        orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
+          giftCard: { id: "gc-1", amount: 20 },
+        })
+      ).rejects.toThrow("Insufficient gift card balance");
+    });
+
+    it("should rollback all operations when payment record creation fails", async () => {
+      const transactionError = new Error("Payment record creation failed");
+      vi.mocked(paymentService.createPaymentRecord).mockRejectedValue(transactionError);
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        return (fn as (tx: unknown) => Promise<unknown>)(Symbol("tx"));
+      });
+
+      await expect(
+        orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
+          payment: {
+            stripePaymentIntentId: "pi_123",
+            amount: 42.98,
+            currency: "USD",
+          },
+        })
+      ).rejects.toThrow("Payment record creation failed");
+    });
+
+    it("should emit order.created event AFTER transaction commits", async () => {
+      const eventHandler = vi.fn();
+      const unsubscribe = orderEventEmitter.on("order.created", eventHandler);
+
+      await orderService.createMerchantOrderAtomic("tenant-1", mockInput);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(eventHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderId: "order-1",
+          orderNumber: "20260127-0001",
+          merchantId: "merchant-1",
+        })
+      );
+
+      unsubscribe();
+    });
+
+    it("should NOT emit event when transaction fails", async () => {
+      vi.mocked(giftCardService.redeemGiftCard).mockRejectedValue(
+        new Error("Gift card error")
+      );
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        return (fn as (tx: unknown) => Promise<unknown>)(Symbol("tx"));
+      });
+
+      const eventHandler = vi.fn();
+      const unsubscribe = orderEventEmitter.on("order.created", eventHandler);
+
+      await expect(
+        orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
+          giftCard: { id: "gc-1", amount: 20 },
+        })
+      ).rejects.toThrow();
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(eventHandler).not.toHaveBeenCalled();
+
+      unsubscribe();
     });
   });
 });

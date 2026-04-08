@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import type { DbClient } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import type { OrderStatus, FulfillmentStatus, OrderMode, SalesChannel } from "@/types";
 import { generateEntityId } from "@/lib/id";
@@ -12,9 +13,11 @@ export class OrderRepository {
     companyId: string,
     merchantId: string | null,
     data: Omit<Prisma.OrderCreateInput, "tenant" | "company" | "merchant" | "loyaltyMember" | "id">,
-    loyaltyMemberId?: string
+    loyaltyMemberId?: string,
+    tx?: DbClient
   ) {
-    return prisma.order.create({
+    const db = tx ?? prisma;
+    return db.order.create({
       data: {
         id: generateEntityId(),
         ...data,

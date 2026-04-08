@@ -445,7 +445,7 @@ describe("PaymentService", () => {
         stripeCustomerId: undefined,
         amount: 25.99,
         currency: "USD",
-      });
+      }, undefined);
     });
   });
 

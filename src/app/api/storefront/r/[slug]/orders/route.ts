@@ -180,55 +180,39 @@ export async function POST(
       }
     }
 
-    // Create merchant order with payment breakdown
-    const order = await orderService.createMerchantOrder(tenantId, {
-      companyId: merchant.company.id,
-      merchantId: merchant.id,
-      loyaltyMemberId: body.loyaltyMemberId,
-      customerFirstName: formValidation.data.customerFirstName,
-      customerLastName: formValidation.data.customerLastName,
-      customerPhone: formValidation.data.customerPhone,
-      customerEmail: formValidation.data.customerEmail || undefined,
-      orderMode: formValidation.data.orderMode,
-      salesChannel: "online_order",
-      items: body.items,
-      notes: formValidation.data.notes || undefined,
-      deliveryAddress: formValidation.data.deliveryAddress,
-      tipAmount: formValidation.data.tipAmount,
-      giftCardPayment: body.giftCardPayment?.amount,
-    });
-
-    // Process gift card redemption after order is created
-    if (validatedGiftCard && body.giftCardPayment) {
-      try {
-        await giftCardService.redeemGiftCard(
-          tenantId,
-          validatedGiftCard.id,
-          order.id,
-          body.giftCardPayment.amount
-        );
-      } catch (error) {
-        console.error("Failed to redeem gift card:", error);
-        // Note: Order is already created. In production, consider rolling back or marking order for review.
+    // Create merchant order atomically (order + gift card redemption + payment record in one transaction)
+    const order = await orderService.createMerchantOrderAtomic(
+      tenantId,
+      {
+        companyId: merchant.company.id,
+        merchantId: merchant.id,
+        loyaltyMemberId: body.loyaltyMemberId,
+        customerFirstName: formValidation.data.customerFirstName,
+        customerLastName: formValidation.data.customerLastName,
+        customerPhone: formValidation.data.customerPhone,
+        customerEmail: formValidation.data.customerEmail || undefined,
+        orderMode: formValidation.data.orderMode,
+        salesChannel: "online_order",
+        items: body.items,
+        notes: formValidation.data.notes || undefined,
+        deliveryAddress: formValidation.data.deliveryAddress,
+        tipAmount: formValidation.data.tipAmount,
+        giftCardPayment: body.giftCardPayment?.amount,
+      },
+      {
+        giftCard:
+          validatedGiftCard && body.giftCardPayment
+            ? { id: validatedGiftCard.id, amount: body.giftCardPayment.amount }
+            : undefined,
+        payment: verifiedPayment
+          ? {
+              stripePaymentIntentId: verifiedPayment.paymentIntentId,
+              amount: verifiedPayment.amount,
+              currency: merchant.currency || "USD",
+            }
+          : undefined,
       }
-    }
-
-    // Create payment record if card payment was made
-    if (verifiedPayment) {
-      try {
-        await paymentService.createPaymentRecord({
-          tenantId,
-          orderId: order.id,
-          stripePaymentIntentId: verifiedPayment.paymentIntentId,
-          amount: verifiedPayment.amount,
-          currency: merchant.currency || "USD",
-        });
-      } catch (error) {
-        console.error("Failed to create payment record:", error);
-        // Note: Order and payment were successful, but record creation failed
-        // This should be logged and handled asynchronously
-      }
-    }
+    );
 
     // Award loyalty points if member is logged in
     // Gift card payment portion earns DOUBLE points (2x)
