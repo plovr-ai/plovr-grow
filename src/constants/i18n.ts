@@ -37,6 +37,3 @@ export const TIMEZONE_OPTIONS = [
   { value: "America/Puerto_Rico", label: "Atlantic Time (AT)" },
 ] as const;
 
-export type CurrencyCode = (typeof CURRENCY_OPTIONS)[number]["value"];
-export type LocaleCode = (typeof LOCALE_OPTIONS)[number]["value"];
-export type TimezoneCode = (typeof TIMEZONE_OPTIONS)[number]["value"];

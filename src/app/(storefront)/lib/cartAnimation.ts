@@ -98,13 +98,3 @@ export function animateFlyToCart(params: FlyToCartParams): void {
   requestAnimationFrame(animate);
 }
 
-/**
- * Calculate animation start position from a DOM element
- */
-export function getElementCenterPosition(element: HTMLElement): AnimationPosition {
-  const rect = element.getBoundingClientRect();
-  return {
-    x: rect.left + rect.width / 2 - 20,
-    y: rect.top + rect.height / 2 - 20,
-  };
-}

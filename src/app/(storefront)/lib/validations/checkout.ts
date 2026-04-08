@@ -16,8 +16,8 @@ export const US_STATES = [
   "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", "DC",
 ] as const;
 
-// Contact information schema
-export const contactInfoSchema = z.object({
+// Contact information schema (used inline by checkoutFormSchema)
+const contactInfoSchema = z.object({
   customerFirstName: z
     .string()
     .min(1, "First name is required")
@@ -90,6 +90,5 @@ export const checkoutFormSchema = z
   );
 
 // Type exports
-export type ContactInfo = z.infer<typeof contactInfoSchema>;
 export type DeliveryAddress = z.infer<typeof deliveryAddressSchema>;
 export type CheckoutFormData = z.infer<typeof checkoutFormSchema>;

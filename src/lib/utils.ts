@@ -76,35 +76,6 @@ export function generateInvoiceNumber(sequence: number): string {
 }
 
 /**
- * Calculate tax amount
- */
-export function calculateTax(subtotal: number, taxRate: number): number {
-  return Math.round(subtotal * taxRate * 100) / 100;
-}
-
-/**
- * Sleep utility for async operations
- */
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Safely parse JSON with a fallback
- */
-export function safeJsonParse<T>(
-  json: string | null | undefined,
-  fallback: T
-): T {
-  if (!json) return fallback;
-  try {
-    return JSON.parse(json) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-/**
  * Format phone number based on locale
  * For US locale: (555) 123-4567
  * For other locales: returns original format

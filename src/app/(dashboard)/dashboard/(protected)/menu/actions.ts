@@ -482,60 +482,6 @@ export async function getAvailableItemsAction(
   }
 }
 
-/**
- * Get count of categories an item belongs to
- */
-export async function getItemCategoryCountAction(
-  itemId: string
-): Promise<ActionResult<number>> {
-  const session = await auth();
-
-  if (!session?.user?.tenantId) {
-    return { success: false, error: "Unauthorized" };
-  }
-
-  try {
-    const count = await menuService.countItemCategories(itemId);
-    return { success: true, data: count };
-  } catch (error) {
-    console.error("Failed to get item category count:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to get item category count",
-    };
-  }
-}
-
-// ==================== Featured Items Actions ====================
-
-/**
- * Set featured items for a company (replace all)
- */
-export async function setFeaturedItemsAction(
-  menuItemIds: string[]
-): Promise<ActionResult> {
-  const session = await auth();
-
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
-    return { success: false, error: "Unauthorized" };
-  }
-
-  const { tenantId, companyId } = session.user;
-
-  try {
-    await menuService.setFeaturedItems(tenantId, companyId, menuItemIds);
-
-    revalidatePath("/dashboard/menu/featured", "page");
-
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to set featured items:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to set featured items",
-    };
-  }
-}
 
 /**
  * Add a single featured item

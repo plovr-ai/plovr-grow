@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const giftcardFormSchema = z.object({
+const giftcardFormSchema = z.object({
   amount: z.number().positive("Amount is required"),
   recipientName: z.string().optional(),
   recipientEmail: z.string().email("Invalid email").optional().or(z.literal("")),
@@ -13,8 +13,6 @@ export const giftcardFormSchema = z.object({
   buyerEmail: z.string().email("Invalid email"),
   message: z.string().max(200, "Message too long (max 200 characters)").optional(),
 });
-
-export type GiftcardFormData = z.infer<typeof giftcardFormSchema>;
 
 // Extended schema for API validation (includes payment intent)
 export const giftcardApiSchema = giftcardFormSchema.extend({
