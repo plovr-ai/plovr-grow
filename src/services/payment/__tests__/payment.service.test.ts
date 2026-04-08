@@ -414,6 +414,7 @@ describe("PaymentService", () => {
         orderId: mockOrderId,
         stripePaymentIntentId: "pi_test123",
         stripeCustomerId: null,
+        stripeAccountId: null,
         amount: new Decimal(25.99),
         currency: "USD",
         status: "pending",
