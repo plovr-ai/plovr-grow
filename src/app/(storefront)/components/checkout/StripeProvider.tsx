@@ -2,21 +2,24 @@
 
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
+import { useMemo } from "react";
 import type { ReactNode } from "react";
-
-// Initialize Stripe outside of component to avoid recreating on every render
-const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = STRIPE_PUBLISHABLE_KEY
-  ? loadStripe(STRIPE_PUBLISHABLE_KEY)
-  : null;
 
 interface StripeProviderProps {
   clientSecret: string;
+  stripeAccountId?: string;
   defaultCountry?: string;
   children: ReactNode;
 }
 
-export function StripeProvider({ clientSecret, defaultCountry, children }: StripeProviderProps) {
+export function StripeProvider({ clientSecret, stripeAccountId, defaultCountry, children }: StripeProviderProps) {
+  // Load Stripe dynamically based on stripeAccountId for Connect support
+  const stripePromise = useMemo(() => {
+    const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    if (!key) return null;
+    return loadStripe(key, stripeAccountId ? { stripeAccount: stripeAccountId } : undefined);
+  }, [stripeAccountId]);
+
   // Show warning if Stripe is not configured
   if (!stripePromise) {
     return (

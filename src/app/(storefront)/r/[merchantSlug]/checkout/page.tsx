@@ -108,6 +108,8 @@ export default function CheckoutPage() {
   // Stripe payment states
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isPaymentReady, setIsPaymentReady] = useState(false);
   const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
   const cardPaymentFormRef = useRef<CardPaymentFormRef>(null);
@@ -222,8 +224,16 @@ export default function CheckoutPage() {
       if (data.success) {
         setClientSecret(data.data.clientSecret);
         setPaymentIntentId(data.data.paymentIntentId);
+        setStripeAccountId(data.data.stripeAccountId ?? null);
       } else {
-        setSubmitError(data.error || "Failed to initialize payment");
+        const errMsg: string = data.error || "Failed to initialize payment";
+        setPaymentError(errMsg);
+        // If Connect is not available, fall back to cash
+        if (errMsg.includes("STRIPE_CONNECT")) {
+          setFormState((prev) => ({ ...prev, paymentMethod: "cash" }));
+        } else {
+          setSubmitError(errMsg);
+        }
       }
     } catch (error) {
       setSubmitError("Failed to initialize payment");
@@ -245,10 +255,15 @@ export default function CheckoutPage() {
     if (clientSecret && formState.paymentMethod === "card") {
       setClientSecret(null);
       setPaymentIntentId(null);
+      setStripeAccountId(null);
+      setPaymentError(null);
       setIsPaymentReady(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [amountDue]);
+
+  // Determine if online (card) payment is available based on payment errors
+  const isOnlinePaymentAvailable = !paymentError?.includes("STRIPE_CONNECT");
 
   // Handle form field changes
   const handleContactChange = (
@@ -297,6 +312,7 @@ export default function CheckoutPage() {
     if (method === "cash") {
       setClientSecret(null);
       setPaymentIntentId(null);
+      setStripeAccountId(null);
       setIsPaymentReady(false);
     }
   };
@@ -642,13 +658,13 @@ export default function CheckoutPage() {
                 <PaymentMethodSelector
                   value={formState.paymentMethod}
                   onChange={handlePaymentMethodChange}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !isOnlinePaymentAvailable}
                   orderMode={formState.orderMode}
                 />
 
                 {/* Card Payment Form */}
-                {formState.paymentMethod === "card" && clientSecret && (
-                  <StripeProvider clientSecret={clientSecret} defaultCountry={country}>
+                {isOnlinePaymentAvailable && formState.paymentMethod === "card" && clientSecret && (
+                  <StripeProvider clientSecret={clientSecret} stripeAccountId={stripeAccountId ?? undefined} defaultCountry={country}>
                     <CardPaymentForm
                       ref={cardPaymentFormRef}
                       onReady={() => setIsPaymentReady(true)}
@@ -660,7 +676,7 @@ export default function CheckoutPage() {
                 )}
 
                 {/* Loading state for PaymentIntent creation */}
-                {formState.paymentMethod === "card" && !clientSecret && isCreatingPaymentIntent && (
+                {isOnlinePaymentAvailable && formState.paymentMethod === "card" && !clientSecret && isCreatingPaymentIntent && (
                   <div className="bg-white rounded-xl border border-gray-100 p-4">
                     <PaymentLoadingState />
                   </div>
