@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { subscriptionService } from "@/services/subscription";
 
-// POST: Create checkout session for subscription
+// POST: Change subscription plan (upgrade/downgrade)
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -14,11 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { planCode, successUrl, cancelUrl } = body as {
-      planCode?: string;
-      successUrl?: string;
-      cancelUrl?: string;
-    };
+    const { planCode } = body as { planCode?: string };
 
     if (!planCode) {
       return NextResponse.json(
@@ -27,25 +23,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await subscriptionService.createCheckoutSession(
-      session.user.tenantId,
-      planCode,
-      { successUrl, cancelUrl }
-    );
+    await subscriptionService.changePlan(session.user.tenantId, planCode);
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        url: result.url,
-        sessionId: result.sessionId,
-      },
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[Dashboard Subscription Checkout] Error:", error);
+    console.error("[Dashboard Subscription Change Plan] Error:", error);
     const message =
       error instanceof Error
         ? error.message
-        : "Failed to create checkout session";
+        : "Failed to change plan";
     return NextResponse.json(
       { success: false, error: message },
       { status: 500 }
