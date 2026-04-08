@@ -2,7 +2,11 @@
 // Uses OrderRepository (Prisma) for database operations.
 
 import { Prisma } from "@prisma/client";
+import prisma from "@/lib/db";
+import type { DbClient } from "@/lib/db";
 import { menuService } from "@/services/menu";
+import { giftCardService } from "@/services/giftcard";
+import { paymentService } from "@/services/payment";
 import { merchantService } from "@/services/merchant";
 import { orderRepository } from "@/repositories/order.repository";
 import { sequenceRepository } from "@/repositories/sequence.repository";
@@ -25,7 +29,7 @@ export class OrderService {
    * Create a merchant order (regular orders with menu items)
    * Uses atomic sequence generation to prevent race conditions
    */
-  async createMerchantOrder(tenantId: string, input: CreateMerchantOrderInput) {
+  async createMerchantOrder(tenantId: string, input: CreateMerchantOrderInput, tx?: DbClient) {
     const { companyId, merchantId } = input;
 
     // Validate menu items exist and are available
@@ -53,7 +57,7 @@ export class OrderService {
       : new Date().toISOString().slice(0, 10);
 
     // Generate order number using atomic sequence
-    const sequence = await sequenceRepository.getNextOrderSequence(tenantId, merchantId, dateStr);
+    const sequence = await sequenceRepository.getNextOrderSequence(tenantId, merchantId, dateStr, tx);
     const orderNumber = generateOrderNumber(sequence, timezone);
 
     const salesChannel = input.salesChannel ?? "online_order";
@@ -88,14 +92,90 @@ export class OrderService {
           : Prisma.JsonNull,
         scheduledAt: input.scheduledAt ?? null,
       },
-      input.loyaltyMemberId
+      input.loyaltyMemberId,
+      tx
     );
 
-    // Emit order created event
+    // Emit order created event (only when not inside a transaction —
+    // callers using transactions should emit after commit)
+    if (!tx) {
+      this.emitOrderCreatedEvent(tenantId, order, input, calculation.totalAmount);
+    }
+
+    return order;
+  }
+
+  /**
+   * Create a merchant order atomically with gift card redemption and payment record.
+   * Wraps order creation, gift card deduction, and payment record in a single transaction.
+   * Loyalty points are NOT included — they stay outside the transaction.
+   */
+  async createMerchantOrderAtomic(
+    tenantId: string,
+    input: CreateMerchantOrderInput,
+    options?: {
+      giftCard?: { id: string; amount: number };
+      payment?: {
+        stripePaymentIntentId: string;
+        amount: number;
+        currency: string;
+        stripeCustomerId?: string;
+      };
+    }
+  ) {
+    const order = await prisma.$transaction(async (tx) => {
+      // 1. Create order
+      const createdOrder = await this.createMerchantOrder(tenantId, input, tx);
+
+      // 2. Redeem gift card if applicable
+      if (options?.giftCard) {
+        await giftCardService.redeemGiftCard(
+          tenantId,
+          options.giftCard.id,
+          createdOrder.id,
+          options.giftCard.amount,
+          tx
+        );
+      }
+
+      // 3. Create payment record if applicable
+      if (options?.payment) {
+        await paymentService.createPaymentRecord(
+          {
+            tenantId,
+            orderId: createdOrder.id,
+            stripePaymentIntentId: options.payment.stripePaymentIntentId,
+            stripeCustomerId: options.payment.stripeCustomerId,
+            amount: options.payment.amount,
+            currency: options.payment.currency,
+          },
+          tx
+        );
+      }
+
+      return createdOrder;
+    });
+
+    // Emit event AFTER transaction commits successfully
+    this.emitOrderCreatedEvent(tenantId, order, input, Number(order.totalAmount));
+
+    return order;
+  }
+
+  /**
+   * Emit order.created event
+   */
+  private emitOrderCreatedEvent(
+    tenantId: string,
+    order: { id: string; orderNumber: string },
+    input: CreateMerchantOrderInput,
+    totalAmount: number
+  ) {
+    const salesChannel = input.salesChannel ?? "online_order";
     orderEventEmitter.emit("order.created", {
       orderId: order.id,
       orderNumber: order.orderNumber,
-      merchantId,
+      merchantId: input.merchantId,
       tenantId,
       status: "created",
       fulfillmentStatus: "pending",
@@ -105,11 +185,9 @@ export class OrderService {
       customerPhone: input.customerPhone,
       orderMode: input.orderMode,
       salesChannel,
-      totalAmount: calculation.totalAmount,
+      totalAmount,
       items: input.items,
     });
-
-    return order;
   }
 
   /**

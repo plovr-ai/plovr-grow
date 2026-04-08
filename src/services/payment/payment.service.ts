@@ -1,4 +1,5 @@
 import { stripeService } from "@/services/stripe";
+import type { DbClient } from "@/lib/db";
 import {
   paymentRepository,
   type PaymentStatus,
@@ -64,14 +65,14 @@ export class PaymentService {
    * Create a payment record in database
    * This is called after order is created to link payment with order
    */
-  async createPaymentRecord(input: CreatePaymentRecordInput) {
+  async createPaymentRecord(input: CreatePaymentRecordInput, tx?: DbClient) {
     return paymentRepository.create(input.tenantId, {
       orderId: input.orderId,
       stripePaymentIntentId: input.stripePaymentIntentId,
       stripeCustomerId: input.stripeCustomerId,
       amount: input.amount,
       currency: input.currency,
-    });
+    }, tx);
   }
 
   /**

@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import type { DbClient } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
 
@@ -34,8 +35,9 @@ export class GiftCardRepository {
   /**
    * Get gift card by ID
    */
-  async getById(tenantId: string, id: string) {
-    return prisma.giftCard.findFirst({
+  async getById(tenantId: string, id: string, tx?: DbClient) {
+    const db = tx ?? prisma;
+    return db.giftCard.findFirst({
       where: {
         id,
         tenantId,
@@ -71,8 +73,9 @@ export class GiftCardRepository {
   /**
    * Update gift card balance
    */
-  async updateBalance(tenantId: string, id: string, newBalance: number) {
-    return prisma.giftCard.update({
+  async updateBalance(tenantId: string, id: string, newBalance: number, tx?: DbClient) {
+    const db = tx ?? prisma;
+    return db.giftCard.update({
       where: { id },
       data: { currentBalance: newBalance },
     });
@@ -90,9 +93,11 @@ export class GiftCardRepository {
       amount: number;
       balanceBefore: number;
       balanceAfter: number;
-    }
+    },
+    tx?: DbClient
   ) {
-    return prisma.giftCardTransaction.create({
+    const db = tx ?? prisma;
+    return db.giftCardTransaction.create({
       data: {
         id: generateEntityId(),
         tenantId,

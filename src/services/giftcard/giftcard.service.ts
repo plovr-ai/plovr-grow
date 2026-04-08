@@ -2,6 +2,7 @@ import {
   giftCardRepository,
   type GiftCardRepository,
 } from "@/repositories/giftcard.repository";
+import type { DbClient } from "@/lib/db";
 import {
   generateGiftCardNumber,
   normalizeGiftCardNumber,
@@ -125,10 +126,11 @@ export class GiftCardService {
     tenantId: string,
     giftCardId: string,
     orderId: string,
-    amount: number
+    amount: number,
+    tx?: DbClient
   ): Promise<GiftCardRedemptionResult> {
     // Get the gift card
-    const giftCard = await this.repository.getById(tenantId, giftCardId);
+    const giftCard = await this.repository.getById(tenantId, giftCardId, tx);
 
     if (!giftCard) {
       throw new Error("Gift card not found");
@@ -145,7 +147,7 @@ export class GiftCardService {
     const newBalance = currentBalance - amountToRedeem;
 
     // Update balance
-    await this.repository.updateBalance(tenantId, giftCardId, newBalance);
+    await this.repository.updateBalance(tenantId, giftCardId, newBalance, tx);
 
     // Create redemption transaction
     const transaction = await this.repository.createTransaction(tenantId, {
@@ -155,7 +157,7 @@ export class GiftCardService {
       amount: amountToRedeem,
       balanceBefore: currentBalance,
       balanceAfter: newBalance,
-    });
+    }, tx);
 
     return {
       success: true,

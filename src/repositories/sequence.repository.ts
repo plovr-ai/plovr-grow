@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import type { DbClient } from "@/lib/db";
 import { generateEntityId } from "@/lib/id";
 
 export class SequenceRepository {
@@ -9,9 +10,11 @@ export class SequenceRepository {
   async getNextOrderSequence(
     tenantId: string,
     merchantId: string,
-    date: string
+    date: string,
+    tx?: DbClient
   ): Promise<number> {
-    const result = await prisma.orderSequence.upsert({
+    const db = tx ?? prisma;
+    const result = await db.orderSequence.upsert({
       where: {
         tenantId_merchantId_date: {
           tenantId,
