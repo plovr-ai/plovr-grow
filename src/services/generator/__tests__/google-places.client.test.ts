@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GooglePlacesClient, type PlaceDetails } from "../google-places.client";
+import { GooglePlacesClient } from "../google-places.client";
 
 describe("GooglePlacesClient", () => {
   let client: GooglePlacesClient;
