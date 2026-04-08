@@ -13,8 +13,11 @@ import type {
   StripeCheckoutSessionData,
   DashboardSubscriptionInfo,
 } from "./subscription.types";
-
-const STRIPE_STANDARD_PRICE_ID = process.env.STRIPE_STANDARD_PRICE_ID;
+import {
+  getStripePriceId,
+  getPlanByCode,
+  getPlanByStripePriceId,
+} from "./subscription.plans";
 const STRIPE_TRIAL_DAYS = parseInt(process.env.STRIPE_TRIAL_DAYS ?? "14");
 const STRIPE_GRACE_PERIOD_DAYS = parseInt(
   process.env.STRIPE_GRACE_PERIOD_DAYS ?? "7"
@@ -102,13 +105,19 @@ export class SubscriptionService {
    */
   async createCheckoutSession(
     tenantId: string,
+    planCode: string,
     options?: Partial<CheckoutSessionOptions>
   ): Promise<{ url: string; sessionId: string }> {
-    if (!STRIPE_STANDARD_PRICE_ID) {
-      throw new Error("Stripe price ID not configured");
+    const plan = getPlanByCode(planCode);
+    if (!plan) {
+      throw new Error("Invalid plan code: " + planCode);
     }
 
-    // Get or create Stripe customer for this tenant
+    const stripePriceId = getStripePriceId(planCode);
+    if (!stripePriceId) {
+      throw new Error("Stripe price ID not configured for plan: " + planCode);
+    }
+
     const stripeCustomerId = await this.getOrCreateStripeCustomer(tenantId);
 
     const successUrl =
@@ -118,7 +127,7 @@ export class SubscriptionService {
 
     const result = await stripeService.createSubscriptionCheckoutSession({
       customerId: stripeCustomerId,
-      priceId: STRIPE_STANDARD_PRICE_ID,
+      priceId: stripePriceId,
       tenantId,
       successUrl,
       cancelUrl,
@@ -197,6 +206,55 @@ export class SubscriptionService {
     });
   }
 
+  /**
+   * Change subscription plan (upgrade/downgrade with proration)
+   */
+  async changePlan(tenantId: string, newPlanCode: string): Promise<void> {
+    const plan = getPlanByCode(newPlanCode);
+    if (!plan) {
+      throw new Error("Invalid plan code: " + newPlanCode);
+    }
+
+    const newStripePriceId = getStripePriceId(newPlanCode);
+    if (!newStripePriceId) {
+      throw new Error("Stripe price ID not configured for plan: " + newPlanCode);
+    }
+
+    const subscription = await subscriptionRepository.getByTenantId(tenantId);
+    if (!subscription || !subscription.stripeSubscriptionId) {
+      throw new Error("No active subscription found");
+    }
+
+    if (subscription.status !== "active" && subscription.status !== "trialing") {
+      throw new Error("Subscription is not active");
+    }
+
+    if (subscription.plan === newPlanCode) {
+      throw new Error("Already on this plan");
+    }
+
+    if (!subscription.stripePriceId) {
+      throw new Error("Current subscription has no price ID");
+    }
+
+    const updated = await stripeService.updateSubscriptionPrice({
+      subscriptionId: subscription.stripeSubscriptionId,
+      currentPriceId: subscription.stripePriceId,
+      newPriceId: newStripePriceId,
+    });
+
+    if (!updated) {
+      throw new Error("Failed to update subscription in Stripe");
+    }
+
+    await subscriptionRepository.update(subscription.id, {
+      plan: newPlanCode,
+      stripePriceId: newStripePriceId,
+    });
+
+    await this.updateTenantSubscriptionStatus(tenantId, newPlanCode, subscription.status);
+  }
+
   // ==================== Webhook Handlers ====================
 
   /**
@@ -234,6 +292,11 @@ export class SubscriptionService {
     const existingSubscription =
       await subscriptionRepository.getByTenantId(tenantId);
 
+    const detectedPlan = stripeSubscription.priceId
+      ? getPlanByStripePriceId(stripeSubscription.priceId)
+      : undefined;
+    const planCode = detectedPlan?.code ?? "starter";
+
     if (existingSubscription) {
       // Update existing subscription
       await subscriptionRepository.updateByTenantId(tenantId, {
@@ -254,6 +317,7 @@ export class SubscriptionService {
         stripeSubscriptionId: stripeSubscription.id,
         stripePriceId: stripeSubscription.priceId ?? undefined,
         status: stripeSubscription.status as SubscriptionStatus,
+        plan: planCode,
         currentPeriodStart: stripeSubscription.currentPeriodStart,
         currentPeriodEnd: stripeSubscription.currentPeriodEnd,
         trialStart: stripeSubscription.trialStart ?? undefined,
@@ -264,7 +328,7 @@ export class SubscriptionService {
     // Update tenant's denormalized status
     await this.updateTenantSubscriptionStatus(
       tenantId,
-      "standard",
+      planCode,
       stripeSubscription.status
     );
 
@@ -290,6 +354,9 @@ export class SubscriptionService {
 
     const priceId = subscription.items.data[0]?.price?.id || null;
 
+    const planFromPrice = priceId ? getPlanByStripePriceId(priceId) : undefined;
+    const planCode = planFromPrice?.code ?? "starter";
+
     // Check if already exists (might have been created by checkout handler)
     const existing = await subscriptionRepository.getByStripeSubscriptionId(
       subscription.id
@@ -302,6 +369,7 @@ export class SubscriptionService {
       stripeCustomerId: subscription.customer,
       stripeSubscriptionId: subscription.id,
       stripePriceId: priceId ?? undefined,
+      plan: planCode,
       status: subscription.status as SubscriptionStatus,
       currentPeriodStart: new Date(subscription.current_period_start * 1000),
       currentPeriodEnd: new Date(subscription.current_period_end * 1000),
@@ -315,7 +383,7 @@ export class SubscriptionService {
 
     await this.updateTenantSubscriptionStatus(
       tenantId,
-      "standard",
+      planCode,
       subscription.status
     );
 
@@ -364,12 +432,22 @@ export class SubscriptionService {
         : null,
     };
 
+    if (priceId) {
+      const detectedPlan = getPlanByStripePriceId(priceId);
+      if (detectedPlan) {
+        updateData.plan = detectedPlan.code;
+      }
+    }
+
     await subscriptionRepository.update(existingSubscription.id, updateData);
 
     // Update tenant's denormalized status
+    const currentPlan = priceId
+      ? (getPlanByStripePriceId(priceId)?.code ?? existingSubscription.plan)
+      : existingSubscription.plan;
     await this.updateTenantSubscriptionStatus(
       existingSubscription.tenantId,
-      "standard",
+      currentPlan,
       subscription.status
     );
 
@@ -439,7 +517,7 @@ export class SubscriptionService {
 
     await this.updateTenantSubscriptionStatus(
       subscription.tenantId,
-      "standard",
+      subscription.plan,
       "active"
     );
 
@@ -478,7 +556,7 @@ export class SubscriptionService {
 
     await this.updateTenantSubscriptionStatus(
       subscription.tenantId,
-      "standard",
+      subscription.plan,
       "past_due"
     );
 
