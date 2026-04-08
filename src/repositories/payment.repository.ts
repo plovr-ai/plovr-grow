@@ -154,6 +154,51 @@ export class PaymentRepository {
   }
 
   /**
+   * Atomic status update using Compare-And-Swap (CAS) pattern.
+   * Only updates if the current status matches expectedStatus.
+   * Returns the number of rows updated (0 or 1).
+   */
+  async atomicUpdateStatus(
+    paymentIntentId: string,
+    expectedStatus: PaymentStatus,
+    data: UpdatePaymentStatusInput
+  ): Promise<number> {
+    const updateData: Prisma.PaymentUpdateManyMutationInput = {
+      status: data.status,
+    };
+
+    if (data.paymentMethod !== undefined) {
+      updateData.paymentMethod = data.paymentMethod;
+    }
+    if (data.cardBrand !== undefined) {
+      updateData.cardBrand = data.cardBrand;
+    }
+    if (data.cardLast4 !== undefined) {
+      updateData.cardLast4 = data.cardLast4;
+    }
+    if (data.failureCode !== undefined) {
+      updateData.failureCode = data.failureCode;
+    }
+    if (data.failureMessage !== undefined) {
+      updateData.failureMessage = data.failureMessage;
+    }
+    if (data.paidAt !== undefined) {
+      updateData.paidAt = data.paidAt;
+    }
+
+    const result = await prisma.payment.updateMany({
+      where: {
+        stripePaymentIntentId: paymentIntentId,
+        status: expectedStatus,
+        deleted: false,
+      },
+      data: updateData,
+    });
+
+    return result.count;
+  }
+
+  /**
    * Update payment by Stripe PaymentIntent ID
    */
   async updateByPaymentIntentId(

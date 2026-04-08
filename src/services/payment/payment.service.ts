@@ -1,8 +1,5 @@
 import type { DbClient } from "@/lib/db";
-import {
-  paymentRepository,
-  type PaymentStatus,
-} from "@/repositories/payment.repository";
+import { paymentRepository } from "@/repositories/payment.repository";
 import { AppError } from "@/lib/errors/app-error";
 import { ErrorCodes } from "@/lib/errors/error-codes";
 import {
@@ -137,63 +134,55 @@ export class PaymentService {
   }
 
   /**
-   * Handle successful payment from Stripe webhook
+   * Handle successful payment from Stripe webhook.
+   * Uses atomic CAS (Compare-And-Swap) to prevent race conditions
+   * when concurrent webhooks arrive for the same PaymentIntent.
    */
   async handlePaymentSucceeded(data: PaymentSucceededData): Promise<void> {
-    // Get payment record
-    const payment = await paymentRepository.getByPaymentIntentId(
-      data.paymentIntentId
+    const count = await paymentRepository.atomicUpdateStatus(
+      data.paymentIntentId,
+      "pending",
+      {
+        status: "succeeded",
+        paymentMethod: data.paymentMethodType || null,
+        cardBrand: data.cardBrand || null,
+        cardLast4: data.cardLast4 || null,
+        paidAt: new Date(),
+      }
     );
 
-    if (!payment) {
-      console.warn(
-        `Payment not found for PaymentIntent: ${data.paymentIntentId}`
-      );
-      return;
-    }
-
-    // Idempotency check - already processed
-    if (payment.status === "succeeded") {
+    if (count === 0) {
       console.log(
-        `Payment already marked as succeeded: ${data.paymentIntentId}`
+        `Payment already processed or not found for PaymentIntent: ${data.paymentIntentId}`
       );
       return;
     }
-
-    // Update payment status
-    await paymentRepository.updateStatus(payment.id, {
-      status: "succeeded" as PaymentStatus,
-      paymentMethod: data.paymentMethodType || null,
-      cardBrand: data.cardBrand || null,
-      cardLast4: data.cardLast4 || null,
-      paidAt: new Date(),
-    });
 
     console.log(`Payment succeeded: ${data.paymentIntentId}`);
   }
 
   /**
-   * Handle failed payment from Stripe webhook
+   * Handle failed payment from Stripe webhook.
+   * Uses atomic CAS (Compare-And-Swap) to prevent race conditions
+   * when concurrent webhooks arrive for the same PaymentIntent.
    */
   async handlePaymentFailed(data: PaymentFailedData): Promise<void> {
-    // Get payment record
-    const payment = await paymentRepository.getByPaymentIntentId(
-      data.paymentIntentId
+    const count = await paymentRepository.atomicUpdateStatus(
+      data.paymentIntentId,
+      "pending",
+      {
+        status: "failed",
+        failureCode: data.failureCode || null,
+        failureMessage: data.failureMessage || null,
+      }
     );
 
-    if (!payment) {
-      console.warn(
-        `Payment not found for PaymentIntent: ${data.paymentIntentId}`
+    if (count === 0) {
+      console.log(
+        `Payment already processed or not found for PaymentIntent: ${data.paymentIntentId}`
       );
       return;
     }
-
-    // Update payment status
-    await paymentRepository.updateStatus(payment.id, {
-      status: "failed" as PaymentStatus,
-      failureCode: data.failureCode || null,
-      failureMessage: data.failureMessage || null,
-    });
 
     console.log(`Payment failed: ${data.paymentIntentId}`);
   }
