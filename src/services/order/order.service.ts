@@ -14,6 +14,8 @@ import { pointTransactionRepository } from "@/repositories/point-transaction.rep
 import { generateOrderNumber, generateGiftcardOrderNumber } from "@/lib/utils";
 import { getTodayInTimezone } from "@/lib/timezone";
 import { calculateOrderPricing, type PricingItem, type TipInput } from "@/lib/pricing";
+import { taxConfigRepository } from "@/repositories/tax-config.repository";
+import type { RoundingMethod } from "@/services/menu/tax-config.types";
 import { orderEventEmitter } from "./order-events";
 import type {
   CreateMerchantOrderInput,
@@ -251,21 +253,40 @@ export class OrderService {
    * Uses unified pricing module for consistency with client-side calculation
    */
   async calculateOrderTotals(
-    _tenantId: string,
+    tenantId: string,
     merchantId: string,
     input: Pick<CreateMerchantOrderInput, "items" | "orderMode" | "tipAmount" | "discountCode">
   ): Promise<OrderCalculation> {
-    // Convert to PricingItem using taxes from cart items directly
-    // Frontend already passes complete tax info (rate, roundingMethod)
-    const pricingItems: PricingItem[] = input.items.map((item) => ({
-      itemId: item.menuItemId,
-      unitPrice: item.totalPrice / item.quantity,
-      quantity: item.quantity,
-      taxes: (item.taxes || []).map((t) => ({
-        rate: t.rate,
-        roundingMethod: t.roundingMethod,
-      })),
-    }));
+    // Query tax data from DB instead of trusting frontend-provided rates
+    const itemIds = input.items.map((item) => item.menuItemId);
+    const itemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(itemIds);
+    const allTaxConfigIds = [...new Set([...itemTaxMap.values()].flat())];
+    const [taxConfigs, merchantTaxRateMap] = await Promise.all([
+      taxConfigRepository.getTaxConfigsByIds(tenantId, allTaxConfigIds),
+      taxConfigRepository.getMerchantTaxRateMap(merchantId),
+    ]);
+    const taxConfigMap = new Map(taxConfigs.map((c) => [c.id, c]));
+
+    // Convert to PricingItem using DB-sourced tax data
+    const pricingItems: PricingItem[] = input.items.map((item) => {
+      const taxConfigIds = itemTaxMap.get(item.menuItemId) || [];
+      const taxes = taxConfigIds
+        .map((taxId) => {
+          const config = taxConfigMap.get(taxId);
+          if (!config) return null;
+          return {
+            rate: merchantTaxRateMap.get(taxId) || 0,
+            roundingMethod: config.roundingMethod as RoundingMethod,
+          };
+        })
+        .filter((t): t is NonNullable<typeof t> => t !== null);
+      return {
+        itemId: item.menuItemId,
+        unitPrice: item.totalPrice / item.quantity,
+        quantity: item.quantity,
+        taxes,
+      };
+    });
 
     // Convert tipAmount to TipInput (fixed amount)
     const tip: TipInput | null = input.tipAmount
@@ -276,8 +297,6 @@ export class OrderService {
     const pricing = calculateOrderPricing(pricingItems, tip);
 
     // Calculate delivery fee (TODO: get from merchant settings)
-    // merchantId can be used to fetch merchant-specific delivery fee configuration
-    void merchantId; // Reserved for future merchant-specific fee configuration
     const deliveryFee = input.orderMode === "delivery" ? 3.99 : 0;
 
     // Calculate discount (TODO: implement discount service)

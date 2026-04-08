@@ -61,9 +61,18 @@ vi.mock("@/repositories/point-transaction.repository", () => ({
   },
 }));
 
+vi.mock("@/repositories/tax-config.repository", () => ({
+  taxConfigRepository: {
+    getMenuItemsTaxConfigIds: vi.fn(),
+    getTaxConfigsByIds: vi.fn(),
+    getMerchantTaxRateMap: vi.fn(),
+  },
+}));
+
 // Import mocked modules
 import { orderRepository } from "@/repositories/order.repository";
 import { sequenceRepository } from "@/repositories/sequence.repository";
+import { taxConfigRepository } from "@/repositories/tax-config.repository";
 import { menuService, taxConfigService } from "@/services/menu";
 import { merchantService } from "@/services/merchant";
 import { giftCardService } from "@/services/giftcard";
@@ -108,6 +117,17 @@ describe("OrderService", () => {
 
       vi.mocked(taxConfigService.getTaxConfigsMap).mockResolvedValue(
         new Map([["tax-1", { id: "tax-1", name: "Sales Tax", description: null, roundingMethod: "half_up", status: "active" as const }]])
+      );
+
+      // Mock tax config repository (server-side tax lookup)
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([["item-1", ["tax-1"]]])
+      );
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([
+        { id: "tax-1", name: "Sales Tax", roundingMethod: "half_up", status: "active" },
+      ] as never);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
+        new Map([["tax-1", 0.08875]])
       );
 
       vi.mocked(merchantService.getMerchant).mockResolvedValue({
@@ -656,9 +676,10 @@ describe("OrderService", () => {
 
   describe("calculateOrderTotals()", () => {
     beforeEach(() => {
-      vi.mocked(menuService.getMenuItemsByIds).mockResolvedValue([
-        { id: "item-1", name: "Test Item" },
-      ] as never);
+      // Default: no taxes assigned to items
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(new Map());
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([]);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(new Map());
     });
 
     it("should calculate subtotal from item prices", async () => {
@@ -675,7 +696,18 @@ describe("OrderService", () => {
       expect(result.subtotal).toBe(35);
     });
 
-    it("should calculate tax amount based on item taxes", async () => {
+    it("should calculate tax amount from DB, not from frontend-provided taxes", async () => {
+      // DB says: item-1 has tax-1 with 10% rate
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([["item-1", ["tax-1"]]])
+      );
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([
+        { id: "tax-1", name: "Sales Tax", roundingMethod: "half_up", status: "active" },
+      ] as never);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
+        new Map([["tax-1", 0.1]])
+      );
+
       const input = {
         items: [
           {
@@ -685,7 +717,8 @@ describe("OrderService", () => {
             quantity: 1,
             selectedModifiers: [],
             totalPrice: 100,
-            taxes: [{ taxConfigId: "tax-1", name: "Sales Tax", rate: 0.1, roundingMethod: "half_up" as const }],
+            // Frontend sends forged 0% rate — should be ignored
+            taxes: [{ taxConfigId: "tax-1", name: "Sales Tax", rate: 0, roundingMethod: "half_up" as const }],
           },
         ],
         orderMode: "pickup" as const,
@@ -693,7 +726,127 @@ describe("OrderService", () => {
 
       const result = await orderService.calculateOrderTotals("tenant-1", "merchant-1", input);
 
+      // Tax should be 10% from DB, NOT 0% from frontend
       expect(result.taxAmount).toBe(10);
+    });
+
+    it("should ignore frontend tax data and use DB tax data (security fix)", async () => {
+      // DB says: item-1 has tax-1 with 8.875% rate
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([["item-1", ["tax-1"]]])
+      );
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([
+        { id: "tax-1", name: "Sales Tax", roundingMethod: "half_up", status: "active" },
+      ] as never);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
+        new Map([["tax-1", 0.08875]])
+      );
+
+      const input = {
+        items: [
+          {
+            menuItemId: "item-1",
+            name: "Pizza",
+            price: 20,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 20,
+            // Attacker forges rate to 0
+            taxes: [{ taxConfigId: "tax-1", name: "Sales Tax", rate: 0, roundingMethod: "half_up" as const }],
+          },
+        ],
+        orderMode: "pickup" as const,
+      };
+
+      const result = await orderService.calculateOrderTotals("tenant-1", "merchant-1", input);
+
+      // 8.875% of $20 = $1.78 (rounded half_up)
+      expect(result.taxAmount).toBe(1.78);
+      expect(result.totalAmount).toBe(21.78);
+    });
+
+    it("should handle item with no taxes in DB", async () => {
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([["item-1", []]])
+      );
+
+      const input = {
+        items: [
+          { menuItemId: "item-1", name: "Item", price: 20, quantity: 1, selectedModifiers: [], totalPrice: 20, taxes: [] },
+        ],
+        orderMode: "pickup" as const,
+      };
+
+      const result = await orderService.calculateOrderTotals("tenant-1", "merchant-1", input);
+
+      expect(result.taxAmount).toBe(0);
+      expect(result.totalAmount).toBe(20);
+    });
+
+    it("should handle item with multiple taxes from DB", async () => {
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([["item-1", ["tax-1", "tax-2"]]])
+      );
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([
+        { id: "tax-1", name: "Sales Tax", roundingMethod: "half_up", status: "active" },
+        { id: "tax-2", name: "Alcohol Tax", roundingMethod: "half_up", status: "active" },
+      ] as never);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
+        new Map([["tax-1", 0.08], ["tax-2", 0.05]])
+      );
+
+      const input = {
+        items: [
+          {
+            menuItemId: "item-1",
+            name: "Alcohol",
+            price: 100,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 100,
+            taxes: [],
+          },
+        ],
+        orderMode: "pickup" as const,
+      };
+
+      const result = await orderService.calculateOrderTotals("tenant-1", "merchant-1", input);
+
+      // 8% + 5% = 13% of $100 = $13
+      expect(result.taxAmount).toBe(13);
+      expect(result.totalAmount).toBe(113);
+    });
+
+    it("should handle missing merchant rate (default to 0)", async () => {
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([["item-1", ["tax-1"]]])
+      );
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([
+        { id: "tax-1", name: "Sales Tax", roundingMethod: "half_up", status: "active" },
+      ] as never);
+      // No merchant rate configured for tax-1
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(new Map());
+
+      const input = {
+        items: [
+          {
+            menuItemId: "item-1",
+            name: "Item",
+            price: 100,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 100,
+            taxes: [],
+          },
+        ],
+        orderMode: "pickup" as const,
+      };
+
+      const result = await orderService.calculateOrderTotals("tenant-1", "merchant-1", input);
+
+      // Rate defaults to 0 when no merchant rate configured
+      expect(result.taxAmount).toBe(0);
+      expect(result.totalAmount).toBe(100);
     });
 
     it("should add delivery fee for delivery orders", async () => {
@@ -739,30 +892,28 @@ describe("OrderService", () => {
       expect(result.totalAmount).toBe(25);
     });
 
-    it("should calculate multiple taxes for same item", async () => {
+    it("should pass tenantId to getTaxConfigsByIds for tenant isolation", async () => {
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([["item-1", ["tax-1"]]])
+      );
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([
+        { id: "tax-1", name: "Sales Tax", roundingMethod: "half_up", status: "active" },
+      ] as never);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
+        new Map([["tax-1", 0.1]])
+      );
+
       const input = {
         items: [
-          {
-            menuItemId: "item-1",
-            name: "Alcohol",
-            price: 100,
-            quantity: 1,
-            selectedModifiers: [],
-            totalPrice: 100,
-            taxes: [
-              { taxConfigId: "tax-1", name: "Sales Tax", rate: 0.08, roundingMethod: "half_up" as const },
-              { taxConfigId: "tax-2", name: "Alcohol Tax", rate: 0.05, roundingMethod: "half_up" as const },
-            ],
-          },
+          { menuItemId: "item-1", name: "Item", price: 10, quantity: 1, selectedModifiers: [], totalPrice: 10, taxes: [] },
         ],
         orderMode: "pickup" as const,
       };
 
-      const result = await orderService.calculateOrderTotals("tenant-1", "merchant-1", input);
+      await orderService.calculateOrderTotals("tenant-1", "merchant-1", input);
 
-      // 8% + 5% = 13% of $100 = $13
-      expect(result.taxAmount).toBe(13);
-      expect(result.totalAmount).toBe(113);
+      expect(taxConfigRepository.getTaxConfigsByIds).toHaveBeenCalledWith("tenant-1", ["tax-1"]);
+      expect(taxConfigRepository.getMerchantTaxRateMap).toHaveBeenCalledWith("merchant-1");
     });
   });
 
@@ -926,6 +1077,17 @@ describe("OrderService", () => {
       vi.mocked(menuService.getMenuItemsByIds).mockResolvedValue([
         { id: "item-1", name: "Margherita Pizza" },
       ] as never);
+
+      // Mock tax config repository for atomic tests
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([["item-1", ["tax-1"]]])
+      );
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([
+        { id: "tax-1", name: "Sales Tax", roundingMethod: "half_up", status: "active" },
+      ] as never);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
+        new Map([["tax-1", 0.08875]])
+      );
 
       vi.mocked(merchantService.getMerchantById).mockResolvedValue({
         id: "merchant-1",
