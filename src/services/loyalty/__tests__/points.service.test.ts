@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Decimal } from "@prisma/client/runtime/library";
+import { Prisma } from "@prisma/client";
 import { PointsService } from "../points.service";
+
+// Mock prisma
+vi.mock("@/lib/db", () => {
+  const mockPrisma = {
+    $transaction: vi.fn(),
+  };
+  return { default: mockPrisma, prisma: mockPrisma };
+});
 
 // Mock repositories
 vi.mock("@/repositories/point-transaction.repository", () => ({
@@ -8,6 +17,7 @@ vi.mock("@/repositories/point-transaction.repository", () => ({
     create: vi.fn(),
     getByMember: vi.fn(),
     hasEarnedForOrder: vi.fn(),
+    getEarnTransactionForOrder: vi.fn(),
     getTotalPointsEarned: vi.fn(),
   },
 }));
@@ -19,6 +29,7 @@ vi.mock("@/repositories/loyalty-member.repository", () => ({
   },
 }));
 
+import prisma from "@/lib/db";
 import { pointTransactionRepository } from "@/repositories/point-transaction.repository";
 import { loyaltyMemberRepository } from "@/repositories/loyalty-member.repository";
 
@@ -65,6 +76,11 @@ describe("PointsService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     service = new PointsService();
+
+    // Default: prisma.$transaction executes the callback immediately
+    vi.mocked(prisma.$transaction).mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => fn({})
+    );
   });
 
   describe("calculatePointsForOrder", () => {
@@ -100,7 +116,7 @@ describe("PointsService", () => {
   });
 
   describe("awardPoints", () => {
-    it("should award points successfully", async () => {
+    it("should award points successfully within a transaction", async () => {
       vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
       vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(false);
       vi.mocked(pointTransactionRepository.create).mockResolvedValue(mockTransaction);
@@ -117,6 +133,9 @@ describe("PointsService", () => {
       expect(result.newBalance).toBe(125);
       expect(result.transactionId).toBe("tx-1");
 
+      // Verify prisma.$transaction was called (atomic create + update)
+      expect(prisma.$transaction).toHaveBeenCalledOnce();
+
       expect(pointTransactionRepository.create).toHaveBeenCalledWith("tenant-1", {
         memberId: "member-1",
         merchantId: "merchant-1",
@@ -126,17 +145,66 @@ describe("PointsService", () => {
         balanceBefore: 100,
         balanceAfter: 125,
         description: "Earned 25 points from order",
-      });
+      }, expect.anything());
 
       expect(loyaltyMemberRepository.updatePoints).toHaveBeenCalledWith(
         "tenant-1",
         "member-1",
-        25
+        25,
+        expect.anything()
       );
     });
 
-    it("should throw error if points already awarded for order", async () => {
+    it("should return idempotent result if points already awarded for order (fast path)", async () => {
       vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(true);
+      vi.mocked(pointTransactionRepository.getEarnTransactionForOrder).mockResolvedValue(mockTransaction);
+
+      const result = await service.awardPoints("tenant-1", "member-1", {
+        orderAmount: 25,
+        pointsPerDollar: 1,
+        orderId: "order-1",
+      });
+
+      // Should return existing transaction data, not throw
+      expect(result.pointsEarned).toBe(25);
+      expect(result.newBalance).toBe(125);
+      expect(result.transactionId).toBe("tx-1");
+
+      // Should NOT create a new transaction
+      expect(pointTransactionRepository.create).not.toHaveBeenCalled();
+      expect(loyaltyMemberRepository.updatePoints).not.toHaveBeenCalled();
+    });
+
+    it("should return idempotent result on P2002 unique constraint violation", async () => {
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+
+      // Simulate P2002 unique constraint violation during transaction
+      const p2002Error = new Prisma.PrismaClientKnownRequestError(
+        "Unique constraint failed",
+        { code: "P2002", clientVersion: "5.0.0", meta: { target: ["tenant_id", "order_id", "type"] } }
+      );
+      vi.mocked(prisma.$transaction).mockRejectedValue(p2002Error);
+      vi.mocked(pointTransactionRepository.getEarnTransactionForOrder).mockResolvedValue(mockTransaction);
+
+      const result = await service.awardPoints("tenant-1", "member-1", {
+        orderAmount: 25,
+        pointsPerDollar: 1,
+        orderId: "order-1",
+      });
+
+      // Should return existing transaction data
+      expect(result.pointsEarned).toBe(25);
+      expect(result.newBalance).toBe(125);
+      expect(result.transactionId).toBe("tx-1");
+    });
+
+    it("should rethrow non-P2002 errors", async () => {
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+
+      const genericError = new Error("Database connection lost");
+      vi.mocked(prisma.$transaction).mockRejectedValue(genericError);
 
       await expect(
         service.awardPoints("tenant-1", "member-1", {
@@ -144,7 +212,7 @@ describe("PointsService", () => {
           pointsPerDollar: 1,
           orderId: "order-1",
         })
-      ).rejects.toThrow("LOYALTY_POINTS_ALREADY_AWARDED");
+      ).rejects.toThrow("Database connection lost");
     });
 
     it("should throw error if member not found", async () => {
@@ -171,6 +239,42 @@ describe("PointsService", () => {
       expect(result.pointsEarned).toBe(0);
       expect(result.newBalance).toBe(100);
       expect(pointTransactionRepository.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("awardPointsWithCustomAmount", () => {
+    it("should return idempotent result if points already awarded (fast path)", async () => {
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(true);
+      vi.mocked(pointTransactionRepository.getEarnTransactionForOrder).mockResolvedValue(mockTransaction);
+
+      const result = await service.awardPointsWithCustomAmount("tenant-1", "member-1", {
+        points: 50,
+        orderId: "order-1",
+      });
+
+      expect(result.pointsEarned).toBe(25); // from existing transaction
+      expect(result.transactionId).toBe("tx-1");
+      expect(pointTransactionRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("should return idempotent result on P2002 unique constraint violation", async () => {
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+
+      const p2002Error = new Prisma.PrismaClientKnownRequestError(
+        "Unique constraint failed",
+        { code: "P2002", clientVersion: "5.0.0", meta: { target: ["tenant_id", "order_id", "type"] } }
+      );
+      vi.mocked(prisma.$transaction).mockRejectedValue(p2002Error);
+      vi.mocked(pointTransactionRepository.getEarnTransactionForOrder).mockResolvedValue(mockTransaction);
+
+      const result = await service.awardPointsWithCustomAmount("tenant-1", "member-1", {
+        points: 50,
+        orderId: "order-1",
+      });
+
+      expect(result.pointsEarned).toBe(25);
+      expect(result.transactionId).toBe("tx-1");
     });
   });
 
