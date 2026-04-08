@@ -86,7 +86,7 @@ export class SubscriptionRepository {
         stripeSubscriptionId: data.stripeSubscriptionId,
         stripePriceId: data.stripePriceId,
         status: data.status ?? "incomplete",
-        plan: data.plan ?? "standard",
+        plan: data.plan ?? "starter",
         currentPeriodStart: data.currentPeriodStart,
         currentPeriodEnd: data.currentPeriodEnd,
         trialStart: data.trialStart,
