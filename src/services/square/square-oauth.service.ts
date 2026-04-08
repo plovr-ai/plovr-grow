@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { Client, Environment } from "square";
+import { SquareClient, SquareEnvironment } from "square";
 import { squareConfig } from "./square.config";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import type {
@@ -11,13 +11,13 @@ import type {
 const SCOPES = ["ITEMS_READ", "MERCHANT_PROFILE_READ"];
 
 export class SquareOAuthService {
-  private getClient(accessToken?: string): Client {
-    return new Client({
-      accessToken,
+  private getClient(accessToken?: string): SquareClient {
+    return new SquareClient({
+      token: accessToken,
       environment:
         squareConfig.environment === "production"
-          ? Environment.Production
-          : Environment.Sandbox,
+          ? SquareEnvironment.Production
+          : SquareEnvironment.Sandbox,
     });
   }
 
@@ -77,7 +77,7 @@ export class SquareOAuthService {
 
   async exchangeCode(code: string): Promise<SquareTokenResponse> {
     const client = this.getClient();
-    const { result } = await client.oAuthApi.obtainToken({
+    const tokenResponse = await client.oAuth.obtainToken({
       clientId: squareConfig.appId,
       clientSecret: squareConfig.appSecret,
       code,
@@ -85,16 +85,16 @@ export class SquareOAuthService {
     });
 
     return {
-      accessToken: result.accessToken!,
-      refreshToken: result.refreshToken!,
-      expiresAt: new Date(result.expiresAt!),
-      merchantId: result.merchantId!,
+      accessToken: tokenResponse.accessToken!,
+      refreshToken: tokenResponse.refreshToken!,
+      expiresAt: new Date(tokenResponse.expiresAt!),
+      merchantId: tokenResponse.merchantId!,
     };
   }
 
   async refreshToken(refreshTokenValue: string): Promise<SquareTokenResponse> {
     const client = this.getClient();
-    const { result } = await client.oAuthApi.obtainToken({
+    const tokenResponse = await client.oAuth.obtainToken({
       clientId: squareConfig.appId,
       clientSecret: squareConfig.appSecret,
       refreshToken: refreshTokenValue,
@@ -102,18 +102,18 @@ export class SquareOAuthService {
     });
 
     return {
-      accessToken: result.accessToken!,
-      refreshToken: result.refreshToken!,
-      expiresAt: new Date(result.expiresAt!),
-      merchantId: result.merchantId!,
+      accessToken: tokenResponse.accessToken!,
+      refreshToken: tokenResponse.refreshToken!,
+      expiresAt: new Date(tokenResponse.expiresAt!),
+      merchantId: tokenResponse.merchantId!,
     };
   }
 
   async listLocations(accessToken: string): Promise<SquareLocation[]> {
     const client = this.getClient(accessToken);
-    const { result } = await client.locationsApi.listLocations();
+    const locationsResponse = await client.locations.list();
 
-    return (result.locations ?? []).map((loc) => ({
+    return (locationsResponse.locations ?? []).map((loc) => ({
       id: loc.id!,
       name: loc.name ?? "",
       address: loc.address

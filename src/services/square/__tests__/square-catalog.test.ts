@@ -2,14 +2,34 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SquareCatalogService } from "../square-catalog.service";
 import type { SquareCatalogResult } from "../square-catalog.service";
 
-const mockCatalogApi = { listCatalog: vi.fn() };
+let mockCatalogObjects: object[] = [];
+
+function makePage(objects: object[]) {
+  return {
+    [Symbol.asyncIterator]() {
+      let index = 0;
+      return {
+        async next() {
+          if (index < objects.length) {
+            return { value: objects[index++], done: false };
+          }
+          return { value: undefined, done: true };
+        },
+      };
+    },
+  };
+}
+
+const mockCatalogApi = {
+  list: vi.fn(() => Promise.resolve(makePage(mockCatalogObjects))),
+};
 
 vi.mock("square", () => {
   return {
-    Client: vi.fn().mockImplementation(function () {
-      return { catalogApi: mockCatalogApi };
+    SquareClient: vi.fn().mockImplementation(function () {
+      return { catalog: mockCatalogApi };
     }),
-    Environment: { Sandbox: "sandbox", Production: "production" },
+    SquareEnvironment: { Sandbox: "sandbox", Production: "production" },
   };
 });
 
@@ -27,25 +47,20 @@ describe("SquareCatalogService", () => {
   beforeEach(() => {
     service = new SquareCatalogService();
     vi.clearAllMocks();
+    mockCatalogObjects = [];
+    mockCatalogApi.list.mockImplementation(() =>
+      Promise.resolve(makePage(mockCatalogObjects))
+    );
   });
 
   describe("fetchFullCatalog", () => {
     it("should fetch and group catalog objects by type", async () => {
-      mockCatalogApi.listCatalog.mockResolvedValueOnce({
-        result: {
-          objects: [
-            { type: "CATEGORY", id: "cat-1", categoryData: { name: "Burgers" } },
-            { type: "ITEM", id: "item-1", itemData: { name: "Burger" } },
-            {
-              type: "MODIFIER_LIST",
-              id: "ml-1",
-              modifierListData: { name: "Toppings" },
-            },
-            { type: "TAX", id: "tax-1", taxData: { name: "Sales Tax" } },
-          ],
-          cursor: undefined,
-        },
-      });
+      mockCatalogObjects = [
+        { type: "CATEGORY", id: "cat-1", categoryData: { name: "Burgers" } },
+        { type: "ITEM", id: "item-1", itemData: { name: "Burger" } },
+        { type: "MODIFIER_LIST", id: "ml-1", modifierListData: { name: "Toppings" } },
+        { type: "TAX", id: "tax-1", taxData: { name: "Sales Tax" } },
+      ];
 
       const result = await service.fetchFullCatalog("test-token");
 
@@ -63,41 +78,21 @@ describe("SquareCatalogService", () => {
     });
 
     it("should handle pagination with cursor (two pages)", async () => {
-      // First page returns a cursor
-      mockCatalogApi.listCatalog.mockResolvedValueOnce({
-        result: {
-          objects: [
-            { type: "CATEGORY", id: "cat-1", categoryData: { name: "Burgers" } },
-          ],
-          cursor: "page-2-cursor",
-        },
-      });
-
-      // Second page (no cursor = last page)
-      mockCatalogApi.listCatalog.mockResolvedValueOnce({
-        result: {
-          objects: [
-            { type: "ITEM", id: "item-1", itemData: { name: "Burger" } },
-            { type: "ITEM", id: "item-2", itemData: { name: "Fries" } },
-          ],
-          cursor: undefined,
-        },
-      });
+      // New SDK auto-paginates via async iterator — provide all objects in one page
+      mockCatalogObjects = [
+        { type: "CATEGORY", id: "cat-1", categoryData: { name: "Burgers" } },
+        { type: "ITEM", id: "item-1", itemData: { name: "Burger" } },
+        { type: "ITEM", id: "item-2", itemData: { name: "Fries" } },
+      ];
 
       const result = await service.fetchFullCatalog("test-token");
-
-      expect(mockCatalogApi.listCatalog).toHaveBeenCalledTimes(2);
-      expect(mockCatalogApi.listCatalog).toHaveBeenNthCalledWith(1, undefined);
-      expect(mockCatalogApi.listCatalog).toHaveBeenNthCalledWith(2, "page-2-cursor");
 
       expect(result.categories).toHaveLength(1);
       expect(result.items).toHaveLength(2);
     });
 
     it("should handle empty result", async () => {
-      mockCatalogApi.listCatalog.mockResolvedValueOnce({
-        result: { objects: undefined, cursor: undefined },
-      });
+      mockCatalogObjects = [];
 
       const result = await service.fetchFullCatalog("test-token");
 

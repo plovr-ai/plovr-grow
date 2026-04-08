@@ -4,17 +4,17 @@ import { AppError } from "@/lib/errors";
 import * as squareModule from "square";
 
 const mockOAuthApi = { obtainToken: vi.fn() };
-const mockLocationsApi = { listLocations: vi.fn() };
+const mockLocationsApi = { list: vi.fn() };
 
 vi.mock("square", () => {
   return {
-    Client: vi.fn().mockImplementation(function () {
+    SquareClient: vi.fn().mockImplementation(function () {
       return {
-        oAuthApi: mockOAuthApi,
-        locationsApi: mockLocationsApi,
+        oAuth: mockOAuthApi,
+        locations: mockLocationsApi,
       };
     }),
-    Environment: { Sandbox: "sandbox", Production: "production" },
+    SquareEnvironment: { Sandbox: "sandbox", Production: "production" },
   };
 });
 
@@ -137,12 +137,10 @@ describe("SquareOAuthService", () => {
   describe("exchangeCode()", () => {
     it("should call obtainToken with authorization_code grant and return token response", async () => {
       mockOAuthApi.obtainToken.mockResolvedValue({
-        result: {
-          accessToken: "access-123",
-          refreshToken: "refresh-456",
-          expiresAt: "2026-05-08T00:00:00Z",
-          merchantId: "sq-merchant-1",
-        },
+        accessToken: "access-123",
+        refreshToken: "refresh-456",
+        expiresAt: "2026-05-08T00:00:00Z",
+        merchantId: "sq-merchant-1",
       });
 
       const result = await service.exchangeCode("auth-code-abc");
@@ -164,12 +162,10 @@ describe("SquareOAuthService", () => {
 
     it("should return expiresAt as a Date object", async () => {
       mockOAuthApi.obtainToken.mockResolvedValue({
-        result: {
-          accessToken: "access-123",
-          refreshToken: "refresh-456",
-          expiresAt: "2026-05-08T00:00:00Z",
-          merchantId: "sq-merchant-1",
-        },
+        accessToken: "access-123",
+        refreshToken: "refresh-456",
+        expiresAt: "2026-05-08T00:00:00Z",
+        merchantId: "sq-merchant-1",
       });
 
       const result = await service.exchangeCode("auth-code-abc");
@@ -181,12 +177,10 @@ describe("SquareOAuthService", () => {
   describe("refreshToken()", () => {
     it("should call obtainToken with refresh_token grant and return token response", async () => {
       mockOAuthApi.obtainToken.mockResolvedValue({
-        result: {
-          accessToken: "new-access-789",
-          refreshToken: "new-refresh-012",
-          expiresAt: "2026-06-08T00:00:00Z",
-          merchantId: "sq-merchant-1",
-        },
+        accessToken: "new-access-789",
+        refreshToken: "new-refresh-012",
+        expiresAt: "2026-06-08T00:00:00Z",
+        merchantId: "sq-merchant-1",
       });
 
       const result = await service.refreshToken("old-refresh-token");
@@ -208,12 +202,10 @@ describe("SquareOAuthService", () => {
 
     it("should return expiresAt as a Date object", async () => {
       mockOAuthApi.obtainToken.mockResolvedValue({
-        result: {
-          accessToken: "new-access-789",
-          refreshToken: "new-refresh-012",
-          expiresAt: "2026-06-08T00:00:00Z",
-          merchantId: "sq-merchant-1",
-        },
+        accessToken: "new-access-789",
+        refreshToken: "new-refresh-012",
+        expiresAt: "2026-06-08T00:00:00Z",
+        merchantId: "sq-merchant-1",
       });
 
       const result = await service.refreshToken("old-refresh-token");
@@ -224,29 +216,27 @@ describe("SquareOAuthService", () => {
 
   describe("listLocations()", () => {
     it("should return mapped locations from Square API", async () => {
-      mockLocationsApi.listLocations.mockResolvedValue({
-        result: {
-          locations: [
-            {
-              id: "loc-1",
-              name: "Main Street Location",
-              address: {
-                addressLine1: "123 Main St",
-                locality: "San Francisco",
-                administrativeDistrictLevel1: "CA",
-                postalCode: "94102",
-                country: "US",
-              },
-              status: "ACTIVE",
+      mockLocationsApi.list.mockResolvedValue({
+        locations: [
+          {
+            id: "loc-1",
+            name: "Main Street Location",
+            address: {
+              addressLine1: "123 Main St",
+              locality: "San Francisco",
+              administrativeDistrictLevel1: "CA",
+              postalCode: "94102",
+              country: "US",
             },
-            {
-              id: "loc-2",
-              name: "Downtown Location",
-              address: null,
-              status: "INACTIVE",
-            },
-          ],
-        },
+            status: "ACTIVE",
+          },
+          {
+            id: "loc-2",
+            name: "Downtown Location",
+            address: null,
+            status: "INACTIVE",
+          },
+        ],
       });
 
       const result = await service.listLocations("access-token-abc");
@@ -273,8 +263,8 @@ describe("SquareOAuthService", () => {
     });
 
     it("should return empty array when no locations exist", async () => {
-      mockLocationsApi.listLocations.mockResolvedValue({
-        result: { locations: undefined },
+      mockLocationsApi.list.mockResolvedValue({
+        locations: undefined,
       });
 
       const result = await service.listLocations("access-token-abc");
@@ -283,15 +273,15 @@ describe("SquareOAuthService", () => {
     });
 
     it("should pass access token to the Square client", async () => {
-      mockLocationsApi.listLocations.mockResolvedValue({
-        result: { locations: [] },
+      mockLocationsApi.list.mockResolvedValue({
+        locations: [],
       });
 
       await service.listLocations("my-access-token");
 
-      const ClientMock = squareModule.Client as unknown as ReturnType<typeof vi.fn>;
+      const ClientMock = squareModule.SquareClient as unknown as ReturnType<typeof vi.fn>;
       const lastCallArgs = ClientMock.mock.calls[ClientMock.mock.calls.length - 1][0];
-      expect(lastCallArgs.accessToken).toBe("my-access-token");
+      expect(lastCallArgs.token).toBe("my-access-token");
     });
   });
 });

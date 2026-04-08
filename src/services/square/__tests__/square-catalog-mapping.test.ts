@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { SquareCatalogService } from "../square-catalog.service";
 import type { SquareCatalogResult } from "../square-catalog.service";
 

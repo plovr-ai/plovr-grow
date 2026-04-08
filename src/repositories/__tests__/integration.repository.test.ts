@@ -30,7 +30,13 @@ vi.mock("@/lib/id", () => ({
 import prisma from "@/lib/db";
 import { IntegrationRepository } from "../integration.repository";
 
-const mockPrisma = vi.mocked(prisma);
+type MockedFn = ReturnType<typeof vi.fn>;
+type MockedPrisma = {
+  integrationConnection: { findUnique: MockedFn; findFirst: MockedFn; upsert: MockedFn; update: MockedFn };
+  externalIdMapping: { upsert: MockedFn; findMany: MockedFn; findFirst: MockedFn };
+  integrationSyncRecord: { create: MockedFn; update: MockedFn; findFirst: MockedFn };
+};
+const mockPrisma = prisma as unknown as MockedPrisma;
 
 describe("IntegrationRepository", () => {
   let repo: IntegrationRepository;

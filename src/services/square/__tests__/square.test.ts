@@ -247,10 +247,12 @@ describe("SquareService", () => {
         status: "running",
         startedAt: new Date(),
         finishedAt: null,
-        objectsSynced: null,
-        objectsMapped: null,
+        objectsSynced: 0,
+        objectsMapped: 0,
         errorMessage: null,
         cursor: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
 
       await expect(
