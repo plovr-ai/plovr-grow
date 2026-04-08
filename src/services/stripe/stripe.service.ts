@@ -13,10 +13,14 @@ import type {
   CreateBillingPortalInput,
   BillingPortalResult,
   StripeSubscriptionInfo,
+  StripeOAuthTokenResponse,
+  StripeAccountInfo,
 } from "./stripe.types";
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
+const STRIPE_CONNECT_CLIENT_ID = process.env.STRIPE_CONNECT_CLIENT_ID;
+const STRIPE_CONNECT_WEBHOOK_SECRET = process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
 
 // Initialize Stripe client only if key is available
 const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
@@ -155,8 +159,13 @@ export class StripeService {
       paymentIntentParams.setup_future_usage = "on_session";
     }
 
+    const options: Stripe.RequestOptions | undefined = input.stripeAccount
+      ? { stripeAccount: input.stripeAccount }
+      : undefined;
+
     const paymentIntent = await stripe!.paymentIntents.create(
-      paymentIntentParams
+      paymentIntentParams,
+      options
     );
 
     return {
@@ -170,7 +179,8 @@ export class StripeService {
    * Retrieve a PaymentIntent by ID
    */
   async retrievePaymentIntent(
-    paymentIntentId: string
+    paymentIntentId: string,
+    stripeAccount?: string
   ): Promise<RetrievedPaymentIntent | null> {
     if (this.isMockMode()) {
       console.log("[Stripe Mock] Retrieving PaymentIntent:", paymentIntentId);
@@ -189,12 +199,17 @@ export class StripeService {
       return null;
     }
 
+    const retrieveOptions: Stripe.RequestOptions | undefined = stripeAccount
+      ? { stripeAccount }
+      : undefined;
+
     try {
       const paymentIntent = await stripe!.paymentIntents.retrieve(
         paymentIntentId,
         {
           expand: ["latest_charge.payment_method_details"],
-        }
+        },
+        retrieveOptions
       );
 
       const charge = paymentIntent.latest_charge as Stripe.Charge | null;
@@ -487,6 +502,116 @@ export class StripeService {
       console.error("Failed to retrieve subscription:", err);
       return null;
     }
+  }
+  // ==================== Connect Methods ====================
+
+  /**
+   * Generate OAuth URL for Stripe Connect onboarding
+   */
+  generateConnectOAuthUrl(
+    clientId: string,
+    redirectUri: string,
+    state: string
+  ): string {
+    return `https://connect.stripe.com/oauth/authorize?response_type=code&client_id=${clientId}&scope=read_write&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&stripe_landing=register`;
+  }
+
+  /**
+   * Handle OAuth callback and exchange code for access token
+   */
+  async handleConnectOAuthCallback(
+    code: string
+  ): Promise<StripeOAuthTokenResponse> {
+    if (this.isMockMode()) {
+      console.log("[Stripe Mock] Handling Connect OAuth callback:", { code });
+      return {
+        access_token: `mock_access_token_${crypto.randomUUID().slice(0, 8)}`,
+        refresh_token: `mock_refresh_token_${crypto.randomUUID().slice(0, 8)}`,
+        stripe_user_id: `mock_acct_${crypto.randomUUID().slice(0, 8)}`,
+        scope: "read_write",
+      };
+    }
+
+    const token = await stripe!.oauth.token({
+      grant_type: "authorization_code",
+      code,
+    });
+
+    return {
+      access_token: token.access_token ?? "",
+      refresh_token: token.refresh_token ?? "",
+      stripe_user_id: token.stripe_user_id ?? "",
+      scope: token.scope ?? "",
+    };
+  }
+
+  /**
+   * Retrieve Connect account status
+   */
+  async getConnectAccountStatus(
+    stripeAccountId: string
+  ): Promise<StripeAccountInfo> {
+    if (this.isMockMode()) {
+      console.log(
+        "[Stripe Mock] Getting Connect account status:",
+        stripeAccountId
+      );
+      return {
+        id: stripeAccountId,
+        charges_enabled: true,
+        payouts_enabled: true,
+        details_submitted: true,
+      };
+    }
+
+    const account = await stripe!.accounts.retrieve(stripeAccountId);
+
+    return {
+      id: account.id,
+      charges_enabled: account.charges_enabled ?? false,
+      payouts_enabled: account.payouts_enabled ?? false,
+      details_submitted: account.details_submitted ?? false,
+    };
+  }
+
+  /**
+   * Disconnect a connected account via OAuth deauthorize
+   */
+  async disconnectConnectAccount(stripeAccountId: string): Promise<void> {
+    if (this.isMockMode()) {
+      console.log(
+        "[Stripe Mock] Disconnecting Connect account:",
+        stripeAccountId
+      );
+      return;
+    }
+
+    await stripe!.oauth.deauthorize({
+      client_id: STRIPE_CONNECT_CLIENT_ID ?? "",
+      stripe_user_id: stripeAccountId,
+    });
+  }
+
+  /**
+   * Verify Stripe Connect webhook signature
+   */
+  verifyConnectWebhookSignature(
+    payload: string,
+    signature: string
+  ): Stripe.Event {
+    if (this.isMockMode() || !STRIPE_CONNECT_WEBHOOK_SECRET) {
+      if (!STRIPE_CONNECT_WEBHOOK_SECRET) {
+        throw new Error("STRIPE_CONNECT_WEBHOOK_SECRET is not configured");
+      }
+      console.log("[Stripe Mock] Skipping Connect webhook verification");
+      return JSON.parse(payload) as Stripe.Event;
+    }
+
+    return stripe!.webhooks.constructEvent(
+      payload,
+      signature,
+      STRIPE_CONNECT_WEBHOOK_SECRET
+    );
   }
 }
 

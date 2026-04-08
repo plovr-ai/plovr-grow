@@ -50,6 +50,7 @@ export interface WebhookEvent {
 export interface CreatePaymentIntentInput {
   amount: number;
   currency: string;
+  stripeAccount?: string; // Connected account ID for Connect
   customerId?: string;
   saveCard?: boolean;
   metadata?: Record<string, string>;
@@ -123,4 +124,20 @@ export interface StripeSubscriptionInfo {
   trialEnd: Date | null;
   cancelAtPeriodEnd: boolean;
   canceledAt: Date | null;
+}
+
+// ==================== Connect Types ====================
+
+export interface StripeOAuthTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  stripe_user_id: string;
+  scope: string;
+}
+
+export interface StripeAccountInfo {
+  id: string;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  details_submitted: boolean;
 }
