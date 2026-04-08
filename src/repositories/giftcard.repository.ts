@@ -1,5 +1,5 @@
-import prisma from "@/lib/db";
-import type { DbClient } from "@/lib/db";
+import prisma, { type DbClient } from "@/lib/db";
+import { PrismaClient } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
 
@@ -44,6 +44,23 @@ export class GiftCardRepository {
         deleted: false,
       },
     });
+  }
+
+  /**
+   * Get gift card by ID with row-level lock (FOR UPDATE).
+   * Must be called within a prisma.$transaction() context.
+   */
+  async getByIdForUpdate(tenantId: string, id: string, tx: DbClient) {
+    const rows = await (tx as PrismaClient).$queryRaw<
+      Array<{ id: string; current_balance: string }>
+    >`SELECT id, current_balance FROM gift_cards WHERE id = ${id} AND tenant_id = ${tenantId} AND deleted = false FOR UPDATE`;
+
+    if (rows.length === 0) return null;
+
+    return {
+      id: rows[0].id,
+      currentBalance: rows[0].current_balance,
+    };
   }
 
   /**
