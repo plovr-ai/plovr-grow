@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { merchantService } from "@/services/merchant";
 import { MerchantProvider, ThemeProvider, LoyaltyProvider } from "@/contexts";
+import { TrialBanner } from "@storefront/components/trial/TrialBanner";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -35,8 +36,13 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
   // Get theme preset from company settings
   const themePreset = merchant?.company?.settings?.themePreset;
 
+  // Determine trial status
+  const tenantId = merchant?.company?.tenant?.id ?? null;
+  const isTrial = merchant?.company?.tenant?.subscriptionStatus === "TRIAL";
+
   return (
     <ThemeProvider preset={themePreset}>
+      {isTrial && tenantId && <TrialBanner tenantId={tenantId} />}
       <MerchantProvider
         config={{
           name: merchant?.name ?? "",
@@ -49,6 +55,8 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
           feeConfig: merchant?.settings?.feeConfig,
           companySlug: merchant?.company?.slug ?? null,
           companyId: merchant?.company?.id ?? null,
+          tenantId,
+          isTrial,
         }}
       >
         <LoyaltyProvider>{children}</LoyaltyProvider>

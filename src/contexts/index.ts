@@ -7,6 +7,7 @@ export {
   useCompanySlug,
   useCompanyId,
   useCountry,
+  useTrial,
 } from "./MerchantContext";
 export type { MerchantConfig } from "./MerchantContext";
 
