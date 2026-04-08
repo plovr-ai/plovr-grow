@@ -87,6 +87,7 @@ export function toCompanyWithMerchants(
     tenant: {
       id: data.tenant.id,
       name: data.tenant.name,
+      subscriptionStatus: data.tenant.subscriptionStatus,
     },
     merchants: data.merchants.map((m) => toMerchantFromCompany(m, data)),
   };

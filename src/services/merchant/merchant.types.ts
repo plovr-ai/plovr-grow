@@ -63,6 +63,7 @@ export interface CompanyWithMerchants {
   tenant: {
     id: string;
     name: string;
+    subscriptionStatus: string;
   };
   merchants: MerchantWithCompany[];
 }
