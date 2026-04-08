@@ -55,7 +55,7 @@ class SubscriptionTool extends BaseTool {
 
     try {
       // Create Stripe Checkout session for subscription
-      const result = await subscriptionService.createCheckoutSession(tenantId, {
+      const result = await subscriptionService.createCheckoutSession(tenantId, "starter", {
         successUrl: `${APP_URL}/dashboard?subscription=success`,
         cancelUrl: `${APP_URL}/dashboard?subscription=canceled`,
       });
