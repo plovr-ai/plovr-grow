@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
 }
 
 model Tenant {
@@ -73,7 +74,7 @@ model Company {
   deleted               Boolean         @default(false)
   createdAt             DateTime        @default(now()) @map("created_at")
   updatedAt             DateTime        @updatedAt @map("updated_at")
-  tenant                Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant                Tenant          @relation(fields: [tenantId], references: [id])
   menus                 Menu[]
   menuCategories        MenuCategory[]
   menuItems             MenuItem[]
@@ -104,8 +105,8 @@ model Menu {
   deleted     Boolean        @default(false)
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
-  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  company     Company        @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  tenant      Tenant         @relation(fields: [tenantId], references: [id])
+  company     Company        @relation(fields: [companyId], references: [id])
   categories  MenuCategory[]
 
   @@index([tenantId])
@@ -127,9 +128,9 @@ model MenuCategory {
   deleted       Boolean            @default(false)
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
-  company       Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  menu          Menu               @relation(fields: [menuId], references: [id], onDelete: Restrict)
+  company       Company            @relation(fields: [companyId], references: [id])
+  tenant        Tenant             @relation(fields: [tenantId], references: [id])
+  menu          Menu               @relation(fields: [menuId], references: [id])
   categoryItems MenuCategoryItem[]
 
   @@index([companyId])
@@ -154,8 +155,8 @@ model MenuItem {
   deleted       Boolean            @default(false)
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
-  company       Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  company       Company            @relation(fields: [companyId], references: [id])
+  tenant        Tenant             @relation(fields: [tenantId], references: [id])
   menuItemTaxes MenuItemTax[]
   categories    MenuCategoryItem[]
   featuredItems FeaturedItem[]
@@ -175,9 +176,9 @@ model MenuCategoryItem {
   deleted    Boolean      @default(false)
   createdAt  DateTime     @default(now()) @map("created_at")
   updatedAt  DateTime     @updatedAt @map("updated_at")
-  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  category   MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  menuItem   MenuItem     @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  tenant     Tenant       @relation(fields: [tenantId], references: [id])
+  category   MenuCategory @relation(fields: [categoryId], references: [id])
+  menuItem   MenuItem     @relation(fields: [menuItemId], references: [id])
 
   @@unique([categoryId, menuItemId])
   @@index([tenantId])
@@ -211,8 +212,8 @@ model Merchant {
   deleted           Boolean            @default(false)
   createdAt         DateTime           @default(now()) @map("created_at")
   updatedAt         DateTime           @updatedAt @map("updated_at")
-  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  company           Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  tenant            Tenant             @relation(fields: [tenantId], references: [id])
+  company           Company            @relation(fields: [companyId], references: [id])
   orders            Order[]
   merchantTaxRates  MerchantTaxRate[]
   pointTransactions PointTransaction[]
@@ -265,10 +266,10 @@ model Order {
   deleted               Boolean                @default(false)
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at")
-  company               Company                @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  merchant              Merchant?              @relation(fields: [merchantId], references: [id], onDelete: Restrict)
-  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  loyaltyMember         LoyaltyMember?         @relation(fields: [loyaltyMemberId], references: [id], onDelete: Restrict)
+  company               Company                @relation(fields: [companyId], references: [id])
+  merchant              Merchant?              @relation(fields: [merchantId], references: [id])
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id])
+  loyaltyMember         LoyaltyMember?         @relation(fields: [loyaltyMemberId], references: [id])
   pointTransactions     PointTransaction[]
   giftCardPurchase      GiftCard?              @relation("GiftCardPurchase")
   giftCardRedemptions   GiftCardTransaction[]  @relation("GiftCardRedemption")
@@ -296,7 +297,7 @@ model PasswordResetToken {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
   @@index([email])
@@ -317,8 +318,8 @@ model User {
   deleted      Boolean   @default(false)
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
-  company      Company?  @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  company      Company?  @relation(fields: [companyId], references: [id])
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, email])
   @@index([companyId])
@@ -339,8 +340,8 @@ model TaxConfig {
   deleted          Boolean           @default(false)
   createdAt        DateTime          @default(now()) @map("created_at")
   updatedAt        DateTime          @updatedAt @map("updated_at")
-  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  company          Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  company          Company           @relation(fields: [companyId], references: [id])
   merchantTaxRates MerchantTaxRate[]
   menuItemTaxes    MenuItemTax[]
 
@@ -358,8 +359,8 @@ model MerchantTaxRate {
   deleted     Boolean   @default(false)
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
-  merchant    Merchant  @relation(fields: [merchantId], references: [id], onDelete: Restrict)
-  taxConfig   TaxConfig @relation(fields: [taxConfigId], references: [id], onDelete: Restrict)
+  merchant    Merchant  @relation(fields: [merchantId], references: [id])
+  taxConfig   TaxConfig @relation(fields: [taxConfigId], references: [id])
 
   @@unique([merchantId, taxConfigId])
   @@index([merchantId])
@@ -375,9 +376,9 @@ model MenuItemTax {
   deleted     Boolean   @default(false)
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
-  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  menuItem    MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
-  taxConfig   TaxConfig @relation(fields: [taxConfigId], references: [id], onDelete: Restrict)
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  menuItem    MenuItem  @relation(fields: [menuItemId], references: [id])
+  taxConfig   TaxConfig @relation(fields: [taxConfigId], references: [id])
 
   @@unique([menuItemId, taxConfigId])
   @@index([tenantId])
@@ -398,8 +399,8 @@ model LoyaltyConfig {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
 
   @@index([tenantId])
   @@map("loyalty_configs")
@@ -422,8 +423,8 @@ model LoyaltyMember {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  company           Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  company           Company            @relation(fields: [companyId], references: [id])
+  tenant            Tenant             @relation(fields: [tenantId], references: [id])
   pointTransactions PointTransaction[]
   orders            Order[]
   stripeCustomer    StripeCustomer?
@@ -450,10 +451,10 @@ model PointTransaction {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  loyaltyMember LoyaltyMember @relation(fields: [memberId], references: [id], onDelete: Restrict)
-  merchant      Merchant?     @relation(fields: [merchantId], references: [id], onDelete: Restrict)
-  order         Order?        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  loyaltyMember LoyaltyMember @relation(fields: [memberId], references: [id])
+  merchant      Merchant?     @relation(fields: [merchantId], references: [id])
+  order         Order?        @relation(fields: [orderId], references: [id])
 
   @@unique([tenantId, orderId, type], map: "point_transactions_tenant_order_type_unique")
   @@index([tenantId])
@@ -474,7 +475,7 @@ model OtpVerification {
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, phone, purpose])
   @@index([tenantId])
@@ -494,9 +495,9 @@ model FeaturedItem {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  company  Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  company  Company  @relation(fields: [companyId], references: [id])
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
 
   @@unique([companyId, menuItemId])
   @@index([tenantId])
@@ -520,8 +521,8 @@ model CateringLead {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  merchant      Merchant       @relation(fields: [merchantId], references: [id], onDelete: Restrict)
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  merchant      Merchant       @relation(fields: [merchantId], references: [id])
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
   cateringOrder CateringOrder?
 
   @@index([tenantId])
@@ -571,9 +572,9 @@ model CateringOrder {
   paidAt            DateTime? @map("paid_at")
 
   // Relations
-  tenant            Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  merchant          Merchant      @relation(fields: [merchantId], references: [id], onDelete: Restrict)
-  lead              CateringLead? @relation(fields: [leadId], references: [id], onDelete: Restrict)
+  tenant            Tenant        @relation(fields: [tenantId], references: [id])
+  merchant          Merchant      @relation(fields: [merchantId], references: [id])
+  lead              CateringLead? @relation(fields: [leadId], references: [id])
   invoice           Invoice?
 
   @@index([tenantId])
@@ -605,8 +606,8 @@ model Invoice {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  cateringOrder   CateringOrder @relation(fields: [cateringOrderId], references: [id], onDelete: Restrict)
+  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  cateringOrder   CateringOrder @relation(fields: [cateringOrderId], references: [id])
 
   @@index([tenantId])
   @@index([status])
@@ -627,9 +628,9 @@ model GiftCard {
   createdAt       DateTime              @default(now()) @map("created_at")
   updatedAt       DateTime              @updatedAt @map("updated_at")
 
-  tenant        Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  company       Company                 @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  purchaseOrder Order                   @relation("GiftCardPurchase", fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  tenant        Tenant                  @relation(fields: [tenantId], references: [id])
+  company       Company                 @relation(fields: [companyId], references: [id])
+  purchaseOrder Order                   @relation("GiftCardPurchase", fields: [purchaseOrderId], references: [id])
   transactions  GiftCardTransaction[]
 
   @@index([tenantId])
@@ -651,9 +652,9 @@ model GiftCardTransaction {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  giftCard GiftCard  @relation(fields: [giftCardId], references: [id], onDelete: Restrict)
-  order    Order?    @relation("GiftCardRedemption", fields: [orderId], references: [id], onDelete: Restrict)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  giftCard GiftCard  @relation(fields: [giftCardId], references: [id])
+  order    Order?    @relation("GiftCardRedemption", fields: [orderId], references: [id])
 
   @@index([tenantId])
   @@index([giftCardId])
@@ -674,8 +675,8 @@ model OrderSequence {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  merchant Merchant @relation(fields: [merchantId], references: [id])
 
   @@unique([tenantId, merchantId, date])
   @@index([tenantId])
@@ -695,8 +696,8 @@ model CompanyOrderSequence {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
 
   @@unique([tenantId, companyId, date])
   @@index([tenantId])
@@ -716,8 +717,8 @@ model CateringOrderSequence {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Restrict)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  merchant Merchant @relation(fields: [merchantId], references: [id])
 
   @@unique([tenantId, merchantId, date])
   @@index([tenantId])
@@ -735,7 +736,7 @@ model InvoiceSequence {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
   @@map("invoice_sequences")
@@ -775,8 +776,8 @@ model Payment {
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  order                 Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  tenant                Tenant    @relation(fields: [tenantId], references: [id])
+  order                 Order     @relation(fields: [orderId], references: [id])
 
   @@index([tenantId])
   @@index([orderId])
@@ -796,9 +797,9 @@ model StripeCustomer {
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
-  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  company       Company       @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  loyaltyMember LoyaltyMember @relation(fields: [loyaltyMemberId], references: [id], onDelete: Restrict)
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  company       Company       @relation(fields: [companyId], references: [id])
+  loyaltyMember LoyaltyMember @relation(fields: [loyaltyMemberId], references: [id])
 
   @@index([tenantId])
   @@index([companyId])
@@ -825,7 +826,7 @@ model StripeConnectAccount {
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant                Tenant    @relation(fields: [tenantId], references: [id])
 
   @@index([stripeAccountId])
   @@map("stripe_connect_accounts")
@@ -870,7 +871,7 @@ model Subscription {
   updatedAt               DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  tenant                  Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant                  Tenant    @relation(fields: [tenantId], references: [id])
 
   @@index([status])
   @@map("subscriptions")
@@ -889,7 +890,7 @@ model WebsiteGeneration {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
 
   @@index([placeId, status])
   @@map("website_generations")
