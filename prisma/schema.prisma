@@ -459,6 +459,8 @@ model PointTransaction {
   @@unique([tenantId, orderId, type], map: "point_transactions_tenant_order_type_unique")
   @@index([tenantId])
   @@index([memberId])
+  @@index([merchantId])
+  @@index([orderId])
   @@map("point_transactions")
 }
 
@@ -502,6 +504,7 @@ model FeaturedItem {
   @@unique([companyId, menuItemId])
   @@index([tenantId])
   @@index([companyId])
+  @@index([menuItemId])
   @@map("featured_items")
 }
 
@@ -579,6 +582,7 @@ model CateringOrder {
 
   @@index([tenantId])
   @@index([merchantId])
+  @@index([leadId])
   @@index([status])
   @@index([merchantId, status])
   @@index([merchantId, eventDate])
@@ -892,6 +896,7 @@ model WebsiteGeneration {
 
   tenant       Tenant?  @relation(fields: [tenantId], references: [id])
 
+  @@index([tenantId])
   @@index([placeId, status])
   @@map("website_generations")
 }
