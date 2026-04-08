@@ -909,6 +909,7 @@ model Lead {
   aov         Float
   platform    String
   monthlyLoss Float    @map("monthly_loss")
+  source      String   @default("calculator")
   deleted     Boolean  @default(false)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")

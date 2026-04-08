@@ -49,6 +49,7 @@ describe("POST /api/leads", () => {
         aov: 25,
         platform: "doordash",
         monthlyLoss: 1400,
+        source: "calculator",
       },
     });
   });
@@ -87,5 +88,28 @@ describe("POST /api/leads", () => {
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.success).toBe(false);
+  });
+
+  it("accepts customer-loss source", async () => {
+    mockCreate.mockResolvedValue({ id: "lead-2", ...validBody, source: "customer-loss" });
+    const res = await POST(makeRequest({ ...validBody, source: "customer-loss" }));
+    expect(res.status).toBe(201);
+    expect(mockCreate).toHaveBeenCalledWith({
+      data: { ...validBody, source: "customer-loss" },
+    });
+  });
+
+  it("defaults source to calculator when not provided", async () => {
+    mockCreate.mockResolvedValue({ id: "lead-3", ...validBody, source: "calculator" });
+    const res = await POST(makeRequest(validBody));
+    expect(res.status).toBe(201);
+    expect(mockCreate).toHaveBeenCalledWith({
+      data: { ...validBody, source: "calculator" },
+    });
+  });
+
+  it("returns 400 for invalid source", async () => {
+    const res = await POST(makeRequest({ ...validBody, source: "unknown" }));
+    expect(res.status).toBe(400);
   });
 });
