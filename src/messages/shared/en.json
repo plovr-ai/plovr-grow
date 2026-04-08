@@ -102,12 +102,6 @@
     "chartLostCustomers": "Lost monthly",
     "sellingPoint1": "Loyalty programs retain customers",
     "sellingPoint2": "Direct ordering builds relationships",
-    "ctaHeadline": "Stop losing customers",
-    "emailPlaceholder": "your@email.com",
-    "continueButton": "Continue",
-    "submitting": "Submitting...",
-    "emailRequired": "Email is required",
-    "emailInvalid": "Please enter a valid email",
-    "submitError": "Something went wrong. Please try again."
+    "ctaHeadline": "Stop losing customers"
   }
 }
