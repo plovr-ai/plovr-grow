@@ -45,6 +45,7 @@ model Tenant {
   passwordResetTokens     PasswordResetToken[]
   menuCategoryItems       MenuCategoryItem[]
   menuItemTaxes           MenuItemTax[]
+  websiteGenerations      WebsiteGeneration[]
 
   @@map("tenants")
 }
@@ -68,6 +69,7 @@ model Company {
   onboardingStatus      String          @default("not_started") @map("onboarding_status")
   onboardingData        Json?           @map("onboarding_data")
   onboardingCompletedAt DateTime?       @map("onboarding_completed_at")
+  source                String?
   deleted               Boolean         @default(false)
   createdAt             DateTime        @default(now()) @map("created_at")
   updatedAt             DateTime        @updatedAt @map("updated_at")
@@ -872,4 +874,23 @@ model Subscription {
 
   @@index([status])
   @@map("subscriptions")
+}
+
+model WebsiteGeneration {
+  id           String   @id @default(cuid())
+  placeId      String   @map("place_id")
+  placeName    String   @map("place_name")
+  status       String   @default("pending")
+  stepDetail   String?  @map("step_detail")
+  googleData   Json?    @map("google_data")
+  tenantId     String?  @map("tenant_id")
+  companySlug  String?  @map("company_slug")
+  errorMessage String?  @map("error_message") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([placeId, status])
+  @@map("website_generations")
 }
