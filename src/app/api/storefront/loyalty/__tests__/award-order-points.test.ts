@@ -30,6 +30,7 @@ vi.mock("@/services/loyalty", () => ({
 import { merchantService } from "@/services/merchant";
 import { orderService } from "@/services/order";
 import { pointsService, loyaltyConfigService } from "@/services/loyalty";
+import type { CompanyWithMerchants } from "@/services/merchant/merchant.types";
 
 describe("POST /api/storefront/loyalty/award-order-points", () => {
   beforeEach(() => {
@@ -148,7 +149,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as any);
+    } as unknown as CompanyWithMerchants);
 
     vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(false);
 
@@ -179,7 +180,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as any);
+    } as unknown as CompanyWithMerchants);
 
     vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(true);
@@ -211,7 +212,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as any);
+    } as unknown as CompanyWithMerchants);
 
     vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
@@ -244,7 +245,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as any);
+    } as unknown as CompanyWithMerchants);
 
     vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
@@ -256,7 +257,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       totalAmount: 50.0,
     };
     vi.mocked(orderService.getOrder).mockResolvedValue(
-      mockOrder as any
+      mockOrder as unknown as Awaited<ReturnType<typeof orderService.getOrder>>
     );
     vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(1);
     vi.mocked(pointsService.awardPoints).mockResolvedValue({

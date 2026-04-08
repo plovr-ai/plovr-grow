@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { detectSourceType, getScraper } from "../scrapers";
+import type { DataSourceType } from "../onboarding-agent.types";
 
 describe("Scrapers", () => {
   describe("detectSourceType", () => {
@@ -34,7 +35,7 @@ describe("Scrapers", () => {
     });
 
     it("should throw for unknown type", () => {
-      expect(() => getScraper("unknown" as any)).toThrow("Unknown source type");
+      expect(() => getScraper("unknown" as unknown as DataSourceType)).toThrow("Unknown source type");
     });
   });
 

@@ -17,6 +17,7 @@ vi.mock("@/services/loyalty", () => ({
 
 import { merchantService } from "@/services/merchant";
 import { pointsService } from "@/services/loyalty";
+import type { CompanyWithMerchants } from "@/services/merchant/merchant.types";
 
 describe("GET /api/storefront/loyalty/order-points-status", () => {
   beforeEach(() => {
@@ -71,7 +72,7 @@ describe("GET /api/storefront/loyalty/order-points-status", () => {
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as any);
+    } as unknown as CompanyWithMerchants);
 
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(true);
 
@@ -98,7 +99,7 @@ describe("GET /api/storefront/loyalty/order-points-status", () => {
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as any);
+    } as unknown as CompanyWithMerchants);
 
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
 

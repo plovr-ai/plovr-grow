@@ -46,3 +46,5 @@ next-env.d.ts
 # claude code
 .claude/*
 !.claude/commands/
+!.claude/docs/
+!.claude/settings.json
