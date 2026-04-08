@@ -19,7 +19,8 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
 
   useEffect(() => {
     if (window.google?.maps?.places) {
-      setLoaded(true);
+      // Defer setState to avoid synchronous setState in effect
+      queueMicrotask(() => setLoaded(true));
       return;
     }
 

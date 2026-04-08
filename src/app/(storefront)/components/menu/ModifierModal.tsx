@@ -47,8 +47,11 @@ export function ModifierModal({
           .map((m): ModifierSelection => ({ modifierId: m.id, quantity: 1 }));
         initialSelections[group.id] = defaultModifiers;
       });
-      setSelections(initialSelections);
-      setQuantity(1);
+      // Defer to avoid synchronous setState in effect
+      queueMicrotask(() => {
+        setSelections(initialSelections);
+        setQuantity(1);
+      });
     }
   }, [isOpen, item.modifierGroups]);
 

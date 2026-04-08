@@ -53,9 +53,13 @@ export default function ProgressPage({ params }: Props) {
   }, [generationId, router]);
 
   useEffect(() => {
-    pollStatus();
+    // Use setTimeout(0) to avoid synchronous setState in effect
+    const initialTimeout = setTimeout(pollStatus, 0);
     const interval = setInterval(pollStatus, 2000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
   }, [pollStatus]);
 
   return (

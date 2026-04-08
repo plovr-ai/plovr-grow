@@ -72,21 +72,24 @@ export function TipSelector({
 
   // Sync activeType with external value changes
   useEffect(() => {
-    if (value === null) {
-      if (activeType !== "custom") {
-        setActiveType("none");
+    // Defer to avoid synchronous setState in effect
+    queueMicrotask(() => {
+      if (value === null) {
+        if (activeType !== "custom") {
+          setActiveType("none");
+        }
+      } else if (value.type === "percentage") {
+        setActiveType("percentage");
+      } else if (value.type === "fixed") {
+        // Check if this is a custom value or a preset fixed value
+        const isPresetFixed =
+          tipConfig.mode === "fixed" && tipConfig.tiers.includes(value.amount);
+        setActiveType(isPresetFixed ? "fixed" : "custom");
+        if (!isPresetFixed) {
+          setCustomValue(String(value.amount));
+        }
       }
-    } else if (value.type === "percentage") {
-      setActiveType("percentage");
-    } else if (value.type === "fixed") {
-      // Check if this is a custom value or a preset fixed value
-      const isPresetFixed =
-        tipConfig.mode === "fixed" && tipConfig.tiers.includes(value.amount);
-      setActiveType(isPresetFixed ? "fixed" : "custom");
-      if (!isPresetFixed) {
-        setCustomValue(String(value.amount));
-      }
-    }
+    });
   }, [value, activeType, tipConfig]);
 
   const handleSelect = (option: TipOption) => {
