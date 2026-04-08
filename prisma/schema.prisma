@@ -891,6 +891,7 @@ model WebsiteGeneration {
   tenantId     String?  @map("tenant_id")
   companySlug  String?  @map("company_slug")
   errorMessage String?  @map("error_message") @db.Text
+  deleted      Boolean  @default(false)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -908,7 +909,9 @@ model Lead {
   aov         Float
   platform    String
   monthlyLoss Float    @map("monthly_loss")
+  deleted     Boolean  @default(false)
   createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("leads")
 }
