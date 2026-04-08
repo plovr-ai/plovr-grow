@@ -894,3 +894,15 @@ model WebsiteGeneration {
   @@index([placeId, status])
   @@map("website_generations")
 }
+
+model Lead {
+  id          String   @id @default(cuid())
+  email       String
+  revenue     Float
+  aov         Float
+  platform    String
+  monthlyLoss Float    @map("monthly_loss")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("leads")
+}
