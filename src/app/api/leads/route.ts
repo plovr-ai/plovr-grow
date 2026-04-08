@@ -8,6 +8,7 @@ const leadSchema = z.object({
   aov: z.number().positive("AOV must be positive"),
   platform: z.enum(["doordash", "ubereats", "both"]),
   monthlyLoss: z.number().positive("Monthly loss must be positive"),
+  source: z.enum(["calculator", "customer-loss"]).default("calculator"),
 });
 
 export async function POST(request: NextRequest) {
