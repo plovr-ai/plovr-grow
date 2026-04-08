@@ -53,6 +53,12 @@
     "INVOICE_NOT_FOUND": "Invoice not found",
     "INVOICE_ALREADY_EXISTS": "Invoice already exists for this order",
     "CATERING_ORDER_NOT_FOUND": "Catering order not found",
+    "INTEGRATION_NOT_CONNECTED": "No integration connection found",
+    "INTEGRATION_TOKEN_EXPIRED": "Integration token expired and could not be refreshed",
+    "INTEGRATION_OAUTH_STATE_INVALID": "Invalid OAuth state parameter",
+    "SQUARE_CATALOG_SYNC_FAILED": "Failed to sync catalog from Square",
+    "SQUARE_SYNC_ALREADY_RUNNING": "A catalog sync is already in progress",
+    "SQUARE_NOT_CONFIGURED": "Square integration is not configured",
     "VALIDATION_FAILED": "Validation failed",
     "INTERNAL_ERROR": "An unexpected error occurred. Please try again.",
     "NETWORK_ERROR": "Network error. Please check your connection."
