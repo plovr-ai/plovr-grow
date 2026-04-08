@@ -1,17 +1,19 @@
 /**
  * Integration test for order creation transaction atomicity.
  *
- * Connects to a real MySQL test database (reborn_test) and verifies that
+ * Connects to a real MySQL test database and verifies that
  * prisma.$transaction() correctly rolls back ALL writes when any step fails.
  *
  * Run with: npx vitest run --config vitest.config.integration.ts
- * Requires: MySQL running with reborn_test database (see README)
+ * Requires: MySQL running with DATABASE_URL configured
  */
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
 
-const TEST_DB_URL = "mysql://root:password@localhost:3306/reborn_test";
+const TEST_DB_URL =
+  process.env.DATABASE_URL ||
+  "mysql://root:password@localhost:3306/reborn_test";
 
 const prisma = new PrismaClient({
   datasources: { db: { url: TEST_DB_URL } },
