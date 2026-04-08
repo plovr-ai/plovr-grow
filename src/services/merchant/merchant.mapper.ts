@@ -65,6 +65,7 @@ export function toMerchantWithCompany(
       tenant: {
         id: data.company.tenant.id,
         name: data.company.tenant.name,
+        subscriptionStatus: data.company.tenant.subscriptionStatus,
       },
     },
   };
@@ -131,6 +132,7 @@ function toMerchantFromCompany(
       tenant: {
         id: company.tenant.id,
         name: company.tenant.name,
+        subscriptionStatus: company.tenant.subscriptionStatus,
       },
     },
   };

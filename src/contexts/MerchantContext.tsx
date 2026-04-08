@@ -19,6 +19,8 @@ export interface MerchantConfig {
   feeConfig: FeeConfig;
   companySlug: string | null;
   companyId: string | null;
+  tenantId: string | null;
+  isTrial: boolean;
 }
 
 interface MerchantProviderProps {
@@ -34,6 +36,8 @@ interface MerchantProviderProps {
     feeConfig?: FeeConfig;
     companySlug?: string | null;
     companyId?: string | null;
+    tenantId?: string | null;
+    isTrial?: boolean;
   };
 }
 
@@ -52,8 +56,10 @@ export function MerchantProvider({ children, config }: MerchantProviderProps) {
       feeConfig: config.feeConfig ?? DEFAULT_FEE_CONFIG,
       companySlug: config.companySlug ?? null,
       companyId: config.companyId ?? null,
+      tenantId: config.tenantId ?? null,
+      isTrial: config.isTrial ?? false,
     }),
-    [config.name, config.logoUrl, config.currency, config.locale, config.timezone, config.country, config.tipConfig, config.feeConfig, config.companySlug, config.companyId]
+    [config.name, config.logoUrl, config.currency, config.locale, config.timezone, config.country, config.tipConfig, config.feeConfig, config.companySlug, config.companyId, config.tenantId, config.isTrial]
   );
 
   return (
@@ -104,4 +110,9 @@ export function useCompanyId(): string | null {
 export function useCountry(): string {
   const { country } = useMerchantConfig();
   return country;
+}
+
+export function useTrial(): { isTrial: boolean; tenantId: string | null } {
+  const { isTrial, tenantId } = useMerchantConfig();
+  return { isTrial, tenantId };
 }
