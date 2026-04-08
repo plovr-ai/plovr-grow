@@ -28,10 +28,17 @@ vi.mock("@/services/payment", () => ({
   },
 }));
 
+vi.mock("@/services/stripe-connect", () => ({
+  stripeConnectService: {
+    getConnectAccount: vi.fn(),
+  },
+}));
+
 import { merchantService } from "@/services/merchant";
 import { orderService } from "@/services/order";
 import { giftCardService } from "@/services/giftcard";
 import { paymentService } from "@/services/payment";
+import { stripeConnectService } from "@/services/stripe-connect";
 
 describe("POST /api/storefront/[companySlug]/giftcard", () => {
   const mockCompany = {
@@ -105,6 +112,12 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
         mockCompany as never
       );
+      vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue({
+        stripeAccountId: "acct_test123",
+        accessToken: "access_token",
+        refreshToken: "refresh_token",
+        scope: "read_write",
+      } as never);
       vi.mocked(paymentService.verifyPayment).mockResolvedValue({
         success: true,
         paymentIntentId: "pi_test123",
@@ -140,10 +153,11 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       expect(response.status).toBe(201);
       expect(data.success).toBe(true);
 
-      // Should verify payment
+      // Should verify payment with stripeAccountId
       expect(paymentService.verifyPayment).toHaveBeenCalledWith(
         "pi_test123",
-        50
+        50,
+        "acct_test123"
       );
 
       // Should create payment record
@@ -160,6 +174,12 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
         mockCompany as never
       );
+      vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue({
+        stripeAccountId: "acct_test123",
+        accessToken: "access_token",
+        refreshToken: "refresh_token",
+        scope: "read_write",
+      } as never);
       vi.mocked(paymentService.verifyPayment).mockResolvedValue({
         success: false,
         paymentIntentId: "pi_test123",
@@ -197,6 +217,12 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
         mockCompany as never
       );
+      vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue({
+        stripeAccountId: "acct_test123",
+        accessToken: "access_token",
+        refreshToken: "refresh_token",
+        scope: "read_write",
+      } as never);
       vi.mocked(paymentService.verifyPayment).mockResolvedValue({
         success: false,
         paymentIntentId: "pi_test123",

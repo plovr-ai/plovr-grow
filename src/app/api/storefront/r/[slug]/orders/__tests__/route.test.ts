@@ -28,6 +28,12 @@ vi.mock("@/services/payment", () => ({
   },
 }));
 
+vi.mock("@/services/stripe-connect", () => ({
+  stripeConnectService: {
+    getConnectAccount: vi.fn(),
+  },
+}));
+
 vi.mock("@/services/loyalty", () => ({
   pointsService: {
     awardPointsWithCustomAmount: vi.fn(),
@@ -48,6 +54,7 @@ import { merchantService } from "@/services/merchant";
 import { orderService } from "@/services/order";
 import { giftCardService } from "@/services/giftcard";
 import { paymentService } from "@/services/payment";
+import { stripeConnectService } from "@/services/stripe-connect";
 import { checkoutFormSchema } from "@storefront/lib/validations/checkout";
 
 function createRequest(body: Record<string, unknown>): NextRequest {
@@ -181,6 +188,13 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
       deliveryFee: 0,
       discount: 0,
       totalAmount: 20,
+    } as never);
+
+    vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue({
+      stripeAccountId: "acct_test123",
+      accessToken: "access_token",
+      refreshToken: "refresh_token",
+      scope: "read_write",
     } as never);
 
     vi.mocked(paymentService.verifyPayment).mockResolvedValue({
