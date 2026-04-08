@@ -207,6 +207,13 @@ export class PaymentService {
   async getPaymentByIntentId(paymentIntentId: string) {
     return paymentRepository.getByPaymentIntentId(paymentIntentId);
   }
+
+  /**
+   * Check if a PaymentIntent has already been used for a payment record
+   */
+  async paymentIntentExists(stripePaymentIntentId: string): Promise<boolean> {
+    return paymentRepository.paymentIntentExists(stripePaymentIntentId);
+  }
 }
 
 export const paymentService = new PaymentService();
