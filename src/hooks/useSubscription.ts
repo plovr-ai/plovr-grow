@@ -53,11 +53,3 @@ export function useSubscription(): UseSubscriptionResult {
   };
 }
 
-/**
- * Hook to check if a feature requires subscription and redirect if not active
- * @returns true if subscription is active, false otherwise
- */
-export function useRequireSubscription(): boolean {
-  const { isActive } = useSubscription();
-  return isActive;
-}

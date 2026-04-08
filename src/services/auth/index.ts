@@ -4,7 +4,6 @@ export {
   mockTenantStore,
   mockCompanyStore,
   mockPasswordResetTokenStore,
-  clearAllStores,
 } from "./mock-store";
 export type {
   MockUser,

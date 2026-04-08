@@ -80,7 +80,7 @@ export function calculateTipAmount(
  * 根据 subtotal 计算 fees 金额
  * percentage 类型基于 subtotal 计算
  */
-export function calculateFeesAmount(
+function calculateFeesAmount(
   subtotal: number,
   fees: FeeInput[] | null | undefined
 ): { feesAmount: number; feesBreakdown: FeeBreakdownItem[] } {

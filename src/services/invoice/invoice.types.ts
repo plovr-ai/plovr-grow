@@ -80,7 +80,7 @@ function parseDecimal(value: Decimal | number): number {
   return Number(value);
 }
 
-export function toInvoiceData(invoice: Invoice): InvoiceData {
+function toInvoiceData(invoice: Invoice): InvoiceData {
   return {
     id: invoice.id,
     tenantId: invoice.tenantId,
