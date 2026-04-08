@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit:*)",
+            "command": "bash -c 'echo \"=== ESLint check ===\"; npx eslint --max-warnings 0 src/ 2>&1; LINT_EXIT=$?; if [ $LINT_EXIT -ne 0 ]; then echo \"{\\\"continue\\\":false,\\\"stopReason\\\":\\\"ESLint failed. Fix lint errors before committing.\\\"}\"; exit 0; fi; echo \"=== TypeScript type check ===\"; npx tsc --noEmit 2>&1; TSC_EXIT=$?; if [ $TSC_EXIT -ne 0 ]; then echo \"{\\\"continue\\\":false,\\\"stopReason\\\":\\\"TypeScript compilation failed. Fix type errors before committing.\\\"}\"; exit 0; fi; echo \"=== Unit tests with coverage ===\"; npx vitest run --coverage --reporter=verbose 2>&1; TEST_EXIT=$?; if [ $TEST_EXIT -ne 0 ]; then echo \"{\\\"continue\\\":false,\\\"stopReason\\\":\\\"Unit tests failed. Fix failing tests before committing.\\\"}\"; exit 0; fi; COV=$(node -e \"try{const r=JSON.parse(require(\\\"fs\\\").readFileSync(\\\"./coverage/coverage-summary.json\\\",\\\"utf8\\\"));const t=r.total;const p=Math.min(t.lines.pct,t.branches.pct,t.functions.pct,t.statements.pct);console.log(p)}catch(e){console.log(0)}\"); PASS=$(node -e \"console.log(Number($COV)>=99)\"); if [ \"$PASS\" = \"false\" ]; then echo \"{\\\"continue\\\":false,\\\"stopReason\\\":\\\"UT coverage is ${COV}%, below required 99%. Add more tests before committing.\\\"}\"; exit 0; fi; echo \"All pre-commit checks passed (coverage: ${COV}%)\"'",
+            "timeout": 300,
+            "statusMessage": "Running pre-commit checks (eslint + tsc + UT coverage 99%)..."
+          }
+        ]
+      }
+    ]
+  }
+}

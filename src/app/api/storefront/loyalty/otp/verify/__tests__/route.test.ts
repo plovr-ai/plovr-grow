@@ -31,6 +31,7 @@ vi.mock("@/lib/loyalty-session", () => ({
 import { otpService } from "@/services/otp";
 import { loyaltyService, loyaltyMemberService } from "@/services/loyalty";
 import { merchantService } from "@/services/merchant";
+import type { CompanyWithMerchants } from "@/services/merchant/merchant.types";
 
 describe("POST /api/storefront/loyalty/otp/verify", () => {
   beforeEach(() => {
@@ -44,7 +45,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       tenantId: "tenant-1",
       slug: "test-company",
       name: "Test Company",
-    } as any);
+    } as unknown as CompanyWithMerchants);
 
     // Mock existing member check
     vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue(null);
@@ -118,7 +119,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       tenantId: "tenant-1",
       slug: "test-company",
       name: "Test Company",
-    } as any);
+    } as unknown as CompanyWithMerchants);
 
     vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue(null);
 
@@ -236,7 +237,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       tenantId: "tenant-1",
       slug: "test-company",
       name: "Test Company",
-    } as any);
+    } as unknown as CompanyWithMerchants);
 
     vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue(null);
 
@@ -332,7 +333,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       tenantId: "tenant-1",
       slug: "test-company",
       name: "Test Company",
-    } as any);
+    } as unknown as CompanyWithMerchants);
 
     vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue(null);
 
