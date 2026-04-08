@@ -42,6 +42,8 @@ Thumbs.db
 # Assets (images, fonts - binary files)
 public/images/
 public/fonts/
+public/uploads/
+*.svg
 *.png
 *.jpg
 *.jpeg
