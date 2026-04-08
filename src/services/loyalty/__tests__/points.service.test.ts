@@ -79,7 +79,8 @@ describe("PointsService", () => {
 
     // Default: prisma.$transaction executes the callback immediately
     vi.mocked(prisma.$transaction).mockImplementation(
-      async (fn: (tx: unknown) => Promise<unknown>) => fn({})
+      // cast needed because mock returns {} instead of full PrismaClient
+      async (fn: unknown) => (fn as (tx: unknown) => Promise<unknown>)({})
     );
   });
 
