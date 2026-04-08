@@ -38,7 +38,7 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
 
   // Determine trial status
   const tenantId = merchant?.company?.tenant?.id ?? null;
-  const isTrial = merchant?.company?.tenant?.subscriptionStatus === "TRIAL";
+  const isTrial = merchant?.company?.tenant?.subscriptionStatus === "trial";
 
   return (
     <ThemeProvider preset={themePreset}>
