@@ -33,27 +33,31 @@ export function ModifierModal({
 }: ModifierModalProps) {
   const formatPrice = useFormatPrice();
 
+  // Compute initial selections from item's modifier groups
+  const getInitialSelections = useCallback((): SelectionState => {
+    const initialSelections: SelectionState = {};
+    item.modifierGroups.forEach((group) => {
+      const defaultModifiers = group.modifiers
+        .filter((m) => m.isDefault && m.isAvailable)
+        .map((m): ModifierSelection => ({ modifierId: m.id, quantity: 1 }));
+      initialSelections[group.id] = defaultModifiers;
+    });
+    return initialSelections;
+  }, [item.modifierGroups]);
+
   // State for selected modifiers per group
-  const [selections, setSelections] = useState<SelectionState>({});
+  const [selections, setSelections] = useState<SelectionState>(getInitialSelections);
   const [quantity, setQuantity] = useState(1);
 
-  // Initialize default selections when modal opens
+  // Reset selections when modal opens
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on modal open */
   useEffect(() => {
     if (isOpen) {
-      const initialSelections: SelectionState = {};
-      item.modifierGroups.forEach((group) => {
-        const defaultModifiers = group.modifiers
-          .filter((m) => m.isDefault && m.isAvailable)
-          .map((m): ModifierSelection => ({ modifierId: m.id, quantity: 1 }));
-        initialSelections[group.id] = defaultModifiers;
-      });
-      // Defer to avoid synchronous setState in effect
-      queueMicrotask(() => {
-        setSelections(initialSelections);
-        setQuantity(1);
-      });
+      setSelections(getInitialSelections());
+      setQuantity(1);
     }
-  }, [isOpen, item.modifierGroups]);
+  }, [isOpen, getInitialSelections]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Toggle modifier selection
   const handleToggleModifier = useCallback(

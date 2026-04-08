@@ -71,26 +71,25 @@ export function TipSelector({
   const [customValue, setCustomValue] = useState("");
 
   // Sync activeType with external value changes
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional sync with external prop */
   useEffect(() => {
-    // Defer to avoid synchronous setState in effect
-    queueMicrotask(() => {
-      if (value === null) {
-        if (activeType !== "custom") {
-          setActiveType("none");
-        }
-      } else if (value.type === "percentage") {
-        setActiveType("percentage");
-      } else if (value.type === "fixed") {
-        // Check if this is a custom value or a preset fixed value
-        const isPresetFixed =
-          tipConfig.mode === "fixed" && tipConfig.tiers.includes(value.amount);
-        setActiveType(isPresetFixed ? "fixed" : "custom");
-        if (!isPresetFixed) {
-          setCustomValue(String(value.amount));
-        }
+    if (value === null) {
+      if (activeType !== "custom") {
+        setActiveType("none");
       }
-    });
+    } else if (value.type === "percentage") {
+      setActiveType("percentage");
+    } else if (value.type === "fixed") {
+      // Check if this is a custom value or a preset fixed value
+      const isPresetFixed =
+        tipConfig.mode === "fixed" && tipConfig.tiers.includes(value.amount);
+      setActiveType(isPresetFixed ? "fixed" : "custom");
+      if (!isPresetFixed) {
+        setCustomValue(String(value.amount));
+      }
+    }
   }, [value, activeType, tipConfig]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSelect = (option: TipOption) => {
     setActiveType(option.type);
