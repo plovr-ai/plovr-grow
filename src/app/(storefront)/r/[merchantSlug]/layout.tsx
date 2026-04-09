@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { merchantService } from "@/services/merchant";
 import { MerchantProvider, ThemeProvider, LoyaltyProvider } from "@/contexts";
-import { TrialBanner } from "@storefront/components/trial/TrialBanner";
+import { ClaimBar } from "@storefront/components/trial/ClaimBar";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -42,7 +42,7 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
 
   return (
     <ThemeProvider preset={themePreset}>
-      {isTrial && tenantId && <TrialBanner tenantId={tenantId} />}
+      {isTrial && tenantId && <ClaimBar tenantId={tenantId} companySlug={merchant?.company?.slug ?? ""} />}
       <MerchantProvider
         config={{
           name: merchant?.name ?? "",

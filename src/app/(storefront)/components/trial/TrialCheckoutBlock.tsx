@@ -24,7 +24,7 @@ export function TrialCheckoutBlock({ tenantId }: TrialCheckoutBlockProps) {
         </button>
       </div>
 
-      <ClaimModal tenantId={tenantId} isOpen={showModal} onClose={() => setShowModal(false)} />
+      <ClaimModal tenantId={tenantId} companySlug="" isOpen={showModal} onClose={() => setShowModal(false)} />
     </div>
   );
 }
