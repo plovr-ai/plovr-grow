@@ -251,6 +251,65 @@ export class IntegrationRepository {
       },
     });
   }
+
+  // ==================== Webhook Events ====================
+
+  async getConnectionByExternalAccountId(
+    externalAccountId: string,
+    type: string
+  ) {
+    return prisma.integrationConnection.findFirst({
+      where: {
+        externalAccountId,
+        type,
+        deleted: false,
+        status: "active",
+      },
+    });
+  }
+
+  async findWebhookEventByEventId(eventId: string) {
+    return prisma.webhookEvent.findUnique({
+      where: { eventId },
+    });
+  }
+
+  async createWebhookEvent(data: {
+    tenantId: string;
+    merchantId: string;
+    connectionId: string;
+    eventId: string;
+    eventType: string;
+    payload: unknown;
+  }) {
+    return prisma.webhookEvent.create({
+      data: {
+        id: generateEntityId(),
+        tenantId: data.tenantId,
+        merchantId: data.merchantId,
+        connectionId: data.connectionId,
+        eventId: data.eventId,
+        eventType: data.eventType,
+        payload: data.payload as never,
+        status: "received",
+      },
+    });
+  }
+
+  async updateWebhookEventStatus(
+    id: string,
+    status: string,
+    errorMessage?: string
+  ) {
+    return prisma.webhookEvent.update({
+      where: { id },
+      data: {
+        status,
+        errorMessage,
+        processedAt: status === "processed" || status === "failed" ? new Date() : undefined,
+      },
+    });
+  }
 }
 
 export const integrationRepository = new IntegrationRepository();
