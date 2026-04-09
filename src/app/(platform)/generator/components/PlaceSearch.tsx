@@ -43,22 +43,21 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
         componentRestrictions: { country: "us" },
       });
 
-    placeAutocomplete.addEventListener(
-      "gmp-placeselect",
-      async (event: google.maps.places.PlaceAutocompletePlaceSelectEvent) => {
-        const { place } = event;
-        await place.fetchFields({
-          fields: ["id", "displayName", "formattedAddress"],
+    placeAutocomplete.addEventListener("gmp-placeselect", (async (
+      event: google.maps.places.PlaceAutocompletePlaceSelectEvent
+    ) => {
+      const { place } = event;
+      await place.fetchFields({
+        fields: ["id", "displayName", "formattedAddress"],
+      });
+      if (place.id && place.displayName) {
+        onSelect({
+          placeId: place.id,
+          name: place.displayName,
+          address: place.formattedAddress ?? "",
         });
-        if (place.id && place.displayName) {
-          onSelect({
-            placeId: place.id,
-            name: place.displayName,
-            address: place.formattedAddress ?? "",
-          });
-        }
       }
-    );
+    }) as unknown as EventListener);
 
     containerRef.current.appendChild(placeAutocomplete as unknown as Node);
     elementRef.current = placeAutocomplete;
