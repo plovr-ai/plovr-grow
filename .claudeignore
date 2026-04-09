@@ -54,6 +54,9 @@ public/uploads/
 *.ttf
 *.eot
 
+# Worktrees
+.worktrees/
+
 # Misc
 .vercel/
 .turbo/
