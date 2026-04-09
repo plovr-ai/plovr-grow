@@ -7,6 +7,7 @@ const publicRoutes = [
   "/dashboard/register",
   "/dashboard/forgot-password",
   "/dashboard/reset-password",
+  "/dashboard/stytch-authenticate",
 ];
 
 export default auth((req) => {
