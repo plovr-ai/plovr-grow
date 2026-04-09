@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { auth, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { DashboardLayoutClient } from "@/components/dashboard";
 import { merchantService } from "@/services/merchant";
@@ -27,6 +27,9 @@ export default async function ProtectedLayout({
   ]);
 
   if (!company) {
+    // Company not found in database — session has stale/invalid companyId.
+    // Sign out to clear the invalid session and prevent infinite redirect loop.
+    await signOut({ redirect: false });
     redirect("/dashboard/login");
   }
 
