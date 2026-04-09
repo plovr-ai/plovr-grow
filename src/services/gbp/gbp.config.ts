@@ -1,9 +1,6 @@
 import { AppError, ErrorCodes } from "@/lib/errors";
 
 export const gbpConfig = {
-  get enabled() {
-    return process.env.GBP_ENABLED === "true";
-  },
   get clientId() {
     return process.env.GBP_CLIENT_ID ?? "";
   },
@@ -19,7 +16,7 @@ export const gbpConfig = {
   },
 
   assertConfigured() {
-    if (!this.enabled || !this.clientId || !this.clientSecret) {
+    if (!this.clientId || !this.clientSecret) {
       throw new AppError(ErrorCodes.GBP_NOT_CONFIGURED, undefined, 500);
     }
   },
