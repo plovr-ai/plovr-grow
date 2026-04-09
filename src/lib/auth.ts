@@ -30,7 +30,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!user || user.status !== "active") return null;
 
-        // Verify password
+        // Verify password (passwordHash may be null for Stytch users)
+        if (!user.passwordHash) return null;
         const isValid = await compare(password, user.passwordHash);
         if (!isValid) return null;
 

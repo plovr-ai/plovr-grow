@@ -8,7 +8,8 @@ export interface MockUser {
   tenantId: string;
   companyId: string | null;
   email: string;
-  passwordHash: string;
+  passwordHash: string | null;
+  stytchUserId: string | null;
   name: string;
   role: string;
   status: string;
@@ -99,6 +100,23 @@ export const mockUserStore = {
     const user = users.get(id);
     if (user) {
       user.passwordHash = passwordHash;
+      user.updatedAt = new Date();
+    }
+  },
+
+  findByStytchUserId(stytchUserId: string): MockUser | undefined {
+    for (const user of users.values()) {
+      if (user.stytchUserId === stytchUserId) {
+        return user;
+      }
+    }
+    return undefined;
+  },
+
+  updateStytchUserId(id: string, stytchUserId: string): void {
+    const user = users.get(id);
+    if (user) {
+      user.stytchUserId = stytchUserId;
       user.updatedAt = new Date();
     }
   },

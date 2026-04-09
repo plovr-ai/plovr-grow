@@ -39,6 +39,7 @@ export class AuthService {
       companyId: company.id,
       email: input.email,
       passwordHash,
+      stytchUserId: null,
       name: input.name,
       role: "owner",
       status: "active",

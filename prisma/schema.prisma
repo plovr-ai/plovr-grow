@@ -316,8 +316,9 @@ model User {
   tenantId     String    @map("tenant_id")
   companyId    String?   @map("company_id")
   email        String
-  passwordHash String    @map("password_hash")
-  name         String
+  passwordHash  String?   @map("password_hash")
+  stytchUserId  String?   @unique @map("stytch_user_id")
+  name          String
   role         String    @default("staff")
   status       String    @default("active")
   lastLoginAt  DateTime? @map("last_login_at")
