@@ -810,8 +810,8 @@ async function main() {
           name: "Size",
           type: "single",
           required: true,
-          choices: [
-            { id: "small", name: "Small (8 oz)", price: 0 },
+          modifiers: [
+            { id: "small", name: "Small (8 oz)", price: 0, isDefault: true },
             { id: "large", name: "Large (12 oz)", price: 1.5 },
           ],
         },
@@ -820,8 +820,8 @@ async function main() {
           name: "Milk",
           type: "single",
           required: false,
-          choices: [
-            { id: "whole", name: "Whole Milk", price: 0 },
+          modifiers: [
+            { id: "whole", name: "Whole Milk", price: 0, isDefault: true },
             { id: "oat", name: "Oat Milk", price: 0.75 },
             { id: "almond", name: "Almond Milk", price: 0.75 },
           ],
@@ -843,8 +843,8 @@ async function main() {
           name: "Size",
           type: "single",
           required: true,
-          choices: [
-            { id: "small", name: "Small (8 oz)", price: 0 },
+          modifiers: [
+            { id: "small", name: "Small (8 oz)", price: 0, isDefault: true },
             { id: "large", name: "Large (12 oz)", price: 1.5 },
           ],
         },
@@ -865,8 +865,8 @@ async function main() {
           name: "Size",
           type: "single",
           required: true,
-          choices: [
-            { id: "small", name: "Small (12 oz)", price: 0 },
+          modifiers: [
+            { id: "small", name: "Small (12 oz)", price: 0, isDefault: true },
             { id: "large", name: "Large (16 oz)", price: 1 },
           ],
         },
@@ -1376,9 +1376,10 @@ async function main() {
   ];
 
   for (const item of menuItems) {
+    const { id, tenantId, companyId, ...updateData } = item;
     await prisma.menuItem.upsert({
       where: { id: item.id },
-      update: {},
+      update: updateData,
       create: item,
     });
   }
@@ -1478,6 +1479,57 @@ async function main() {
 
   console.log("Associated menu items with tax configs");
 
+  // ==================== Users for Joe's Pizza and Bella's Bakery ====================
+  console.log("\nCreating users for Joe's Pizza and Bella's Bakery...");
+
+  const joesPasswordHash = await bcrypt.hash("test123", 10);
+
+  const joesUser = await prisma.user.upsert({
+    where: {
+      tenantId_email: {
+        tenantId: tenant.id,
+        email: "joe@joespizza.com",
+      },
+    },
+    update: {},
+    create: {
+      id: "user-joes-pizza-owner",
+      tenantId: tenant.id,
+      companyId: company.id,
+      email: "joe@joespizza.com",
+      passwordHash: joesPasswordHash,
+      name: "Joe Smith",
+      role: "owner",
+      status: "active",
+    },
+  });
+
+  console.log(`Created Joe's Pizza user: ${joesUser.email}`);
+
+  const bellaPasswordHash = await bcrypt.hash("test123", 10);
+
+  const bellaUser = await prisma.user.upsert({
+    where: {
+      tenantId_email: {
+        tenantId: bellaTenant.id,
+        email: "bella@bellasbakery.com",
+      },
+    },
+    update: {},
+    create: {
+      id: "user-bellas-bakery-owner",
+      tenantId: bellaTenant.id,
+      companyId: bellaCompany.id,
+      email: "bella@bellasbakery.com",
+      passwordHash: bellaPasswordHash,
+      name: "Bella Martinez",
+      role: "owner",
+      status: "active",
+    },
+  });
+
+  console.log(`Created Bella's Bakery user: ${bellaUser.email}`);
+
   // ==================== Onboarding Test Account ====================
   console.log("\nCreating onboarding test account...");
 
@@ -1566,11 +1618,11 @@ async function main() {
   });
 
   console.log(`Created onboarding test user: ${onboardingUser.email}`);
-  console.log("\n✅ Onboarding test account ready!");
+  console.log("\n✅ All accounts ready!");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("📧 Email: test@example.com");
-  console.log("🔑 Password: test123");
-  console.log("🏪 Merchant URL: /dashboard/merchant-onboarding-test");
+  console.log("Joe's Pizza:      joe@joespizza.com / test123");
+  console.log("Bella's Bakery:   bella@bellasbakery.com / test123");
+  console.log("Onboarding Test:  test@example.com / test123");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   // Sync loyalty member stats from historical orders
