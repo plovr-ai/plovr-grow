@@ -127,6 +127,9 @@ import("@/services/loyalty/loyalty-event-handler").then(({ registerLoyaltyEventH
 
 // Register Square order push event handlers
 // Use dynamic import to avoid circular dependency
-import("@/services/square/square-order-listener").then(({ registerSquareOrderEventHandlers }) => {
-  registerSquareOrderEventHandlers();
-});
+// Only register in non-test environments to prevent EnvironmentTeardownError in Vitest
+if (process.env.NODE_ENV !== "test") {
+  import("@/services/square/square-order-listener").then(({ registerSquareOrderEventHandlers }) => {
+    registerSquareOrderEventHandlers();
+  });
+}
