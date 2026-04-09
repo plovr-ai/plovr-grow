@@ -84,7 +84,7 @@ function buildPayload(
 
 function computeSignature(rawBody: string): string {
   const hmac = crypto.createHmac("sha256", "test-webhook-key");
-  hmac.update("https://example.com/api/webhooks/square" + rawBody);
+  hmac.update("https://example.com/api/integration/square/webhook" + rawBody);
   return hmac.digest("base64");
 }
 
