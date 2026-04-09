@@ -16,7 +16,7 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
-    "db:start": "docker start plovr-mysql 2>/dev/null || docker run -d --name plovr-mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=reborn -p 3306:3306 mysql:8",
+    "db:start": "docker start plovr-mysql 2>/dev/null || docker run -d --name plovr-mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=plovr -p 3306:3306 mysql:8",
     "db:stop": "docker stop plovr-mysql",
     "db:rm": "docker rm -f plovr-mysql",
     "postinstall": "prisma generate"

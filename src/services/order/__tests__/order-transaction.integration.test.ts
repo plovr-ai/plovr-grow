@@ -13,7 +13,7 @@ import { generateEntityId } from "@/lib/id";
 
 const TEST_DB_URL =
   process.env.DATABASE_URL ||
-  "mysql://root:password@localhost:3306/reborn_test";
+  "mysql://root:password@localhost:3306/plovr_test";
 
 const prisma = new PrismaClient({
   datasources: { db: { url: TEST_DB_URL } },
