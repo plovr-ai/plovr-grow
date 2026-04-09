@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       data: { subscriptionStatus: "active" },
     });
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    return NextResponse.json({ success: true, companySlug: tenant.company?.slug }, { status: 200 });
   } catch (error) {
     console.error("[Auth] Claim error:", error);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
