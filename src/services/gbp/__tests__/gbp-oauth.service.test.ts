@@ -9,7 +9,6 @@ vi.mock("../gbp.config", () => ({
     oauthStateSecret: "test-secret-key-32-chars-long!!!",
     oauthRedirectUrl:
       "http://localhost:3000/api/integration/gbp/oauth/callback",
-    enabled: true,
     assertConfigured: vi.fn(),
   },
 }));
