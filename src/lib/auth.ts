@@ -4,6 +4,8 @@ import { compare } from "bcryptjs";
 import { loginSchema } from "@/lib/validations/auth";
 import { mockUserStore } from "@/services/auth/mock-store";
 import { initTestData } from "@/services/auth/init-test-data";
+import { getStytchServerClient } from "@/lib/stytch";
+import { authService } from "@/services/auth";
 
 // Initialize test data on first load
 initTestData().catch(console.error);
@@ -51,29 +53,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
 
-    // Stytch login provider — receives pre-verified user data
+    // Stytch login provider — verifies session_token server-side
     Credentials({
       id: "stytch",
       name: "stytch",
       credentials: {
-        id: { type: "text" },
-        email: { type: "email" },
-        name: { type: "text" },
-        role: { type: "text" },
-        tenantId: { type: "text" },
-        companyId: { type: "text" },
+        session_token: { type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.id || !credentials?.email) return null;
+        if (!credentials?.session_token) return null;
 
-        return {
-          id: credentials.id as string,
-          email: credentials.email as string,
-          name: (credentials.name as string) || "",
-          role: (credentials.role as string) || "owner",
-          tenantId: (credentials.tenantId as string) || "",
-          companyId: (credentials.companyId as string) || null,
-        };
+        try {
+          const stytchClient = getStytchServerClient();
+          const stytchResponse = await stytchClient.sessions.authenticate({
+            session_token: credentials.session_token as string,
+          });
+
+          const email = stytchResponse.user.emails[0]?.email;
+          if (!email) return null;
+
+          const { user } = await authService.findOrCreateStytchUser(
+            email,
+            stytchResponse.user.user_id
+          );
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            tenantId: user.tenantId,
+            companyId: user.companyId,
+          };
+        } catch {
+          return null;
+        }
       },
     }),
   ],
