@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useCallback } from "react";
 
 interface PlaceResult {
   placeId: string;
@@ -12,30 +12,31 @@ interface PlaceSearchProps {
   onSelect: (place: PlaceResult) => void;
 }
 
+function loadGoogleMapsScript(): Promise<void> {
+  if (typeof window.google?.maps?.importLibrary === "function")
+    return Promise.resolve();
+
+  return new Promise((resolve) => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async`;
+    script.async = true;
+    script.onload = () => resolve();
+    document.head.appendChild(script);
+  });
+}
+
 export function PlaceSearch({ onSelect }: PlaceSearchProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const elementRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(
     null
   );
-  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    if (window.google?.maps?.places?.PlaceAutocompleteElement) {
-      queueMicrotask(() => setLoaded(true));
-      return;
-    }
+  const init = useCallback(async () => {
+    if (!containerRef.current || elementRef.current) return;
 
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
-    script.async = true;
-    script.onload = () => setLoaded(true);
-    document.head.appendChild(script);
-  }, []);
-
-  const initAutocomplete = useCallback(() => {
-    if (!containerRef.current || !window.google?.maps?.places) return;
-    if (elementRef.current) return;
+    await loadGoogleMapsScript();
+    await google.maps.importLibrary("places");
 
     const placeAutocomplete =
       new google.maps.places.PlaceAutocompleteElement({
@@ -64,13 +65,10 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
   }, [onSelect]);
 
   useEffect(() => {
-    if (loaded) initAutocomplete();
-  }, [loaded, initAutocomplete]);
+    init();
+  }, [init]);
 
   return (
-    <div
-      ref={containerRef}
-      className="[&_input]:w-full [&_input]:text-lg [&_input]:px-4 [&_input]:py-3 [&_input]:border [&_input]:border-gray-300 [&_input]:rounded-lg [&_input]:focus:outline-none [&_input]:focus:ring-2 [&_input]:focus:ring-blue-500 [&_input]:focus:border-transparent"
-    />
+    <div ref={containerRef} className="place-search-container" />
   );
 }
