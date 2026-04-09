@@ -13,6 +13,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   providers: [
     Credentials({
+      id: "credentials",
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -46,6 +47,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role: user.role,
           tenantId: user.tenantId,
           companyId: user.companyId,
+        };
+      },
+    }),
+
+    // Stytch login provider — receives pre-verified user data
+    Credentials({
+      id: "stytch",
+      name: "stytch",
+      credentials: {
+        id: { type: "text" },
+        email: { type: "email" },
+        name: { type: "text" },
+        role: { type: "text" },
+        tenantId: { type: "text" },
+        companyId: { type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.id || !credentials?.email) return null;
+
+        return {
+          id: credentials.id as string,
+          email: credentials.email as string,
+          name: (credentials.name as string) || "",
+          role: (credentials.role as string) || "owner",
+          tenantId: (credentials.tenantId as string) || "",
+          companyId: (credentials.companyId as string) || null,
         };
       },
     }),
