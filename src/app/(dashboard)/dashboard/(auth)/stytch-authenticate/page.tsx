@@ -29,38 +29,28 @@ export default function StytchAuthenticatePage() {
           return;
         }
 
-        // Stytch SDK authenticates the magic link token
-        const response = await stytchClient.magicLinks.authenticate(token, {
-          session_duration_minutes: 60,
-        });
+        const tokenType = params.get("stytch_token_type");
+
+        // Dispatch to the appropriate Stytch SDK method based on token type
+        let response;
+        if (tokenType === "oauth") {
+          response = await stytchClient.oauth.authenticate(token, {
+            session_duration_minutes: 60,
+          });
+        } else {
+          response = await stytchClient.magicLinks.authenticate(token, {
+            session_duration_minutes: 60,
+          });
+        }
 
         if (!response.session_token) {
           setError("Authentication failed — no session token");
           return;
         }
 
-        // Call our callback API to verify + find/create user
-        const callbackResponse = await fetch("/api/auth/stytch/callback", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_token: response.session_token }),
-        });
-
-        if (!callbackResponse.ok) {
-          setError("Authentication failed — callback error");
-          return;
-        }
-
-        const { user } = await callbackResponse.json();
-
-        // Create NextAuth JWT session via the stytch provider
+        // Pass session_token to NextAuth; server-side verification happens in the provider
         const result = await signIn("stytch", {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          tenantId: user.tenantId,
-          companyId: user.companyId,
+          session_token: response.session_token,
           redirect: false,
         });
 
