@@ -65,34 +65,36 @@ export function OtpModal({
       // Only allow digits
       const digit = value.replace(/\D/g, "").slice(-1);
 
-      const newCode = [...code];
-      newCode[index] = digit;
-      setCode(newCode);
+      setCode((prev) => {
+        const newCode = [...prev];
+        newCode[index] = digit;
+
+        // Auto-submit when all digits entered
+        if (digit && index === 5) {
+          const fullCode = newCode.join("");
+          if (fullCode.length === 6) {
+            onVerify(fullCode);
+          }
+        }
+
+        return newCode;
+      });
 
       // Auto-focus next input
       if (digit && index < 5) {
         inputRefs.current[index + 1]?.focus();
       }
-
-      // Auto-submit when all digits entered
-      if (digit && index === 5) {
-        const fullCode = newCode.join("");
-        if (fullCode.length === 6) {
-          onVerify(fullCode);
-        }
-      }
     },
-    [code, onVerify]
+    [onVerify]
   );
 
   const handleKeyDown = useCallback(
     (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Backspace" && !code[index] && index > 0) {
-        // Move to previous input on backspace if current is empty
+      if (e.key === "Backspace" && !e.currentTarget.value && index > 0) {
         inputRefs.current[index - 1]?.focus();
       }
     },
-    [code]
+    []
   );
 
   const handlePaste = useCallback(
@@ -100,7 +102,7 @@ export function OtpModal({
       e.preventDefault();
       const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
       if (pastedData) {
-        const newCode = [...code];
+        const newCode = ["", "", "", "", "", ""];
         for (let i = 0; i < pastedData.length; i++) {
           newCode[i] = pastedData[i];
         }
@@ -116,7 +118,7 @@ export function OtpModal({
         }
       }
     },
-    [code, onVerify]
+    [onVerify]
   );
 
   const handleResend = async () => {
