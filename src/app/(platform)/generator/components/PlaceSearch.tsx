@@ -20,17 +20,23 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (window.google?.maps?.places?.PlaceAutocompleteElement) {
-      queueMicrotask(() => setLoaded(true));
-      return;
+    async function loadGoogleMaps() {
+      if (!window.google?.maps) {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async`;
+        script.async = true;
+        document.head.appendChild(script);
+        await new Promise<void>((resolve) => {
+          script.onload = () => resolve();
+        });
+      }
+
+      await window.google.maps.importLibrary("places");
+      setLoaded(true);
     }
 
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
-    script.async = true;
-    script.onload = () => setLoaded(true);
-    document.head.appendChild(script);
+    loadGoogleMaps();
   }, []);
 
   const initAutocomplete = useCallback(() => {
