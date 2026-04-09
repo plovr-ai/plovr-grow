@@ -1,0 +1,269 @@
+import crypto from "crypto";
+import { squareConfig } from "./square.config";
+import { integrationRepository } from "@/repositories/integration.repository";
+import { squareService } from "./square.service";
+import prisma from "@/lib/db";
+import type { SquareWebhookPayload } from "./square.types";
+import {
+  REVERSE_FULFILLMENT_STATUS_MAP,
+  WEBHOOK_EVENT_STATUS,
+} from "./square.types";
+
+const INTEGRATION_TYPE = "POS_SQUARE";
+
+const FULFILLMENT_TIMESTAMP_FIELD: Record<string, string> = {
+  confirmed: "confirmedAt",
+  preparing: "preparingAt",
+  ready: "readyAt",
+  fulfilled: "fulfilledAt",
+};
+
+export class SquareWebhookService {
+  verifySignature(rawBody: string, signature: string): boolean {
+    if (!signature) return false;
+    try {
+      const hmac = crypto.createHmac(
+        "sha256",
+        squareConfig.webhookSignatureKey
+      );
+      hmac.update(squareConfig.webhookNotificationUrl + rawBody);
+      const expected = hmac.digest("base64");
+      const sigBuffer = Buffer.from(signature, "base64");
+      const expectedBuffer = Buffer.from(expected, "base64");
+      if (sigBuffer.length !== expectedBuffer.length) return false;
+      return crypto.timingSafeEqual(sigBuffer, expectedBuffer);
+    } catch {
+      return false;
+    }
+  }
+
+  async handleWebhook(
+    rawBody: string
+  ): Promise<{ deduplicated?: boolean; error?: string }> {
+    const payload: SquareWebhookPayload = JSON.parse(rawBody);
+    const { merchant_id, type: eventType, event_id: eventId } = payload;
+
+    // Dedup check
+    const existing =
+      await integrationRepository.findWebhookEventByEventId(eventId);
+    if (existing) {
+      console.log(`[Square Webhook] Duplicate event skipped: ${eventId}`);
+      return { deduplicated: true };
+    }
+
+    // Lookup connection
+    const connection =
+      await integrationRepository.getConnectionByExternalAccountId(
+        merchant_id,
+        INTEGRATION_TYPE
+      );
+    if (!connection) {
+      console.error(
+        `[Square Webhook] No connection found for Square merchant: ${merchant_id}`
+      );
+      return { error: "connection_not_found" };
+    }
+
+    // Store event
+    const webhookEvent = await integrationRepository.createWebhookEvent({
+      tenantId: connection.tenantId,
+      merchantId: connection.merchantId,
+      connectionId: connection.id,
+      eventId,
+      eventType,
+      payload,
+    });
+
+    // Route to handler
+    try {
+      await this.routeEvent(eventType, payload, connection);
+      await integrationRepository.updateWebhookEventStatus(
+        webhookEvent.id,
+        WEBHOOK_EVENT_STATUS.PROCESSED
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error(
+        `[Square Webhook] Handler failed for ${eventType}:`,
+        errorMessage
+      );
+      await integrationRepository.updateWebhookEventStatus(
+        webhookEvent.id,
+        WEBHOOK_EVENT_STATUS.FAILED,
+        errorMessage
+      );
+    }
+
+    return { deduplicated: false };
+  }
+
+  private async routeEvent(
+    eventType: string,
+    payload: SquareWebhookPayload,
+    connection: { tenantId: string; merchantId: string; id: string }
+  ): Promise<void> {
+    switch (eventType) {
+      case "catalog.version.updated":
+        await this.handleCatalogChange(connection);
+        break;
+      case "order.updated":
+        await this.handleOrderUpdate(payload, connection.tenantId);
+        break;
+      case "payment.completed":
+      case "payment.updated":
+        await this.handlePaymentEvent(payload, connection.tenantId);
+        break;
+      default:
+        console.log(
+          `[Square Webhook] Unhandled event type: ${eventType}`
+        );
+    }
+  }
+
+  private async handleCatalogChange(connection: {
+    tenantId: string;
+    merchantId: string;
+  }): Promise<void> {
+    const merchant = await prisma.merchant.findFirst({
+      where: { id: connection.merchantId },
+      select: { companyId: true },
+    });
+    if (!merchant) {
+      console.error(
+        `[Square Webhook] Merchant not found: ${connection.merchantId}`
+      );
+      return;
+    }
+    console.log(
+      `[Square Webhook] Triggering catalog re-sync for merchant: ${connection.merchantId}`
+    );
+    try {
+      await squareService.syncCatalog(
+        connection.tenantId,
+        connection.merchantId,
+        merchant.companyId
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (!message.includes("ALREADY_RUNNING")) {
+        throw error;
+      }
+      console.log("[Square Webhook] Catalog sync already running, skipped");
+    }
+  }
+
+  private async handleOrderUpdate(
+    payload: SquareWebhookPayload,
+    tenantId: string
+  ): Promise<void> {
+    const squareOrderId = payload.data.id;
+    const orderObj = (
+      payload.data.object as Record<string, unknown>
+    )?.order as
+      | { id: string; fulfillments?: Array<{ state: string }> }
+      | undefined;
+
+    const squareFulfillmentState = orderObj?.fulfillments?.[0]?.state;
+    if (!squareFulfillmentState) {
+      console.log(
+        "[Square Webhook] No fulfillment state in order update, skipping"
+      );
+      return;
+    }
+
+    const internalStatus =
+      REVERSE_FULFILLMENT_STATUS_MAP[squareFulfillmentState];
+    if (!internalStatus) {
+      console.log(
+        `[Square Webhook] Unknown Square fulfillment state: ${squareFulfillmentState}`
+      );
+      return;
+    }
+
+    const mapping = await integrationRepository.getIdMappingByExternalId(
+      tenantId,
+      "SQUARE",
+      squareOrderId
+    );
+    if (!mapping) {
+      console.log(
+        `[Square Webhook] No mapping for Square order: ${squareOrderId}, skipping`
+      );
+      return;
+    }
+
+    const timestampField = FULFILLMENT_TIMESTAMP_FIELD[internalStatus];
+    const updateData: Record<string, unknown> = {
+      fulfillmentStatus: internalStatus,
+    };
+    if (timestampField) {
+      updateData[timestampField] = new Date();
+    }
+
+    await prisma.order.update({
+      where: { id: mapping.internalId },
+      data: updateData,
+    });
+
+    console.log(
+      `[Square Webhook] Order ${mapping.internalId} fulfillment updated to: ${internalStatus}`
+    );
+  }
+
+  private async handlePaymentEvent(
+    payload: SquareWebhookPayload,
+    tenantId: string
+  ): Promise<void> {
+    const paymentObj = (
+      payload.data.object as Record<string, unknown>
+    )?.payment as
+      | { id: string; order_id?: string; status?: string }
+      | undefined;
+
+    const squareOrderId = paymentObj?.order_id;
+    if (!squareOrderId) {
+      console.log(
+        "[Square Webhook] No order_id in payment event, skipping"
+      );
+      return;
+    }
+
+    const mapping = await integrationRepository.getIdMappingByExternalId(
+      tenantId,
+      "SQUARE",
+      squareOrderId
+    );
+    if (!mapping) {
+      console.log(
+        `[Square Webhook] No mapping for Square order: ${squareOrderId}, skipping`
+      );
+      return;
+    }
+
+    const paymentStatus = paymentObj?.status;
+    if (paymentStatus === "COMPLETED") {
+      await prisma.order.update({
+        where: { id: mapping.internalId },
+        data: { status: "completed", paidAt: new Date() },
+      });
+      console.log(
+        `[Square Webhook] Order ${mapping.internalId} payment completed`
+      );
+    } else if (paymentStatus === "FAILED") {
+      await prisma.order.update({
+        where: { id: mapping.internalId },
+        data: {
+          status: "canceled",
+          cancelledAt: new Date(),
+          cancelReason: "Payment failed on Square",
+        },
+      });
+      console.log(
+        `[Square Webhook] Order ${mapping.internalId} payment failed`
+      );
+    }
+  }
+}
+
+export const squareWebhookService = new SquareWebhookService();
