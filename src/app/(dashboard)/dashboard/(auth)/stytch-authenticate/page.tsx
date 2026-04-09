@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useStytch } from "@stytch/nextjs";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -89,12 +90,12 @@ export default function StytchAuthenticatePage() {
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-gray-600 mb-4">{error}</p>
-            <a
+            <Link
               href="/dashboard/login"
               className="text-blue-600 hover:underline"
             >
               Back to login
-            </a>
+            </Link>
           </CardContent>
         </Card>
       </div>
