@@ -6,6 +6,7 @@ import {
   mockCompanyStore,
   mockPasswordResetTokenStore,
 } from "./mock-store";
+import type { MockUser } from "./mock-store";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import type { RegisterInput, ResetPasswordInput } from "@/lib/validations/auth";
 
@@ -115,6 +116,50 @@ export class AuthService {
     mockPasswordResetTokenStore.deleteByToken(input.token);
 
     return { success: true };
+  }
+
+  /**
+   * Find or create a user from a Stytch OAuth/magic-link callback
+   */
+  async findOrCreateStytchUser(
+    email: string,
+    stytchUserId: string
+  ): Promise<{ user: MockUser; isNewUser: boolean }> {
+    // 1. Look up by stytchUserId first (already linked user)
+    const existingByStytch = mockUserStore.findByStytchUserId(stytchUserId);
+    if (existingByStytch) {
+      mockUserStore.updateLastLogin(existingByStytch.id);
+      return { user: existingByStytch, isNewUser: false };
+    }
+
+    // 2. Look up by email (existing password user, first Stytch login)
+    const existingByEmail = mockUserStore.findByEmail(email);
+    if (existingByEmail) {
+      mockUserStore.updateStytchUserId(existingByEmail.id, stytchUserId);
+      mockUserStore.updateLastLogin(existingByEmail.id);
+      const updated = mockUserStore.findById(existingByEmail.id)!;
+      return { user: updated, isNewUser: false };
+    }
+
+    // 3. New user — create Tenant + Company + User
+    const emailPrefix = email.split("@")[0];
+    const companyName = `${emailPrefix}'s Company`;
+
+    const tenant = mockTenantStore.create(companyName);
+    const company = mockCompanyStore.create(tenant.id, companyName);
+    const user = mockUserStore.create({
+      tenantId: tenant.id,
+      companyId: company.id,
+      email,
+      passwordHash: null,
+      stytchUserId,
+      name: emailPrefix,
+      role: "owner",
+      status: "active",
+      lastLoginAt: new Date(),
+    });
+
+    return { user, isNewUser: true };
   }
 
   /**
