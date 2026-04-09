@@ -89,3 +89,46 @@ export const FULFILLMENT_STATUS_MAP: Record<string, string> = {
  * Square order sync record type identifier.
  */
 export const SQUARE_ORDER_SYNC_TYPE = "ORDER_PUSH" as const;
+
+// ==================== Webhook Types ====================
+
+/**
+ * Square webhook event payload (raw from Square API).
+ */
+export interface SquareWebhookPayload {
+  merchant_id: string;
+  type: string;
+  event_id: string;
+  created_at: string;
+  data: {
+    type: string;
+    id: string;
+    object?: Record<string, unknown>;
+  };
+}
+
+/**
+ * Webhook event status values.
+ */
+export const WEBHOOK_EVENT_STATUS = {
+  RECEIVED: "received",
+  PROCESSING: "processing",
+  PROCESSED: "processed",
+  FAILED: "failed",
+} as const;
+
+/**
+ * Reverse fulfillment status mapping: Square FulfillmentState → internal status.
+ * Used when receiving order updates from Square via webhook.
+ */
+export const REVERSE_FULFILLMENT_STATUS_MAP: Record<string, string> = {
+  PROPOSED: "pending",
+  RESERVED: "preparing",
+  PREPARED: "ready",
+  COMPLETED: "fulfilled",
+} as const;
+
+/**
+ * Square webhook sync type for sync records.
+ */
+export const SQUARE_WEBHOOK_SYNC_TYPE = "WEBHOOK_EVENT" as const;
