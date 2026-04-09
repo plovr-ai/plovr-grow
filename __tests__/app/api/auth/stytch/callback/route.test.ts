@@ -52,6 +52,29 @@ describe("POST /api/auth/stytch/callback", () => {
     expect(response.status).toBe(401);
   });
 
+  it("returns 400 if stytch user has no email", async () => {
+    mockAuthenticate.mockResolvedValue({
+      user: {
+        user_id: "stytch-user-abc",
+        emails: [],
+      },
+    });
+
+    const { POST } = await import("@/app/api/auth/stytch/callback/route");
+
+    const request = new Request("http://localhost/api/auth/stytch/callback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_token: "valid-token" }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+
+    const data = await response.json();
+    expect(data.error).toBeDefined();
+  });
+
   it("returns 200 with user data on successful authentication", async () => {
     const { authService } = await import("@/services/auth");
 
