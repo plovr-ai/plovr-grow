@@ -13,47 +13,55 @@ interface PlaceSearchProps {
 }
 
 export function PlaceSearch({ onSelect }: PlaceSearchProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const elementRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(
+    null
+  );
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (window.google?.maps?.places) {
-      // Defer setState to avoid synchronous setState in effect
+    if (window.google?.maps?.places?.PlaceAutocompleteElement) {
       queueMicrotask(() => setLoaded(true));
       return;
     }
 
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
     script.async = true;
     script.onload = () => setLoaded(true);
     document.head.appendChild(script);
   }, []);
 
   const initAutocomplete = useCallback(() => {
-    if (!inputRef.current || !window.google?.maps?.places) return;
-    if (autocompleteRef.current) return;
+    if (!containerRef.current || !window.google?.maps?.places) return;
+    if (elementRef.current) return;
 
-    const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
-      types: ["restaurant"],
-      componentRestrictions: { country: "us" },
-      fields: ["place_id", "name", "formatted_address"],
-    });
+    const placeAutocomplete =
+      new google.maps.places.PlaceAutocompleteElement({
+        types: ["restaurant"],
+        componentRestrictions: { country: "us" },
+      });
 
-    autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace();
-      if (place.place_id && place.name) {
-        onSelect({
-          placeId: place.place_id,
-          name: place.name,
-          address: place.formatted_address ?? "",
+    placeAutocomplete.addEventListener(
+      "gmp-placeselect",
+      async (event: google.maps.places.PlaceAutocompletePlaceSelectEvent) => {
+        const { place } = event;
+        await place.fetchFields({
+          fields: ["id", "displayName", "formattedAddress"],
         });
+        if (place.id && place.displayName) {
+          onSelect({
+            placeId: place.id,
+            name: place.displayName,
+            address: place.formattedAddress ?? "",
+          });
+        }
       }
-    });
+    );
 
-    autocompleteRef.current = autocomplete;
+    containerRef.current.appendChild(placeAutocomplete as unknown as Node);
+    elementRef.current = placeAutocomplete;
   }, [onSelect]);
 
   useEffect(() => {
@@ -61,11 +69,9 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
   }, [loaded, initAutocomplete]);
 
   return (
-    <input
-      ref={inputRef}
-      type="text"
-      placeholder="Search for your restaurant..."
-      className="w-full text-lg px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    <div
+      ref={containerRef}
+      className="[&_input]:w-full [&_input]:text-lg [&_input]:px-4 [&_input]:py-3 [&_input]:border [&_input]:border-gray-300 [&_input]:rounded-lg [&_input]:focus:outline-none [&_input]:focus:ring-2 [&_input]:focus:ring-blue-500 [&_input]:focus:border-transparent"
     />
   );
 }
