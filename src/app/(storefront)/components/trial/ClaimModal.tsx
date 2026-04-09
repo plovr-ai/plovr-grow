@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { claimSchema, type ClaimInput } from "@/lib/validations/auth";
 
@@ -140,7 +141,7 @@ export function ClaimModal({ tenantId, companySlug, isOpen, onClose }: ClaimModa
 
           <p className="text-xs text-center text-gray-500">
             Already have an account?{" "}
-            <a href="/dashboard/login" className="text-theme-primary hover:underline">Log in</a>
+            <Link href="/dashboard/login" className="text-theme-primary hover:underline">Log in</Link>
           </p>
         </form>
       </div>
