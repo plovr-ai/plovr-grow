@@ -34,7 +34,7 @@ vi.mock("../square.service", () => ({
 vi.mock("../square.config", () => ({
   squareConfig: {
     webhookSignatureKey: "test-webhook-key",
-    webhookNotificationUrl: "https://example.com/api/webhooks/square",
+    webhookNotificationUrl: "https://example.com/api/integration/square/webhook",
   },
 }));
 
