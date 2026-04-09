@@ -1,26 +1,42 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { authService } from "@/services/auth";
-import { mockUserStore, mockTenantStore, mockCompanyStore } from "@/services/auth";
-import { clearAllStores } from "@/services/auth/mock-store";
+import prisma from "@/lib/db";
+import { generateEntityId } from "@/lib/id";
 
 describe("AuthService.findOrCreateStytchUser", () => {
-  beforeEach(() => {
-    clearAllStores();
+  beforeEach(async () => {
+    // Clean up test data in reverse dependency order
+    await prisma.user.deleteMany({
+      where: { email: { in: ["existing@test.com", "newuser@test.com", "linked@test.com"] } },
+    });
+    await prisma.company.deleteMany({
+      where: { name: { in: ["Test Co", "newuser's Company", "linked's Company"] } },
+    });
+    await prisma.tenant.deleteMany({
+      where: { name: { in: ["Test Co", "newuser's Company", "linked's Company"] } },
+    });
   });
 
   it("returns existing user when email matches and links stytchUserId", async () => {
-    const tenant = mockTenantStore.create("Test Co");
-    const company = mockCompanyStore.create(tenant.id, "Test Co");
-    mockUserStore.create({
-      tenantId: tenant.id,
-      companyId: company.id,
-      email: "existing@test.com",
-      passwordHash: "hashed_pw",
-      stytchUserId: null,
-      name: "Existing User",
-      role: "owner",
-      status: "active",
-      lastLoginAt: null,
+    // Seed test data in real database
+    const tenantId = generateEntityId();
+    const companyId = generateEntityId();
+
+    await prisma.tenant.create({ data: { id: tenantId, name: "Test Co" } });
+    await prisma.company.create({
+      data: { id: companyId, tenantId, slug: `test-co-${Date.now()}`, name: "Test Co" },
+    });
+    await prisma.user.create({
+      data: {
+        id: generateEntityId(),
+        tenantId,
+        companyId,
+        email: "existing@test.com",
+        passwordHash: "hashed_pw",
+        name: "Existing User",
+        role: "owner",
+        status: "active",
+      },
     });
 
     const result = await authService.findOrCreateStytchUser(
@@ -46,6 +62,22 @@ describe("AuthService.findOrCreateStytchUser", () => {
     expect(result.user.passwordHash).toBeNull();
     expect(result.user.role).toBe("owner");
     expect(result.isNewUser).toBe(true);
+
+    // Verify data was created in the real database
+    const dbUser = await prisma.user.findUnique({
+      where: { stytchUserId: "stytch-user-456" },
+    });
+    expect(dbUser).not.toBeNull();
+    expect(dbUser!.tenantId).toBeTruthy();
+    expect(dbUser!.companyId).toBeTruthy();
+
+    // Verify tenant and company exist
+    const dbTenant = await prisma.tenant.findUnique({ where: { id: dbUser!.tenantId } });
+    expect(dbTenant).not.toBeNull();
+
+    const dbCompany = await prisma.company.findUnique({ where: { id: dbUser!.companyId! } });
+    expect(dbCompany).not.toBeNull();
+    expect(dbCompany!.slug).toBeTruthy();
   });
 
   it("returns existing user when stytchUserId already linked", async () => {

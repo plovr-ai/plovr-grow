@@ -21,8 +21,14 @@ export default auth((req) => {
   const isDashboardRoute = nextUrl.pathname.startsWith("/dashboard");
 
   // Redirect logged-in users away from auth pages
+  // Only redirect if user has a complete profile (tenant + company),
+  // otherwise let them stay on auth pages to avoid infinite redirect loop
   if (isPublicRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL("/dashboard", nextUrl));
+    const hasCompleteProfile =
+      req.auth?.user?.tenantId && req.auth?.user?.companyId;
+    if (hasCompleteProfile) {
+      return NextResponse.redirect(new URL("/dashboard", nextUrl));
+    }
   }
 
   // Redirect non-logged-in users to login
