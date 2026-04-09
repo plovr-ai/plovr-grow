@@ -52,8 +52,25 @@ export const resetPasswordSchema = z
     path: ["confirmPassword"],
   });
 
+// Claim schema (for claiming trial websites)
+export const claimSchema = z
+  .object({
+    name: z
+      .string()
+      .min(2, "Name must be at least 2 characters")
+      .max(100, "Name must be less than 100 characters"),
+    email: z.string().email("Please enter a valid email"),
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
 // Type exports
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type ClaimInput = z.infer<typeof claimSchema>;
