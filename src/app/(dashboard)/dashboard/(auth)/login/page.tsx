@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { StytchLogin, Products, OAuthProviders } from "@stytch/nextjs";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -98,6 +99,22 @@ function LoginForm() {
     router.refresh();
   };
 
+  const stytchConfig =
+    typeof window !== "undefined"
+      ? {
+          products: [Products.emailMagicLinks, Products.oauth],
+          emailMagicLinksOptions: {
+            loginRedirectURL: `${window.location.origin}/dashboard/stytch-authenticate`,
+            signupRedirectURL: `${window.location.origin}/dashboard/stytch-authenticate`,
+          },
+          oauthOptions: {
+            providers: [{ type: OAuthProviders.Google }],
+            loginRedirectURL: `${window.location.origin}/dashboard/stytch-authenticate`,
+            signupRedirectURL: `${window.location.origin}/dashboard/stytch-authenticate`,
+          },
+        }
+      : null;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
@@ -109,6 +126,23 @@ function LoginForm() {
             Enter your email and password to access your account
           </CardDescription>
         </CardHeader>
+
+        {stytchConfig && (
+          <CardContent>
+            <StytchLogin config={stytchConfig} />
+          </CardContent>
+        )}
+
+        <div className="relative px-6 py-2">
+          <div className="absolute inset-0 flex items-center px-6">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-2 text-muted-foreground">
+              Or continue with password
+            </span>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
