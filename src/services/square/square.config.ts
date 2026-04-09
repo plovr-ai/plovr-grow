@@ -29,9 +29,22 @@ export const squareConfig = {
       : "https://connect.squareupsandbox.com";
   },
 
+  get webhookSignatureKey() {
+    return process.env.SQUARE_WEBHOOK_SIGNATURE_KEY ?? "";
+  },
+  get webhookNotificationUrl() {
+    return process.env.SQUARE_WEBHOOK_NOTIFICATION_URL ?? "";
+  },
+
   assertConfigured() {
     if (!this.enabled || !this.appId || !this.appSecret) {
       throw new AppError(ErrorCodes.SQUARE_NOT_CONFIGURED, undefined, 500);
+    }
+  },
+
+  assertWebhookConfigured() {
+    if (!this.enabled || !this.webhookSignatureKey || !this.webhookNotificationUrl) {
+      throw new AppError(ErrorCodes.SQUARE_WEBHOOK_NOT_CONFIGURED, undefined, 500);
     }
   },
 } as const;
