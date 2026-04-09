@@ -31,7 +31,7 @@ describe("POST /api/auth/claim", () => {
 
   it("claims a trial tenant and creates owner user", async () => {
     vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
-      id: "tenant1", subscriptionStatus: "trial", company: { id: "company1" },
+      id: "tenant1", subscriptionStatus: "trial", company: { id: "company1", slug: "test-slug" },
     } as never);
     vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
     vi.mocked(prisma.user.create).mockResolvedValue({ id: "mock-user-id" } as never);
@@ -42,7 +42,7 @@ describe("POST /api/auth/claim", () => {
     }));
     const data = await res.json();
     expect(res.status).toBe(200);
-    expect(data.success).toBe(true);
+    expect(data).toEqual({ success: true, companySlug: "test-slug" });
     expect(prisma.user.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ email: "owner@test.com", role: "owner", status: "active" }),
     });
