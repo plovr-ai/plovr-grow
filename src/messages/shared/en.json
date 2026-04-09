@@ -65,6 +65,10 @@
     "SQUARE_ORDER_CANCEL_FAILED": "Failed to cancel order on Square",
     "SQUARE_MISSING_EXTERNAL_MAPPING": "Missing external ID mapping for Square catalog item",
     "SQUARE_MISSING_LOCATION": "No Square location configured for this merchant",
+    "GBP_NOT_CONFIGURED": "Google Business Profile integration is not configured",
+    "GBP_SYNC_FAILED": "Failed to sync location data from Google Business Profile",
+    "GBP_ACCOUNT_FETCH_FAILED": "Failed to fetch Google Business Profile accounts",
+    "GBP_LOCATION_FETCH_FAILED": "Failed to fetch Google Business Profile locations",
     "VALIDATION_FAILED": "Validation failed",
     "INTERNAL_ERROR": "An unexpected error occurred. Please try again.",
     "NETWORK_ERROR": "Network error. Please check your connection."
