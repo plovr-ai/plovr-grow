@@ -12,10 +12,6 @@ vi.mock("@/lib/id", () => ({
   generateEntityId: vi.fn().mockReturnValue("mock-user-id"),
 }));
 
-vi.mock("bcryptjs", () => ({
-  hash: vi.fn().mockResolvedValue("hashed-password"),
-}));
-
 import prisma from "@/lib/db";
 import { POST } from "../claim/route";
 
@@ -38,13 +34,13 @@ describe("POST /api/auth/claim", () => {
     vi.mocked(prisma.tenant.update).mockResolvedValue({} as never);
 
     const res = await POST(makeRequest({
-      tenantId: "tenant1", email: "owner@test.com", password: "SecurePass1", name: "Owner",
+      tenantId: "tenant1", email: "owner@test.com", name: "Owner",
     }));
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data).toEqual({ success: true, companySlug: "test-slug" });
     expect(prisma.user.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ email: "owner@test.com", role: "owner", status: "active" }),
+      data: expect.objectContaining({ email: "owner@test.com", passwordHash: null, role: "owner", status: "active" }),
     });
     expect(prisma.tenant.update).toHaveBeenCalledWith({
       where: { id: "tenant1" },
@@ -57,7 +53,7 @@ describe("POST /api/auth/claim", () => {
       id: "tenant1", subscriptionStatus: "active", company: { id: "company1" },
     } as never);
     const res = await POST(makeRequest({
-      tenantId: "tenant1", email: "owner@test.com", password: "SecurePass1", name: "Owner",
+      tenantId: "tenant1", email: "owner@test.com", name: "Owner",
     }));
     expect(res.status).toBe(400);
   });
@@ -65,7 +61,7 @@ describe("POST /api/auth/claim", () => {
   it("returns 404 when tenant does not exist", async () => {
     vi.mocked(prisma.tenant.findUnique).mockResolvedValue(null);
     const res = await POST(makeRequest({
-      tenantId: "fake", email: "owner@test.com", password: "SecurePass1", name: "Owner",
+      tenantId: "fake", email: "owner@test.com", name: "Owner",
     }));
     expect(res.status).toBe(404);
   });
@@ -76,7 +72,7 @@ describe("POST /api/auth/claim", () => {
     } as never);
     vi.mocked(prisma.user.findFirst).mockResolvedValue({ id: "existing-user" } as never);
     const res = await POST(makeRequest({
-      tenantId: "tenant1", email: "owner@test.com", password: "SecurePass1", name: "Owner",
+      tenantId: "tenant1", email: "owner@test.com", name: "Owner",
     }));
     expect(res.status).toBe(409);
   });
