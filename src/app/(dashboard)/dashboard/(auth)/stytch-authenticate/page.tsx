@@ -59,6 +59,10 @@ export default function StytchAuthenticatePage() {
           return;
         }
 
+        // Revoke the Stytch session — we only need the NextAuth session going forward.
+        // This prevents the SDK from attempting background refreshes that would fail.
+        await stytchClient.session.revoke();
+
         router.push("/dashboard");
         router.refresh();
       } catch {
