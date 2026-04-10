@@ -20,11 +20,10 @@ export class LoyaltyMemberRepository {
   /**
    * Get loyalty member by phone (within a company)
    */
-  async getByPhone(tenantId: string, companyId: string, phone: string) {
+  async getByPhone(tenantId: string, phone: string) {
     return prisma.loyaltyMember.findFirst({
       where: {
         tenantId,
-        companyId,
         phone,
         deleted: false,
       },
@@ -36,7 +35,6 @@ export class LoyaltyMemberRepository {
    */
   async create(
     tenantId: string,
-    companyId: string,
     data: {
       phone: string;
       email?: string | null;
@@ -48,7 +46,6 @@ export class LoyaltyMemberRepository {
       data: {
         id: generateEntityId(),
         tenantId,
-        companyId,
         phone: data.phone,
         email: data.email,
         firstName: data.firstName,
@@ -116,7 +113,6 @@ export class LoyaltyMemberRepository {
    */
   async findOrCreate(
     tenantId: string,
-    companyId: string,
     phone: string,
     data?: {
       email?: string | null;
@@ -124,12 +120,12 @@ export class LoyaltyMemberRepository {
       lastName?: string | null;
     }
   ) {
-    const existing = await this.getByPhone(tenantId, companyId, phone);
+    const existing = await this.getByPhone(tenantId, phone);
     if (existing) {
       return { member: existing, isNew: false };
     }
 
-    const member = await this.create(tenantId, companyId, {
+    const member = await this.create(tenantId, {
       phone,
       email: data?.email,
       firstName: data?.firstName,
@@ -143,7 +139,6 @@ export class LoyaltyMemberRepository {
    */
   async getByCompany(
     tenantId: string,
-    companyId: string,
     options: {
       page?: number;
       pageSize?: number;
@@ -154,7 +149,6 @@ export class LoyaltyMemberRepository {
 
     const where: Prisma.LoyaltyMemberWhereInput = {
       tenantId,
-      companyId,
       deleted: false,
     };
 
@@ -189,11 +183,10 @@ export class LoyaltyMemberRepository {
   /**
    * Get member count for a company
    */
-  async countByCompany(tenantId: string, companyId: string) {
+  async countByTenant(tenantId: string) {
     return prisma.loyaltyMember.count({
       where: {
         tenantId,
-        companyId,
         deleted: false,
       },
     });

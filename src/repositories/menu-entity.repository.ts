@@ -8,11 +8,10 @@ export class MenuEntityRepository {
   /**
    * Get all active menus for a company (for Storefront)
    */
-  async getMenusByCompany(tenantId: string, companyId: string) {
+  async getMenusByCompany(tenantId: string) {
     return prisma.menu.findMany({
       where: {
         tenantId,
-        companyId,
         status: "active",
         deleted: false,
       },
@@ -25,11 +24,10 @@ export class MenuEntityRepository {
   /**
    * Get all menus for a company including inactive (for Dashboard)
    */
-  async getMenusByCompanyForDashboard(tenantId: string, companyId: string) {
+  async getMenusByCompanyForDashboard(tenantId: string) {
     return prisma.menu.findMany({
       where: {
         tenantId,
-        companyId,
         deleted: false,
       },
       orderBy: {
@@ -81,14 +79,13 @@ export class MenuEntityRepository {
    */
   async createMenu(
     tenantId: string,
-    companyId: string,
     data: { name: string; description?: string; sortOrder?: number }
   ) {
     // Calculate sortOrder if not provided - new menus should appear at the end
     let sortOrder = data.sortOrder;
     if (sortOrder === undefined) {
       const maxResult = await prisma.menu.aggregate({
-        where: { tenantId, companyId, deleted: false },
+        where: { tenantId, deleted: false },
         _max: { sortOrder: true },
       });
       sortOrder = (maxResult._max.sortOrder ?? -1) + 1;
@@ -98,7 +95,6 @@ export class MenuEntityRepository {
       data: {
         id: generateEntityId(),
         tenantId,
-        companyId,
         name: data.name,
         description: data.description,
         sortOrder,
@@ -180,11 +176,10 @@ export class MenuEntityRepository {
   /**
    * Count menus for a company (to check if it's the last one)
    */
-  async countMenusByCompany(tenantId: string, companyId: string) {
+  async countMenusByCompany(tenantId: string) {
     return prisma.menu.count({
       where: {
         tenantId,
-        companyId,
         status: "active",
         deleted: false,
       },

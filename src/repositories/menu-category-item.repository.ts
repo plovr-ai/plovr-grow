@@ -154,7 +154,6 @@ export class MenuCategoryItemRepository {
    */
   async getItemsNotInCategory(
     tenantId: string,
-    companyId: string,
     categoryId: string
   ) {
     // Get item IDs already in this category
@@ -168,7 +167,6 @@ export class MenuCategoryItemRepository {
     return prisma.menuItem.findMany({
       where: {
         tenantId,
-        companyId,
         status: "active",
         deleted: false,
         id: { notIn: existingItemIds },

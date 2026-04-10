@@ -45,14 +45,12 @@ export class SequenceRepository {
    */
   async getNextCompanyOrderSequence(
     tenantId: string,
-    companyId: string,
     date: string
   ): Promise<number> {
     const result = await prisma.companyOrderSequence.upsert({
       where: {
-        tenantId_companyId_date: {
+        tenantId_date: {
           tenantId,
-          companyId,
           date,
         },
       },
@@ -62,7 +60,6 @@ export class SequenceRepository {
       create: {
         id: generateEntityId(),
         tenantId,
-        companyId,
         date,
         sequence: 1,
       },

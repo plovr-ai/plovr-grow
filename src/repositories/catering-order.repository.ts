@@ -201,7 +201,6 @@ export class CateringOrderRepository {
    */
   async getByCompany(
     tenantId: string,
-    companyId: string,
     options: {
       page?: number;
       pageSize?: number;
@@ -217,9 +216,6 @@ export class CateringOrderRepository {
     const where: Prisma.CateringOrderWhereInput = {
       tenantId,
       deleted: false,
-      merchant: {
-        companyId,
-      },
     };
 
     if (merchantId) {

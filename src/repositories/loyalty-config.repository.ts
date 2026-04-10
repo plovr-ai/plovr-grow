@@ -5,11 +5,10 @@ export class LoyaltyConfigRepository {
   /**
    * Get loyalty config for a company
    */
-  async getByCompanyId(tenantId: string, companyId: string) {
+  async getByTenantId(tenantId: string) {
     return prisma.loyaltyConfig.findFirst({
       where: {
         tenantId,
-        companyId,
         deleted: false,
       },
     });
@@ -33,7 +32,6 @@ export class LoyaltyConfigRepository {
    */
   async create(
     tenantId: string,
-    companyId: string,
     data: {
       pointsPerDollar?: number;
       status?: string;
@@ -43,7 +41,6 @@ export class LoyaltyConfigRepository {
       data: {
         id: generateEntityId(),
         tenantId,
-        companyId,
         pointsPerDollar: data.pointsPerDollar ?? 1,
         status: data.status ?? "active",
       },
@@ -75,7 +72,6 @@ export class LoyaltyConfigRepository {
    */
   async upsert(
     tenantId: string,
-    companyId: string,
     data: {
       pointsPerDollar?: number;
       status?: string;
@@ -83,7 +79,7 @@ export class LoyaltyConfigRepository {
   ) {
     return prisma.loyaltyConfig.upsert({
       where: {
-        companyId,
+        tenantId,
       },
       update: {
         pointsPerDollar: data.pointsPerDollar,
@@ -92,7 +88,6 @@ export class LoyaltyConfigRepository {
       create: {
         id: generateEntityId(),
         tenantId,
-        companyId,
         pointsPerDollar: data.pointsPerDollar ?? 1,
         status: data.status ?? "active",
       },
@@ -102,11 +97,10 @@ export class LoyaltyConfigRepository {
   /**
    * Set loyalty status (enable/disable)
    */
-  async setStatus(tenantId: string, companyId: string, status: "active" | "inactive") {
+  async setStatus(tenantId: string, status: "active" | "inactive") {
     return prisma.loyaltyConfig.updateMany({
       where: {
         tenantId,
-        companyId,
       },
       data: {
         status,
