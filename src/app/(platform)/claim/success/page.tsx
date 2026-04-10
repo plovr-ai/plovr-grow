@@ -1,18 +1,10 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
 
 interface PageProps {
   searchParams: Promise<{ company?: string }>;
 }
 
 export default async function ClaimSuccessPage({ searchParams }: PageProps) {
-  const session = await auth();
-
-  if (!session) {
-    redirect("/dashboard/login");
-  }
-
   const { company: companySlug } = await searchParams;
 
   return (
@@ -40,7 +32,7 @@ export default async function ClaimSuccessPage({ searchParams }: PageProps) {
 
         <div className="block">
           <Link
-            href="/dashboard"
+            href="/dashboard/login"
             className="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Set Up Your Restaurant &rarr;

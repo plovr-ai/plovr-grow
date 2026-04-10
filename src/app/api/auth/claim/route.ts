@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { hash } from "bcryptjs";
 import prisma from "@/lib/db";
 import { generateEntityId } from "@/lib/id";
-
-const BCRYPT_ROUNDS = 12;
 
 const claimSchema = z.object({
   tenantId: z.string().min(1),
   email: z.string().email(),
-  password: z.string().min(8),
   name: z.string().min(1),
 });
 
@@ -25,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { tenantId, email, password, name } = parsed.data;
+    const { tenantId, email, name } = parsed.data;
 
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -45,12 +41,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Email already exists" }, { status: 409 });
     }
 
-    const passwordHash = await hash(password, BCRYPT_ROUNDS);
     await prisma.user.create({
       data: {
         id: generateEntityId(), tenantId,
         companyId: tenant.company?.id,
-        email, passwordHash, name, role: "owner", status: "active",
+        email, passwordHash: null, name, role: "owner", status: "active",
       },
     });
 
