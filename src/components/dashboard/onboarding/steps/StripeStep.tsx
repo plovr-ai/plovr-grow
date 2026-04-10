@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 
 interface StripeStepProps {
@@ -19,13 +20,13 @@ export function StripeStep({ status }: StripeStepProps) {
     return (
       <div className="space-y-3">
         <p className="text-sm text-green-700">{t("completedDescription")}</p>
-        <a
+        <Link
           href="/dashboard/settings"
           className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
         >
           {t("completedAction")}
           <ExternalLink className="h-4 w-4" />
-        </a>
+        </Link>
       </div>
     );
   }
