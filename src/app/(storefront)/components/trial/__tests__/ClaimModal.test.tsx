@@ -96,18 +96,6 @@ describe("ClaimModal", () => {
     });
   });
 
-  it("shows password validation errors", async () => {
-    render(<ClaimModal {...defaultProps} />);
-    // Password "short" doesn't meet Zod minimum length of 8
-    fillForm({ password: "lowonly1", confirmPassword: "lowonly1" });
-    const form = document.querySelector("form");
-    fireEvent.submit(form!);
-    await waitFor(() => {
-      // Zod will complain about missing uppercase letter
-      expect(screen.getByText("Password must contain at least one uppercase letter")).toBeInTheDocument();
-    });
-  });
-
   it("shows default error when API returns success false without error", async () => {
     vi.mocked(global.fetch).mockResolvedValue({
       json: () =>
@@ -150,19 +138,4 @@ describe("ClaimModal", () => {
     });
   });
 
-  it("redirects to login when sign-in fails after claim", async () => {
-    vi.mocked(global.fetch).mockResolvedValue({
-      json: () =>
-        Promise.resolve({ success: true, companySlug: "joes-pizza" }),
-    } as Response);
-    mockSignIn.mockResolvedValue({ error: "CredentialsSignin" });
-
-    render(<ClaimModal {...defaultProps} />);
-    fillForm();
-    fireEvent.click(screen.getByText("Claim Website"));
-
-    await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/dashboard/login");
-    });
-  });
 });

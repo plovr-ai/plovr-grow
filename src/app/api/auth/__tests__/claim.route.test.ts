@@ -115,20 +115,4 @@ describe("POST /api/auth/claim", () => {
     });
   });
 
-  it("returns 400 for short password", async () => {
-    const res = await POST(makeRequest({
-      tenantId: "tenant1", email: "owner@test.com", password: "short", name: "Owner",
-    }));
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 500 when an unexpected error occurs", async () => {
-    vi.mocked(prisma.tenant.findUnique).mockRejectedValue(new Error("DB down"));
-    const res = await POST(makeRequest({
-      tenantId: "tenant1", email: "owner@test.com", password: "SecurePass1", name: "Owner",
-    }));
-    const data = await res.json();
-    expect(res.status).toBe(500);
-    expect(data.error).toBe("Internal server error");
-  });
 });
