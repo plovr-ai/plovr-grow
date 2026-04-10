@@ -1,7 +1,6 @@
 import prisma from "@/lib/db";
 import { generateEntityId } from "@/lib/id";
-import { slugify, generateUniqueSlug } from "@/services/generator/slug.util";
-import { merchantRepository } from "@/repositories/merchant.repository";
+import { companyService } from "@/services/company/company.service";
 import type { User } from "@prisma/client";
 
 export class AuthService {
@@ -38,72 +37,28 @@ export class AuthService {
       return { user: updated, isNewUser: false };
     }
 
-    // 3. New user — create Tenant + Company + User in a single transaction
+    // 3. New user — create Tenant + Company + Merchant via unified service
     const emailPrefix = email.split("@")[0];
     const companyName = `${emailPrefix}'s Company`;
-    const baseSlug = slugify(companyName);
 
-    // Ensure unique slug
-    const existingCompany = await prisma.company.findUnique({
-      where: { slug: baseSlug },
-    });
-    const slug = existingCompany
-      ? `${baseSlug}-${Date.now()}`
-      : baseSlug;
-
-    const tenantId = generateEntityId();
-    const companyId = generateEntityId();
-    const userId = generateEntityId();
-    const merchantId = generateEntityId();
-
-    // Generate a unique merchant slug
-    const merchantSlug = await generateUniqueSlug(
-      companyName,
-      async (s) => merchantRepository.isSlugAvailable(s)
-    );
-
-    const user = await prisma.$transaction(async (tx) => {
-      await tx.tenant.create({
-        data: {
-          id: tenantId,
-          name: companyName,
-        },
+    const { tenant, company } =
+      await companyService.createTenantWithCompanyAndMerchant({
+        companyName,
       });
 
-      await tx.company.create({
-        data: {
-          id: companyId,
-          tenantId,
-          slug,
-          name: companyName,
-        },
-      });
-
-      // Create a default merchant so the dashboard is immediately usable
-      await tx.merchant.create({
-        data: {
-          id: merchantId,
-          tenantId,
-          companyId,
-          slug: merchantSlug,
-          name: companyName,
-          status: "active",
-        },
-      });
-
-      return tx.user.create({
-        data: {
-          id: userId,
-          tenantId,
-          companyId,
-          email,
-          stytchUserId,
-          name: emailPrefix,
-          role: "owner",
-          status: "active",
-          lastLoginAt: new Date(),
-        },
-      });
+    // Create User in the newly created tenant
+    const user = await prisma.user.create({
+      data: {
+        id: generateEntityId(),
+        tenantId: tenant.id,
+        companyId: company.id,
+        email,
+        stytchUserId,
+        name: emailPrefix,
+        role: "owner",
+        status: "active",
+        lastLoginAt: new Date(),
+      },
     });
 
     return { user, isNewUser: true };
