@@ -50,7 +50,7 @@ export default async function CompanyLayout({ children, params }: LayoutProps) {
 
   return (
     <ThemeProvider preset={company.settings?.themePreset}>
-      {isTrial && <ClaimBar tenantId={company.tenantId} companySlug={company.slug} />}
+      {isTrial && company.slug && <ClaimBar tenantId={company.tenantId} companySlug={company.slug} />}
       <MerchantProvider
         config={{
           name: company.name,

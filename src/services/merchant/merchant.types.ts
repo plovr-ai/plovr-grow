@@ -37,7 +37,7 @@ export interface MerchantWithCompany {
   settings?: MerchantSettings;
   company: {
     id: string;
-    slug: string;
+    slug: string | null;
     tenantId: string;
     name: string;
     logoUrl?: string;
@@ -55,7 +55,7 @@ export interface MerchantWithCompany {
  */
 export interface CompanyWithMerchants {
   id: string;
-  slug: string;
+  slug: string | null;
   tenantId: string;
   name: string;
   description?: string;

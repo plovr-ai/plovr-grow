@@ -52,7 +52,7 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
     menus: menusWithItemCount,
   };
 
-  const data = convertToMenuDisplayData(responseWithItemCount, merchant.company.slug);
+  const data = convertToMenuDisplayData(responseWithItemCount, merchant.company.slug ?? "");
 
   return <MenuPageClient data={data} merchantSlug={merchantSlug} />;
 }
