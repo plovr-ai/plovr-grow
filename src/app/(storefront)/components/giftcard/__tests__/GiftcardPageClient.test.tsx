@@ -50,8 +50,7 @@ vi.mock("@storefront/hooks", () => ({
 }));
 
 // Track CardPaymentForm callbacks for testing
-let mockOnReady: (() => void) | null = null;
-let mockOnError: ((error: string) => void) | null = null;
+const cardFormCallbacks = { onReady: null as (() => void) | null, onError: null as ((error: string) => void) | null };
 let mockConfirmPayment = vi.fn().mockResolvedValue({ success: true });
 
 // Mock checkout components - keep simple to avoid crashes
@@ -63,8 +62,10 @@ vi.mock("@storefront/components/checkout", () => ({
     props: { onReady?: () => void; onError?: (error: string) => void; disabled?: boolean },
     ref: React.Ref<{ confirmPayment: () => Promise<{ success: boolean; error?: string }> }>
   ) {
-    mockOnReady = props.onReady ?? null;
-    mockOnError = props.onError ?? null;
+    // eslint-disable-next-line react-hooks/immutability
+    cardFormCallbacks.onReady = props.onReady ?? null;
+    // eslint-disable-next-line react-hooks/immutability
+    cardFormCallbacks.onError = props.onError ?? null;
     React.useImperativeHandle(ref, () => ({
       confirmPayment: mockConfirmPayment,
     }));
@@ -131,8 +132,8 @@ describe("GiftcardPageClient", () => {
     mockIsCreatingPaymentIntent = false;
     mockPaymentIntentError = null;
     mockConfirmPayment = vi.fn().mockResolvedValue({ success: true });
-    mockOnReady = null;
-    mockOnError = null;
+    cardFormCallbacks.onReady = null;
+    cardFormCallbacks.onError = null;
   });
 
   it("should render denomination buttons", () => {
@@ -798,7 +799,7 @@ describe("GiftcardPageClient", () => {
 
       // Trigger onReady to enable payment (inside act)
       await act(async () => {
-        if (mockOnReady) mockOnReady();
+        if (cardFormCallbacks.onReady) cardFormCallbacks.onReady();
       });
 
       fireEvent.submit(document.querySelector("form")!);
@@ -829,7 +830,7 @@ describe("GiftcardPageClient", () => {
       );
 
       fillValidForm();
-      await act(async () => { if (mockOnReady) mockOnReady(); });
+      await act(async () => { if (cardFormCallbacks.onReady) cardFormCallbacks.onReady(); });
 
       fireEvent.submit(document.querySelector("form")!);
 
@@ -855,7 +856,7 @@ describe("GiftcardPageClient", () => {
       );
 
       fillValidForm();
-      await act(async () => { if (mockOnReady) mockOnReady(); });
+      await act(async () => { if (cardFormCallbacks.onReady) cardFormCallbacks.onReady(); });
 
       fireEvent.submit(document.querySelector("form")!);
 
@@ -882,7 +883,7 @@ describe("GiftcardPageClient", () => {
       );
 
       fillValidForm();
-      await act(async () => { if (mockOnReady) mockOnReady(); });
+      await act(async () => { if (cardFormCallbacks.onReady) cardFormCallbacks.onReady(); });
 
       fireEvent.submit(document.querySelector("form")!);
 
@@ -906,7 +907,7 @@ describe("GiftcardPageClient", () => {
       );
 
       fillValidForm();
-      await act(async () => { if (mockOnReady) mockOnReady(); });
+      await act(async () => { if (cardFormCallbacks.onReady) cardFormCallbacks.onReady(); });
 
       fireEvent.submit(document.querySelector("form")!);
 
@@ -930,7 +931,7 @@ describe("GiftcardPageClient", () => {
       );
 
       fillValidForm();
-      await act(async () => { if (mockOnReady) mockOnReady(); });
+      await act(async () => { if (cardFormCallbacks.onReady) cardFormCallbacks.onReady(); });
 
       fireEvent.submit(document.querySelector("form")!);
 
@@ -957,7 +958,7 @@ describe("GiftcardPageClient", () => {
       );
 
       fillValidForm();
-      await act(async () => { if (mockOnReady) mockOnReady(); });
+      await act(async () => { if (cardFormCallbacks.onReady) cardFormCallbacks.onReady(); });
 
       fireEvent.submit(document.querySelector("form")!);
 
@@ -999,7 +1000,7 @@ describe("GiftcardPageClient", () => {
       );
 
       // onReady may have been reset after re-render, trigger it inside act
-      await act(async () => { if (mockOnReady) mockOnReady(); });
+      await act(async () => { if (cardFormCallbacks.onReady) cardFormCallbacks.onReady(); });
 
       fireEvent.submit(document.querySelector("form")!);
 
@@ -1034,7 +1035,7 @@ describe("GiftcardPageClient", () => {
 
       // Trigger onReady within act to process state update
       await act(async () => {
-        if (mockOnReady) mockOnReady();
+        if (cardFormCallbacks.onReady) cardFormCallbacks.onReady();
       });
 
       expect(screen.getByTestId("card-payment-form")).toBeInTheDocument();
@@ -1051,7 +1052,7 @@ describe("GiftcardPageClient", () => {
 
       // Trigger onError within act to process state update
       await act(async () => {
-        if (mockOnError) mockOnError("Card element error");
+        if (cardFormCallbacks.onError) cardFormCallbacks.onError("Card element error");
       });
 
       const errorAlerts = screen.getAllByTestId("error-alert");

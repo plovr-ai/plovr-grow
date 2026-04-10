@@ -42,7 +42,9 @@ vi.mock("@storefront/components/checkout/CardPaymentForm", async () => {
       props: { onReady?: () => void; onError?: (e: string) => void; disabled?: boolean },
       ref: React.ForwardedRef<{ confirmPayment: () => Promise<{ success: boolean; error?: string }> }>
     ) {
+      // eslint-disable-next-line react-hooks/globals
       cardFormOnReady = props.onReady;
+      // eslint-disable-next-line react-hooks/globals
       cardFormOnError = props.onError;
       React.useImperativeHandle(ref, () => ({
         confirmPayment: mockConfirmPayment,
