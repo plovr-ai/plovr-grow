@@ -44,16 +44,6 @@ export const DEFAULT_ONBOARDING_DATA: OnboardingData = {
   },
 };
 
-// Default data for a claimed user (website already generated)
-export const CLAIMED_USER_ONBOARDING_DATA: OnboardingData = {
-  steps: {
-    website: { status: "completed", completedAt: new Date().toISOString() },
-    gbp: { status: "pending" },
-    menu: { status: "pending" },
-    stripe: { status: "pending" },
-  },
-};
-
 /**
  * Check if all steps are completed or skipped
  */

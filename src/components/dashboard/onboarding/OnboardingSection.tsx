@@ -43,11 +43,15 @@ export function OnboardingSection() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ stepId: step, status: "completed" }),
-        }).then(() => {
-          startTransition(() => {
-            router.replace("/dashboard");
-            router.refresh();
-          });
+        }).then((res) => {
+          if (res.ok) {
+            startTransition(() => {
+              router.replace("/dashboard");
+              router.refresh();
+            });
+          }
+        }).catch(() => {
+          // OAuth callback completion failed, user can retry
         });
       }
     }

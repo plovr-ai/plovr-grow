@@ -24,19 +24,6 @@ const requestSchema = z.object({
         })
         .optional(),
       slots: z.record(z.string(), z.unknown()).optional(),
-      onboardingState: z
-        .object({
-          status: z.enum(["idle", "collecting_urls", "importing", "completed"]),
-          collectedUrls: z
-            .object({
-              website: z.string().optional(),
-              doordash: z.string().optional(),
-              ubereats: z.string().optional(),
-              google: z.string().optional(),
-            })
-            .optional(),
-        })
-        .optional(),
     })
     .optional(),
 });
@@ -111,7 +98,6 @@ export async function POST(
             context: {
               activeIntent: context?.activeIntent as import("@/services/dashboard-agent").IntentResult | undefined,
               slots: context?.slots || {},
-              onboardingState: context?.onboardingState as import("@/services/dashboard-agent").OnboardingState | undefined,
               subscription: subscription
                 ? {
                     status: subscription.status,

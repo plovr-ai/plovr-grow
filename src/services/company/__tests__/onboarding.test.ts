@@ -37,7 +37,7 @@ describe("CompanyService onboarding", () => {
       } as never);
       mockRepo.update.mockResolvedValue({} as never);
 
-      await service.initializeOnboarding("c1");
+      await service.initializeOnboarding("t1", "c1");
 
       expect(mockRepo.update).toHaveBeenCalledWith("c1", {
         onboardingStatus: "in_progress",
@@ -62,7 +62,7 @@ describe("CompanyService onboarding", () => {
       } as never);
       mockRepo.update.mockResolvedValue({} as never);
 
-      await service.initializeOnboarding("c1");
+      await service.initializeOnboarding("t1", "c1");
 
       const updateCall = mockRepo.update.mock.calls[0][1];
       const data = updateCall.onboardingData as unknown as OnboardingData;
@@ -79,7 +79,7 @@ describe("CompanyService onboarding", () => {
         onboardingData: { steps: {} },
       } as never);
 
-      await service.initializeOnboarding("c1");
+      await service.initializeOnboarding("t1", "c1");
 
       expect(mockRepo.update).not.toHaveBeenCalled();
     });
@@ -103,7 +103,7 @@ describe("CompanyService onboarding", () => {
       } as never);
       mockRepo.update.mockResolvedValue({} as never);
 
-      await service.updateOnboardingStep("c1", "website", "completed");
+      await service.updateOnboardingStep("t1", "c1", "website", "completed");
 
       const updateCall = mockRepo.update.mock.calls[0][1];
       const data = updateCall.onboardingData as unknown as OnboardingData;
@@ -130,7 +130,7 @@ describe("CompanyService onboarding", () => {
       } as never);
       mockRepo.update.mockResolvedValue({} as never);
 
-      await service.updateOnboardingStep("c1", "gbp", "skipped");
+      await service.updateOnboardingStep("t1", "c1", "gbp", "skipped");
 
       const updateCall = mockRepo.update.mock.calls[0][1];
       const updated = updateCall.onboardingData as unknown as OnboardingData;
@@ -154,7 +154,7 @@ describe("CompanyService onboarding", () => {
       } as never);
       mockRepo.update.mockResolvedValue({} as never);
 
-      await service.updateOnboardingStep("c1", "stripe", "completed");
+      await service.updateOnboardingStep("t1", "c1", "stripe", "completed");
 
       const updateCall = mockRepo.update.mock.calls[0][1];
       expect(updateCall.onboardingStatus).toBe("completed");

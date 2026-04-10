@@ -37,16 +37,20 @@ export function GbpStep({ status }: GbpStepProps) {
   }
 
   async function handleSkip() {
-    const res = await fetch("/api/dashboard/onboarding", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stepId: "gbp", status: "skipped" }),
-    });
-
-    if (res.ok) {
-      startTransition(() => {
-        router.refresh();
+    try {
+      const res = await fetch("/api/dashboard/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stepId: "gbp", status: "skipped" }),
       });
+
+      if (res.ok) {
+        startTransition(() => {
+          router.refresh();
+        });
+      }
+    } catch {
+      // Skip is non-critical, silently fail
     }
   }
 

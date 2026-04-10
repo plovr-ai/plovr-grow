@@ -9,7 +9,7 @@ import { z } from "zod";
 export async function GET() {
   try {
     const session = await auth();
-    if (!session?.user?.companyId) {
+    if (!session?.user?.tenantId || !session?.user?.companyId) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
@@ -17,6 +17,7 @@ export async function GET() {
     }
 
     const result = await companyService.getOnboardingStatus(
+      session.user.tenantId,
       session.user.companyId
     );
 
@@ -39,7 +40,7 @@ const updateSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user?.companyId) {
+    if (!session?.user?.tenantId || !session?.user?.companyId) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
     const { stepId, status } = validation.data;
 
     const result = await companyService.updateOnboardingStep(
+      session.user.tenantId,
       session.user.companyId,
       stepId as OnboardingStepId,
       status as OnboardingStepStatus

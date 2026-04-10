@@ -44,16 +44,20 @@ export function MenuStep({ status }: MenuStepProps) {
   }
 
   async function handleSkip() {
-    const res = await fetch("/api/dashboard/onboarding", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stepId: "menu", status: "skipped" }),
-    });
-
-    if (res.ok) {
-      startTransition(() => {
-        router.refresh();
+    try {
+      const res = await fetch("/api/dashboard/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stepId: "menu", status: "skipped" }),
       });
+
+      if (res.ok) {
+        startTransition(() => {
+          router.refresh();
+        });
+      }
+    } catch {
+      // Skip is non-critical, silently fail
     }
   }
 
