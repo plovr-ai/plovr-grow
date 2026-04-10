@@ -43,7 +43,7 @@ model Tenant {
   stripeCustomers         StripeCustomer[]
   subscription            Subscription?
   merchants               Merchant[]
-  passwordResetTokens     PasswordResetToken[]
+
   menuCategoryItems       MenuCategoryItem[]
   menuItemTaxes           MenuItemTax[]
   websiteGenerations      WebsiteGeneration[]
@@ -291,24 +291,6 @@ model Order {
   @@index([tenantId, fulfillmentStatus])
   @@index([tenantId, salesChannel])
   @@map("orders")
-}
-
-model PasswordResetToken {
-  id        String   @id
-  tenantId  String   @map("tenant_id")
-  email     String
-  token     String   @unique
-  expiresAt DateTime @map("expires_at")
-  deleted   Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-
-  @@index([tenantId])
-  @@index([email])
-  @@index([token])
-  @@map("password_reset_tokens")
 }
 
 model User {

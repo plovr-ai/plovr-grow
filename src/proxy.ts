@@ -4,9 +4,6 @@ import { auth } from "@/lib/auth";
 // Routes that don't require authentication
 const publicRoutes = [
   "/dashboard/login",
-  "/dashboard/register",
-  "/dashboard/forgot-password",
-  "/dashboard/reset-password",
   "/dashboard/stytch-authenticate",
 ];
 
