@@ -1,6 +1,7 @@
 import prisma from "@/lib/db";
 import { generateEntityId } from "@/lib/id";
-import { slugify } from "@/services/generator/slug.util";
+import { slugify, generateUniqueSlug } from "@/services/generator/slug.util";
+import { merchantRepository } from "@/repositories/merchant.repository";
 import type { User } from "@prisma/client";
 
 export class AuthService {
@@ -53,6 +54,13 @@ export class AuthService {
     const tenantId = generateEntityId();
     const companyId = generateEntityId();
     const userId = generateEntityId();
+    const merchantId = generateEntityId();
+
+    // Generate a unique merchant slug
+    const merchantSlug = await generateUniqueSlug(
+      companyName,
+      async (s) => merchantRepository.isSlugAvailable(s)
+    );
 
     const user = await prisma.$transaction(async (tx) => {
       await tx.tenant.create({
@@ -68,6 +76,18 @@ export class AuthService {
           tenantId,
           slug,
           name: companyName,
+        },
+      });
+
+      // Create a default merchant so the dashboard is immediately usable
+      await tx.merchant.create({
+        data: {
+          id: merchantId,
+          tenantId,
+          companyId,
+          slug: merchantSlug,
+          name: companyName,
+          status: "active",
         },
       });
 
