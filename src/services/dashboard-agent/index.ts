@@ -22,7 +22,6 @@ export type {
   QuickAction,
   // Conversation types
   ConversationContext,
-  OnboardingState,
   // Intent types
   IntentCategory,
   IntentResult,

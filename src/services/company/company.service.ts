@@ -193,7 +193,7 @@ export class CompanyService {
    * Initialize onboarding for a company.
    * For claimed users (source=generator with merchants), website step is auto-completed.
    */
-  async initializeOnboarding(companyId: string) {
+  async initializeOnboarding(tenantId: string, companyId: string) {
     const company = await companyRepository.getById(companyId);
 
     if (!company) {
@@ -232,6 +232,7 @@ export class CompanyService {
    * When all steps are completed/skipped, marks onboarding as completed.
    */
   async updateOnboardingStep(
+    tenantId: string,
     companyId: string,
     stepId: OnboardingStepId,
     status: OnboardingStepStatus
@@ -282,7 +283,7 @@ export class CompanyService {
   /**
    * Get onboarding status and data for a company
    */
-  async getOnboardingStatus(companyId: string) {
+  async getOnboardingStatus(tenantId: string, companyId: string) {
     const company = await companyRepository.getById(companyId);
 
     if (!company) {
@@ -299,7 +300,7 @@ export class CompanyService {
   /**
    * Dismiss the onboarding completed bar
    */
-  async dismissOnboarding(companyId: string) {
+  async dismissOnboarding(tenantId: string, companyId: string) {
     const company = await companyRepository.getById(companyId);
 
     if (!company) {

@@ -38,7 +38,7 @@ export default async function ProtectedLayout({
   // Initialize onboarding if not started
   let company = initialCompany;
   if (company.onboardingStatus === "not_started") {
-    await companyService.initializeOnboarding(company.id);
+    await companyService.initializeOnboarding(tenantId, company.id);
     const updated = await companyRepository.getById(companyId);
     if (updated) {
       company = updated;

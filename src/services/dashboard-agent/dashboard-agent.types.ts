@@ -63,16 +63,6 @@ export interface Message {
 
 // ==================== Conversation Types ====================
 
-export interface OnboardingState {
-  status: "idle" | "collecting_urls" | "importing" | "completed";
-  collectedUrls: {
-    website?: string;
-    doordash?: string;
-    ubereats?: string;
-    google?: string;
-  };
-}
-
 export interface SubscriptionContext {
   status: string;
   canAccessPremiumFeatures: boolean;
@@ -85,8 +75,6 @@ export interface ConversationContext {
   activeIntent?: IntentResult;
   /** Entity slots collected during conversation */
   slots: Record<string, unknown>;
-  /** Onboarding progress if applicable */
-  onboardingState?: OnboardingState;
   /** Subscription status */
   subscription?: SubscriptionContext;
 }
@@ -95,7 +83,6 @@ export interface ConversationContext {
 
 export type IntentCategory =
   | "subscription"
-  | "onboarding"
   | "menu_management"
   | "order_management"
   | "reports"

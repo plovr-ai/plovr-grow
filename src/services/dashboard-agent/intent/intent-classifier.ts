@@ -28,25 +28,6 @@ const INTENT_PATTERNS: Record<IntentCategory, string[]> = {
     "定价",
     "升级",
   ],
-  onboarding: [
-    "import",
-    "导入",
-    "setup",
-    "设置",
-    "get started",
-    "开始",
-    "website",
-    "网站",
-    "doordash",
-    "ubereats",
-    "uber eats",
-    "add menu",
-    "添加菜单",
-    "scrape",
-    "extract",
-    "提取",
-    "google business",
-  ],
   menu_management: [
     "menu",
     "菜单",
@@ -158,25 +139,6 @@ class IntentClassifier {
       result = this.boostWithContext(result, lowerMessage, context);
     }
 
-    // Boost confidence if URLs are detected and we're in onboarding
-    if (this.containsUrls(message)) {
-      if (
-        context?.onboardingState?.status === "collecting_urls" ||
-        result.category === "onboarding"
-      ) {
-        result = {
-          ...result,
-          category: "onboarding",
-          action: "provide_urls",
-          confidence: Math.min(result.confidence + 0.3, 1),
-          entities: {
-            ...result.entities,
-            urls: this.extractUrls(message),
-          },
-        };
-      }
-    }
-
     return result;
   }
 
@@ -250,9 +212,6 @@ class IntentClassifier {
         if (message.includes("billing") || message.includes("账单")) return "manage_billing";
         return "start_trial";
 
-      case "onboarding":
-        return "import_menu";
-
       case "menu_management":
         if (message.includes("add") || message.includes("添加")) return "add_item";
         if (message.includes("edit") || message.includes("编辑") || message.includes("update") || message.includes("更新"))
@@ -319,22 +278,9 @@ class IntentClassifier {
    */
   private boostWithContext(
     result: IntentResult,
-    message: string,
+    _message: string,
     context: Partial<ConversationContext>
   ): IntentResult {
-    // If we're collecting URLs in onboarding and message contains URLs
-    if (
-      context.onboardingState?.status === "collecting_urls" &&
-      this.containsUrls(message)
-    ) {
-      return {
-        ...result,
-        category: "onboarding",
-        action: "provide_urls",
-        confidence: Math.min(result.confidence + 0.3, 1),
-      };
-    }
-
     // If same category as active intent, boost confidence
     if (context.activeIntent?.category === result.category) {
       return {
