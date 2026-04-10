@@ -28,6 +28,7 @@ function createWrapper() {
           currency: "USD",
           locale: "en-US",
           subscription: null,
+        onboarding: { status: "not_started" as const, data: null },
         }}
       >
         {children}

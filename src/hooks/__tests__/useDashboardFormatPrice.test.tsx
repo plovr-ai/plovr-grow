@@ -22,6 +22,7 @@ function createWrapper(currency: string, locale: string) {
           currency,
           locale,
           subscription: null,
+        onboarding: { status: "not_started" as const, data: null },
         }}
       >
         {children}

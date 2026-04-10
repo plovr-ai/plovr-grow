@@ -22,6 +22,7 @@ function Wrapper({ children }: { children: ReactNode }) {
         currency: "USD",
         locale: "en-US",
         subscription: null,
+        onboarding: { status: "not_started" as const, data: null },
       }}
     >
       {children}
