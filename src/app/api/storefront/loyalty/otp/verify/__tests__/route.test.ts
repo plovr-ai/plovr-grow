@@ -102,7 +102,6 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
     // Verify that enrollCustomer was called with email
     expect(loyaltyService.enrollCustomer).toHaveBeenCalledWith(
       "tenant-1",
-      "tenant-1",
       "+15551234567",
       {
         firstName: "John",
@@ -170,7 +169,6 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
 
     // Verify that enrollCustomer was called with undefined for empty email
     expect(loyaltyService.enrollCustomer).toHaveBeenCalledWith(
-      "tenant-1",
       "tenant-1",
       "+15551234567",
       {
@@ -287,7 +285,6 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
 
     // Email should be undefined when not provided
     expect(loyaltyService.enrollCustomer).toHaveBeenCalledWith(
-      "tenant-1",
       "tenant-1",
       "+15551234567",
       {

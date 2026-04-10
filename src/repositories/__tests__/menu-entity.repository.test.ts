@@ -62,6 +62,7 @@ describe("MenuEntityRepository", () => {
 
       // Verify aggregate was called to get max sortOrder
       expect(prisma.menu.aggregate).toHaveBeenCalledWith({
+        where: { tenantId: "tenant-1", deleted: false },
         _max: { sortOrder: true },
       });
 

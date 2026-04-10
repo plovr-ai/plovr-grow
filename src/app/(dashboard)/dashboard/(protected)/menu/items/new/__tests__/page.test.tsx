@@ -115,16 +115,14 @@ describe("NewMenuItemPage", () => {
       expect(mockRedirect).toHaveBeenCalledWith("/dashboard/login");
     });
 
-    it("should redirect to login when session missing companyId", async () => {
+    it("should not redirect when session has tenantId", async () => {
       mockAuth.mockResolvedValue({ user: { tenantId: "tenant-1" } });
 
-      await expect(
-        NewMenuItemPage({
-          searchParams: Promise.resolve({ menuId: "menu-1", categoryId: "cat-1" }),
-        })
-      ).rejects.toThrow("NEXT_REDIRECT: /dashboard/login");
+      const result = await NewMenuItemPage({
+        searchParams: Promise.resolve({ menuId: "menu-1", categoryId: "cat-1" }),
+      });
 
-      expect(mockRedirect).toHaveBeenCalledWith("/dashboard/login");
+      expect(result).toBeDefined();
     });
   });
 
@@ -158,7 +156,6 @@ describe("NewMenuItemPage", () => {
 
       expect(mockGetMenuForDashboard).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "menu-2"
       );
       expect(result).toBeDefined();
@@ -171,7 +168,6 @@ describe("NewMenuItemPage", () => {
 
       expect(mockGetMenuForDashboard).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         undefined
       );
       expect(result).toBeDefined();
@@ -194,7 +190,7 @@ describe("NewMenuItemPage", () => {
         searchParams: Promise.resolve({ menuId: "menu-1", categoryId: "cat-1" }),
       });
 
-      expect(mockGetTaxConfigs).toHaveBeenCalledWith("tenant-1", "company-1");
+      expect(mockGetTaxConfigs).toHaveBeenCalledWith("tenant-1");
     });
   });
 });

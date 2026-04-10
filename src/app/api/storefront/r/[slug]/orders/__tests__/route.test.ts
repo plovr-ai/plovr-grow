@@ -142,7 +142,6 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
     expect(orderService.createMerchantOrderAtomic).toHaveBeenCalledWith(
       "tenant-1",
       expect.objectContaining({
-        companyId: "tenant-1",
         merchantId: "merchant-1",
         customerFirstName: "John",
         orderMode: "pickup",
