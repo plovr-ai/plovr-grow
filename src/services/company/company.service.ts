@@ -9,7 +9,11 @@ import type {
   UpdateCompanyInput,
   CreateMerchantInput,
 } from "./company.types";
-import { DEFAULT_ONBOARDING_DATA } from "@/types/onboarding";
+import {
+  DEFAULT_ONBOARDING_DATA,
+  WEBSITE_DEPENDENT_STEPS,
+  isOnboardingComplete,
+} from "@/types/onboarding";
 import type {
   OnboardingStepId,
   OnboardingStepStatus,
@@ -186,25 +190,8 @@ export class CompanyService {
   // ==================== Onboarding Methods ====================
 
   /**
-   * Get onboarding status and data for a company
-   */
-  async getOnboardingStatus(companyId: string) {
-    const company = await companyRepository.getById(companyId);
-
-    if (!company) {
-      throw new AppError(ErrorCodes.COMPANY_NOT_FOUND, undefined, 404);
-    }
-
-    return {
-      status: company.onboardingStatus,
-      data: company.onboardingData as OnboardingData | null,
-      completedAt: company.onboardingCompletedAt,
-    };
-  }
-
-  /**
-   * Initialize onboarding for a company
-   * Called when user first accesses the onboarding flow
+   * Initialize onboarding for a company.
+   * For claimed users (source=generator with merchants), website step is auto-completed.
    */
   async initializeOnboarding(companyId: string) {
     const company = await companyRepository.getById(companyId);
@@ -218,15 +205,31 @@ export class CompanyService {
       return company;
     }
 
+    // Detect claimed user: has source=generator
+    const isClaimed =
+      (company as Record<string, unknown>).source === "generator";
+
+    const data: OnboardingData = isClaimed
+      ? {
+          steps: {
+            website: { status: "completed", completedAt: new Date().toISOString() },
+            gbp: { status: "pending" },
+            menu: { status: "pending" },
+            stripe: { status: "pending" },
+          },
+        }
+      : { ...DEFAULT_ONBOARDING_DATA };
+
     return companyRepository.update(companyId, {
       onboardingStatus: "in_progress",
-      onboardingData:
-        DEFAULT_ONBOARDING_DATA as unknown as Prisma.InputJsonValue,
+      onboardingData: data as unknown as Prisma.InputJsonValue,
     });
   }
 
   /**
-   * Update a specific onboarding step
+   * Update a specific onboarding step.
+   * When website is completed, unlocks gbp/menu/stripe.
+   * When all steps are completed/skipped, marks onboarding as completed.
    */
   async updateOnboardingStep(
     companyId: string,
@@ -239,56 +242,79 @@ export class CompanyService {
       throw new AppError(ErrorCodes.COMPANY_NOT_FOUND, undefined, 404);
     }
 
-    // Get current data or initialize
     const currentData =
-      (company.onboardingData as unknown as OnboardingData) || DEFAULT_ONBOARDING_DATA;
+      (company.onboardingData as unknown as OnboardingData) ??
+      DEFAULT_ONBOARDING_DATA;
 
-    // Update the specific step
-    const updatedData: OnboardingData = {
-      ...currentData,
-      steps: {
-        ...currentData.steps,
-        [stepId]: {
-          status,
-          completedAt:
-            status === "completed" || status === "skipped"
-              ? new Date().toISOString()
-              : null,
-        },
-      },
+    // Update the target step
+    const updatedSteps = { ...currentData.steps };
+    updatedSteps[stepId] = {
+      status,
+      ...(status === "completed" || status === "skipped"
+        ? { completedAt: new Date().toISOString() }
+        : {}),
     };
 
-    // Determine next step
-    const stepOrder: OnboardingStepId[] = ["website", "menu", "oo_config"];
-    const currentIndex = stepOrder.indexOf(stepId);
-    const nextStepId = stepOrder[currentIndex + 1];
-
-    if (nextStepId) {
-      updatedData.currentStep = nextStepId;
+    // If website just completed, unlock dependent steps
+    if (stepId === "website" && status === "completed") {
+      for (const depId of WEBSITE_DEPENDENT_STEPS) {
+        if (updatedSteps[depId].status === "locked") {
+          updatedSteps[depId] = { status: "pending" };
+        }
+      }
     }
 
+    const updatedData: OnboardingData = {
+      ...currentData,
+      steps: updatedSteps,
+    };
+
+    // Check if all steps are now finished
+    const allFinished = isOnboardingComplete(updatedData);
+
     return companyRepository.update(companyId, {
-      onboardingStatus: "in_progress",
+      onboardingStatus: allFinished ? "completed" : "in_progress",
       onboardingData: updatedData as unknown as Prisma.InputJsonValue,
+      ...(allFinished ? { onboardingCompletedAt: new Date() } : {}),
     });
   }
 
   /**
-   * Mark onboarding as completed
+   * Get onboarding status and data for a company
    */
-  async completeOnboarding(companyId: string) {
-    return companyRepository.update(companyId, {
-      onboardingStatus: "completed",
-      onboardingCompletedAt: new Date(),
-    });
-  }
-
-  /**
-   * Check if company has completed onboarding
-   */
-  async hasCompletedOnboarding(companyId: string): Promise<boolean> {
+  async getOnboardingStatus(companyId: string) {
     const company = await companyRepository.getById(companyId);
-    return company?.onboardingStatus === "completed";
+
+    if (!company) {
+      throw new AppError(ErrorCodes.COMPANY_NOT_FOUND, undefined, 404);
+    }
+
+    return {
+      status: company.onboardingStatus,
+      data: company.onboardingData as unknown as OnboardingData | null,
+      completedAt: company.onboardingCompletedAt,
+    };
+  }
+
+  /**
+   * Dismiss the onboarding completed bar
+   */
+  async dismissOnboarding(companyId: string) {
+    const company = await companyRepository.getById(companyId);
+
+    if (!company) {
+      throw new AppError(ErrorCodes.COMPANY_NOT_FOUND, undefined, 404);
+    }
+
+    const currentData =
+      (company.onboardingData as unknown as OnboardingData) ?? DEFAULT_ONBOARDING_DATA;
+
+    return companyRepository.update(companyId, {
+      onboardingData: {
+        ...currentData,
+        dismissedAt: new Date().toISOString(),
+      } as unknown as Prisma.InputJsonValue,
+    });
   }
 }
 

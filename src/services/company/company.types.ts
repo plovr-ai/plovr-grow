@@ -19,7 +19,6 @@ export type {
   OnboardingStepId,
   OnboardingStepStatus,
   OnboardingData,
-  OnboardingStepConfig,
 } from "@/types/onboarding";
 
 // Service-specific types
