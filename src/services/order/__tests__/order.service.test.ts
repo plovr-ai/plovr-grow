@@ -970,11 +970,10 @@ describe("OrderService", () => {
         pageSize: 10,
       };
 
-      await orderService.getCompanyOrders("tenant-1", "company-1", options);
+      await orderService.getCompanyOrders("tenant-1", options);
 
       expect(orderRepository.getCompanyOrders).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         options
       );
     });
@@ -1007,7 +1006,7 @@ describe("OrderService", () => {
       };
       vi.mocked(orderRepository.getCompanyOrders).mockResolvedValue(mockResult as never);
 
-      const result = await orderService.getCompanyOrders("tenant-1", "company-1");
+      const result = await orderService.getCompanyOrders("tenant-1");
 
       expect(result.items).toHaveLength(2);
       expect(result.total).toBe(2);

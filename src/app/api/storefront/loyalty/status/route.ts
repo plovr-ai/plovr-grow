@@ -35,7 +35,6 @@ export async function GET(request: NextRequest) {
     // Get customer dashboard data
     const dashboard = await loyaltyService.getCustomerDashboard(
       tenantId,
-      tenantId,
       phone
     );
 

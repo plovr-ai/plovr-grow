@@ -64,7 +64,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const result = await cateringOrderService.getCompanyOrders(
       tenantId,
-      tenantId,
       {
         page,
         pageSize,

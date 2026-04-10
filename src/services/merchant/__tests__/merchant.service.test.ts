@@ -66,7 +66,7 @@ describe.skip("MerchantService (integration)", () => {
     it("should return merchant with company info", async () => {
       const merchant = await merchantService.getMerchantBySlug("joes-pizza-downtown");
 
-      expect(merchant?.companyId).toBe("company-joes");
+      expect(merchant?.company.id).toBe("company-joes");
       expect(merchant?.company.slug).toBe("joes-pizza");
       expect(merchant?.company.name).toBe("Joe's Pizza Inc.");
     });

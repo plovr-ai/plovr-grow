@@ -25,14 +25,14 @@ export default async function OrdersManagementPage({
   const session = await auth();
 
   // Verify session
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
-  // Get Company with its Merchants
-  const company = await tenantService.getTenantWithMerchants(companyId);
+  // Get Tenant with its Merchants
+  const company = await tenantService.getTenantWithMerchants(tenantId);
   const merchants = company?.merchants ?? [];
 
   // Default to first merchant if not specified
@@ -68,7 +68,7 @@ export default async function OrdersManagementPage({
 
   // Get orders data from database
   // Always filter by specific merchant (no "all" option)
-  const ordersData = await orderService.getCompanyOrders(tenantId, companyId, {
+  const ordersData = await orderService.getCompanyOrders(tenantId, {
     merchantId: merchantFilter,
     status: statusFilter,
     orderMode: modeFilter,

@@ -22,7 +22,6 @@ export interface CompanyInfo {
 
 export interface DashboardContextValue {
   tenantId: string;
-  companyId: string;
   company: CompanyInfo;
   merchants: MerchantInfo[];
   currency: string;

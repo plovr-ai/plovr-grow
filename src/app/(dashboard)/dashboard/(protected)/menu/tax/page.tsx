@@ -8,20 +8,19 @@ export default async function TaxManagementPage() {
   const session = await auth();
 
   // Verify session
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
-  // Get Company with its Merchants
-  const company = await tenantService.getTenantWithMerchants(companyId);
+  // Get Tenant with its Merchants
+  const company = await tenantService.getTenantWithMerchants(tenantId);
   const merchants = company?.merchants ?? [];
 
   // Get all tax configs with merchant rates
   const taxConfigs = await taxConfigService.getTaxConfigsWithRates(
     tenantId,
-    companyId,
     merchants.map((m) => ({ id: m.id, name: m.name }))
   );
 

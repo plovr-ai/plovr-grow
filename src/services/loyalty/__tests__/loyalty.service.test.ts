@@ -36,7 +36,6 @@ describe("LoyaltyService", () => {
   const mockMember: LoyaltyMemberData = {
     id: "member-1",
     tenantId: "tenant-1",
-    companyId: "company-1",
     phone: "+12025551234",
     firstName: "John",
     lastName: "Doe",
@@ -53,7 +52,6 @@ describe("LoyaltyService", () => {
   const mockConfig = {
     id: "config-1",
     tenantId: "tenant-1",
-    companyId: "company-1",
     pointsPerDollar: 1.0,
     status: "active",
     createdAt: new Date(),
@@ -92,7 +90,6 @@ describe("LoyaltyService", () => {
 
       const result = await service.processOrderCompletion(
         "tenant-1",
-        "company-1",
         "order-1",
         orderData
       );
@@ -105,7 +102,6 @@ describe("LoyaltyService", () => {
 
       expect(loyaltyMemberService.findOrCreateByPhone).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "+12025551234",
         expect.objectContaining({
           phone: "+12025551234",
@@ -137,7 +133,6 @@ describe("LoyaltyService", () => {
 
       const result = await service.processOrderCompletion(
         "tenant-1",
-        "company-1",
         "order-1",
         orderData
       );
@@ -152,7 +147,6 @@ describe("LoyaltyService", () => {
 
       const result = await service.processOrderCompletion(
         "tenant-1",
-        "company-1",
         "order-1",
         orderData
       );
@@ -178,7 +172,6 @@ describe("LoyaltyService", () => {
 
       await service.processOrderCompletion(
         "tenant-1",
-        "company-1",
         "order-1",
         orderData
       );
@@ -200,7 +193,6 @@ describe("LoyaltyService", () => {
 
       const result = await service.getCustomerDashboard(
         "tenant-1",
-        "company-1",
         "+12025551234"
       );
 
@@ -218,7 +210,6 @@ describe("LoyaltyService", () => {
 
       const result = await service.getCustomerDashboard(
         "tenant-1",
-        "company-1",
         "+12025551234"
       );
 
@@ -232,7 +223,6 @@ describe("LoyaltyService", () => {
 
       const result = await service.getCustomerDashboard(
         "tenant-1",
-        "company-1",
         "+12025551234"
       );
 
@@ -245,7 +235,7 @@ describe("LoyaltyService", () => {
     it("should return true if loyalty is enabled", async () => {
       vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
 
-      const result = await service.isLoyaltyEnabled("tenant-1", "company-1");
+      const result = await service.isLoyaltyEnabled("tenant-1");
 
       expect(result).toBe(true);
     });
@@ -253,7 +243,7 @@ describe("LoyaltyService", () => {
     it("should return false if loyalty is disabled", async () => {
       vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(false);
 
-      const result = await service.isLoyaltyEnabled("tenant-1", "company-1");
+      const result = await service.isLoyaltyEnabled("tenant-1");
 
       expect(result).toBe(false);
     });
@@ -278,7 +268,6 @@ describe("LoyaltyService", () => {
 
       const result = await service.getCustomerLoyaltyStatus(
         "tenant-1",
-        "company-1",
         "+12025551234"
       );
 
@@ -290,7 +279,6 @@ describe("LoyaltyService", () => {
 
       const result = await service.getCustomerLoyaltyStatus(
         "tenant-1",
-        "company-1",
         "+12025559999"
       );
 
@@ -307,7 +295,6 @@ describe("LoyaltyService", () => {
 
       const result = await service.enrollCustomer(
         "tenant-1",
-        "company-1",
         "+12025559999",
         { firstName: "Jane", lastName: "Doe", email: "jane@example.com" }
       );
@@ -315,7 +302,6 @@ describe("LoyaltyService", () => {
       expect(result.isNew).toBe(true);
       expect(loyaltyMemberService.findOrCreateByPhone).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "+12025559999",
         expect.objectContaining({
           phone: "+12025559999",
@@ -334,7 +320,6 @@ describe("LoyaltyService", () => {
 
       const result = await service.enrollCustomer(
         "tenant-1",
-        "company-1",
         "+12025551234"
       );
 

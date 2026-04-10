@@ -40,7 +40,6 @@ describe("PaymentService", () => {
   let service: PaymentService;
 
   const mockTenantId = "tenant-1";
-  const mockCompanyId = "company-1";
   const mockMerchantId = "merchant-1";
   const mockOrderId = "order-1";
   const mockStripeAccountId = "acct_test123";
@@ -80,7 +79,6 @@ describe("PaymentService", () => {
 
       const result = await service.createPaymentIntent({
         tenantId: mockTenantId,
-        companyId: mockCompanyId,
         merchantId: mockMerchantId,
         amount: 25.99,
         currency: "USD",
@@ -101,7 +99,6 @@ describe("PaymentService", () => {
         stripeAccountId: mockStripeAccountId,
         metadata: {
           tenantId: mockTenantId,
-          companyId: mockCompanyId,
           merchantId: mockMerchantId,
         },
       });
@@ -119,7 +116,6 @@ describe("PaymentService", () => {
 
       await service.createPaymentIntent({
         tenantId: mockTenantId,
-        companyId: mockCompanyId,
         amount: 10.0,
       });
 
@@ -134,7 +130,6 @@ describe("PaymentService", () => {
       await expect(
         service.createPaymentIntent({
           tenantId: mockTenantId,
-          companyId: mockCompanyId,
           amount: 25.99,
         })
       ).rejects.toThrow();
@@ -149,7 +144,6 @@ describe("PaymentService", () => {
       await expect(
         service.createPaymentIntent({
           tenantId: mockTenantId,
-          companyId: mockCompanyId,
           amount: 25.99,
         })
       ).rejects.toThrow();
@@ -190,7 +184,6 @@ describe("PaymentService", () => {
 
       await service.createPaymentIntent({
         tenantId: mockTenantId,
-        companyId: mockCompanyId,
         amount: 10.0,
       });
 

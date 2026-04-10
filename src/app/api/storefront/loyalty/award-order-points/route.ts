@@ -42,10 +42,7 @@ export async function POST(request: NextRequest) {
     const tenantId = company.tenantId;
 
     // Check if loyalty is enabled
-    const isEnabled = await loyaltyConfigService.isLoyaltyEnabled(
-      tenantId,
-      tenantId
-    );
+    const isEnabled = await loyaltyConfigService.isLoyaltyEnabled(tenantId);
     if (!isEnabled) {
       return NextResponse.json(
         { success: false, error: "Loyalty program is not enabled" },
@@ -75,10 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get points per dollar config
-    const pointsPerDollar = await loyaltyConfigService.getPointsPerDollar(
-      tenantId,
-      tenantId
-    );
+    const pointsPerDollar = await loyaltyConfigService.getPointsPerDollar(tenantId);
 
     // Award points
     const result = await pointsService.awardPoints(tenantId, memberId, {

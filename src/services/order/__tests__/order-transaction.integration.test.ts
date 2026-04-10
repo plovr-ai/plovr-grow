@@ -21,7 +21,6 @@ const prisma = new PrismaClient({
 
 // Seed data IDs (stable across tests)
 const TENANT_ID = generateEntityId();
-const COMPANY_ID = generateEntityId();
 const MERCHANT_ID = generateEntityId();
 const PURCHASE_ORDER_ID = generateEntityId();
 const GIFT_CARD_ID = generateEntityId();
@@ -29,23 +28,13 @@ const GIFT_CARD_ID = generateEntityId();
 async function seedTestData() {
   // Create tenant -> company -> merchant chain
   await prisma.tenant.create({
-    data: { id: TENANT_ID, name: "Test Tenant" },
-  });
-
-  await prisma.company.create({
-    data: {
-      id: COMPANY_ID,
-      tenantId: TENANT_ID,
-      slug: `test-company-${Date.now()}`,
-      name: "Test Company",
-    },
+    data: { id: TENANT_ID, name: "Test Tenant", slug: `test-tenant-${Date.now()}` },
   });
 
   await prisma.merchant.create({
     data: {
       id: MERCHANT_ID,
       tenantId: TENANT_ID,
-      companyId: COMPANY_ID,
       slug: `test-merchant-${Date.now()}`,
       name: "Test Merchant",
     },
@@ -56,7 +45,6 @@ async function seedTestData() {
     data: {
       id: PURCHASE_ORDER_ID,
       tenantId: TENANT_ID,
-      companyId: COMPANY_ID,
       merchantId: MERCHANT_ID,
       orderNumber: `SEED-${Date.now()}`,
       customerFirstName: "Seed",
@@ -76,7 +64,6 @@ async function seedTestData() {
     data: {
       id: GIFT_CARD_ID,
       tenantId: TENANT_ID,
-      companyId: COMPANY_ID,
       cardNumber: `TEST-${Date.now()}`,
       initialAmount: 50,
       currentBalance: 50,
@@ -93,7 +80,6 @@ async function cleanupTestData() {
   await prisma.orderSequence.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.order.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.merchant.deleteMany({ where: { tenantId: TENANT_ID } });
-  await prisma.company.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.tenant.deleteMany({ where: { id: TENANT_ID } });
 }
 
@@ -133,7 +119,6 @@ describe("Order Transaction Atomicity (Integration)", () => {
         data: {
           id: orderId,
           tenantId: TENANT_ID,
-          companyId: COMPANY_ID,
           merchantId: MERCHANT_ID,
           orderNumber: `TXN-OK-${Date.now()}`,
           customerFirstName: "John",
@@ -216,7 +201,6 @@ describe("Order Transaction Atomicity (Integration)", () => {
           data: {
             id: orderId,
             tenantId: TENANT_ID,
-            companyId: COMPANY_ID,
             merchantId: MERCHANT_ID,
             orderNumber: `TXN-FAIL-${Date.now()}`,
             customerFirstName: "Jane",
@@ -237,7 +221,6 @@ describe("Order Transaction Atomicity (Integration)", () => {
         throw new Error("Insufficient gift card balance");
 
         // 3. Payment record — never reached
-        // eslint-disable-next-line no-unreachable
         await tx.payment.create({
           data: {
             id: paymentId,
@@ -282,7 +265,6 @@ describe("Order Transaction Atomicity (Integration)", () => {
           data: {
             id: orderId,
             tenantId: TENANT_ID,
-            companyId: COMPANY_ID,
             merchantId: MERCHANT_ID,
             orderNumber: `TXN-FAIL2-${Date.now()}`,
             customerFirstName: "Bob",

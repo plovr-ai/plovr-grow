@@ -11,7 +11,6 @@ function createWrapper(currency: string, locale: string) {
       <DashboardProvider
         value={{
           tenantId: "tenant-1",
-          companyId: "company-1",
           company: {
             id: "company-1",
             name: "Test Company",

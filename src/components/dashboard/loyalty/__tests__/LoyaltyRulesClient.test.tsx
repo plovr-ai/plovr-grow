@@ -24,7 +24,6 @@ describe("LoyaltyRulesClient", () => {
   const mockConfig: LoyaltyConfigData = {
     id: "config-1",
     tenantId: "tenant-1",
-    companyId: "company-1",
     pointsPerDollar: 2,
     status: "active",
     createdAt: new Date(),

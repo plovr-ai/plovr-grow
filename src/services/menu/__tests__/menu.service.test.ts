@@ -62,7 +62,7 @@ vi.mock("@/repositories/menu-category-item.repository", () => ({
 
 vi.mock("@/repositories/featured-item.repository", () => ({
   featuredItemRepository: {
-    getByCompanyId: vi.fn(),
+    getByTenantId: vi.fn(),
     setFeaturedItems: vi.fn(),
     addFeaturedItem: vi.fn(),
     removeFeaturedItem: vi.fn(),
@@ -281,7 +281,7 @@ describe("MenuService", () => {
       vi.mocked(menuRepository.getCategoriesWithItemsByMenu).mockResolvedValue(
         mockCategoriesWithJunction as never
       );
-      vi.mocked(featuredItemRepository.getByCompanyId).mockResolvedValue([] as never);
+      vi.mocked(featuredItemRepository.getByTenantId).mockResolvedValue([] as never);
       // Default tax mocks
       vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(mockItemTaxMap);
       vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue(mockTaxConfigs as never);
@@ -499,7 +499,7 @@ describe("MenuService", () => {
     });
   });
 
-  describe("getMenuItemsByCompanyId()", () => {
+  describe("getMenuItemsByTenantId()", () => {
     beforeEach(() => {
       vi.mocked(menuRepository.getItemsByIdsByCompany).mockResolvedValue(mockMenuItems as never);
     });
@@ -507,7 +507,7 @@ describe("MenuService", () => {
     it("should return menu items for given IDs by companyId", async () => {
       const itemIds = ["item-cheese-pizza", "item-pepperoni-pizza"];
 
-      const result = await menuService.getMenuItemsByCompanyId("tenant-1", "company-1", itemIds);
+      const result = await menuService.getMenuItemsByTenantId("tenant-1", itemIds);
 
       expect(result).toHaveLength(2);
       expect(result[0].id).toBe("item-cheese-pizza");
@@ -517,7 +517,7 @@ describe("MenuService", () => {
     it("should call menuRepository.getItemsByIdsByCompany with correct params", async () => {
       const itemIds = ["item-cheese-pizza", "item-pepperoni-pizza"];
 
-      await menuService.getMenuItemsByCompanyId("tenant-1", "company-1", itemIds);
+      await menuService.getMenuItemsByTenantId("tenant-1", itemIds);
 
       expect(menuRepository.getItemsByIdsByCompany).toHaveBeenCalledWith(
         "tenant-1",
@@ -529,7 +529,7 @@ describe("MenuService", () => {
     it("should return empty array when no items match", async () => {
       vi.mocked(menuRepository.getItemsByIdsByCompany).mockResolvedValue([] as never);
 
-      const result = await menuService.getMenuItemsByCompanyId("tenant-1", "company-1", [
+      const result = await menuService.getMenuItemsByTenantId("tenant-1", [
         "non-existent-item",
       ]);
 
@@ -537,7 +537,7 @@ describe("MenuService", () => {
     });
 
     it("should not require merchantId lookup", async () => {
-      await menuService.getMenuItemsByCompanyId("tenant-1", "company-1", ["item-1"]);
+      await menuService.getMenuItemsByTenantId("tenant-1", ["item-1"]);
 
       // Should NOT call merchantRepository since we already have companyId
       expect(merchantRepository.getById).not.toHaveBeenCalled();

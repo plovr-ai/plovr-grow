@@ -15,30 +15,31 @@ export default async function ProtectedLayout({
   const session = await auth();
 
   // Note: Middleware handles redirect, but this is a fallback
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   // Fetch company, merchants, and subscription data
   const [initialCompany, merchants, subscription] = await Promise.all([
-    tenantRepository.getById(companyId),
-    merchantService.getMerchantsByCompanyId(tenantId, companyId),
+    tenantRepository.getById(tenantId),
+    merchantService.getMerchantsByCompanyId(tenantId),
     subscriptionService.getSubscriptionForDashboard(tenantId),
   ]);
 
   if (!initialCompany) {
-    // Company not found in database — session has stale/invalid companyId.
-    // Redirect to login (signOut can't be called during render in Next.js 16).
-    redirect("/api/auth/signout?callbackUrl=/dashboard/login");
+    // Tenant not found in database — session has stale/invalid tenantId.
+    // Sign out to clear the invalid session and prevent infinite redirect loop.
+    await signOut({ redirect: false });
+    redirect("/dashboard/login");
   }
 
   // Initialize onboarding if not started
   let company = initialCompany;
   if (company.onboardingStatus === "not_started") {
     await tenantService.initializeOnboarding(tenantId);
-    const updated = await tenantRepository.getById(companyId);
+    const updated = await tenantRepository.getById(tenantId);
     if (updated) {
       company = updated;
     }
@@ -50,7 +51,6 @@ export default async function ProtectedLayout({
 
   const dashboardContext = {
     tenantId,
-    companyId,
     company: {
       id: company.id,
       name: company.name,

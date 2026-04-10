@@ -17,18 +17,18 @@ export default async function MenuManagementPage({
 }: MenuManagementPageProps) {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
   const { menu: menuId, archived } = await searchParams;
   const showArchived = archived === "true";
 
   // Get menu data and tax configs in parallel
   const [menuData, taxConfigs] = await Promise.all([
-    menuService.getMenuForDashboard(tenantId, companyId, menuId, showArchived),
-    taxConfigService.getTaxConfigs(tenantId, companyId),
+    menuService.getMenuForDashboard(tenantId, menuId, showArchived),
+    taxConfigService.getTaxConfigs(tenantId),
   ]);
 
   // Transform tax configs for the form

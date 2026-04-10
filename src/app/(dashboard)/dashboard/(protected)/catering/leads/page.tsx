@@ -20,11 +20,11 @@ export default async function CateringLeadsPage({
   const session = await auth();
 
   // Verify session
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   // Parse filter parameters
   const currentPage = parseInt(search.page ?? "1", 10);
@@ -33,15 +33,11 @@ export default async function CateringLeadsPage({
   const merchantIdFilter = search.merchantId;
 
   // Fetch merchants for filter dropdown
-  const merchants = await merchantService.getMerchantsByCompanyId(
-    tenantId,
-    companyId
-  );
+  const merchants = await merchantService.getMerchantsByCompanyId(tenantId);
 
   // Fetch leads with pagination
   const leadsData = await cateringService.getLeadsByCompany(
     tenantId,
-    companyId,
     {
       page: currentPage,
       pageSize: 20,

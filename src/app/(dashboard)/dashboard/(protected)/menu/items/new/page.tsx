@@ -11,11 +11,11 @@ interface PageProps {
 export default async function NewMenuItemPage({ searchParams }: PageProps) {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
   const params = await searchParams;
   const menuId = params.menuId;
   const categoryId = params.categoryId;
@@ -27,8 +27,8 @@ export default async function NewMenuItemPage({ searchParams }: PageProps) {
   // Get menu data to verify category exists and get tax configs
   // Pass menuId to get the correct menu's categories
   const [menuData, taxConfigs] = await Promise.all([
-    menuService.getMenuForDashboard(tenantId, companyId, menuId),
-    taxConfigService.getTaxConfigs(tenantId, companyId),
+    menuService.getMenuForDashboard(tenantId, menuId),
+    taxConfigService.getTaxConfigs(tenantId),
   ]);
 
   // Find the category

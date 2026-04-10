@@ -164,12 +164,11 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue(mockOrders as never);
       vi.mocked(prisma.order.count).mockResolvedValue(2);
 
-      const result = await repository.getCompanyOrders("tenant-1", "company-1");
+      const result = await repository.getCompanyOrders("tenant-1");
 
       expect(prisma.order.findMany).toHaveBeenCalledWith({
         where: {
           tenantId: "tenant-1",
-          companyId: "company-1",
           deleted: false,
         },
         orderBy: { createdAt: "desc" },
@@ -198,7 +197,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
-      await repository.getCompanyOrders("tenant-1", "company-1", {
+      await repository.getCompanyOrders("tenant-1", {
         merchantId: "merchant-1",
       });
 
@@ -206,7 +205,6 @@ describe("OrderRepository", () => {
         expect.objectContaining({
           where: {
             tenantId: "tenant-1",
-            companyId: "company-1",
             deleted: false,
             merchantId: "merchant-1",
           },
@@ -218,7 +216,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
-      await repository.getCompanyOrders("tenant-1", "company-1", {
+      await repository.getCompanyOrders("tenant-1", {
         status: "created",
       });
 
@@ -235,7 +233,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
-      await repository.getCompanyOrders("tenant-1", "company-1", {
+      await repository.getCompanyOrders("tenant-1", {
         orderMode: "pickup",
       });
 
@@ -255,7 +253,7 @@ describe("OrderRepository", () => {
       const dateFrom = new Date("2024-01-01");
       const dateTo = new Date("2024-01-31");
 
-      await repository.getCompanyOrders("tenant-1", "company-1", {
+      await repository.getCompanyOrders("tenant-1", {
         dateFrom,
         dateTo,
       });
@@ -276,7 +274,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
-      await repository.getCompanyOrders("tenant-1", "company-1", {
+      await repository.getCompanyOrders("tenant-1", {
         search: "john",
       });
 
@@ -298,7 +296,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(100);
 
-      const result = await repository.getCompanyOrders("tenant-1", "company-1", {
+      const result = await repository.getCompanyOrders("tenant-1", {
         page: 3,
         pageSize: 10,
       });
@@ -353,7 +351,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
-      await repository.getCompanyOrders("tenant-1", "company-1", {
+      await repository.getCompanyOrders("tenant-1", {
         orderBy: "totalAmount",
         orderDirection: "asc",
       });
@@ -369,7 +367,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
-      const result = await repository.getCompanyOrders("tenant-1", "company-1");
+      const result = await repository.getCompanyOrders("tenant-1");
 
       expect(result.items).toHaveLength(0);
       expect(result.total).toBe(0);
@@ -383,7 +381,7 @@ describe("OrderRepository", () => {
       const dateFrom = new Date("2024-01-01");
       const dateTo = new Date("2024-01-31");
 
-      await repository.getCompanyOrders("tenant-1", "company-1", {
+      await repository.getCompanyOrders("tenant-1", {
         merchantId: "merchant-1",
         status: "completed",
         orderMode: "delivery",
@@ -396,7 +394,6 @@ describe("OrderRepository", () => {
       expect(prisma.order.findMany).toHaveBeenCalledWith({
         where: {
           tenantId: "tenant-1",
-          companyId: "company-1",
           deleted: false,
           merchantId: "merchant-1",
           status: "completed",

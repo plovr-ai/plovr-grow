@@ -24,7 +24,6 @@ const prisma = new PrismaClient({
 
 // Seed data IDs
 const TENANT_ID = generateEntityId();
-const COMPANY_ID = generateEntityId();
 const MERCHANT_ID = generateEntityId();
 const PURCHASE_ORDER_ID = generateEntityId();
 const GIFT_CARD_ID = generateEntityId();
@@ -35,23 +34,13 @@ const ORDER_B_ID = generateEntityId();
 
 async function seedTestData() {
   await prisma.tenant.create({
-    data: { id: TENANT_ID, name: "Concurrency Test Tenant" },
-  });
-
-  await prisma.company.create({
-    data: {
-      id: COMPANY_ID,
-      tenantId: TENANT_ID,
-      slug: `conc-company-${Date.now()}`,
-      name: "Concurrency Test Company",
-    },
+    data: { id: TENANT_ID, name: "Concurrency Test Tenant", slug: `conc-tenant-${Date.now()}` },
   });
 
   await prisma.merchant.create({
     data: {
       id: MERCHANT_ID,
       tenantId: TENANT_ID,
-      companyId: COMPANY_ID,
       slug: `conc-merchant-${Date.now()}`,
       name: "Concurrency Test Merchant",
     },
@@ -62,7 +51,6 @@ async function seedTestData() {
     data: {
       id: PURCHASE_ORDER_ID,
       tenantId: TENANT_ID,
-      companyId: COMPANY_ID,
       merchantId: MERCHANT_ID,
       orderNumber: `SEED-CONC-${Date.now()}`,
       customerFirstName: "Seed",
@@ -82,7 +70,6 @@ async function seedTestData() {
     data: {
       id: GIFT_CARD_ID,
       tenantId: TENANT_ID,
-      companyId: COMPANY_ID,
       cardNumber: `CONC-${Date.now()}`,
       initialAmount: 50,
       currentBalance: 50,
@@ -98,7 +85,6 @@ async function cleanupTestData() {
   await prisma.orderSequence.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.order.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.merchant.deleteMany({ where: { tenantId: TENANT_ID } });
-  await prisma.company.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.tenant.deleteMany({ where: { id: TENANT_ID } });
 }
 
@@ -141,7 +127,6 @@ function redeemInTransaction(orderId: string, amount: number) {
       data: {
         id: orderId,
         tenantId: TENANT_ID,
-        companyId: COMPANY_ID,
         merchantId: MERCHANT_ID,
         orderNumber: `CONC-${orderId.slice(-6)}-${Date.now()}`,
         customerFirstName: "Test",
@@ -334,7 +319,6 @@ describe("Gift Card Concurrency & Idempotency (Integration)", () => {
           data: {
             id: oid,
             tenantId: TENANT_ID,
-            companyId: COMPANY_ID,
             merchantId: MERCHANT_ID,
             orderNumber: `DUP-${oid.slice(-6)}-${Date.now()}`,
             customerFirstName: "Dup",
@@ -389,7 +373,6 @@ describe("Gift Card Concurrency & Idempotency (Integration)", () => {
         data: {
           id: orderId,
           tenantId: TENANT_ID,
-          companyId: COMPANY_ID,
           merchantId: MERCHANT_ID,
           orderNumber: `CAS-${Date.now()}`,
           customerFirstName: "CAS",
@@ -455,7 +438,6 @@ describe("Gift Card Concurrency & Idempotency (Integration)", () => {
         data: {
           id: orderId,
           tenantId: TENANT_ID,
-          companyId: COMPANY_ID,
           merchantId: MERCHANT_ID,
           orderNumber: `NR-${Date.now()}`,
           customerFirstName: "NoRevert",

@@ -31,7 +31,6 @@ export async function GET(
     // Validate the gift card
     const result = await giftCardService.validateGiftCard(
       company.tenantId,
-      company.tenantId,
       cardNumber
     );
 

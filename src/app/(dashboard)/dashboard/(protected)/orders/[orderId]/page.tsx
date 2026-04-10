@@ -23,11 +23,11 @@ export default async function DashboardOrderDetailPage({ params }: PageProps) {
   const session = await auth();
 
   // Verify session
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   // Fetch order with timeline
   const order = await orderService.getOrderWithTimeline(tenantId, orderId);
@@ -37,17 +37,16 @@ export default async function DashboardOrderDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Validate order belongs to this company (via merchant.companyId)
-  // We need to fetch the merchant to check companyId
+  // Validate order belongs to this tenant (via merchant)
   const merchant = order.merchant;
   if (!merchant) {
     notFound();
   }
 
-  // Get merchant's companyId from merchant service (use getMerchant with tenantId for proper tenant isolation)
+  // Verify merchant belongs to this tenant (getMerchant already checks tenant isolation)
   const { merchantService } = await import("@/services/merchant");
   const fullMerchant = await merchantService.getMerchant(tenantId, merchant.id);
-  if (!fullMerchant || fullMerchant.companyId !== companyId) {
+  if (!fullMerchant) {
     notFound();
   }
 

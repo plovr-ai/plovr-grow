@@ -40,9 +40,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    if (member.companyId !== tenantId) {
+    if (member.tenantId !== tenantId) {
       return NextResponse.json(
-        { success: false, error: "Member does not belong to this company" },
+        { success: false, error: "Member does not belong to this tenant" },
         { status: 403 }
       );
     }

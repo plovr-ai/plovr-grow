@@ -6,7 +6,7 @@ import { SubscriptionClient } from "@/components/dashboard/subscription";
 export default async function SubscriptionPage() {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 

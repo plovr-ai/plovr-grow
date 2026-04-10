@@ -37,7 +37,6 @@ export async function GET(request: NextRequest) {
     // Get member by phone
     const member = await loyaltyMemberService.getMemberByPhone(
       tenantId,
-      tenantId,
       phone
     );
 

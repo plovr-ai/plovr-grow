@@ -4,7 +4,7 @@ import { TaxConfigService } from "../tax-config.service";
 // Mock repository
 vi.mock("@/repositories/tax-config.repository", () => ({
   taxConfigRepository: {
-    getTaxConfigsByCompany: vi.fn(),
+    getTaxConfigsByTenant: vi.fn(),
     getTaxConfigById: vi.fn(),
     getTaxConfigsByIds: vi.fn(),
     getMerchantTaxRates: vi.fn(),
@@ -71,15 +71,14 @@ describe("TaxConfigService", () => {
 
   describe("getTaxConfigs", () => {
     it("should return all tax configs for a company", async () => {
-      vi.mocked(taxConfigRepository.getTaxConfigsByCompany).mockResolvedValue(
+      vi.mocked(taxConfigRepository.getTaxConfigsByTenant).mockResolvedValue(
         mockTaxConfigs
       );
 
-      const result = await service.getTaxConfigs("tenant-1", "company-1");
+      const result = await service.getTaxConfigs("tenant-1");
 
-      expect(taxConfigRepository.getTaxConfigsByCompany).toHaveBeenCalledWith(
-        "tenant-1",
-        "company-1"
+      expect(taxConfigRepository.getTaxConfigsByTenant).toHaveBeenCalledWith(
+        "tenant-1"
       );
       expect(result).toHaveLength(3);
       expect(result[0]).toEqual({
@@ -92,11 +91,11 @@ describe("TaxConfigService", () => {
     });
 
     it("should return empty array when no configs exist", async () => {
-      vi.mocked(taxConfigRepository.getTaxConfigsByCompany).mockResolvedValue(
+      vi.mocked(taxConfigRepository.getTaxConfigsByTenant).mockResolvedValue(
         []
       );
 
-      const result = await service.getTaxConfigs("tenant-1", "company-1");
+      const result = await service.getTaxConfigs("tenant-1");
 
       expect(result).toHaveLength(0);
     });
@@ -203,7 +202,7 @@ describe("TaxConfigService", () => {
         ["tax-alcohol", 0.1],
       ]);
 
-      vi.mocked(taxConfigRepository.getTaxConfigsByCompany).mockResolvedValue(
+      vi.mocked(taxConfigRepository.getTaxConfigsByTenant).mockResolvedValue(
         mockTaxConfigs
       );
       vi.mocked(taxConfigRepository.getMerchantTaxRateMap)
@@ -217,7 +216,6 @@ describe("TaxConfigService", () => {
 
       const result = await service.getTaxConfigsWithRates(
         "tenant-1",
-        "company-1",
         merchants
       );
 
@@ -232,7 +230,6 @@ describe("TaxConfigService", () => {
       const newConfig = {
         id: "tax-new",
         tenantId: "tenant-1",
-        companyId: "company-1",
         name: "New Tax",
         description: "A new tax",
         roundingMethod: "half_up",
@@ -253,7 +250,7 @@ describe("TaxConfigService", () => {
         updatedAt: new Date(),
       });
 
-      const result = await service.createTaxConfig("tenant-1", "company-1", {
+      const result = await service.createTaxConfig("tenant-1", {
         name: "New Tax",
         description: "A new tax",
         roundingMethod: "half_up",
@@ -262,7 +259,6 @@ describe("TaxConfigService", () => {
 
       expect(taxConfigRepository.createTaxConfig).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         {
           name: "New Tax",
           description: "A new tax",
@@ -287,7 +283,7 @@ describe("TaxConfigService", () => {
         []
       );
 
-      await service.updateTaxConfig("tenant-1", "company-1", "tax-standard", {
+      await service.updateTaxConfig("tenant-1", "tax-standard", {
         name: "Updated Tax",
         roundingMethod: "always_round_up",
       });

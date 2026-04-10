@@ -7,14 +7,14 @@ export default async function LoyaltyRulesPage() {
   const session = await auth();
 
   // Verify session
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   // Get loyalty config
-  const config = await loyaltyConfigService.getLoyaltyConfig(tenantId, companyId);
+  const config = await loyaltyConfigService.getLoyaltyConfig(tenantId);
 
   return <LoyaltyRulesClient initialConfig={config} />;
 }

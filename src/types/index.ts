@@ -1,4 +1,3 @@
-import type { Prisma } from "@prisma/client";
 import type { ItemTaxInfo as _ItemTaxInfo, TaxBreakdownItem as _TaxBreakdownItem } from "@/services/menu/tax-config.types";
 
 // Re-export tax types for convenience
@@ -7,8 +6,8 @@ export type { _ItemTaxInfo as ItemTaxInfo, _TaxBreakdownItem as TaxBreakdownItem
 // Local alias for use in this file
 type ItemTaxInfo = _ItemTaxInfo;
 
-// Re-export company and merchant types
-export * from "./company";
+// Re-export tenant and merchant types
+export * from "./tenant";
 export * from "./merchant";
 
 // ==================== Modifier Types ====================

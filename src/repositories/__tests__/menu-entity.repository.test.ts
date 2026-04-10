@@ -46,7 +46,6 @@ describe("MenuEntityRepository", () => {
       const mockCreatedMenu = {
         id: "mock-uuid",
         tenantId: "tenant-1",
-        companyId: "company-1",
         name: "New Menu",
         description: null,
         sortOrder: 3, // Should be max + 1 = 2 + 1 = 3
@@ -57,13 +56,12 @@ describe("MenuEntityRepository", () => {
       };
       vi.mocked(prisma.menu.create).mockResolvedValue(mockCreatedMenu);
 
-      const result = await repository.createMenu("tenant-1", "company-1", {
+      const result = await repository.createMenu("tenant-1", {
         name: "New Menu",
       });
 
       // Verify aggregate was called to get max sortOrder
       expect(prisma.menu.aggregate).toHaveBeenCalledWith({
-        where: { tenantId: "tenant-1", companyId: "company-1", deleted: false },
         _max: { sortOrder: true },
       });
 
@@ -72,7 +70,6 @@ describe("MenuEntityRepository", () => {
         data: {
           id: "mock-uuid",
           tenantId: "tenant-1",
-          companyId: "company-1",
           name: "New Menu",
           description: undefined,
           sortOrder: 3,
@@ -95,7 +92,6 @@ describe("MenuEntityRepository", () => {
       const mockCreatedMenu = {
         id: "mock-uuid",
         tenantId: "tenant-1",
-        companyId: "company-1",
         name: "First Menu",
         description: null,
         sortOrder: 0,
@@ -106,7 +102,7 @@ describe("MenuEntityRepository", () => {
       };
       vi.mocked(prisma.menu.create).mockResolvedValue(mockCreatedMenu);
 
-      await repository.createMenu("tenant-1", "company-1", {
+      await repository.createMenu("tenant-1", {
         name: "First Menu",
       });
 
@@ -115,7 +111,6 @@ describe("MenuEntityRepository", () => {
         data: {
           id: "mock-uuid",
           tenantId: "tenant-1",
-          companyId: "company-1",
           name: "First Menu",
           description: undefined,
           sortOrder: 0,
@@ -127,7 +122,6 @@ describe("MenuEntityRepository", () => {
       const mockCreatedMenu = {
         id: "mock-uuid",
         tenantId: "tenant-1",
-        companyId: "company-1",
         name: "Custom Order Menu",
         description: "A menu with custom order",
         sortOrder: 5,
@@ -138,7 +132,7 @@ describe("MenuEntityRepository", () => {
       };
       vi.mocked(prisma.menu.create).mockResolvedValue(mockCreatedMenu);
 
-      await repository.createMenu("tenant-1", "company-1", {
+      await repository.createMenu("tenant-1", {
         name: "Custom Order Menu",
         description: "A menu with custom order",
         sortOrder: 5,
@@ -152,7 +146,6 @@ describe("MenuEntityRepository", () => {
         data: {
           id: "mock-uuid",
           tenantId: "tenant-1",
-          companyId: "company-1",
           name: "Custom Order Menu",
           description: "A menu with custom order",
           sortOrder: 5,
@@ -172,7 +165,6 @@ describe("MenuEntityRepository", () => {
       const mockCreatedMenu = {
         id: "mock-uuid",
         tenantId: "tenant-1",
-        companyId: "company-1",
         name: "Lunch Menu",
         description: "Available 11am-3pm",
         sortOrder: 1,
@@ -183,7 +175,7 @@ describe("MenuEntityRepository", () => {
       };
       vi.mocked(prisma.menu.create).mockResolvedValue(mockCreatedMenu);
 
-      const result = await repository.createMenu("tenant-1", "company-1", {
+      const result = await repository.createMenu("tenant-1", {
         name: "Lunch Menu",
         description: "Available 11am-3pm",
       });
@@ -192,7 +184,6 @@ describe("MenuEntityRepository", () => {
         data: {
           id: "mock-uuid",
           tenantId: "tenant-1",
-          companyId: "company-1",
           name: "Lunch Menu",
           description: "Available 11am-3pm",
           sortOrder: 1,
@@ -212,12 +203,11 @@ describe("MenuEntityRepository", () => {
       ];
       vi.mocked(prisma.menu.findMany).mockResolvedValue(mockMenus as never);
 
-      const result = await repository.getMenusByCompany("tenant-1", "company-1");
+      const result = await repository.getMenusByCompany("tenant-1");
 
       expect(prisma.menu.findMany).toHaveBeenCalledWith({
         where: {
           tenantId: "tenant-1",
-          companyId: "company-1",
           status: "active",
           deleted: false,
         },
@@ -235,7 +225,7 @@ describe("MenuEntityRepository", () => {
     it("should return empty array when no menus exist", async () => {
       vi.mocked(prisma.menu.findMany).mockResolvedValue([]);
 
-      const result = await repository.getMenusByCompany("tenant-1", "company-1");
+      const result = await repository.getMenusByCompany("tenant-1");
 
       expect(result).toHaveLength(0);
     });
@@ -250,14 +240,12 @@ describe("MenuEntityRepository", () => {
       vi.mocked(prisma.menu.findMany).mockResolvedValue(mockMenus as never);
 
       const result = await repository.getMenusByCompanyForDashboard(
-        "tenant-1",
-        "company-1"
+        "tenant-1"
       );
 
       expect(prisma.menu.findMany).toHaveBeenCalledWith({
         where: {
           tenantId: "tenant-1",
-          companyId: "company-1",
           deleted: false,
         },
         orderBy: {
@@ -306,12 +294,11 @@ describe("MenuEntityRepository", () => {
     it("should count only active menus", async () => {
       vi.mocked(prisma.menu.count).mockResolvedValue(3);
 
-      const result = await repository.countMenusByCompany("tenant-1", "company-1");
+      const result = await repository.countMenusByCompany("tenant-1");
 
       expect(prisma.menu.count).toHaveBeenCalledWith({
         where: {
           tenantId: "tenant-1",
-          companyId: "company-1",
           status: "active",
           deleted: false,
         },

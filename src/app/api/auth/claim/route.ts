@@ -27,7 +27,6 @@ export async function POST(request: NextRequest) {
 
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      include: { company: true },
     });
 
     if (!tenant) {
@@ -46,7 +45,6 @@ export async function POST(request: NextRequest) {
     await prisma.user.create({
       data: {
         id: generateEntityId(), tenantId,
-        companyId: tenantId,
         email, passwordHash: null, name, role: "owner", status: "active",
       },
     });
@@ -56,7 +54,7 @@ export async function POST(request: NextRequest) {
       data: { subscriptionStatus: "active" },
     });
 
-    return NextResponse.json({ success: true, companySlug: tenant.company?.slug }, { status: 200 });
+    return NextResponse.json({ success: true, companySlug: tenant.slug }, { status: 200 });
   } catch (error) {
     if (error instanceof AppError) {
       return NextResponse.json(

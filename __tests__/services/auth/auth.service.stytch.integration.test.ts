@@ -9,9 +9,6 @@ describe("AuthService.findOrCreateStytchUser", () => {
     await prisma.user.deleteMany({
       where: { email: { in: ["existing@test.com", "newuser@test.com", "linked@test.com"] } },
     });
-    await prisma.company.deleteMany({
-      where: { name: { in: ["Test Co", "newuser's Company", "linked's Company"] } },
-    });
     await prisma.tenant.deleteMany({
       where: { name: { in: ["Test Co", "newuser's Company", "linked's Company"] } },
     });
@@ -20,17 +17,14 @@ describe("AuthService.findOrCreateStytchUser", () => {
   it("returns existing user when email matches and links stytchUserId", async () => {
     // Seed test data in real database
     const tenantId = generateEntityId();
-    const companyId = generateEntityId();
 
-    await prisma.tenant.create({ data: { id: tenantId, name: "Test Co" } });
-    await prisma.company.create({
-      data: { id: companyId, tenantId, slug: `test-co-${Date.now()}`, name: "Test Co" },
+    await prisma.tenant.create({
+      data: { id: tenantId, name: "Test Co", slug: `test-co-${Date.now()}` },
     });
     await prisma.user.create({
       data: {
         id: generateEntityId(),
         tenantId,
-        companyId,
         email: "existing@test.com",
         passwordHash: "hashed_pw",
         name: "Existing User",
@@ -69,15 +63,11 @@ describe("AuthService.findOrCreateStytchUser", () => {
     });
     expect(dbUser).not.toBeNull();
     expect(dbUser!.tenantId).toBeTruthy();
-    expect(dbUser!.companyId).toBeTruthy();
 
-    // Verify tenant and company exist
+    // Verify tenant exists
     const dbTenant = await prisma.tenant.findUnique({ where: { id: dbUser!.tenantId } });
     expect(dbTenant).not.toBeNull();
-
-    const dbCompany = await prisma.company.findUnique({ where: { id: dbUser!.companyId! } });
-    expect(dbCompany).not.toBeNull();
-    expect(dbCompany!.slug).toBeTruthy();
+    expect(dbTenant!.slug).toBeTruthy();
   });
 
   it("returns existing user when stytchUserId already linked", async () => {

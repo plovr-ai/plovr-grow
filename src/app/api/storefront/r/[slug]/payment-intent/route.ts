@@ -48,7 +48,6 @@ export async function POST(
     // Create PaymentIntent
     const result = await paymentService.createPaymentIntent({
       tenantId,
-      companyId: tenantId,
       merchantId: merchant.id,
       amount,
       currency,
