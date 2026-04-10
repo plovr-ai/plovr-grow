@@ -326,5 +326,56 @@
     "confirm": "Confirm",
     "cancel": "Cancel"
   },
-  "logo": "Plovr"
+  "logo": "Plovr",
+  "onboarding": {
+    "title": "Welcome! Let's get your restaurant online",
+    "subtitle": "Complete the steps below to start receiving online orders",
+    "completedBar": "Setup complete {finished}/{total}",
+    "completedBarWithSkipped": "Setup progress {finished}/{total} ({skipped} skipped)",
+    "expand": "View details",
+    "lockedHint": "Complete Step 1 to unlock",
+    "skipButton": "Skip for now",
+    "steps": {
+      "website": {
+        "title": "Launch Your Website",
+        "pendingWhy": "Your restaurant deserves a stunning online presence",
+        "pendingEffect": "In just seconds, your restaurant will have a professional website that customers can visit anytime, anywhere",
+        "pendingAction": "Search your restaurant",
+        "generating": "Building your website...",
+        "completedHeadline": "Your website is LIVE!",
+        "completedDescription": "Customers can now discover your restaurant online — your digital front door is open for business",
+        "completedAction": "Visit your website"
+      },
+      "gbp": {
+        "title": "Connect Google Business",
+        "pendingWhy": "Put your restaurant on the map — literally",
+        "pendingEffect": "After connecting, anyone searching on Google Maps will see a direct link to your new website",
+        "pendingAction": "Connect Google Business",
+        "completedHeadline": "You're on Google Maps!",
+        "completedDescription": "Every Google search and Maps lookup now leads customers straight to your website",
+        "completedAction": "View on Google Maps"
+      },
+      "menu": {
+        "title": "Import Your Menu",
+        "pendingWhy": "A great menu is the heart of online ordering",
+        "pendingEffect": "Connect your Square POS and your full menu will sync automatically — no manual entry needed",
+        "pendingAction": "Connect Square POS",
+        "noPos": "I don't have Square POS",
+        "syncing": "Syncing your menu...",
+        "completedHeadline": "Your menu is ready!",
+        "completedDescription": "All {categories} categories and {items} menu items are live — customers can start browsing right now",
+        "completedAction": "View your menu",
+        "skippedDescription": "You can add menu items manually anytime in Menu Management"
+      },
+      "stripe": {
+        "title": "Set Up Payments",
+        "pendingWhy": "Start accepting online payments from day one",
+        "pendingEffect": "Once connected, every online order means money flowing directly to your account",
+        "pendingAction": "Connect Stripe",
+        "completedHeadline": "You're ready to get paid!",
+        "completedDescription": "Online payments are live — every order now goes straight to revenue",
+        "completedAction": "View account"
+      }
+    }
+  }
 }
