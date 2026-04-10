@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { companyService } from "@/services/company";
+import { tenantService } from "@/services/tenant/tenant.service";
 import { orderService } from "@/services/order";
 import { getTodayInTimezone, getDateRangeInTimezone } from "@/lib/timezone";
 import { OrdersManagementClient, type SerializedOrder } from "@/components/orders/OrdersManagementClient";
@@ -32,7 +32,7 @@ export default async function OrdersManagementPage({
   const { tenantId, companyId } = session.user;
 
   // Get Company with its Merchants
-  const company = await companyService.getCompanyWithMerchants(companyId);
+  const company = await tenantService.getTenantWithMerchants(companyId);
   const merchants = company?.merchants ?? [];
 
   // Default to first merchant if not specified

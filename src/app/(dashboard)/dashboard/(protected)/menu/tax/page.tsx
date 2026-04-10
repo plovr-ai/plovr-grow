@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { companyService } from "@/services/company";
+import { tenantService } from "@/services/tenant/tenant.service";
 import { taxConfigService } from "@/services/menu/tax-config.service";
 import { TaxManagementClient } from "@/components/dashboard/tax/TaxManagementClient";
 
@@ -15,7 +15,7 @@ export default async function TaxManagementPage() {
   const { tenantId, companyId } = session.user;
 
   // Get Company with its Merchants
-  const company = await companyService.getCompanyWithMerchants(companyId);
+  const company = await tenantService.getTenantWithMerchants(companyId);
   const merchants = company?.merchants ?? [];
 
   // Get all tax configs with merchant rates
