@@ -28,8 +28,8 @@ export default async function OrderDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Get tenantId from merchant -> company -> tenant chain
-  const tenantId = merchant.company.tenantId;
+  // Get tenantId from merchant -> tenant chain
+  const tenantId = merchant.tenant.tenantId;
 
   // Fetch order with timeline
   const order = await orderService.getOrderWithTimeline(tenantId, orderId);

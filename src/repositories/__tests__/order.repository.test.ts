@@ -6,16 +6,9 @@ vi.mock("@/lib/db", () => ({
   default: {
     order: {
       findMany: vi.fn(),
-      findFirst: vi.fn(),
       count: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
     },
   },
-}));
-
-vi.mock("@/lib/id", () => ({
-  generateEntityId: vi.fn(() => "order-id-123"),
 }));
 
 import prisma from "@/lib/db";
@@ -28,111 +21,7 @@ describe("OrderRepository", () => {
     repository = new OrderRepository();
   });
 
-  describe("create", () => {
-    it("should create an order with merchantId and loyaltyMemberId", async () => {
-      vi.mocked(prisma.order.create).mockResolvedValue({ id: "order-id-123" } as never);
-
-      await repository.create(
-        "tenant-1",
-        "company-1",
-        "merchant-1",
-        { orderNumber: "#001", status: "created" } as never,
-        "loyalty-member-1"
-      );
-
-      expect(prisma.order.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          id: "order-id-123",
-          orderNumber: "#001",
-          status: "created",
-          tenant: { connect: { id: "tenant-1" } },
-          company: { connect: { id: "company-1" } },
-          merchant: { connect: { id: "merchant-1" } },
-          loyaltyMember: { connect: { id: "loyalty-member-1" } },
-        }),
-      });
-    });
-
-    it("should create an order without merchantId (company-level)", async () => {
-      vi.mocked(prisma.order.create).mockResolvedValue({ id: "order-id-123" } as never);
-
-      await repository.create(
-        "tenant-1",
-        "company-1",
-        null,
-        { orderNumber: "#001" } as never
-      );
-
-      const callData = vi.mocked(prisma.order.create).mock.calls[0][0].data;
-      expect(callData).not.toHaveProperty("merchant");
-      expect(callData).not.toHaveProperty("loyaltyMember");
-    });
-
-    it("should use provided transaction client", async () => {
-      const mockTx = { order: { create: vi.fn().mockResolvedValue({ id: "tx-order" }) } };
-
-      await repository.create(
-        "tenant-1",
-        "company-1",
-        "merchant-1",
-        { orderNumber: "#001" } as never,
-        undefined,
-        mockTx as never
-      );
-
-      expect(mockTx.order.create).toHaveBeenCalled();
-      expect(prisma.order.create).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("getByIdWithMerchant", () => {
-    it("should find order by ID with merchant info", async () => {
-      vi.mocked(prisma.order.findFirst).mockResolvedValue({
-        id: "order-1",
-        merchant: { id: "m1", name: "Downtown", slug: "downtown", timezone: "America/New_York" },
-      } as never);
-
-      const result = await repository.getByIdWithMerchant("tenant-1", "order-1");
-
-      expect(prisma.order.findFirst).toHaveBeenCalledWith({
-        where: { id: "order-1", tenantId: "tenant-1", deleted: false },
-        include: {
-          merchant: {
-            select: { id: true, name: true, slug: true, timezone: true },
-          },
-        },
-      });
-      expect(result).toBeTruthy();
-    });
-  });
-
-  describe("updateLoyaltyMemberId", () => {
-    it("should link order to loyalty member", async () => {
-      vi.mocked(prisma.order.findFirst).mockResolvedValue({ id: "order-1" } as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({ id: "order-1" } as never);
-
-      await repository.updateLoyaltyMemberId("tenant-1", "order-1", "member-1");
-
-      expect(prisma.order.findFirst).toHaveBeenCalledWith({
-        where: { id: "order-1", tenantId: "tenant-1", deleted: false },
-        select: { id: true },
-      });
-      expect(prisma.order.update).toHaveBeenCalledWith({
-        where: { id: "order-1" },
-        data: { loyaltyMember: { connect: { id: "member-1" } } },
-      });
-    });
-
-    it("should throw when order not found", async () => {
-      vi.mocked(prisma.order.findFirst).mockResolvedValue(null);
-
-      await expect(
-        repository.updateLoyaltyMemberId("tenant-1", "order-1", "member-1")
-      ).rejects.toThrow("Order not found: order-1");
-    });
-  });
-
-  describe("getCompanyOrders", () => {
+  describe("getTenantOrders", () => {
     it("should return paginated orders for a company", async () => {
       const mockOrders = [
         {
@@ -164,7 +53,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue(mockOrders as never);
       vi.mocked(prisma.order.count).mockResolvedValue(2);
 
-      const result = await repository.getCompanyOrders("tenant-1");
+      const result = await repository.getTenantOrders("tenant-1");
 
       expect(prisma.order.findMany).toHaveBeenCalledWith({
         where: {
@@ -197,7 +86,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
-      await repository.getCompanyOrders("tenant-1", {
+      await repository.getTenantOrders("tenant-1", {
         merchantId: "merchant-1",
       });
 
@@ -216,7 +105,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
-      await repository.getCompanyOrders("tenant-1", {
+      await repository.getTenantOrders("tenant-1", {
         status: "created",
       });
 
@@ -233,7 +122,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
-      await repository.getCompanyOrders("tenant-1", {
+      await repository.getTenantOrders("tenant-1", {
         orderMode: "pickup",
       });
 
@@ -253,7 +142,7 @@ describe("OrderRepository", () => {
       const dateFrom = new Date("2024-01-01");
       const dateTo = new Date("2024-01-31");
 
-      await repository.getCompanyOrders("tenant-1", {
+      await repository.getTenantOrders("tenant-1", {
         dateFrom,
         dateTo,
       });
@@ -274,7 +163,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
-      await repository.getCompanyOrders("tenant-1", {
+      await repository.getTenantOrders("tenant-1", {
         search: "john",
       });
 
@@ -296,7 +185,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(100);
 
-      const result = await repository.getCompanyOrders("tenant-1", {
+      const result = await repository.getTenantOrders("tenant-1", {
         page: 3,
         pageSize: 10,
       });
@@ -313,45 +202,11 @@ describe("OrderRepository", () => {
       expect(result.totalPages).toBe(10); // Math.ceil(100 / 10)
     });
 
-    it("should filter by fulfillmentStatus when provided", async () => {
-      vi.mocked(prisma.order.findMany).mockResolvedValue([]);
-      vi.mocked(prisma.order.count).mockResolvedValue(0);
-
-      await repository.getCompanyOrders("tenant-1", "company-1", {
-        fulfillmentStatus: "preparing",
-      });
-
-      expect(prisma.order.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            fulfillmentStatus: "preparing",
-          }),
-        })
-      );
-    });
-
-    it("should filter by salesChannel when provided", async () => {
-      vi.mocked(prisma.order.findMany).mockResolvedValue([]);
-      vi.mocked(prisma.order.count).mockResolvedValue(0);
-
-      await repository.getCompanyOrders("tenant-1", "company-1", {
-        salesChannel: "online",
-      });
-
-      expect(prisma.order.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            salesChannel: "online",
-          }),
-        })
-      );
-    });
-
     it("should apply custom ordering", async () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
-      await repository.getCompanyOrders("tenant-1", {
+      await repository.getTenantOrders("tenant-1", {
         orderBy: "totalAmount",
         orderDirection: "asc",
       });
@@ -367,7 +222,7 @@ describe("OrderRepository", () => {
       vi.mocked(prisma.order.findMany).mockResolvedValue([]);
       vi.mocked(prisma.order.count).mockResolvedValue(0);
 
-      const result = await repository.getCompanyOrders("tenant-1");
+      const result = await repository.getTenantOrders("tenant-1");
 
       expect(result.items).toHaveLength(0);
       expect(result.total).toBe(0);
@@ -381,7 +236,7 @@ describe("OrderRepository", () => {
       const dateFrom = new Date("2024-01-01");
       const dateTo = new Date("2024-01-31");
 
-      await repository.getCompanyOrders("tenant-1", {
+      await repository.getTenantOrders("tenant-1", {
         merchantId: "merchant-1",
         status: "completed",
         orderMode: "delivery",

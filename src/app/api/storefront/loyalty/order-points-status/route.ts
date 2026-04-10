@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get company to get tenantId
-    const company = await merchantService.getCompanyBySlug(companySlug);
+    const company = await merchantService.getTenantBySlug(companySlug);
     if (!company) {
       return NextResponse.json(
         { success: false, error: "Company not found" },

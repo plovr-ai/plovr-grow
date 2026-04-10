@@ -58,7 +58,7 @@ export async function POST(
       );
     }
 
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
 
     // Create catering lead
     const lead = await cateringService.createLead(tenantId, merchant.id, {

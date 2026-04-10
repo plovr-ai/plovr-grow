@@ -4,9 +4,9 @@ import { merchantService } from "../merchant.service";
 // These are integration tests that require database seed data
 // Run with: npm run db:seed && npm run test:run
 describe.skip("MerchantService (integration)", () => {
-  describe("getCompanyBySlug", () => {
+  describe("getTenantBySlug", () => {
     it("should return company data for valid slug", async () => {
-      const company = await merchantService.getCompanyBySlug("joes-pizza");
+      const company = await merchantService.getTenantBySlug("joes-pizza");
 
       expect(company).not.toBeNull();
       expect(company?.id).toBe("company-joes");
@@ -15,7 +15,7 @@ describe.skip("MerchantService (integration)", () => {
     });
 
     it("should return company with merchants", async () => {
-      const company = await merchantService.getCompanyBySlug("joes-pizza");
+      const company = await merchantService.getTenantBySlug("joes-pizza");
 
       expect(company?.merchants).toBeDefined();
       expect(company?.merchants.length).toBe(2);
@@ -23,22 +23,22 @@ describe.skip("MerchantService (integration)", () => {
       expect(company?.merchants[1].slug).toBe("joes-pizza-midtown");
     });
 
-    it("should return company with tenant info", async () => {
-      const company = await merchantService.getCompanyBySlug("joes-pizza");
+    it("should return tenant info", async () => {
+      const tenant = await merchantService.getTenantBySlug("joes-pizza");
 
-      expect(company?.tenantId).toBe("tenant-joes");
-      expect(company?.tenant.id).toBe("tenant-joes");
-      expect(company?.tenant.name).toBe("Joe's Pizza");
+      expect(tenant?.tenantId).toBe("tenant-joes");
+      expect(tenant?.id).toBe("tenant-joes");
+      expect(tenant?.name).toBe("Joe's Pizza");
     });
 
     it("should return null for non-existent slug", async () => {
-      const company = await merchantService.getCompanyBySlug("non-existent-company");
+      const company = await merchantService.getTenantBySlug("non-existent-company");
 
       expect(company).toBeNull();
     });
 
     it("should return null for empty slug", async () => {
-      const company = await merchantService.getCompanyBySlug("");
+      const company = await merchantService.getTenantBySlug("");
 
       expect(company).toBeNull();
     });
@@ -63,12 +63,12 @@ describe.skip("MerchantService (integration)", () => {
       expect(merchant?.phone).toBe("(212) 555-0100");
     });
 
-    it("should return merchant with company info", async () => {
+    it("should return merchant with tenant info", async () => {
       const merchant = await merchantService.getMerchantBySlug("joes-pizza-downtown");
 
-      expect(merchant?.company.id).toBe("company-joes");
-      expect(merchant?.company.slug).toBe("joes-pizza");
-      expect(merchant?.company.name).toBe("Joe's Pizza Inc.");
+      expect(merchant?.tenant.id).toBe("company-joes");
+      expect(merchant?.tenant.slug).toBe("joes-pizza");
+      expect(merchant?.tenant.name).toBe("Joe's Pizza Inc.");
     });
 
     it("should support legacy single-store slug", async () => {

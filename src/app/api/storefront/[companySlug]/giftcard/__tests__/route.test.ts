@@ -5,7 +5,7 @@ import { NextRequest } from "next/server";
 // Mock services
 vi.mock("@/services/merchant", () => ({
   merchantService: {
-    getCompanyBySlug: vi.fn(),
+    getTenantBySlug: vi.fn(),
   },
 }));
 
@@ -74,7 +74,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
 
   describe("without payment (backward compatibility)", () => {
     it("should create giftcard order successfully without payment", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
       vi.mocked(orderService.createCompanyOrder).mockResolvedValue(mockOrder as never);
@@ -109,7 +109,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
 
   describe("with Stripe payment", () => {
     it("should create giftcard order with verified payment", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
       vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue({
@@ -198,7 +198,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
     });
 
     it("should return 400 when payment verification fails", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
       vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue({
@@ -241,7 +241,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
     });
 
     it("should return 400 when payment amount mismatch", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
       vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue({
@@ -282,7 +282,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
 
   describe("validation", () => {
     it("should return 404 when company not found", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(null);
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(null);
 
       const request = new NextRequest(
         "http://localhost:3000/api/storefront/non-existent/giftcard",
@@ -303,7 +303,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
     });
 
     it("should return 400 for missing required fields", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
 
@@ -329,7 +329,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
     });
 
     it("should return 400 for invalid phone format", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
 
@@ -355,7 +355,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
     });
 
     it("should return 400 for invalid email", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
 
@@ -381,7 +381,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
     });
 
     it("should return 400 for negative amount", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
 
@@ -409,7 +409,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
 
   describe("optional fields", () => {
     it("should create giftcard with recipient info", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
       vi.mocked(orderService.createCompanyOrder).mockResolvedValue(mockOrder as never);
@@ -448,7 +448,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
     });
 
     it("should return 400 for invalid recipient email format", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
 
@@ -473,7 +473,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
     });
 
     it("should allow empty recipient email", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
       vi.mocked(orderService.createCompanyOrder).mockResolvedValue(mockOrder as never);
@@ -502,7 +502,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
     });
 
     it("should return 400 for message exceeding 200 characters", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
 
@@ -529,7 +529,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
 
   describe("order creation", () => {
     it("should create order with correct structure", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
       vi.mocked(orderService.createCompanyOrder).mockResolvedValue(mockOrder as never);
@@ -570,7 +570,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
     });
 
     it("should create giftcard with correct structure", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
       vi.mocked(orderService.createCompanyOrder).mockResolvedValue(mockOrder as never);
@@ -602,7 +602,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
 
   describe("error handling", () => {
     it("should return 500 when orderService throws error", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
       vi.mocked(orderService.createCompanyOrder).mockRejectedValue(
@@ -628,7 +628,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
     });
 
     it("should return 500 when giftCardService throws error", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
       vi.mocked(orderService.createCompanyOrder).mockResolvedValue(mockOrder as never);
@@ -655,7 +655,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
     });
 
     it("should handle non-Error exceptions", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
       vi.mocked(orderService.createCompanyOrder).mockRejectedValue("Unknown error");

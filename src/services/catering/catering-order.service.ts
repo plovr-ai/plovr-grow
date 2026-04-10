@@ -118,9 +118,9 @@ export class CateringOrderService {
   }
 
   /**
-   * Get catering orders for a company (all merchants)
+   * Get catering orders for a tenant (all merchants)
    */
-  async getCompanyOrders(
+  async getTenantOrders(
     tenantId: string,
     options: CateringOrderListOptions = {}
   ) {

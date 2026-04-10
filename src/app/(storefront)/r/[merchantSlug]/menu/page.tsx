@@ -22,7 +22,7 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
     notFound();
   }
 
-  const tenantId = merchant.company.tenantId;
+  const tenantId = merchant.tenant.tenantId;
   const response = await menuService.getMenu(tenantId, merchant.id, menuId);
 
   // Get item counts for all menus to filter empty ones
@@ -52,7 +52,7 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
     menus: menusWithItemCount,
   };
 
-  const data = convertToMenuDisplayData(responseWithItemCount, merchant.company.slug ?? "");
+  const data = convertToMenuDisplayData(responseWithItemCount, merchant.tenant.slug ?? "");
 
   return <MenuPageClient data={data} merchantSlug={merchantSlug} />;
 }

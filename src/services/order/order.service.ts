@@ -21,7 +21,7 @@ import type {
   CreateMerchantOrderInput,
   CreateCompanyOrderInput,
   OrderCalculation,
-  CompanyOrderListOptions,
+  TenantOrderListOptions,
   TimelineEvent,
   OrderWithTimeline,
 } from "./order.types";
@@ -392,16 +392,16 @@ export class OrderService {
     return events.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   }
 
-  // ==================== Company Order Management ====================
+  // ==================== Tenant Order Management ====================
 
   /**
-   * Get orders for a company (all merchants under the company, for Dashboard)
+   * Get orders for a tenant (all merchants under the tenant, for Dashboard)
    */
-  async getCompanyOrders(
+  async getTenantOrders(
     tenantId: string,
-    options: CompanyOrderListOptions = {}
+    options: TenantOrderListOptions = {}
   ) {
-    return orderRepository.getCompanyOrders(tenantId, options);
+    return orderRepository.getTenantOrders(tenantId, options);
   }
 
   /**

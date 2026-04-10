@@ -16,7 +16,7 @@ export async function POST(
     const { companySlug } = await params;
 
     // Get company by slug
-    const company = await merchantService.getCompanyBySlug(companySlug);
+    const company = await merchantService.getTenantBySlug(companySlug);
     if (!company) {
       return NextResponse.json(
         { success: false, error: "Company not found" },

@@ -27,7 +27,7 @@ export default async function NewCateringOrderPage({
   const { tenantId } = session.user;
 
   // Fetch merchants
-  const merchants = await merchantService.getMerchantsByCompanyId(tenantId);
+  const merchants = await merchantService.getMerchantsByTenantId(tenantId);
 
   // Get selected merchant (or first one)
   const selectedMerchantId = search.merchantId || merchants[0]?.id;

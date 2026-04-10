@@ -13,7 +13,7 @@ export interface MerchantInfo {
   status: string;
 }
 
-export interface CompanyInfo {
+export interface TenantBrandInfo {
   id: string;
   name: string;
   slug: string | null;
@@ -22,7 +22,7 @@ export interface CompanyInfo {
 
 export interface DashboardContextValue {
   tenantId: string;
-  company: CompanyInfo;
+  tenant: TenantBrandInfo;
   merchants: MerchantInfo[];
   currency: string;
   locale: string;
@@ -61,9 +61,9 @@ export function useMerchants(): MerchantInfo[] {
   return merchants;
 }
 
-export function useCompany(): CompanyInfo {
-  const { company } = useDashboard();
-  return company;
+export function useTenantBrand(): TenantBrandInfo {
+  const { tenant } = useDashboard();
+  return tenant;
 }
 
 export function useDashboardCurrency(): string {

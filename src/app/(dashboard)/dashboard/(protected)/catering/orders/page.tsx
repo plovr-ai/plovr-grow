@@ -35,14 +35,14 @@ export default async function CateringOrdersPage({
   const merchantIdFilter = search.merchantId;
 
   // Fetch merchants for filter dropdown
-  const merchants = await merchantService.getMerchantsByCompanyId(tenantId);
+  const merchants = await merchantService.getMerchantsByTenantId(tenantId);
 
   // Default merchant ID for API calls (always select first merchant if not specified)
   const defaultMerchantId = merchants[0]?.id;
   const selectedMerchantId = merchantIdFilter || defaultMerchantId;
 
   // Fetch orders with pagination (always filter by merchant for catering)
-  const ordersData = await cateringOrderService.getCompanyOrders(
+  const ordersData = await cateringOrderService.getTenantOrders(
     tenantId,
     {
       page: currentPage,

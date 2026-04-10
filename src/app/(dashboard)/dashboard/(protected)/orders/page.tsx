@@ -68,7 +68,7 @@ export default async function OrdersManagementPage({
 
   // Get orders data from database
   // Always filter by specific merchant (no "all" option)
-  const ordersData = await orderService.getCompanyOrders(tenantId, {
+  const ordersData = await orderService.getTenantOrders(tenantId, {
     merchantId: merchantFilter,
     status: statusFilter,
     orderMode: modeFilter,

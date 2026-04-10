@@ -73,7 +73,7 @@ const mockMerchant = {
   name: "Test Merchant",
   slug: "test-merchant",
   currency: "USD",
-  company: {
+  tenant: {
     id: "tenant-1",
     tenantId: "tenant-1",
   },

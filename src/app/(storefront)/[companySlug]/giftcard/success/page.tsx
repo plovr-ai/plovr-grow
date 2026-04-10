@@ -21,7 +21,7 @@ export default async function GiftcardSuccessPage({
   }
 
   // Get company data for tenantId
-  const company = await merchantService.getCompanyBySlug(companySlug);
+  const company = await merchantService.getTenantBySlug(companySlug);
   if (!company) {
     notFound();
   }
@@ -33,7 +33,7 @@ export default async function GiftcardSuccessPage({
   }
 
   // Get website data for Navigation/Footer
-  const websiteData = await merchantService.getCompanyWebsiteData(companySlug);
+  const websiteData = await merchantService.getTenantWebsiteData(companySlug);
   if (!websiteData) notFound();
 
   // Check if loyalty is enabled

@@ -4,17 +4,17 @@
 import type { Prisma } from "@prisma/client";
 import type { TenantSettings } from "@/types/tenant";
 import type { MerchantSettings, MerchantStatus, BusinessHoursMap } from "@/types/merchant";
-import type { MerchantWithCompany, CompanyWithMerchants } from "./merchant.types";
+import type { MerchantWithTenant, TenantWithMerchants } from "./merchant.types";
 
 // Prisma return types for Merchant with Tenant
-type MerchantWithTenant = Prisma.MerchantGetPayload<{
+type PrismaMerchantWithTenant = Prisma.MerchantGetPayload<{
   include: {
     tenant: true;
   };
 }>;
 
 // Prisma return types for Tenant with Merchants
-type TenantWithMerchants = Prisma.TenantGetPayload<{
+type PrismaTenantWithMerchants = Prisma.TenantGetPayload<{
   include: {
     merchants: true;
   };
@@ -26,9 +26,9 @@ type MerchantFromTenantQuery = Prisma.MerchantGetPayload<object>;
 /**
  * 将 Prisma Merchant (with Tenant) 转换为 Service 类型
  */
-export function toMerchantWithCompany(
-  data: MerchantWithTenant
-): MerchantWithCompany {
+export function toMerchantWithTenant(
+  data: PrismaMerchantWithTenant
+): MerchantWithTenant {
   return {
     id: data.id,
     slug: data.slug,
@@ -50,18 +50,14 @@ export function toMerchantWithCompany(
     locale: data.locale,
     status: data.status as MerchantStatus,
     settings: (data.settings as unknown) as MerchantSettings | undefined,
-    company: {
+    tenant: {
       id: data.tenant.id,
       slug: data.tenant.slug,
       tenantId: data.tenant.id,
       name: data.tenant.name,
       logoUrl: data.tenant.logoUrl ?? undefined,
       settings: data.tenant.settings as TenantSettings | undefined,
-      tenant: {
-        id: data.tenant.id,
-        name: data.tenant.name,
-        subscriptionStatus: data.tenant.subscriptionStatus,
-      },
+      subscriptionStatus: data.tenant.subscriptionStatus,
     },
   };
 }
@@ -69,9 +65,9 @@ export function toMerchantWithCompany(
 /**
  * 将 Prisma Tenant (with Merchants) 转换为 Service 类型
  */
-export function toCompanyWithMerchants(
-  data: TenantWithMerchants
-): CompanyWithMerchants {
+export function toTenantWithMerchants(
+  data: PrismaTenantWithMerchants
+): TenantWithMerchants {
   return {
     id: data.id,
     slug: data.slug,
@@ -80,22 +76,18 @@ export function toCompanyWithMerchants(
     description: data.description ?? undefined,
     logoUrl: data.logoUrl ?? undefined,
     settings: data.settings as TenantSettings | undefined,
-    tenant: {
-      id: data.id,
-      name: data.name,
-      subscriptionStatus: data.subscriptionStatus,
-    },
+    subscriptionStatus: data.subscriptionStatus,
     merchants: data.merchants.map((m) => toMerchantFromTenant(m, data)),
   };
 }
 
 /**
- * Convert a merchant from tenant query to MerchantWithCompany type
+ * Convert a merchant from tenant query to MerchantWithTenant type
  */
 function toMerchantFromTenant(
   merchant: MerchantFromTenantQuery,
-  tenant: TenantWithMerchants
-): MerchantWithCompany {
+  tenant: PrismaTenantWithMerchants
+): MerchantWithTenant {
   return {
     id: merchant.id,
     slug: merchant.slug,
@@ -117,18 +109,14 @@ function toMerchantFromTenant(
     locale: merchant.locale,
     status: merchant.status as MerchantStatus,
     settings: (merchant.settings as unknown) as MerchantSettings | undefined,
-    company: {
+    tenant: {
       id: tenant.id,
       slug: tenant.slug,
       tenantId: tenant.id,
       name: tenant.name,
       logoUrl: tenant.logoUrl ?? undefined,
       settings: tenant.settings as TenantSettings | undefined,
-      tenant: {
-        id: tenant.id,
-        name: tenant.name,
-        subscriptionStatus: tenant.subscriptionStatus,
-      },
+      subscriptionStatus: tenant.subscriptionStatus,
     },
   };
 }

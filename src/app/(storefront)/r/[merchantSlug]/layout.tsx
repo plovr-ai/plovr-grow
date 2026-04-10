@@ -33,16 +33,16 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
   const { merchantSlug } = await params;
   const merchant = await merchantService.getMerchantBySlug(merchantSlug);
 
-  // Get theme preset from company settings
-  const themePreset = merchant?.company?.settings?.themePreset;
+  // Get theme preset from tenant settings
+  const themePreset = merchant?.tenant?.settings?.themePreset;
 
   // Determine trial status
-  const tenantId = merchant?.company?.tenant?.id ?? null;
-  const isTrial = merchant?.company?.tenant?.subscriptionStatus === "trial";
+  const tenantId = merchant?.tenant?.id ?? null;
+  const isTrial = merchant?.tenant?.subscriptionStatus === "trial";
 
   return (
     <ThemeProvider preset={themePreset}>
-      {isTrial && tenantId && <ClaimBar tenantId={tenantId} companySlug={merchant?.company?.slug ?? ""} />}
+      {isTrial && tenantId && <ClaimBar tenantId={tenantId} companySlug={merchant?.tenant?.slug ?? ""} />}
       <MerchantProvider
         config={{
           name: merchant?.name ?? "",
@@ -53,7 +53,7 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
           country: merchant?.country ?? "US",
           tipConfig: merchant?.settings?.tipConfig,
           feeConfig: merchant?.settings?.feeConfig,
-          companySlug: merchant?.company?.slug ?? null,
+          companySlug: merchant?.tenant?.slug ?? null,
           tenantId,
           isTrial,
         }}

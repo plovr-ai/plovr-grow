@@ -4,12 +4,12 @@
 import { merchantRepository } from "@/repositories/merchant.repository";
 import { tenantRepository } from "@/repositories/tenant.repository";
 import { menuService } from "@/services/menu";
-import { toMerchantWithCompany, toCompanyWithMerchants } from "./merchant.mapper";
+import { toMerchantWithTenant, toTenantWithMerchants } from "./merchant.mapper";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import type { Prisma } from "@prisma/client";
 import type {
-  MerchantWithCompany,
-  CompanyWithMerchants,
+  MerchantWithTenant,
+  TenantWithMerchants,
   CreateMerchantInput,
   UpdateMerchantInput,
   UpdateMerchantSettingsInput,
@@ -26,18 +26,18 @@ export class MerchantService {
    * 通过 Slug 获取 Merchant (公开访问，无需认证)
    * 用于 Storefront 页面
    */
-  async getMerchantBySlug(slug: string): Promise<MerchantWithCompany | null> {
+  async getMerchantBySlug(slug: string): Promise<MerchantWithTenant | null> {
     const data = await merchantRepository.getBySlugWithTenant(slug);
     if (!data) return null;
-    return toMerchantWithCompany(data);
+    return toMerchantWithTenant(data);
   }
 
   /**
    * 通过 Slug 获取 Merchant (别名，保持向后兼容)
    */
-  async getMerchantBySlugWithCompany(
+  async getMerchantBySlugWithTenant(
     slug: string
-  ): Promise<MerchantWithCompany | null> {
+  ): Promise<MerchantWithTenant | null> {
     return this.getMerchantBySlug(slug);
   }
 
@@ -45,20 +45,20 @@ export class MerchantService {
    * 通过 ID 获取 Merchant (公开访问，无需认证)
    * 用于 API routes 中需要从 merchantId 反查 tenantId 的场景
    */
-  async getMerchantById(merchantId: string): Promise<MerchantWithCompany | null> {
+  async getMerchantById(merchantId: string): Promise<MerchantWithTenant | null> {
     const data = await merchantRepository.getByIdWithTenant(merchantId);
     if (!data) return null;
-    return toMerchantWithCompany(data);
+    return toMerchantWithTenant(data);
   }
 
   /**
    * 通过 Slug 获取 Company 及其所有 Merchants (公开访问)
    * 用于品牌官网门店列表
    */
-  async getCompanyBySlug(slug: string): Promise<CompanyWithMerchants | null> {
+  async getTenantBySlug(slug: string): Promise<TenantWithMerchants | null> {
     const data = await tenantRepository.getBySlugWithMerchants(slug);
     if (!data) return null;
-    return toCompanyWithMerchants(data);
+    return toTenantWithMerchants(data);
   }
 
   /**
@@ -70,27 +70,27 @@ export class MerchantService {
     const merchant = await this.getMerchantBySlug(merchantSlug);
     if (!merchant) return null;
 
-    const companySettings = merchant.company.settings as TenantSettings | undefined;
+    const tenantSettings = merchant.tenant.settings as TenantSettings | undefined;
     const merchantSettings = merchant.settings as MerchantSettings | undefined;
 
-    // Merchant-level website config can override company-level
-    const companyWebsite = companySettings?.website;
+    // Merchant-level website config can override tenant-level
+    const tenantWebsite = tenantSettings?.website;
     const merchantWebsite = merchantSettings?.website;
 
-    // Build website data with fallback chain: Merchant -> Company -> Default
+    // Build website data with fallback chain: Merchant -> Tenant -> Default
     const websiteData: WebsiteMerchantData = {
-      name: merchant.company.name,
-      tagline: merchantWebsite?.tagline || companyWebsite?.tagline || "",
+      name: merchant.tenant.name,
+      tagline: merchantWebsite?.tagline || tenantWebsite?.tagline || "",
       address: merchant.address || "",
       city: merchant.city || "",
       state: merchant.state || "",
       zipCode: merchant.zipCode || "",
       phone: merchant.phone || "",
       email: merchant.email || "",
-      logo: merchant.logoUrl || merchant.company.logoUrl || "",
-      heroImage: merchantWebsite?.heroImage || companyWebsite?.heroImage || merchant.bannerUrl || "",
+      logo: merchant.logoUrl || merchant.tenant.logoUrl || "",
+      heroImage: merchantWebsite?.heroImage || tenantWebsite?.heroImage || merchant.bannerUrl || "",
       businessHours: merchant.businessHours || {},
-      socialLinks: companyWebsite?.socialLinks || ([] as SocialLink[]),
+      socialLinks: tenantWebsite?.socialLinks || ([] as SocialLink[]),
       currency: merchant.currency,
       locale: merchant.locale,
       tipConfig: merchantSettings?.tipConfig,
@@ -105,17 +105,17 @@ export class MerchantService {
    * 用于品牌官网首页
    * @param companySlug - Company slug
    */
-  async getCompanyWebsiteData(companySlug: string): Promise<WebsiteMerchantData | null> {
-    const company = await this.getCompanyBySlug(companySlug);
-    if (!company) return null;
+  async getTenantWebsiteData(companySlug: string): Promise<WebsiteMerchantData | null> {
+    const tenant = await this.getTenantBySlug(companySlug);
+    if (!tenant) return null;
 
-    const companySettings = company.settings as TenantSettings | undefined;
-    const companyWebsite = companySettings?.website;
+    const tenantSettings = tenant.settings as TenantSettings | undefined;
+    const tenantWebsite = tenantSettings?.website;
 
     // Fetch featured items from the dedicated featured_items table
     let featuredItems: WebsiteMerchantData["featuredItems"] = [];
     const featuredItemsData = await menuService.getFeaturedItems(
-      company.tenantId
+      tenant.tenantId
     );
 
     if (featuredItemsData.length > 0) {
@@ -134,27 +134,27 @@ export class MerchantService {
         }));
     }
 
-    // For single-merchant companies, include merchant contact info and business hours
-    // For multi-merchant companies, leave these empty (Footer will hide these sections)
-    const singleMerchant = company.merchants.length === 1 ? company.merchants[0] : null;
+    // For single-merchant tenants, include merchant contact info and business hours
+    // For multi-merchant tenants, leave these empty (Footer will hide these sections)
+    const singleMerchant = tenant.merchants.length === 1 ? tenant.merchants[0] : null;
 
     const websiteData: WebsiteMerchantData = {
-      name: company.name,
-      tagline: companyWebsite?.tagline || company.description || "",
+      name: tenant.name,
+      tagline: tenantWebsite?.tagline || tenant.description || "",
       address: singleMerchant?.address || "",
       city: singleMerchant?.city || "",
       state: singleMerchant?.state || "",
       zipCode: singleMerchant?.zipCode || "",
       phone: singleMerchant?.phone || "",
       email: singleMerchant?.email || "",
-      logo: company.logoUrl || "",
-      heroImage: companyWebsite?.heroImage || "",
+      logo: tenant.logoUrl || "",
+      heroImage: tenantWebsite?.heroImage || "",
       businessHours: singleMerchant?.businessHours || {},
-      socialLinks: companyWebsite?.socialLinks || ([] as SocialLink[]),
-      currency: companySettings?.defaultCurrency || "USD",
-      locale: companySettings?.defaultLocale || "en-US",
+      socialLinks: tenantWebsite?.socialLinks || ([] as SocialLink[]),
+      currency: tenantSettings?.defaultCurrency || "USD",
+      locale: tenantSettings?.defaultLocale || "en-US",
       featuredItems,
-      reviews: companyWebsite?.reviews || [],
+      reviews: tenantWebsite?.reviews || [],
     };
 
     return websiteData;
@@ -170,7 +170,7 @@ export class MerchantService {
   async getMerchant(
     tenantId: string,
     merchantId: string
-  ): Promise<MerchantWithCompany | null> {
+  ): Promise<MerchantWithTenant | null> {
     const data = await merchantRepository.getByIdWithTenant(merchantId);
     if (!data) return null;
 
@@ -179,7 +179,7 @@ export class MerchantService {
       return null;
     }
 
-    return toMerchantWithCompany(data);
+    return toMerchantWithTenant(data);
   }
 
   /**
@@ -187,15 +187,15 @@ export class MerchantService {
    * @param tenantId - 租户 ID
    * @param filter - 过滤条件
    */
-  async getMerchantsByCompanyId(
+  async getMerchantsByTenantId(
     tenantId: string,
     filter?: GetMerchantsFilter
-  ): Promise<MerchantWithCompany[]> {
+  ): Promise<MerchantWithTenant[]> {
     const merchants = filter?.status === "active"
       ? await merchantRepository.getActiveByTenantIdWithTenant(tenantId)
       : await merchantRepository.getByTenantIdWithTenant(tenantId);
 
-    return merchants.map(toMerchantWithCompany);
+    return merchants.map(toMerchantWithTenant);
   }
 
   // ==================== 写入方法 ====================
@@ -208,7 +208,7 @@ export class MerchantService {
   async createMerchant(
     tenantId: string,
     input: CreateMerchantInput
-  ): Promise<MerchantWithCompany> {
+  ): Promise<MerchantWithTenant> {
     // 验证 tenant 存在
     const tenant = await tenantRepository.getById(tenantId);
     if (!tenant) {
@@ -242,7 +242,7 @@ export class MerchantService {
     });
 
     const data = await merchantRepository.getByIdWithTenant(merchant.id);
-    return toMerchantWithCompany(data!);
+    return toMerchantWithTenant(data!);
   }
 
   /**
@@ -255,7 +255,7 @@ export class MerchantService {
     tenantId: string,
     merchantId: string,
     input: UpdateMerchantInput
-  ): Promise<MerchantWithCompany> {
+  ): Promise<MerchantWithTenant> {
     // 验证权限
     const existing = await this.getMerchant(tenantId, merchantId);
     if (!existing) {
@@ -309,7 +309,7 @@ export class MerchantService {
     await merchantRepository.update(merchantId, updateData);
 
     const data = await merchantRepository.getByIdWithTenant(merchantId);
-    return toMerchantWithCompany(data!);
+    return toMerchantWithTenant(data!);
   }
 
   /**
@@ -322,7 +322,7 @@ export class MerchantService {
     tenantId: string,
     merchantId: string,
     settings: UpdateMerchantSettingsInput
-  ): Promise<MerchantWithCompany> {
+  ): Promise<MerchantWithTenant> {
     // 验证权限
     const existing = await this.getMerchant(tenantId, merchantId);
     if (!existing) {
@@ -333,7 +333,7 @@ export class MerchantService {
       merchantId,
       settings as Record<string, unknown>
     );
-    return toMerchantWithCompany(data!);
+    return toMerchantWithTenant(data!);
   }
 
   /**

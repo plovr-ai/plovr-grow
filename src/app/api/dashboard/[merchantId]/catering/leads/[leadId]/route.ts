@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
     const lead = await cateringService.getLeadById(tenantId, leadId);
 
     if (!lead) {
@@ -72,7 +72,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
     await cateringService.updateLeadStatus(
       tenantId,
       leadId,

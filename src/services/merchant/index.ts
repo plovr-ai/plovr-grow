@@ -4,8 +4,8 @@
 export { merchantService, MerchantService } from "./merchant.service";
 
 export type {
-  MerchantWithCompany,
-  CompanyWithMerchants,
+  MerchantWithTenant,
+  TenantWithMerchants,
   MerchantBasic,
   CreateMerchantInput,
   UpdateMerchantInput,

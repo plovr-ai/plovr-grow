@@ -24,7 +24,7 @@ export default async function ProtectedLayout({
   // Fetch company, merchants, and subscription data
   const [initialCompany, merchants, subscription] = await Promise.all([
     tenantRepository.getById(tenantId),
-    merchantService.getMerchantsByCompanyId(tenantId),
+    merchantService.getMerchantsByTenantId(tenantId),
     subscriptionService.getSubscriptionForDashboard(tenantId),
   ]);
 
@@ -51,7 +51,7 @@ export default async function ProtectedLayout({
 
   const dashboardContext = {
     tenantId,
-    company: {
+    tenant: {
       id: company.id,
       name: company.name,
       slug: company.slug,

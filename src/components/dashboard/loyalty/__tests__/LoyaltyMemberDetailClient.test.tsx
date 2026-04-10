@@ -21,7 +21,7 @@ function Wrapper({ children }: { children: ReactNode }) {
     <DashboardProvider
       value={{
         tenantId: "tenant-1",
-        company: {
+        tenant: {
           id: "company-1",
           name: "Test Company",
           slug: "test-company",

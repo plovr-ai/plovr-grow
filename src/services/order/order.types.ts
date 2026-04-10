@@ -86,7 +86,7 @@ export interface OrderCalculation {
   totalAmount: number;
 }
 
-export interface CompanyOrderListOptions {
+export interface TenantOrderListOptions {
   merchantId?: string;
   status?: OrderStatus;
   fulfillmentStatus?: FulfillmentStatus;

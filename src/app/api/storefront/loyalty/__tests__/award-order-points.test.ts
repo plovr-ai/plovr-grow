@@ -5,7 +5,7 @@ import { POST } from "../award-order-points/route";
 // Mock services
 vi.mock("@/services/merchant", () => ({
   merchantService: {
-    getCompanyBySlug: vi.fn(),
+    getTenantBySlug: vi.fn(),
   },
 }));
 
@@ -30,7 +30,7 @@ vi.mock("@/services/loyalty", () => ({
 import { merchantService } from "@/services/merchant";
 import { orderService } from "@/services/order";
 import { pointsService, loyaltyConfigService } from "@/services/loyalty";
-import type { CompanyWithMerchants } from "@/services/merchant/merchant.types";
+import type { TenantWithMerchants } from "@/services/merchant/merchant.types";
 
 describe("POST /api/storefront/loyalty/award-order-points", () => {
   beforeEach(() => {
@@ -120,7 +120,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
   });
 
   it("should return 404 if company not found", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(null);
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(null);
 
     const request = new NextRequest(
       "http://localhost:3000/api/storefront/loyalty/award-order-points",
@@ -143,13 +143,13 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
   });
 
   it("should return 400 if loyalty program is not enabled", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue({
       id: "company-1",
       tenantId: "tenant-1",
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as unknown as CompanyWithMerchants);
+    } as unknown as TenantWithMerchants);
 
     vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(false);
 
@@ -174,13 +174,13 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
   });
 
   it("should return 400 if points already awarded", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue({
       id: "company-1",
       tenantId: "tenant-1",
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as unknown as CompanyWithMerchants);
+    } as unknown as TenantWithMerchants);
 
     vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(true);
@@ -206,13 +206,13 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
   });
 
   it("should return 404 if order not found", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue({
       id: "company-1",
       tenantId: "tenant-1",
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as unknown as CompanyWithMerchants);
+    } as unknown as TenantWithMerchants);
 
     vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
@@ -239,13 +239,13 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
   });
 
   it("should award points successfully", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue({
       id: "company-1",
       tenantId: "tenant-1",
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as unknown as CompanyWithMerchants);
+    } as unknown as TenantWithMerchants);
 
     vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
@@ -355,7 +355,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
   });
 
   it("should return 500 on internal error", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockRejectedValue(
+    vi.mocked(merchantService.getTenantBySlug).mockRejectedValue(
       new Error("Database error")
     );
 
