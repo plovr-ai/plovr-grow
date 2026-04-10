@@ -1,7 +1,7 @@
 // ==================== Merchant Service Types ====================
 // Service 接口类型定义，使用方从 @/services/merchant 导入
 
-import type { CompanySettings } from "@/types/company";
+import type { TenantSettings } from "@/types/tenant";
 import type {
   MerchantSettings,
   MerchantStatus,
@@ -17,7 +17,7 @@ export interface MerchantWithCompany {
   id: string;
   slug: string;
   name: string;
-  companyId: string;
+  tenantId: string;
   description?: string;
   address?: string;
   city?: string;
@@ -41,7 +41,7 @@ export interface MerchantWithCompany {
     tenantId: string;
     name: string;
     logoUrl?: string;
-    settings?: CompanySettings;
+    settings?: TenantSettings;
     tenant: {
       id: string;
       name: string;
@@ -60,7 +60,7 @@ export interface CompanyWithMerchants {
   name: string;
   description?: string;
   logoUrl?: string;
-  settings?: CompanySettings;
+  settings?: TenantSettings;
   tenant: {
     id: string;
     name: string;
@@ -76,7 +76,7 @@ export interface MerchantBasic {
   id: string;
   slug: string;
   name: string;
-  companyId: string;
+  tenantId: string;
   description?: string;
   address?: string;
   city?: string;
@@ -175,7 +175,7 @@ export interface GetMerchantsFilter {
 
 // ==================== Website Data Types ====================
 
-import type { SocialLink, CustomerReview } from "@/types/company";
+import type { SocialLink, CustomerReview } from "@/types/tenant";
 import type { FeaturedItem } from "@/types/website";
 import type { TipConfig, FeeConfig } from "@/types/index";
 

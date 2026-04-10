@@ -13,23 +13,6 @@ export class MerchantRepository {
   }
 
   /**
-   * @deprecated Use getById instead. This method is kept for backward compatibility.
-   * Get first merchant by company's tenant ID (for legacy code migration)
-   */
-  async getByTenantId(tenantId: string) {
-    const company = await prisma.company.findUnique({
-      where: { tenantId, deleted: false },
-      include: {
-        merchants: {
-          where: { deleted: false },
-          take: 1,
-        },
-      },
-    });
-    return company?.merchants[0] || null;
-  }
-
-  /**
    * Get merchant by slug (for public URL routing)
    */
   async getBySlug(slug: string) {
@@ -39,38 +22,34 @@ export class MerchantRepository {
   }
 
   /**
-   * Get merchant by slug with company info
+   * Get merchant by slug with tenant info
    */
-  async getBySlugWithCompany(slug: string) {
+  async getBySlugWithTenant(slug: string) {
     return prisma.merchant.findFirst({
       where: { slug, deleted: false },
       include: {
-        company: {
-          include: {
-            tenant: true,
-          },
-        },
+        tenant: true,
       },
     });
   }
 
   /**
-   * Get all merchants for a company
+   * Get all merchants for a tenant
    */
-  async getByCompanyId(companyId: string) {
+  async getByTenantId(tenantId: string) {
     return prisma.merchant.findMany({
-      where: { companyId, deleted: false },
+      where: { tenantId, deleted: false },
       orderBy: { name: "asc" },
     });
   }
 
   /**
-   * Get active merchants for a company
+   * Get active merchants for a tenant
    */
-  async getActiveByCompanyId(companyId: string) {
+  async getActiveByTenantId(tenantId: string) {
     return prisma.merchant.findMany({
       where: {
-        companyId,
+        tenantId,
         status: "active",
         deleted: false,
       },
@@ -79,55 +58,43 @@ export class MerchantRepository {
   }
 
   /**
-   * Get merchant by ID with company info
+   * Get merchant by ID with tenant info
    */
-  async getByIdWithCompany(merchantId: string) {
+  async getByIdWithTenant(merchantId: string) {
     return prisma.merchant.findUnique({
       where: { id: merchantId, deleted: false },
       include: {
-        company: {
-          include: {
-            tenant: true,
-          },
-        },
+        tenant: true,
       },
     });
   }
 
   /**
-   * Get all merchants for a company with company info
+   * Get all merchants for a tenant with tenant info
    */
-  async getByCompanyIdWithCompany(companyId: string) {
+  async getByTenantIdWithTenant(tenantId: string) {
     return prisma.merchant.findMany({
-      where: { companyId, deleted: false },
+      where: { tenantId, deleted: false },
       orderBy: { name: "asc" },
       include: {
-        company: {
-          include: {
-            tenant: true,
-          },
-        },
+        tenant: true,
       },
     });
   }
 
   /**
-   * Get active merchants for a company with company info
+   * Get active merchants for a tenant with tenant info
    */
-  async getActiveByCompanyIdWithCompany(companyId: string) {
+  async getActiveByTenantIdWithTenant(tenantId: string) {
     return prisma.merchant.findMany({
       where: {
-        companyId,
+        tenantId,
         status: "active",
         deleted: false,
       },
       orderBy: { name: "asc" },
       include: {
-        company: {
-          include: {
-            tenant: true,
-          },
-        },
+        tenant: true,
       },
     });
   }
@@ -136,15 +103,13 @@ export class MerchantRepository {
    * Create a new merchant
    */
   async create(
-    companyId: string,
     tenantId: string,
-    data: Omit<Prisma.MerchantCreateInput, "id" | "company" | "tenant">
+    data: Omit<Prisma.MerchantCreateInput, "id" | "tenant">
   ) {
     return prisma.merchant.create({
       data: {
         id: generateEntityId(),
         ...data,
-        company: { connect: { id: companyId } },
         tenant: { connect: { id: tenantId } },
       },
     });
@@ -168,11 +133,7 @@ export class MerchantRepository {
       where: { id: merchantId },
       data: { settings: settings as Prisma.InputJsonValue },
       include: {
-        company: {
-          include: {
-            tenant: true,
-          },
-        },
+        tenant: true,
       },
     });
   }
