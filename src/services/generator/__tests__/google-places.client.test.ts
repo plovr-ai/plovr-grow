@@ -119,6 +119,195 @@ describe("GooglePlacesClient", () => {
     vi.unstubAllGlobals();
   });
 
+  it("handles opening hours without close time (defaults to 23:59)", async () => {
+    const mockResponse = {
+      displayName: { text: "24h Place" },
+      formattedAddress: "789 Pine St",
+      addressComponents: [],
+      regularOpeningHours: {
+        periods: [
+          { open: { day: 1, hour: 0, minute: 0 } }, // no close = open 24h
+        ],
+      },
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      })
+    );
+
+    const result = await client.getPlaceDetails("ChIJ_24h");
+
+    expect(result.businessHours.monday).toEqual({
+      open: "00:00",
+      close: "23:59",
+      closed: false,
+    });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handles missing displayName text", async () => {
+    const mockResponse = {
+      formattedAddress: "123 St",
+      addressComponents: [],
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      })
+    );
+
+    const result = await client.getPlaceDetails("ChIJ_noname");
+
+    expect(result.name).toBe("");
+    expect(result.websiteUrl).toBeNull();
+    expect(result.googleMapsUrl).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handles reviews with missing optional fields", async () => {
+    const mockResponse = {
+      displayName: { text: "Review Place" },
+      formattedAddress: "456 St",
+      addressComponents: [],
+      reviews: [
+        { rating: 3 }, // no authorAttribution, no text, no relativePublishTimeDescription
+      ],
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      })
+    );
+
+    const result = await client.getPlaceDetails("ChIJ_reviews");
+
+    expect(result.reviews).toHaveLength(1);
+    expect(result.reviews[0].author).toBe("Anonymous");
+    expect(result.reviews[0].text).toBe("");
+    expect(result.reviews[0].relativeTime).toBe("");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handles opening hours with invalid day index", async () => {
+    const mockResponse = {
+      displayName: { text: "Bad Day" },
+      formattedAddress: "999 St",
+      addressComponents: [],
+      regularOpeningHours: {
+        periods: [
+          { open: { day: 99, hour: 10, minute: 0 }, close: { day: 99, hour: 22, minute: 0 } },
+        ],
+      },
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      })
+    );
+
+    const result = await client.getPlaceDetails("ChIJ_badday");
+
+    expect(result.businessHours).toEqual({});
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handles address component with short text variant", async () => {
+    const mockResponse = {
+      displayName: { text: "State Place" },
+      formattedAddress: "789 St",
+      addressComponents: [
+        { types: ["administrative_area_level_1"], shortText: "CA", longText: "California" },
+        { types: ["locality"], longText: "Los Angeles" },
+        { types: ["postal_code"], longText: "90001" },
+      ],
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      })
+    );
+
+    const result = await client.getPlaceDetails("ChIJ_state");
+
+    expect(result.state).toBe("CA");
+    expect(result.city).toBe("Los Angeles");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handles completely missing addressComponents and formattedAddress", async () => {
+    const mockResponse = {
+      displayName: { text: "Bare Minimum" },
+      // no formattedAddress
+      // no addressComponents
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      })
+    );
+
+    const result = await client.getPlaceDetails("ChIJ_bare");
+
+    expect(result.address).toBe("");
+    expect(result.city).toBe("");
+    expect(result.state).toBe("");
+    expect(result.zipCode).toBe("");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handles address components with null longText", async () => {
+    const mockResponse = {
+      displayName: { text: "Null Text" },
+      formattedAddress: "123 St",
+      addressComponents: [
+        { types: ["locality"], longText: null },
+        { types: ["administrative_area_level_1"], shortText: null },
+        { types: ["postal_code"], longText: null },
+      ],
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      })
+    );
+
+    const result = await client.getPlaceDetails("ChIJ_nulltext");
+
+    expect(result.city).toBe("");
+    expect(result.state).toBe("");
+    expect(result.zipCode).toBe("");
+
+    vi.unstubAllGlobals();
+  });
+
   it("converts opening hours to businessHours format", async () => {
     const mockResponse = {
       displayName: { text: "Hours Test" },

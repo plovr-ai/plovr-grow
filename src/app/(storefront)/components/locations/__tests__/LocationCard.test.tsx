@@ -129,5 +129,21 @@ describe("LocationCard", () => {
       render(<LocationCard {...defaultProps} businessHours={null} />);
       expect(screen.queryByText(/Today:/)).not.toBeInTheDocument();
     });
+
+    it("should display only city when state is null", () => {
+      render(<LocationCard {...defaultProps} state={null} />);
+      expect(screen.getByText("New York")).toBeInTheDocument();
+    });
+
+    it("should display Closed today when business hours mark day as closed", () => {
+      // Create a business hours map where today is closed
+      const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+      const today = days[new Date().getDay()];
+      const closedHours: Record<string, { open?: string; close?: string; closed?: boolean }> = {};
+      closedHours[today] = { closed: true };
+
+      render(<LocationCard {...defaultProps} businessHours={closedHours} />);
+      expect(screen.getByText(/Closed today/)).toBeInTheDocument();
+    });
   });
 });

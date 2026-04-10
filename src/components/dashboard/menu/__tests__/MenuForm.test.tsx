@@ -268,5 +268,79 @@ describe("MenuForm", () => {
         expect(screen.getByText("Menu name already exists")).toBeInTheDocument();
       });
     });
+
+    it("should display default error message when action fails without error string", async () => {
+      (createMenuAction as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+      });
+
+      render(<MenuForm {...defaultProps} />);
+
+      const nameInput = screen.getByLabelText(/name/i);
+      fireEvent.change(nameInput, { target: { value: "Some Menu" } });
+
+      const submitButton = screen.getByText("Create");
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("An error occurred")).toBeInTheDocument();
+      });
+    });
+
+    it("should display error when delete action fails", async () => {
+      (deleteMenuAction as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: "Cannot delete last menu",
+      });
+
+      render(<MenuForm {...defaultProps} menu={mockMenu} />);
+
+      fireEvent.click(screen.getByText("Delete Menu"));
+      const confirmButton = screen.getByRole("button", { name: "Delete" });
+      fireEvent.click(confirmButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("Cannot delete last menu")).toBeInTheDocument();
+      });
+    });
+
+    it("should display default delete error when no error string provided", async () => {
+      (deleteMenuAction as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+      });
+
+      render(<MenuForm {...defaultProps} menu={mockMenu} />);
+
+      fireEvent.click(screen.getByText("Delete Menu"));
+      const confirmButton = screen.getByRole("button", { name: "Delete" });
+      fireEvent.click(confirmButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("Failed to delete menu")).toBeInTheDocument();
+      });
+    });
+
+    it("should submit description as undefined when empty", async () => {
+      render(<MenuForm {...defaultProps} />);
+
+      const nameInput = screen.getByLabelText(/name/i);
+      fireEvent.change(nameInput, { target: { value: "No Desc Menu" } });
+
+      // Leave description empty
+      const submitButton = screen.getByText("Create");
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(createMenuAction).toHaveBeenCalledWith({
+          name: "No Desc Menu",
+          description: undefined,
+        });
+      });
+    });
+
+    it("should not show delete button in create mode even with canDelete", () => {
+      render(<MenuForm {...defaultProps} menu={null} canDelete={true} />);
+      expect(screen.queryByText("Delete Menu")).not.toBeInTheDocument();
+    });
   });
 });

@@ -173,6 +173,32 @@ describe("Footer", () => {
       );
     });
 
+    it("should render yelp social icon", () => {
+      const merchantWithYelp = {
+        ...mockMerchant,
+        socialLinks: [
+          { platform: "yelp" as const, url: "https://yelp.com/joespizza" },
+        ],
+      };
+      renderWithProvider(<Footer merchant={merchantWithYelp} companySlug="joes-pizza" />);
+
+      const yelpLink = screen.getByRole("link", { name: "yelp" });
+      expect(yelpLink).toHaveAttribute("href", "https://yelp.com/joespizza");
+    });
+
+    it("should render google social icon", () => {
+      const merchantWithGoogle = {
+        ...mockMerchant,
+        socialLinks: [
+          { platform: "google" as const, url: "https://google.com/joespizza" },
+        ],
+      };
+      renderWithProvider(<Footer merchant={merchantWithGoogle} companySlug="joes-pizza" />);
+
+      const googleLink = screen.getByRole("link", { name: "google" });
+      expect(googleLink).toHaveAttribute("href", "https://google.com/joespizza");
+    });
+
     it("should open social links in new tab", () => {
       renderWithProvider(<Footer merchant={mockMerchant} companySlug="joes-pizza" />);
 
@@ -324,6 +350,14 @@ describe("Footer", () => {
       renderWithProvider(<Footer merchant={merchantWithHours} companySlug="joes-pizza" />);
 
       expect(screen.getByText("Hours")).toBeInTheDocument();
+    });
+  });
+
+  describe("slug fallback", () => {
+    it("should use empty string when neither companySlug nor tenantSlug provided", () => {
+      renderWithProvider(<Footer merchant={mockMerchant} />);
+      // Should still render
+      expect(screen.getByText("Joe's Pizza")).toBeInTheDocument();
     });
   });
 });

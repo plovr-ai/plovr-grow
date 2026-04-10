@@ -242,6 +242,53 @@ describe("OrderEventEmitter", () => {
       unsubscribe2();
     });
 
+    it("should handle async handler that rejects", async () => {
+      const asyncErrorHandler = vi.fn(async () => {
+        throw new Error("Async handler error");
+      });
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const unsubscribe = orderEventEmitter.on("order.partial_paid", asyncErrorHandler);
+
+      const event: PaymentStatusChangedEvent = {
+        orderId: "order-1",
+        orderNumber: "#001",
+        merchantId: "merchant-1",
+        tenantId: "tenant-1",
+        status: "partial_paid",
+        previousStatus: "created",
+        timestamp: new Date(),
+      };
+
+      orderEventEmitter.emit("order.partial_paid", event);
+
+      // Wait for async handler to reject
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(asyncErrorHandler).toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalled();
+
+      consoleSpy.mockRestore();
+      unsubscribe();
+    });
+
+    it("should do nothing when emitting to event with no handlers", async () => {
+      // Emit to an event type that has no subscribers
+      const event: FulfillmentStatusChangedEvent = {
+        orderId: "order-1",
+        orderNumber: "#001",
+        merchantId: "merchant-1",
+        tenantId: "tenant-1",
+        fulfillmentStatus: "fulfilled",
+        previousFulfillmentStatus: "ready",
+        timestamp: new Date(),
+      };
+
+      // Should not throw - no handlers registered
+      expect(() => orderEventEmitter.emit("order.fulfillment.fulfilled", event)).not.toThrow();
+    });
+
     it("should not throw when handler throws error", async () => {
       const errorHandler = vi.fn(() => {
         throw new Error("Handler error");
@@ -278,6 +325,48 @@ describe("OrderEventEmitter", () => {
       consoleSpy.mockRestore();
       unsubscribe1();
       unsubscribe2();
+    });
+  });
+
+  describe("development mode logging", () => {
+    it("should register onAny handler in development mode", async () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = "development";
+
+      // Reset modules to re-trigger module-level code with NODE_ENV=development
+      vi.resetModules();
+
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      const { orderEventEmitter: devEmitter } = await import("../order-events");
+
+      devEmitter.emit("order.created", {
+        orderId: "dev-order-1",
+        orderNumber: "#DEV001",
+        merchantId: "merchant-1",
+        tenantId: "tenant-1",
+        status: "created",
+        fulfillmentStatus: "pending",
+        timestamp: new Date(),
+        customerFirstName: "Dev",
+        customerLastName: "Test",
+        customerPhone: "123-456-7890",
+        orderMode: "pickup",
+        salesChannel: "online_order",
+        totalAmount: 10,
+        items: [],
+      } as import("../order-events.types").OrderCreatedEvent);
+
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      // The dev logger should have logged [OrderEvent]
+      const orderEventCalls = consoleSpy.mock.calls.filter(
+        (call) => typeof call[0] === "string" && call[0].includes("[OrderEvent]")
+      );
+      expect(orderEventCalls.length).toBeGreaterThan(0);
+
+      consoleSpy.mockRestore();
+      process.env.NODE_ENV = originalNodeEnv;
     });
   });
 

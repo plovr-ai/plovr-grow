@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useCartStore } from "../cart.store";
 
+type CartStore = ReturnType<typeof useCartStore.getState>;
+
 describe("cart.store", () => {
   beforeEach(() => {
     // Reset the store before each test
@@ -347,6 +349,33 @@ describe("cart.store", () => {
       expect(useCartStore.getState().items.length).toBe(0);
     });
 
+    it("should update only the matching item when multiple items exist", () => {
+      useCartStore.getState().addItem({
+        menuItemId: "item-1",
+        name: "Pizza",
+        price: 10,
+        quantity: 1,
+        selectedModifiers: [],
+      });
+      useCartStore.getState().addItem({
+        menuItemId: "item-2",
+        name: "Pasta",
+        price: 12,
+        quantity: 1,
+        selectedModifiers: [],
+      });
+
+      const items = useCartStore.getState().items;
+      expect(items.length).toBe(2);
+
+      // Update only Pizza
+      useCartStore.getState().updateQuantity(items[0].id, 3);
+
+      const updatedItems = useCartStore.getState().items;
+      expect(updatedItems[0].quantity).toBe(3);
+      expect(updatedItems[1].quantity).toBe(1); // Unchanged
+    });
+
     it("should remove item when quantity is negative", () => {
       useCartStore.getState().addItem({
         menuItemId: "item-1",
@@ -573,6 +602,48 @@ describe("cart.store", () => {
       expect(item.taxes).toEqual(mockTaxes);
     });
 
+    it("should handle imageUrl when adding item", () => {
+      useCartStore.getState().addItem({
+        menuItemId: "item-1",
+        name: "Pizza",
+        price: 18.99,
+        quantity: 1,
+        selectedModifiers: [],
+        imageUrl: "https://example.com/pizza.jpg",
+      });
+
+      const item = useCartStore.getState().items[0];
+      expect(item.imageUrl).toBe("https://example.com/pizza.jpg");
+    });
+
+    it("should handle specialInstructions when adding item", () => {
+      useCartStore.getState().addItem({
+        menuItemId: "item-1",
+        name: "Pizza",
+        price: 18.99,
+        quantity: 1,
+        selectedModifiers: [],
+        specialInstructions: "Extra crispy",
+      });
+
+      const item = useCartStore.getState().items[0];
+      expect(item.specialInstructions).toBe("Extra crispy");
+    });
+
+    it("should handle null imageUrl", () => {
+      useCartStore.getState().addItem({
+        menuItemId: "item-1",
+        name: "Pizza",
+        price: 18.99,
+        quantity: 1,
+        selectedModifiers: [],
+        imageUrl: null,
+      });
+
+      const item = useCartStore.getState().items[0];
+      expect(item.imageUrl).toBeNull();
+    });
+
     it("should preserve taxes when incrementing quantity for same item", () => {
       const addItem = useCartStore.getState().addItem;
 
@@ -599,6 +670,40 @@ describe("cart.store", () => {
       expect(items.length).toBe(1);
       expect(items[0].quantity).toBe(3);
       expect(items[0].taxes).toEqual(mockTaxes);
+    });
+  });
+
+  describe("persist migration", () => {
+    it("should clear cart when migrating from version < 2", () => {
+      // Access the persist options via the store's persist API
+      const persistOptions = useCartStore.persist.getOptions();
+      const migrate = persistOptions.migrate!;
+
+      const oldState = {
+        tenantId: "old-tenant",
+        items: [{ id: "old-item", name: "Old Pizza" }],
+      };
+
+      const result = migrate(oldState, 0) as CartStore;
+      expect(result.tenantId).toBeNull();
+      expect(result.items).toEqual([]);
+
+      const result1 = migrate(oldState, 1) as CartStore;
+      expect(result1.tenantId).toBeNull();
+      expect(result1.items).toEqual([]);
+    });
+
+    it("should pass through state when version is >= 2", () => {
+      const persistOptions = useCartStore.persist.getOptions();
+      const migrate = persistOptions.migrate!;
+
+      const currentState = {
+        tenantId: "current-tenant",
+        items: [{ id: "item-1", name: "Pizza" }],
+      };
+
+      const result = migrate(currentState, 2);
+      expect(result).toEqual(currentState);
     });
   });
 });

@@ -178,6 +178,29 @@ describe("MenuItemCard", () => {
       expect(onAddClick).toHaveBeenCalledTimes(3);
     });
 
+    it("should render without description when description is null", () => {
+      const onAddClick = vi.fn();
+      const noDescItem = { ...mockItem, description: null };
+
+      render(<MenuItemCard item={noDescItem} onAddClick={onAddClick} />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      expect(screen.getByText("Classic Cheese Pizza")).toBeInTheDocument();
+      expect(screen.queryByText("Our signature pizza with fresh mozzarella")).not.toBeInTheDocument();
+    });
+
+    it("should render without tags when tags array is empty", () => {
+      const onAddClick = vi.fn();
+      const noTagsItem = { ...mockItem, tags: [] as never[] };
+
+      render(<MenuItemCard item={noTagsItem} onAddClick={onAddClick} />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      expect(screen.queryByText("Popular")).not.toBeInTheDocument();
+    });
+
     it("should not allow clicks on unavailable items", () => {
       const onAddClick = vi.fn();
       const unavailableItem = { ...mockItem, isAvailable: false };

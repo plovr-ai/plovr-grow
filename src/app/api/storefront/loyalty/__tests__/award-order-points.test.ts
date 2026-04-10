@@ -306,6 +306,54 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
     );
   });
 
+  it("should award points with undefined merchantId for company-level orders", async () => {
+    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+      id: "company-1",
+      tenantId: "tenant-1",
+      name: "Test Company",
+      slug: "test-company",
+      merchants: [],
+    } as unknown as CompanyWithMerchants);
+
+    vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
+    vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
+    vi.mocked(orderService.getOrder).mockResolvedValue({
+      id: "order-gc",
+      merchantId: null,
+      orderNumber: "GC-001",
+      totalAmount: 25.0,
+    } as unknown as Awaited<ReturnType<typeof orderService.getOrder>>);
+    vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(1);
+    vi.mocked(pointsService.awardPoints).mockResolvedValue({
+      pointsEarned: 25,
+      newBalance: 25,
+      transactionId: "tx-gc",
+    });
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/storefront/loyalty/award-order-points",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          orderId: "order-gc",
+          memberId: "member-1",
+          companySlug: "test-company",
+        }),
+      }
+    );
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+
+    expect(pointsService.awardPoints).toHaveBeenCalledWith(
+      "tenant-1",
+      "member-1",
+      expect.objectContaining({
+        merchantId: undefined,
+      })
+    );
+  });
+
   it("should return 500 on internal error", async () => {
     vi.mocked(merchantService.getCompanyBySlug).mockRejectedValue(
       new Error("Database error")

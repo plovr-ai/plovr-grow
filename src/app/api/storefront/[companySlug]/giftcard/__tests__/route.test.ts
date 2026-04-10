@@ -170,6 +170,33 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       });
     });
 
+    it("should return 400 when payment provider not configured", async () => {
+      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+        mockCompany as never
+      );
+      vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue(null);
+
+      const request = new NextRequest(
+        "http://localhost:3000/api/storefront/test-company/giftcard",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            ...validFormData,
+            stripePaymentIntentId: "pi_test123",
+          }),
+        }
+      );
+
+      const response = await POST(request, {
+        params: Promise.resolve({ companySlug: "test-company" }),
+      });
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.success).toBe(false);
+      expect(data.error).toBe("Payment provider not configured");
+    });
+
     it("should return 400 when payment verification fails", async () => {
       vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
         mockCompany as never

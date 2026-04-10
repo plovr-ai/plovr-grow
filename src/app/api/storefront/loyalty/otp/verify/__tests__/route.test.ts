@@ -301,6 +301,106 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
     );
   });
 
+  it("should use login purpose for existing member", async () => {
+    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+      id: "company-1",
+      tenantId: "tenant-1",
+      slug: "test-company",
+      name: "Test Company",
+    } as unknown as CompanyWithMerchants);
+
+    // Return existing member
+    vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue({
+      id: "member-existing",
+      phone: "+15551234567",
+      firstName: "John",
+      lastName: "Doe",
+      email: null,
+      points: 100,
+      tenantId: "tenant-1",
+      companyId: "company-1",
+    } as never);
+
+    vi.mocked(otpService.verifyOtp).mockResolvedValue({
+      verified: true,
+      success: true,
+      reason: undefined,
+    });
+
+    vi.mocked(loyaltyService.enrollCustomer).mockResolvedValue({
+      member: {
+        id: "member-existing",
+        phone: "+15551234567",
+        firstName: "John",
+        lastName: "Doe",
+        email: null,
+        points: 100,
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        totalOrders: 5,
+        totalSpent: 200,
+        lastOrderAt: null,
+        enrolledAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      isNew: false,
+    });
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/storefront/loyalty/otp/verify",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          phone: "+15551234567",
+          code: "123456",
+          companySlug: "test-company",
+        }),
+      }
+    );
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+
+    // Should use "login" purpose for existing member
+    expect(otpService.verifyOtp).toHaveBeenCalledWith(
+      "tenant-1",
+      "+15551234567",
+      "123456",
+      "login"
+    );
+  });
+
+  it("should return 500 for unexpected errors", async () => {
+    vi.mocked(merchantService.getCompanyBySlug).mockRejectedValue(
+      new Error("DB error")
+    );
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/storefront/loyalty/otp/verify",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          phone: "+15551234567",
+          code: "123456",
+          companySlug: "test-company",
+          firstName: "John",
+          lastName: "Doe",
+        }),
+      }
+    );
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.success).toBe(false);
+    expect(data.error).toBe("An error occurred while verifying OTP");
+  });
+
   it("should return error when company not found", async () => {
     vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(null);
 

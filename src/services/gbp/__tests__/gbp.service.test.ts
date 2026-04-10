@@ -167,6 +167,24 @@ describe("GbpService", () => {
         tokenExpiresAt: expiresAt,
       });
     });
+
+    it("should map null fields to undefined in connection status", async () => {
+      mockIntegrationRepo.getConnection.mockResolvedValue({
+        id: "conn-1",
+        externalAccountId: null,
+        externalLocationId: null,
+        tokenExpiresAt: null,
+      });
+
+      const status = await service.getConnectionStatus("t1", "m1");
+
+      expect(status).toEqual({
+        connected: true,
+        externalAccountId: undefined,
+        externalLocationId: undefined,
+        tokenExpiresAt: undefined,
+      });
+    });
   });
 
   describe("disconnect()", () => {
@@ -262,12 +280,117 @@ describe("GbpService", () => {
       expect(result.merchantData).toEqual({ phone: "+1234567890" });
     });
 
+    it("should handle null connection fields when syncing location", async () => {
+      mockIntegrationRepo.getConnection.mockResolvedValue({
+        id: "conn-1",
+        accessToken: "access-123",
+        refreshToken: null,
+        tokenExpiresAt: null,
+        externalAccountId: null,
+        externalLocationId: null,
+        scopes: null,
+      });
+
+      const result = await service.syncLocation("t1", "m1", "locations/456");
+
+      expect(mockIntegrationRepo.upsertConnection).toHaveBeenCalledWith(
+        "t1",
+        "m1",
+        expect.objectContaining({
+          externalAccountId: undefined,
+          accessToken: "access-123",
+          refreshToken: undefined,
+          tokenExpiresAt: undefined,
+          scopes: undefined,
+        })
+      );
+      expect(result.merchantData).toEqual({ phone: "+1234567890" });
+    });
+
     it("should throw AppError when not connected", async () => {
       mockIntegrationRepo.getConnection.mockResolvedValue(null);
 
       await expect(
         service.syncLocation("t1", "m1", "locations/456")
       ).rejects.toThrow(AppError);
+    });
+
+    it("should mark sync as failed and re-throw AppError when getLocation throws AppError", async () => {
+      mockIntegrationRepo.getConnection.mockResolvedValue({
+        id: "conn-1",
+        accessToken: "access-123",
+        refreshToken: "refresh-456",
+        tokenExpiresAt: new Date(Date.now() + 3600 * 1000),
+        externalAccountId: "accounts/123",
+        externalLocationId: null,
+        scopes: "https://www.googleapis.com/auth/business.manage",
+      });
+
+      const appError = new AppError("GBP_ACCOUNT_FETCH_FAILED" as never, undefined, 500);
+      mockGbpLocation.getLocation.mockRejectedValue(appError);
+
+      await expect(
+        service.syncLocation("t1", "m1", "locations/456")
+      ).rejects.toThrow(AppError);
+
+      expect(mockIntegrationRepo.updateSyncRecord).toHaveBeenCalledWith(
+        "sync-1",
+        expect.objectContaining({
+          status: "failed",
+        })
+      );
+    });
+
+    it("should mark sync as failed and throw GBP_SYNC_FAILED for non-AppError", async () => {
+      mockIntegrationRepo.getConnection.mockResolvedValue({
+        id: "conn-1",
+        accessToken: "access-123",
+        refreshToken: "refresh-456",
+        tokenExpiresAt: new Date(Date.now() + 3600 * 1000),
+        externalAccountId: "accounts/123",
+        externalLocationId: null,
+        scopes: "https://www.googleapis.com/auth/business.manage",
+      });
+
+      mockGbpLocation.getLocation.mockRejectedValue(new Error("Network error"));
+
+      await expect(
+        service.syncLocation("t1", "m1", "locations/456")
+      ).rejects.toMatchObject({ code: "GBP_SYNC_FAILED" });
+
+      expect(mockIntegrationRepo.updateSyncRecord).toHaveBeenCalledWith(
+        "sync-1",
+        expect.objectContaining({
+          status: "failed",
+          errorMessage: "Network error",
+        })
+      );
+    });
+
+    it("should handle non-Error thrown during sync", async () => {
+      mockIntegrationRepo.getConnection.mockResolvedValue({
+        id: "conn-1",
+        accessToken: "access-123",
+        refreshToken: "refresh-456",
+        tokenExpiresAt: new Date(Date.now() + 3600 * 1000),
+        externalAccountId: "accounts/123",
+        externalLocationId: null,
+        scopes: "https://www.googleapis.com/auth/business.manage",
+      });
+
+      mockGbpLocation.getLocation.mockRejectedValue("string error");
+
+      await expect(
+        service.syncLocation("t1", "m1", "locations/456")
+      ).rejects.toMatchObject({ code: "GBP_SYNC_FAILED" });
+
+      expect(mockIntegrationRepo.updateSyncRecord).toHaveBeenCalledWith(
+        "sync-1",
+        expect.objectContaining({
+          status: "failed",
+          errorMessage: "Unknown error",
+        })
+      );
     });
   });
 
@@ -306,6 +429,24 @@ describe("GbpService", () => {
       await service.listLocations("t1", "m1");
 
       expect(mockGbpOAuth.refreshToken).not.toHaveBeenCalled();
+    });
+
+    it("should skip refresh when tokenExpiresAt is null", async () => {
+      mockIntegrationRepo.getConnection.mockResolvedValue({
+        id: "conn-1",
+        accessToken: "valid-access",
+        refreshToken: null,
+        tokenExpiresAt: null,
+        externalAccountId: "accounts/123",
+      });
+
+      await service.listLocations("t1", "m1");
+
+      expect(mockGbpOAuth.refreshToken).not.toHaveBeenCalled();
+      expect(mockGbpLocation.listLocations).toHaveBeenCalledWith(
+        "valid-access",
+        "accounts/123"
+      );
     });
 
     it("should throw when no access token exists", async () => {

@@ -54,4 +54,19 @@ describe("generateUniqueSlug", () => {
     const result = await generateUniqueSlug("Joe's Pizza", isAvailable);
     expect(result).toBe("joes-pizza-4");
   });
+
+  it("falls back to timestamp suffix when all 100 suffixes are taken", async () => {
+    const isAvailable = vi.fn().mockResolvedValue(false);
+    const before = Date.now();
+    const result = await generateUniqueSlug("Joe's Pizza", isAvailable);
+    const after = Date.now();
+
+    expect(result).toMatch(/^joes-pizza-\d+$/);
+    // The timestamp suffix should be between before and after
+    const timestamp = parseInt(result.replace("joes-pizza-", ""), 10);
+    expect(timestamp).toBeGreaterThanOrEqual(before);
+    expect(timestamp).toBeLessThanOrEqual(after);
+    // Base + 100 suffixes (2-100) = 100 calls
+    expect(isAvailable).toHaveBeenCalledTimes(100);
+  });
 });

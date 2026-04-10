@@ -457,6 +457,58 @@ describe("CartPage", () => {
     });
   });
 
+  describe("item image display", () => {
+    it("should render item image when imageUrl is provided", () => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: [
+          {
+            id: "1",
+            menuItemId: "item-1",
+            name: "Pizza",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 10,
+            imageUrl: "https://example.com/pizza.jpg",
+          },
+        ],
+      });
+
+      render(<CartPage />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      const img = screen.getByAltText("Pizza");
+      expect(img).toHaveAttribute("src", "https://example.com/pizza.jpg");
+    });
+
+    it("should render special instructions when provided", () => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: [
+          {
+            id: "1",
+            menuItemId: "item-1",
+            name: "Pizza",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 10,
+            imageUrl: null,
+            specialInstructions: "Extra napkins please",
+          },
+        ],
+      });
+
+      render(<CartPage />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      expect(screen.getByText("Extra napkins please")).toBeInTheDocument();
+    });
+  });
+
   describe("responsive layout", () => {
     it("should have responsive grid layout classes", () => {
       useCartStore.setState({

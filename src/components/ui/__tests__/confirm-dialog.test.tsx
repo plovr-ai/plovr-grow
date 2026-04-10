@@ -202,6 +202,21 @@ Line 3`;
       fireEvent.keyDown(document, { key: "Escape" });
       expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
+
+    it("should not call onClose for non-Escape keys", () => {
+      render(
+        <ConfirmDialog
+          isOpen={true}
+          onClose={mockOnClose}
+          onConfirm={mockOnConfirm}
+          title="Delete Item"
+          message="Are you sure?"
+        />
+      );
+
+      fireEvent.keyDown(document, { key: "Enter" });
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
   });
 
   describe("variants", () => {

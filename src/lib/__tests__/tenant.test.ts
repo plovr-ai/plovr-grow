@@ -1,8 +1,18 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   extractCompanySlugFromPath,
   extractMerchantSlugFromPath,
 } from "../tenant";
+
+// Mock next/headers for getMerchantContext and requireMerchantContext
+vi.mock("next/headers", () => ({
+  headers: vi.fn(),
+}));
+
+// Mock react cache to pass through
+vi.mock("react", () => ({
+  cache: (fn: unknown) => fn,
+}));
 
 describe("tenant utilities", () => {
   describe("extractCompanySlugFromPath", () => {
@@ -96,6 +106,94 @@ describe("tenant utilities", () => {
 
     it("should return null for empty path", () => {
       expect(extractMerchantSlugFromPath("")).toBeNull();
+    });
+  });
+
+  describe("getMerchantContext", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("should return merchant context when all headers are present", async () => {
+      const { headers } = await import("next/headers");
+      vi.mocked(headers).mockResolvedValue({
+        get: (name: string) => {
+          const map: Record<string, string> = {
+            "x-merchant-id": "m1",
+            "x-merchant-slug": "downtown",
+            "x-company-id": "c1",
+            "x-tenant-id": "t1",
+          };
+          return map[name] ?? null;
+        },
+      } as never);
+
+      const { getMerchantContext } = await import("../tenant");
+      const context = await getMerchantContext();
+
+      expect(context).toEqual({
+        merchantId: "m1",
+        merchantSlug: "downtown",
+        companyId: "c1",
+        tenantId: "t1",
+      });
+    });
+
+    it("should return null when some headers are missing", async () => {
+      const { headers } = await import("next/headers");
+      vi.mocked(headers).mockResolvedValue({
+        get: (name: string) => {
+          const map: Record<string, string> = {
+            "x-merchant-id": "m1",
+            // missing other headers
+          };
+          return map[name] ?? null;
+        },
+      } as never);
+
+      const { getMerchantContext } = await import("../tenant");
+      const context = await getMerchantContext();
+
+      expect(context).toBeNull();
+    });
+  });
+
+  describe("requireMerchantContext", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("should throw when merchant context is not available", async () => {
+      const { headers } = await import("next/headers");
+      vi.mocked(headers).mockResolvedValue({
+        get: () => null,
+      } as never);
+
+      const { requireMerchantContext } = await import("../tenant");
+
+      await expect(requireMerchantContext()).rejects.toThrow(
+        "Merchant context is required"
+      );
+    });
+
+    it("should return context when available", async () => {
+      const { headers } = await import("next/headers");
+      vi.mocked(headers).mockResolvedValue({
+        get: (name: string) => {
+          const map: Record<string, string> = {
+            "x-merchant-id": "m1",
+            "x-merchant-slug": "downtown",
+            "x-company-id": "c1",
+            "x-tenant-id": "t1",
+          };
+          return map[name] ?? null;
+        },
+      } as never);
+
+      const { requireMerchantContext } = await import("../tenant");
+      const context = await requireMerchantContext();
+
+      expect(context.merchantId).toBe("m1");
     });
   });
 });

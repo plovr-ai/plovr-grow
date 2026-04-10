@@ -134,6 +134,29 @@ describe("FormField", () => {
       // Should not have grid layout
       expect(container.firstChild).not.toHaveClass("grid");
     });
+
+    it("renders error message when label is empty and error is provided", () => {
+      render(
+        <FormField id="test" label="" error="Something went wrong">
+          <input data-testid="child-input" />
+        </FormField>
+      );
+
+      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+    });
+  });
+
+  describe("vertical layout", () => {
+    it("renders required indicator and error in vertical layout", () => {
+      render(
+        <FormField id="test" label="Field" layout="vertical" required error="Required field">
+          <input data-testid="child-input" />
+        </FormField>
+      );
+
+      expect(screen.getByText("*")).toBeInTheDocument();
+      expect(screen.getByText("Required field")).toBeInTheDocument();
+    });
   });
 });
 

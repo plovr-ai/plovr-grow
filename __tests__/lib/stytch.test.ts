@@ -30,4 +30,14 @@ describe("stytch client", () => {
     const { getStytchServerClient } = await import("@/lib/stytch");
     expect(() => getStytchServerClient()).toThrow("STYTCH_SECRET");
   });
+
+  it("returns cached client on subsequent calls", async () => {
+    vi.stubEnv("STYTCH_PROJECT_ID", "project-test-123");
+    vi.stubEnv("STYTCH_SECRET", "secret-test-456");
+
+    const { getStytchServerClient } = await import("@/lib/stytch");
+    const client1 = getStytchServerClient();
+    const client2 = getStytchServerClient();
+    expect(client1).toBe(client2);
+  });
 });

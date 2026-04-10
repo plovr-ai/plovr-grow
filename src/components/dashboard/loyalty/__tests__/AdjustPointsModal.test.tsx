@@ -298,6 +298,41 @@ describe("AdjustPointsModal", () => {
       expect(defaultProps.onClose).toHaveBeenCalled();
     });
 
+    it("should call onClose when Escape key is pressed", () => {
+      render(<AdjustPointsModal {...defaultProps} />);
+
+      fireEvent.keyDown(document, { key: "Escape" });
+
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+
+    it("should not close on non-Escape key", () => {
+      render(<AdjustPointsModal {...defaultProps} />);
+
+      fireEvent.keyDown(document, { key: "Enter" });
+
+      expect(defaultProps.onClose).not.toHaveBeenCalled();
+    });
+
+    it("should not respond to Escape when modal is closed", () => {
+      render(<AdjustPointsModal {...defaultProps} isOpen={false} />);
+
+      fireEvent.keyDown(document, { key: "Escape" });
+
+      expect(defaultProps.onClose).not.toHaveBeenCalled();
+    });
+
+    it("should not close when clicking inside modal content", () => {
+      render(<AdjustPointsModal {...defaultProps} />);
+
+      const modalContent = screen
+        .getByText("Adjust Points")
+        .closest("div.w-full") as HTMLElement;
+      fireEvent.click(modalContent);
+
+      expect(defaultProps.onClose).not.toHaveBeenCalled();
+    });
+
     it("should reset form state when modal reopens", () => {
       const { rerender } = render(<AdjustPointsModal {...defaultProps} />);
 

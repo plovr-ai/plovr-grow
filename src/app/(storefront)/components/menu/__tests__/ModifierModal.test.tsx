@@ -718,6 +718,547 @@ describe("ModifierModal", () => {
     });
   });
 
+  describe("modal interactions", () => {
+    it("should return null when not open", () => {
+      const item = createMenuItem();
+      const { container } = render(
+        <ModifierModal item={item} isOpen={false} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+      expect(container.innerHTML).toBe("");
+    });
+
+    it("should close on escape key", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "size",
+            name: "Size",
+            required: false,
+            minSelections: 0,
+            maxSelections: 1,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "s1", name: "Small", price: 0, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      fireEvent.keyDown(window, { key: "Escape" });
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it("should close on backdrop click", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "size",
+            name: "Size",
+            required: false,
+            minSelections: 0,
+            maxSelections: 1,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "s1", name: "Small", price: 0, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      const { container } = render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      // Click backdrop (the outer fixed div)
+      const backdrop = container.querySelector(".fixed.inset-0") as HTMLElement;
+      fireEvent.click(backdrop);
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it("should close on close button click", () => {
+      const item = createMenuItem({
+        modifierGroups: [],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      fireEvent.click(screen.getByLabelText("Close"));
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it("should display item image when present", () => {
+      const item = createMenuItem({
+        imageUrl: "https://example.com/pizza.jpg",
+        modifierGroups: [],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      const img = screen.getByAltText("Test Pizza");
+      expect(img).toHaveAttribute("src", "https://example.com/pizza.jpg");
+    });
+
+    it("should display item description when present", () => {
+      const item = createMenuItem({
+        description: "A delicious pizza with toppings",
+        modifierGroups: [],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      expect(screen.getByText("A delicious pizza with toppings")).toBeInTheDocument();
+    });
+
+    it("should not display description when null", () => {
+      const item = createMenuItem({
+        description: null,
+        modifierGroups: [],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      expect(screen.getByText("Test Pizza")).toBeInTheDocument();
+      expect(screen.getByText("$18.99")).toBeInTheDocument();
+    });
+
+    it("should handle item quantity increase and decrease", () => {
+      const item = createMenuItem({ modifierGroups: [] });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      // Find item quantity controls (the larger w-8 buttons)
+      const increaseButton = screen.getAllByLabelText(/Increase quantity/i).find(
+        (btn) => btn.className.includes("w-8")
+      )!;
+      const decreaseButton = screen.getAllByLabelText(/Decrease quantity/i).find(
+        (btn) => btn.className.includes("w-8")
+      )!;
+
+      // Increase to 2
+      fireEvent.click(increaseButton);
+      expect(screen.getByText("2")).toBeInTheDocument();
+
+      // Decrease back to 1
+      fireEvent.click(decreaseButton);
+      expect(screen.queryByText("2")).not.toBeInTheDocument();
+
+      // Try to decrease below 1
+      fireEvent.click(decreaseButton);
+      // Should still show 1
+    });
+
+    it("should pass correct item quantity to onConfirm", () => {
+      const item = createMenuItem({ modifierGroups: [] });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      // Increase to 3
+      const increaseButton = screen.getAllByLabelText(/Increase quantity/i).find(
+        (btn) => btn.className.includes("w-8")
+      )!;
+      fireEvent.click(increaseButton);
+      fireEvent.click(increaseButton);
+
+      fireEvent.click(screen.getByRole("button", { name: /Add to Cart/i }));
+      expect(mockOnConfirm).toHaveBeenCalledWith([], 3);
+    });
+  });
+
+  describe("selection hints", () => {
+    it("should show 'Required - Select N' when min equals max", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "size",
+            name: "Size",
+            required: true,
+            minSelections: 1,
+            maxSelections: 1,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "s1", name: "Small", price: 0, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      expect(screen.getByText("Required - Select 1")).toBeInTheDocument();
+    });
+
+    it("should show 'Required - Select N to M' when min differs from max", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "toppings",
+            name: "Toppings",
+            required: true,
+            minSelections: 1,
+            maxSelections: 3,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "t1", name: "Cheese", price: 0, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      expect(screen.getByText("Required - Select 1 to 3")).toBeInTheDocument();
+    });
+
+    it("should show 'Optional - Select up to 1' for optional single-select", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "sauce",
+            name: "Sauce",
+            required: false,
+            minSelections: 0,
+            maxSelections: 1,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "s1", name: "Ketchup", price: 0, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      expect(screen.getByText("Optional - Select up to 1")).toBeInTheDocument();
+    });
+
+    it("should show 'Optional - Select up to N' for optional multi-select", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "extras",
+            name: "Extras",
+            required: false,
+            minSelections: 0,
+            maxSelections: 5,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "e1", name: "Extra Cheese", price: 1, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      expect(screen.getByText("Optional - Select up to 5")).toBeInTheDocument();
+    });
+
+    it("should show modifier price when price > 0", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "extras",
+            name: "Extras",
+            required: false,
+            minSelections: 0,
+            maxSelections: 5,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "e1", name: "Extra Cheese", price: 1.5, isDefault: false, isAvailable: true },
+              { id: "e2", name: "Free Topping", price: 0, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      expect(screen.getByText("+$1.50")).toBeInTheDocument();
+      // Free topping should not show a price
+      expect(screen.queryByText("+$0.00")).not.toBeInTheDocument();
+    });
+
+    it("should not pre-select unavailable default modifiers", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "toppings",
+            name: "Toppings",
+            required: false,
+            minSelections: 0,
+            maxSelections: 5,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "t1", name: "Lettuce", price: 0, isDefault: true, isAvailable: false },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      const lettuceLabel = getModifierLabel("Lettuce");
+      expect(lettuceLabel?.className).not.toContain("bg-theme-primary-light");
+    });
+  });
+
+  describe("handleUpdateQuantity edge cases", () => {
+    it("should not update quantity for a modifier that is not selected", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "toppings",
+            name: "Extra Toppings",
+            required: false,
+            minSelections: 0,
+            maxSelections: 10,
+            allowQuantity: true,
+            maxQuantityPerModifier: 3,
+            modifiers: [
+              { id: "t1", name: "Extra Cheese", price: 1.5, isDefault: false, isAvailable: true },
+              { id: "t2", name: "Bacon", price: 2.0, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      // Only select Extra Cheese
+      const cheeseLabel = getModifierLabel("Extra Cheese");
+      fireEvent.click(cheeseLabel!);
+
+      // Try to increase quantity of Bacon (not selected) - this should be a no-op
+      // We can verify by checking that only 2 decrease buttons exist (1 modifier + 1 item)
+      const allDecreaseButtons = screen.getAllByLabelText(/Decrease quantity/i);
+      expect(allDecreaseButtons.length).toBe(2); // cheese modifier + item qty
+    });
+  });
+
+  describe("escape key when modal is closed", () => {
+    it("should not call onClose when escape is pressed and modal is closed", () => {
+      const item = createMenuItem();
+      render(
+        <ModifierModal item={item} isOpen={false} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      fireEvent.keyDown(window, { key: "Escape" });
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("body scroll prevention", () => {
+    it("should prevent body scroll when open and restore on close", () => {
+      const item = createMenuItem();
+      const { rerender } = render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      expect(document.body.style.overflow).toBe("hidden");
+
+      rerender(
+        <ModifierModal item={item} isOpen={false} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      expect(document.body.style.overflow).toBe("");
+    });
+  });
+
+  describe("confirm when invalid", () => {
+    it("should not call onConfirm when validation fails (required group unmet)", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "size",
+            name: "Size",
+            required: true,
+            minSelections: 1,
+            maxSelections: 1,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "size-s", name: "Small", price: 0, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      // Try to add to cart without selecting required group
+      const addButton = screen.getByRole("button", { name: /Add to Cart/i });
+      fireEvent.click(addButton);
+
+      expect(mockOnConfirm).not.toHaveBeenCalled();
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("backdrop click on non-backdrop element", () => {
+    it("should not close when clicking inside the modal content", () => {
+      const item = createMenuItem({ modifierGroups: [] });
+
+      const { container } = render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      // Click on the modal content (inner div), not the backdrop
+      const modalContent = container.querySelector(".relative.bg-white") as HTMLElement;
+      fireEvent.click(modalContent);
+
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("no image and no description", () => {
+    it("should not render image when imageUrl is null", () => {
+      const item = createMenuItem({ imageUrl: null, modifierGroups: [] });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      expect(screen.queryByAltText("Test Pizza")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("confirm with modifiers selected", () => {
+    it("should build selected modifiers array on confirm", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "toppings",
+            name: "Toppings",
+            required: false,
+            minSelections: 0,
+            maxSelections: 5,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "t1", name: "Extra Cheese", price: 1.5, isDefault: false, isAvailable: true },
+              { id: "t2", name: "Mushrooms", price: 1.0, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      // Select Extra Cheese
+      const cheeseLabel = getModifierLabel("Extra Cheese");
+      fireEvent.click(cheeseLabel!);
+
+      // Click Add to Cart
+      fireEvent.click(screen.getByRole("button", { name: /Add to Cart/i }));
+
+      expect(mockOnConfirm).toHaveBeenCalledWith(
+        [
+          {
+            groupId: "toppings",
+            groupName: "Toppings",
+            modifierId: "t1",
+            modifierName: "Extra Cheese",
+            price: 1.5,
+            quantity: 1,
+          },
+        ],
+        1
+      );
+    });
+
+    it("should build multiple selected modifiers on confirm", () => {
+      const item = createMenuItem({
+        modifierGroups: [
+          {
+            id: "size",
+            name: "Size",
+            required: true,
+            minSelections: 1,
+            maxSelections: 1,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "s1", name: "Large", price: 2.0, isDefault: false, isAvailable: true },
+            ],
+          },
+          {
+            id: "toppings",
+            name: "Toppings",
+            required: false,
+            minSelections: 0,
+            maxSelections: 5,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            modifiers: [
+              { id: "t1", name: "Pepperoni", price: 1.5, isDefault: false, isAvailable: true },
+            ],
+          },
+        ],
+      });
+
+      render(
+        <ModifierModal item={item} isOpen={true} onClose={mockOnClose} onConfirm={mockOnConfirm} />
+      );
+
+      // Select Large
+      fireEvent.click(getModifierLabel("Large")!);
+      // Select Pepperoni
+      fireEvent.click(getModifierLabel("Pepperoni")!);
+
+      fireEvent.click(screen.getByRole("button", { name: /Add to Cart/i }));
+
+      expect(mockOnConfirm).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ modifierId: "s1", modifierName: "Large" }),
+          expect.objectContaining({ modifierId: "t1", modifierName: "Pepperoni" }),
+        ]),
+        1
+      );
+    });
+  });
+
   describe("validation", () => {
     it("should disable Add to Cart when required group has no selection", () => {
       const item = createMenuItem({

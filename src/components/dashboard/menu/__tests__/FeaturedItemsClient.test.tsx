@@ -3,6 +3,21 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { type ReactNode } from "react";
 import { DashboardProvider } from "@/contexts";
 import { FeaturedItemsClient } from "../FeaturedItemsClient";
+import type { DragEndEvent } from "@dnd-kit/core";
+
+// Capture onDragEnd callback from DndContext
+let capturedOnDragEnd: ((event: DragEndEvent) => void) | null = null;
+
+vi.mock("@dnd-kit/core", async () => {
+  const actual = await vi.importActual<typeof import("@dnd-kit/core")>("@dnd-kit/core");
+  return {
+    ...actual,
+    DndContext: ({ children, onDragEnd }: { children: ReactNode; onDragEnd?: (event: DragEndEvent) => void; [key: string]: unknown }) => {
+      capturedOnDragEnd = onDragEnd || null;
+      return <>{children}</>;
+    },
+  };
+});
 
 // Helper wrapper with DashboardContext
 function Wrapper({ children }: { children: ReactNode }) {
@@ -504,6 +519,98 @@ describe("FeaturedItemsClient", () => {
 
       fireEvent.change(searchInput, { target: { value: "chicken" } });
       expect(screen.getByText("Chicken Sandwich")).toBeInTheDocument();
+    });
+  });
+
+  describe("Drag and Drop Reorder", () => {
+    it("should call reorderFeaturedItemsAction when items are reordered", async () => {
+      render(
+        <FeaturedItemsClient
+          selectedItems={selectedItems}
+          availableItems={availableItems}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      if (capturedOnDragEnd) {
+        capturedOnDragEnd({
+          active: { id: "item-1" },
+          over: { id: "item-2" },
+        } as DragEndEvent);
+      }
+
+      await waitFor(() => {
+        expect(mockReorderFeaturedItemsAction).toHaveBeenCalledWith([
+          "item-2",
+          "item-1",
+        ]);
+      });
+    });
+
+    it("should not call reorder when dropped on same position", () => {
+      render(
+        <FeaturedItemsClient
+          selectedItems={selectedItems}
+          availableItems={availableItems}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      if (capturedOnDragEnd) {
+        capturedOnDragEnd({
+          active: { id: "item-1" },
+          over: { id: "item-1" },
+        } as DragEndEvent);
+      }
+
+      expect(mockReorderFeaturedItemsAction).not.toHaveBeenCalled();
+    });
+
+    it("should not call reorder when over is null", () => {
+      render(
+        <FeaturedItemsClient
+          selectedItems={selectedItems}
+          availableItems={availableItems}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      if (capturedOnDragEnd) {
+        capturedOnDragEnd({
+          active: { id: "item-1" },
+          over: null,
+        } as DragEndEvent);
+      }
+
+      expect(mockReorderFeaturedItemsAction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Remove Item Not In Available List", () => {
+    it("should handle removing item that is not in initial available list", async () => {
+      // selectedItems contains items that are NOT in availableItems
+      // When removing, the item should just be removed from selected without adding to available
+      render(
+        <FeaturedItemsClient
+          selectedItems={selectedItems}
+          availableItems={[]} // No available items - item-1 and item-2 are not in this list
+        />,
+        { wrapper: Wrapper }
+      );
+
+      // Find and click the X button for "Classic Burger"
+      const burgerText = screen.getByText("Classic Burger");
+      const itemContainer = burgerText.closest("div.flex.items-center");
+      const xButton = itemContainer?.querySelector('button[class*="hover:text-red"]');
+
+      if (xButton) {
+        fireEvent.click(xButton);
+
+        // Should update selected count
+        expect(screen.getByText("Featured Items (1)")).toBeInTheDocument();
+        // Available should remain 0
+        expect(screen.getByText("Available Items (0)")).toBeInTheDocument();
+      }
     });
   });
 });

@@ -178,6 +178,37 @@ describe("LoyaltyMembersClient", () => {
       expect(dashes.length).toBeGreaterThan(0);
     });
 
+    it("should show last name only when firstName is null", () => {
+      const membersWithLastNameOnly: LoyaltyMemberData[] = [
+        {
+          id: "member-ln",
+          tenantId: "tenant-1",
+          companyId: "company-1",
+          phone: "5555555555",
+          email: null,
+          firstName: null,
+          lastName: "Smith",
+          points: 50,
+          totalOrders: 1,
+          totalSpent: 10,
+          lastOrderAt: null,
+          enrolledAt: new Date("2024-01-01"),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+      render(
+        <LoyaltyMembersClient
+          {...defaultProps}
+          members={membersWithLastNameOnly}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      // lastName-only member should be formatted
+      expect(screen.getByText("Smith")).toBeInTheDocument();
+    });
+
     it("should render enrolled dates correctly", () => {
       render(<LoyaltyMembersClient {...defaultProps} />, { wrapper: Wrapper });
 

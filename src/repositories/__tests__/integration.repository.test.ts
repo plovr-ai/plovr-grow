@@ -19,6 +19,11 @@ vi.mock("@/lib/db", () => {
       update: vi.fn(),
       findFirst: vi.fn(),
     },
+    webhookEvent: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
   };
   return { default: mockPrisma };
 });
@@ -35,6 +40,7 @@ type MockedPrisma = {
   integrationConnection: { findUnique: MockedFn; findFirst: MockedFn; upsert: MockedFn; update: MockedFn };
   externalIdMapping: { upsert: MockedFn; findMany: MockedFn; findFirst: MockedFn };
   integrationSyncRecord: { create: MockedFn; update: MockedFn; findFirst: MockedFn };
+  webhookEvent: { findUnique: MockedFn; create: MockedFn; update: MockedFn };
 };
 const mockPrisma = prisma as unknown as MockedPrisma;
 
@@ -214,6 +220,292 @@ describe("IntegrationRepository", () => {
       expect(mockPrisma.integrationConnection.update).toHaveBeenCalledWith({
         where: { id: "conn-1" },
         data: tokens,
+      });
+    });
+  });
+
+  describe("updateSyncRecord", () => {
+    it("should update sync record with finishedAt for success status", async () => {
+      mockPrisma.integrationSyncRecord.update.mockResolvedValue({} as never);
+
+      await repo.updateSyncRecord("sync-1", {
+        status: "success",
+        objectsSynced: 10,
+        objectsMapped: 10,
+      });
+
+      expect(mockPrisma.integrationSyncRecord.update).toHaveBeenCalledWith({
+        where: { id: "sync-1" },
+        data: expect.objectContaining({
+          status: "success",
+          objectsSynced: 10,
+          objectsMapped: 10,
+          finishedAt: expect.any(Date),
+        }),
+      });
+    });
+
+    it("should update sync record without finishedAt for running status", async () => {
+      mockPrisma.integrationSyncRecord.update.mockResolvedValue({} as never);
+
+      await repo.updateSyncRecord("sync-1", {
+        status: "running",
+        cursor: "next-page-token",
+      });
+
+      expect(mockPrisma.integrationSyncRecord.update).toHaveBeenCalledWith({
+        where: { id: "sync-1" },
+        data: expect.objectContaining({
+          status: "running",
+          cursor: "next-page-token",
+          finishedAt: undefined,
+        }),
+      });
+    });
+
+    it("should update sync record with finishedAt for failed status", async () => {
+      mockPrisma.integrationSyncRecord.update.mockResolvedValue({} as never);
+
+      await repo.updateSyncRecord("sync-1", {
+        status: "failed",
+        errorMessage: "API timeout",
+      });
+
+      expect(mockPrisma.integrationSyncRecord.update).toHaveBeenCalledWith({
+        where: { id: "sync-1" },
+        data: expect.objectContaining({
+          status: "failed",
+          errorMessage: "API timeout",
+          finishedAt: expect.any(Date),
+        }),
+      });
+    });
+  });
+
+  describe("getIdMappingsBySource", () => {
+    it("should find mappings by source", async () => {
+      mockPrisma.externalIdMapping.findMany.mockResolvedValue([
+        { internalId: "item-1", externalId: "sq-item-1" },
+      ] as never);
+
+      const result = await repo.getIdMappingsBySource("t1", "SQUARE");
+
+      expect(mockPrisma.externalIdMapping.findMany).toHaveBeenCalledWith({
+        where: {
+          tenantId: "t1",
+          externalSource: "SQUARE",
+          deleted: false,
+        },
+      });
+      expect(result).toHaveLength(1);
+    });
+
+    it("should filter by internalType when provided", async () => {
+      mockPrisma.externalIdMapping.findMany.mockResolvedValue([] as never);
+
+      await repo.getIdMappingsBySource("t1", "SQUARE", "MenuItem");
+
+      expect(mockPrisma.externalIdMapping.findMany).toHaveBeenCalledWith({
+        where: {
+          tenantId: "t1",
+          externalSource: "SQUARE",
+          internalType: "MenuItem",
+          deleted: false,
+        },
+      });
+    });
+  });
+
+  describe("getIdMappingByExternalId", () => {
+    it("should find mapping by external ID", async () => {
+      mockPrisma.externalIdMapping.findFirst.mockResolvedValue({
+        internalId: "item-1",
+      } as never);
+
+      const result = await repo.getIdMappingByExternalId("t1", "SQUARE", "sq-item-1");
+
+      expect(mockPrisma.externalIdMapping.findFirst).toHaveBeenCalledWith({
+        where: {
+          tenantId: "t1",
+          externalSource: "SQUARE",
+          externalId: "sq-item-1",
+          deleted: false,
+        },
+      });
+      expect(result).toEqual({ internalId: "item-1" });
+    });
+  });
+
+  describe("getIdMappingByInternalId", () => {
+    it("should find mapping by internal ID", async () => {
+      mockPrisma.externalIdMapping.findFirst.mockResolvedValue({
+        externalId: "sq-item-1",
+      } as never);
+
+      const result = await repo.getIdMappingByInternalId(
+        "t1", "SQUARE", "MenuItem", "item-1", "ITEM"
+      );
+
+      expect(mockPrisma.externalIdMapping.findFirst).toHaveBeenCalledWith({
+        where: {
+          tenantId: "t1",
+          externalSource: "SQUARE",
+          internalType: "MenuItem",
+          internalId: "item-1",
+          externalType: "ITEM",
+          deleted: false,
+        },
+      });
+      expect(result).toEqual({ externalId: "sq-item-1" });
+    });
+
+    it("should not include externalType filter when not provided", async () => {
+      mockPrisma.externalIdMapping.findFirst.mockResolvedValue(null as never);
+
+      await repo.getIdMappingByInternalId("t1", "SQUARE", "MenuItem", "item-1");
+
+      expect(mockPrisma.externalIdMapping.findFirst).toHaveBeenCalledWith({
+        where: {
+          tenantId: "t1",
+          externalSource: "SQUARE",
+          internalType: "MenuItem",
+          internalId: "item-1",
+          deleted: false,
+        },
+      });
+    });
+  });
+
+  describe("getIdMappingsByInternalIds", () => {
+    it("should batch find mappings by internal IDs", async () => {
+      mockPrisma.externalIdMapping.findMany.mockResolvedValue([
+        { internalId: "item-1", externalId: "sq-var-1" },
+      ] as never);
+
+      const result = await repo.getIdMappingsByInternalIds(
+        "t1", "SQUARE", "MenuItem", ["item-1", "item-2"], "ITEM_VARIATION"
+      );
+
+      expect(mockPrisma.externalIdMapping.findMany).toHaveBeenCalledWith({
+        where: {
+          tenantId: "t1",
+          externalSource: "SQUARE",
+          internalType: "MenuItem",
+          internalId: { in: ["item-1", "item-2"] },
+          externalType: "ITEM_VARIATION",
+          deleted: false,
+        },
+      });
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe("getConnectionByExternalAccountId", () => {
+    it("should find connection by external account ID", async () => {
+      mockPrisma.integrationConnection.findFirst.mockResolvedValue({
+        id: "conn-1",
+      } as never);
+
+      const result = await repo.getConnectionByExternalAccountId("sq-acct-1", "POS_SQUARE");
+
+      expect(mockPrisma.integrationConnection.findFirst).toHaveBeenCalledWith({
+        where: {
+          externalAccountId: "sq-acct-1",
+          type: "POS_SQUARE",
+          deleted: false,
+          status: "active",
+        },
+      });
+      expect(result).toEqual({ id: "conn-1" });
+    });
+  });
+
+  describe("findWebhookEventByEventId", () => {
+    it("should find webhook event by event ID", async () => {
+      mockPrisma.webhookEvent.findUnique.mockResolvedValue({
+        id: "wh-1",
+        eventId: "evt_123",
+      } as never);
+
+      const result = await repo.findWebhookEventByEventId("evt_123");
+
+      expect(mockPrisma.webhookEvent.findUnique).toHaveBeenCalledWith({
+        where: { eventId: "evt_123" },
+      });
+      expect(result).toEqual({ id: "wh-1", eventId: "evt_123" });
+    });
+  });
+
+  describe("createWebhookEvent", () => {
+    it("should create a webhook event record", async () => {
+      mockPrisma.webhookEvent.create.mockResolvedValue({ id: "test-id-123" } as never);
+
+      await repo.createWebhookEvent({
+        tenantId: "t1",
+        merchantId: "m1",
+        connectionId: "conn-1",
+        eventId: "evt_123",
+        eventType: "inventory.count.updated",
+        payload: { data: "test" },
+      });
+
+      expect(mockPrisma.webhookEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          id: "test-id-123",
+          tenantId: "t1",
+          merchantId: "m1",
+          connectionId: "conn-1",
+          eventId: "evt_123",
+          eventType: "inventory.count.updated",
+          status: "received",
+        }),
+      });
+    });
+  });
+
+  describe("updateWebhookEventStatus", () => {
+    it("should update status to processed with processedAt", async () => {
+      mockPrisma.webhookEvent.update.mockResolvedValue({} as never);
+
+      await repo.updateWebhookEventStatus("wh-1", "processed");
+
+      expect(mockPrisma.webhookEvent.update).toHaveBeenCalledWith({
+        where: { id: "wh-1" },
+        data: {
+          status: "processed",
+          errorMessage: undefined,
+          processedAt: expect.any(Date),
+        },
+      });
+    });
+
+    it("should update status to failed with error message and processedAt", async () => {
+      mockPrisma.webhookEvent.update.mockResolvedValue({} as never);
+
+      await repo.updateWebhookEventStatus("wh-1", "failed", "Processing error");
+
+      expect(mockPrisma.webhookEvent.update).toHaveBeenCalledWith({
+        where: { id: "wh-1" },
+        data: {
+          status: "failed",
+          errorMessage: "Processing error",
+          processedAt: expect.any(Date),
+        },
+      });
+    });
+
+    it("should not set processedAt for received status", async () => {
+      mockPrisma.webhookEvent.update.mockResolvedValue({} as never);
+
+      await repo.updateWebhookEventStatus("wh-1", "received");
+
+      expect(mockPrisma.webhookEvent.update).toHaveBeenCalledWith({
+        where: { id: "wh-1" },
+        data: {
+          status: "received",
+          errorMessage: undefined,
+          processedAt: undefined,
+        },
       });
     });
   });

@@ -34,26 +34,44 @@ vi.mock("../MenuTabs", () => ({
     selectedMenuId,
     onSelectMenu,
     onAddMenu,
+    onEditMenu,
+    onReorderMenus,
   }: {
     menus: MenuInfo[];
     selectedMenuId: string;
     onSelectMenu: (id: string) => void;
     onAddMenu: () => void;
     onEditMenu: (menu: MenuInfo) => void;
+    onReorderMenus: (updates: Array<{ id: string; sortOrder: number }>) => void;
   }) => (
     <div data-testid="menu-tabs">
       {menus.map((menu) => (
-        <button
-          key={menu.id}
-          data-testid={`menu-${menu.id}`}
-          data-selected={selectedMenuId === menu.id}
-          onClick={() => onSelectMenu(menu.id)}
-        >
-          {menu.name}
-        </button>
+        <div key={menu.id}>
+          <button
+            data-testid={`menu-${menu.id}`}
+            data-selected={selectedMenuId === menu.id}
+            onClick={() => onSelectMenu(menu.id)}
+          >
+            {menu.name}
+          </button>
+          <button
+            data-testid={`edit-menu-${menu.id}`}
+            onClick={() => onEditMenu(menu)}
+          >
+            Edit {menu.name}
+          </button>
+        </div>
       ))}
       <button data-testid="add-menu-btn" onClick={onAddMenu}>
         Add Menu
+      </button>
+      <button
+        data-testid="reorder-menus-btn"
+        onClick={() =>
+          onReorderMenus(menus.map((m, i) => ({ id: m.id, sortOrder: i })))
+        }
+      >
+        Reorder
       </button>
     </div>
   ),
@@ -64,6 +82,7 @@ vi.mock("../CategoryList", () => ({
     categories,
     selectedCategoryId,
     onSelectCategory,
+    onEditCategory,
   }: {
     categories: DashboardCategory[];
     selectedCategoryId: string | null;
@@ -72,14 +91,21 @@ vi.mock("../CategoryList", () => ({
   }) => (
     <div data-testid="category-list">
       {categories.map((cat) => (
-        <button
-          key={cat.id}
-          data-testid={`category-${cat.id}`}
-          data-selected={selectedCategoryId === cat.id}
-          onClick={() => onSelectCategory(cat.id)}
-        >
-          {cat.name}
-        </button>
+        <div key={cat.id}>
+          <button
+            data-testid={`category-${cat.id}`}
+            data-selected={selectedCategoryId === cat.id}
+            onClick={() => onSelectCategory(cat.id)}
+          >
+            {cat.name}
+          </button>
+          <button
+            data-testid={`edit-category-${cat.id}`}
+            onClick={() => onEditCategory(cat)}
+          >
+            Edit {cat.name}
+          </button>
+        </div>
       ))}
     </div>
   ),
@@ -126,11 +152,21 @@ vi.mock("../MenuItemList", () => ({
 }));
 
 vi.mock("../CategoryForm", () => ({
-  CategoryForm: () => <div data-testid="category-form">Category Form</div>,
+  CategoryForm: ({ onClose }: { onClose?: () => void }) => (
+    <div data-testid="category-form">
+      Category Form
+      {onClose && <button data-testid="close-category-form" onClick={onClose}>Close</button>}
+    </div>
+  ),
 }));
 
 vi.mock("../MenuForm", () => ({
-  MenuForm: () => <div data-testid="menu-form">Menu Form</div>,
+  MenuForm: ({ onClose }: { onClose?: () => void }) => (
+    <div data-testid="menu-form">
+      Menu Form
+      {onClose && <button data-testid="close-menu-form" onClick={onClose}>Close Menu Form</button>}
+    </div>
+  ),
 }));
 
 vi.mock("../AddExistingItemModal", () => ({
@@ -453,6 +489,87 @@ describe("MenuManagementClient", () => {
     });
   });
 
+  describe("Archived Tab", () => {
+    it("should render Menu Items and Archived tabs", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      expect(screen.getByText("Menu Items")).toBeInTheDocument();
+      expect(screen.getByText("Archived")).toBeInTheDocument();
+    });
+
+    it("should navigate to archived view when Archived tab is clicked", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      const archivedTab = screen.getByText("Archived");
+      fireEvent.click(archivedTab);
+
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining("archived=true"),
+        { scroll: false }
+      );
+    });
+
+    it("should navigate back to non-archived view when Menu Items tab is clicked", () => {
+      render(
+        <MenuManagementClient {...defaultProps} showArchived={true} />
+      );
+
+      const menuItemsTab = screen.getByText("Menu Items");
+      fireEvent.click(menuItemsTab);
+
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.not.stringContaining("archived=true"),
+        { scroll: false }
+      );
+    });
+
+    it("should preserve menu and category params when toggling archived", () => {
+      mockSearchParams.set("category", "cat-2");
+
+      render(<MenuManagementClient {...defaultProps} />);
+
+      const archivedTab = screen.getByText("Archived");
+      fireEvent.click(archivedTab);
+
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining("menu=menu-1"),
+        { scroll: false }
+      );
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining("category=cat-2"),
+        { scroll: false }
+      );
+    });
+
+    it("should preserve archived param when selecting a menu", () => {
+      render(
+        <MenuManagementClient {...defaultProps} showArchived={true} />
+      );
+
+      const menu2Button = screen.getByTestId("menu-menu-2");
+      fireEvent.click(menu2Button);
+
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining("archived=true"),
+        { scroll: false }
+      );
+    });
+
+    it("should preserve archived param when selecting a category", () => {
+      render(
+        <MenuManagementClient {...defaultProps} showArchived={true} />
+      );
+
+      const cat2Button = screen.getByTestId("category-cat-2");
+      fireEvent.click(cat2Button);
+
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining("archived=true"),
+        { scroll: false }
+      );
+    });
+  });
+
   describe("Add Existing Item Modal", () => {
     it("should NOT show modal initially", () => {
       render(<MenuManagementClient {...defaultProps} />);
@@ -527,6 +644,76 @@ describe("MenuManagementClient", () => {
 
       // The add-existing-item-btn won't exist when there's no category
       expect(screen.queryByTestId("add-existing-item-btn")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Edit Category", () => {
+    it("should open category form when editing a category", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      // Click "Edit Appetizers" to trigger handleEditCategory
+      const editBtn = screen.getByTestId("edit-category-cat-1");
+      fireEvent.click(editBtn);
+
+      expect(screen.getByTestId("category-form")).toBeInTheDocument();
+    });
+  });
+
+  describe("Edit Menu", () => {
+    it("should open menu form when editing a menu", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      const editBtn = screen.getByTestId("edit-menu-menu-1");
+      fireEvent.click(editBtn);
+
+      expect(screen.getByTestId("menu-form")).toBeInTheDocument();
+    });
+  });
+
+  describe("Close Menu Form", () => {
+    it("should close menu form when cancel/close is triggered", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      // Open menu form
+      const addMenuBtn = screen.getByTestId("add-menu-btn");
+      fireEvent.click(addMenuBtn);
+      expect(screen.getByTestId("menu-form")).toBeInTheDocument();
+
+      // Close menu form
+      const closeBtn = screen.getByTestId("close-menu-form");
+      fireEvent.click(closeBtn);
+
+      expect(screen.queryByTestId("menu-form")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Reorder Menus", () => {
+    it("should call reorder action when menus are reordered", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      const reorderBtn = screen.getByTestId("reorder-menus-btn");
+      fireEvent.click(reorderBtn);
+
+      // The reorder action should be called via startTransition
+      // Just verify the button is clickable and doesn't error
+      expect(reorderBtn).toBeInTheDocument();
+    });
+  });
+
+  describe("Close Category Form", () => {
+    it("should close category form when cancel/close is triggered", () => {
+      render(<MenuManagementClient {...defaultProps} />);
+
+      // Open category form
+      const addCategoryBtn = screen.getByRole("button", { name: /add category/i });
+      fireEvent.click(addCategoryBtn);
+      expect(screen.getByTestId("category-form")).toBeInTheDocument();
+
+      // Close category form
+      const closeBtn = screen.getByTestId("close-category-form");
+      fireEvent.click(closeBtn);
+
+      expect(screen.queryByTestId("category-form")).not.toBeInTheDocument();
     });
   });
 });

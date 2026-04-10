@@ -159,4 +159,19 @@ describe("SubmitButton", () => {
     const spinner = container.querySelector(".animate-spin");
     expect(spinner).toBeInTheDocument();
   });
+
+  it("should apply custom className", () => {
+    renderWithProvider(
+      <SubmitButton {...defaultProps} label="Submit" className="mt-6" />
+    );
+    const button = screen.getByRole("button");
+    expect(button).toHaveClass("mt-6");
+  });
+
+  it("should render default variant (no variant prop)", () => {
+    renderWithProvider(<SubmitButton {...defaultProps} label="Submit" />);
+    const button = screen.getByRole("button");
+    // Default variant is "primary" (red)
+    expect(button).toHaveClass("bg-red-600");
+  });
 });

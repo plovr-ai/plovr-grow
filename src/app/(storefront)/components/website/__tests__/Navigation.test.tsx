@@ -271,6 +271,233 @@ describe("Navigation", () => {
     });
   });
 
+  describe("mobile Sign In from mobile menu", () => {
+    it("should close mobile menu and open Sign In modal from mobile", async () => {
+      render(
+        <TestWrapper>
+          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Sign In")).toBeInTheDocument();
+      });
+
+      // Open mobile menu
+      const menuButton = screen.getByLabelText("Toggle menu");
+      fireEvent.click(menuButton);
+
+      // Find mobile Sign In (the second one)
+      const signInButtons = screen.getAllByText("Sign In");
+      fireEvent.click(signInButtons[1]); // mobile button
+
+      // Mobile menu should close, modal should open
+      await waitFor(() => {
+        expect(screen.getByText("Sign In to Earn Rewards")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("logged in member", () => {
+    it("should show member greeting and user dropdown toggle when member is logged in", async () => {
+      // Override fetch to return a logged-in member
+      vi.stubGlobal("fetch", vi.fn(() =>
+        Promise.resolve({
+          json: () => Promise.resolve({
+            success: true,
+            data: {
+              member: {
+                id: "m-1",
+                phone: "+15551234567",
+                email: "john@test.com",
+                firstName: "John",
+                lastName: null,
+                points: 200,
+              },
+              config: { pointsPerDollar: 1 },
+            },
+          }),
+        })
+      ));
+
+      render(
+        <TestWrapper>
+          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/Hi, John/)).toBeInTheDocument();
+      });
+
+      // Click the dropdown toggle
+      fireEvent.click(screen.getByText(/Hi, John/));
+
+      // UserDropdown should appear
+      // Click toggle again to close
+      fireEvent.click(screen.getByText(/Hi, John/));
+
+      // Restore default fetch mock
+      vi.stubGlobal("fetch", vi.fn(() =>
+        Promise.resolve({
+          json: () => Promise.resolve({ success: false }),
+        })
+      ));
+    });
+
+    it("should show member name as 'Member' when firstName is null", async () => {
+      vi.stubGlobal("fetch", vi.fn(() =>
+        Promise.resolve({
+          json: () => Promise.resolve({
+            success: true,
+            data: {
+              member: {
+                id: "m-1",
+                phone: "+15551234567",
+                email: null,
+                firstName: null,
+                lastName: null,
+                points: 50,
+              },
+              config: { pointsPerDollar: 1 },
+            },
+          }),
+        })
+      ));
+
+      render(
+        <TestWrapper>
+          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/Hi, Member/)).toBeInTheDocument();
+      });
+
+      // Restore default fetch mock
+      vi.stubGlobal("fetch", vi.fn(() =>
+        Promise.resolve({
+          json: () => Promise.resolve({ success: false }),
+        })
+      ));
+    });
+
+    it("should show mobile member info and sign out in mobile menu", async () => {
+      vi.stubGlobal("fetch", vi.fn(() =>
+        Promise.resolve({
+          json: () => Promise.resolve({
+            success: true,
+            data: {
+              member: {
+                id: "m-1",
+                phone: "+15551234567",
+                email: null,
+                firstName: "Jane",
+                lastName: null,
+                points: 150,
+              },
+              config: { pointsPerDollar: 1 },
+            },
+          }),
+        })
+      ));
+
+      render(
+        <TestWrapper>
+          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/Hi, Jane/)).toBeInTheDocument();
+      });
+
+      // Open mobile menu
+      fireEvent.click(screen.getByLabelText("Toggle menu"));
+
+      // Should show points in mobile menu
+      expect(screen.getByText("150 pts")).toBeInTheDocument();
+
+      // Should have Sign Out button
+      const signOutButton = screen.getByText("Sign Out");
+      expect(signOutButton).toBeInTheDocument();
+
+      // Click Sign Out
+      fireEvent.click(signOutButton);
+
+      // Restore default fetch mock
+      vi.stubGlobal("fetch", vi.fn(() =>
+        Promise.resolve({
+          json: () => Promise.resolve({ success: false }),
+        })
+      ));
+    });
+  });
+
+  describe("user dropdown close", () => {
+    it("should close user dropdown when pressing Escape", async () => {
+      vi.stubGlobal("fetch", vi.fn(() =>
+        Promise.resolve({
+          json: () => Promise.resolve({
+            success: true,
+            data: {
+              member: {
+                id: "m-1",
+                phone: "+15551234567",
+                email: null,
+                firstName: "Jane",
+                lastName: null,
+                points: 100,
+              },
+              config: { pointsPerDollar: 1 },
+            },
+          }),
+        })
+      ));
+
+      render(
+        <TestWrapper>
+          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/Hi, Jane/)).toBeInTheDocument();
+      });
+
+      // Open dropdown
+      fireEvent.click(screen.getByText(/Hi, Jane/));
+
+      // Close via clicking outside
+      fireEvent.mouseDown(document.body);
+
+      // Restore default fetch mock
+      vi.stubGlobal("fetch", vi.fn(() =>
+        Promise.resolve({
+          json: () => Promise.resolve({ success: false }),
+        })
+      ));
+    });
+  });
+
+  describe("catering link", () => {
+    it("should use custom cateringLink when provided", () => {
+      render(
+        <TestWrapper>
+          <Navigation
+            {...defaultProps}
+            companySlug="joes-pizza"
+            cateringLink="/catering-custom"
+          />
+        </TestWrapper>
+      );
+
+      const cateringLinks = screen.getAllByText("Catering");
+      expect(cateringLinks[0]).toHaveAttribute("href", "/catering-custom");
+    });
+  });
+
   describe("Sign In modal", () => {
     it("should open Sign In modal when button is clicked", async () => {
       render(

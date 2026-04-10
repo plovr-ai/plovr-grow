@@ -210,5 +210,24 @@ describe("CategoryForm", () => {
         expect(screen.getByText("Category name already exists")).toBeInTheDocument();
       });
     });
+
+    it("should display fallback error message when action fails without error text", async () => {
+      (createCategoryAction as ReturnType<typeof vi.fn>).mockResolvedValue({
+        success: false,
+        error: "",
+      });
+
+      render(<CategoryForm {...defaultProps} />);
+
+      const nameInput = screen.getByLabelText(/name/i);
+      fireEvent.change(nameInput, { target: { value: "Test" } });
+
+      const submitButton = screen.getByText("Create");
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("An error occurred")).toBeInTheDocument();
+      });
+    });
   });
 });

@@ -358,4 +358,240 @@ describe("TaxConfigService", () => {
       );
     });
   });
+
+  describe("getTaxConfigInfo", () => {
+    it("should return tax config info by ID", async () => {
+      vi.mocked(taxConfigRepository.getTaxConfigById).mockResolvedValue(
+        mockTaxConfigs[0]
+      );
+
+      const result = await service.getTaxConfigInfo("tenant-1", "tax-standard");
+
+      expect(taxConfigRepository.getTaxConfigById).toHaveBeenCalledWith(
+        "tenant-1",
+        "tax-standard"
+      );
+      expect(result).toEqual({
+        id: "tax-standard",
+        name: "Standard Tax",
+        description: "Standard sales tax",
+        roundingMethod: "half_up",
+        status: "active",
+      });
+    });
+
+    it("should return null when tax config not found", async () => {
+      vi.mocked(taxConfigRepository.getTaxConfigById).mockResolvedValue(null);
+
+      const result = await service.getTaxConfigInfo("tenant-1", "non-existent");
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("createTaxConfig without merchantRates", () => {
+    it("should create tax config without setting merchant rates", async () => {
+      const newConfig = {
+        id: "tax-new",
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        name: "Simple Tax",
+        description: null,
+        roundingMethod: "half_even",
+        status: "active",
+        deleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.mocked(taxConfigRepository.createTaxConfig).mockResolvedValue(newConfig);
+
+      const result = await service.createTaxConfig("tenant-1", "company-1", {
+        name: "Simple Tax",
+        roundingMethod: "half_even",
+      });
+
+      expect(taxConfigRepository.createTaxConfig).toHaveBeenCalledWith(
+        "tenant-1",
+        "company-1",
+        {
+          name: "Simple Tax",
+          description: undefined,
+          roundingMethod: "half_even",
+        }
+      );
+      expect(taxConfigRepository.setMerchantTaxRate).not.toHaveBeenCalled();
+      expect(result.name).toBe("Simple Tax");
+      expect(result.description).toBeNull();
+      expect(result.roundingMethod).toBe("half_even");
+    });
+
+    it("should create tax config with empty merchantRates array", async () => {
+      const newConfig = {
+        id: "tax-new",
+        tenantId: "tenant-1",
+        companyId: "company-1",
+        name: "Empty Rates Tax",
+        description: "desc",
+        roundingMethod: "always_round_down",
+        status: "active",
+        deleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.mocked(taxConfigRepository.createTaxConfig).mockResolvedValue(newConfig);
+
+      const result = await service.createTaxConfig("tenant-1", "company-1", {
+        name: "Empty Rates Tax",
+        description: "desc",
+        roundingMethod: "always_round_down",
+        merchantRates: [],
+      });
+
+      expect(taxConfigRepository.setMerchantTaxRate).not.toHaveBeenCalled();
+      expect(result.name).toBe("Empty Rates Tax");
+    });
+  });
+
+  describe("updateTaxConfig with merchantRates", () => {
+    it("should delete old rates and upsert new rates", async () => {
+      vi.mocked(taxConfigRepository.updateTaxConfig).mockResolvedValue({
+        count: 1,
+      });
+      vi.mocked(taxConfigRepository.getTaxConfigMerchantRates).mockResolvedValue([
+        { merchantId: "merchant-1", taxConfigId: "tax-standard", rate: 0.08, id: "r1", deleted: false, createdAt: new Date(), updatedAt: new Date() },
+        { merchantId: "merchant-2", taxConfigId: "tax-standard", rate: 0.09, id: "r2", deleted: false, createdAt: new Date(), updatedAt: new Date() },
+      ] as never);
+      vi.mocked(taxConfigRepository.deleteMerchantTaxRate).mockResolvedValue(
+        undefined as never
+      );
+      vi.mocked(taxConfigRepository.setMerchantTaxRate).mockResolvedValue({
+        id: "mtr-1",
+        merchantId: "merchant-1",
+        taxConfigId: "tax-standard",
+        rate: { toNumber: () => 0.085 } as unknown as import("@prisma/client/runtime/library").Decimal,
+        deleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await service.updateTaxConfig("tenant-1", "company-1", "tax-standard", {
+        name: "Updated Tax",
+        merchantRates: [
+          { merchantId: "merchant-1", rate: 0.085 },
+          { merchantId: "merchant-3", rate: 0.10 },
+        ],
+      });
+
+      // merchant-2 should be deleted (not in new list)
+      expect(taxConfigRepository.deleteMerchantTaxRate).toHaveBeenCalledWith(
+        "merchant-2",
+        "tax-standard"
+      );
+      // merchant-1 should NOT be deleted (in new list)
+      expect(taxConfigRepository.deleteMerchantTaxRate).not.toHaveBeenCalledWith(
+        "merchant-1",
+        "tax-standard"
+      );
+      // merchant-1 and merchant-3 should be upserted
+      expect(taxConfigRepository.setMerchantTaxRate).toHaveBeenCalledWith(
+        "merchant-1",
+        "tax-standard",
+        0.085
+      );
+      expect(taxConfigRepository.setMerchantTaxRate).toHaveBeenCalledWith(
+        "merchant-3",
+        "tax-standard",
+        0.10
+      );
+    });
+
+    it("should skip update when no fields provided", async () => {
+      vi.mocked(taxConfigRepository.getTaxConfigMerchantRates).mockResolvedValue(
+        []
+      );
+
+      await service.updateTaxConfig("tenant-1", "company-1", "tax-standard", {
+        merchantRates: [],
+      });
+
+      // No update call since no fields to update
+      expect(taxConfigRepository.updateTaxConfig).not.toHaveBeenCalled();
+      // No delete calls since no current rates
+      expect(taxConfigRepository.deleteMerchantTaxRate).not.toHaveBeenCalled();
+      // No set calls since no new rates
+      expect(taxConfigRepository.setMerchantTaxRate).not.toHaveBeenCalled();
+    });
+
+    it("should not touch merchant rates when merchantRates is undefined", async () => {
+      vi.mocked(taxConfigRepository.updateTaxConfig).mockResolvedValue({
+        count: 1,
+      });
+
+      await service.updateTaxConfig("tenant-1", "company-1", "tax-standard", {
+        status: "inactive",
+      });
+
+      expect(taxConfigRepository.updateTaxConfig).toHaveBeenCalledWith(
+        "tenant-1",
+        "tax-standard",
+        { status: "inactive" }
+      );
+      expect(taxConfigRepository.getTaxConfigMerchantRates).not.toHaveBeenCalled();
+      expect(taxConfigRepository.deleteMerchantTaxRate).not.toHaveBeenCalled();
+      expect(taxConfigRepository.setMerchantTaxRate).not.toHaveBeenCalled();
+    });
+
+    it("should handle update with only description change", async () => {
+      vi.mocked(taxConfigRepository.updateTaxConfig).mockResolvedValue({
+        count: 1,
+      });
+
+      await service.updateTaxConfig("tenant-1", "company-1", "tax-standard", {
+        description: "Updated description",
+      });
+
+      expect(taxConfigRepository.updateTaxConfig).toHaveBeenCalledWith(
+        "tenant-1",
+        "tax-standard",
+        { description: "Updated description" }
+      );
+    });
+  });
+
+  describe("getTaxConfigsWithRates edge cases", () => {
+    it("should handle empty merchants list", async () => {
+      vi.mocked(taxConfigRepository.getTaxConfigsByCompany).mockResolvedValue(
+        mockTaxConfigs
+      );
+
+      const result = await service.getTaxConfigsWithRates(
+        "tenant-1",
+        "company-1",
+        []
+      );
+
+      expect(result).toHaveLength(3);
+      expect(result[0].merchantRates).toHaveLength(0);
+    });
+
+    it("should handle tax config with no rates for any merchant", async () => {
+      vi.mocked(taxConfigRepository.getTaxConfigsByCompany).mockResolvedValue([
+        mockTaxConfigs[2], // tax-reduced
+      ]);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
+        new Map() // no rates
+      );
+
+      const result = await service.getTaxConfigsWithRates(
+        "tenant-1",
+        "company-1",
+        [{ id: "merchant-1", name: "Store 1" }]
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].merchantRates).toHaveLength(0);
+    });
+  });
 });

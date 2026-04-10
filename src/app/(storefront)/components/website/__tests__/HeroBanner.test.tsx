@@ -119,6 +119,75 @@ describe("HeroBanner", () => {
     });
   });
 
+  describe("business hours branches", () => {
+    it("should show 'Closed today' when today is marked as closed", () => {
+      const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+      const today = days[new Date().getDay()];
+      const closedHours: Record<string, { open: string; close: string; closed: boolean }> = {};
+      closedHours[today] = { open: "", close: "", closed: true };
+
+      const merchantClosed = { ...mockMerchant, businessHours: closedHours };
+      render(<HeroBanner merchant={merchantClosed} companySlug="joes-pizza" />);
+
+      expect(screen.getByText("Today: Closed today")).toBeInTheDocument();
+    });
+
+    it("should not show business hours when today has no entry", () => {
+      // Empty business hours object - no entry for today
+      const merchantNoToday = { ...mockMerchant, businessHours: {} };
+      render(<HeroBanner merchant={merchantNoToday} companySlug="joes-pizza" />);
+
+      expect(screen.queryByText(/Today:/)).not.toBeInTheDocument();
+    });
+
+    it("should not show business hours when businessHours is null", () => {
+      const merchantNullHours = { ...mockMerchant, businessHours: null };
+      render(<HeroBanner merchant={merchantNullHours} companySlug="joes-pizza" />);
+
+      expect(screen.queryByText(/Today:/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("slug fallback", () => {
+    it("should use empty string when neither companySlug nor tenantSlug provided", () => {
+      render(<HeroBanner merchant={mockMerchant} />);
+
+      const orderButton = screen.getByRole("link", { name: "Order Online" });
+      expect(orderButton).toHaveAttribute("href", "/r//menu");
+    });
+  });
+
+  describe("multi-location", () => {
+    it("should show 'View N Locations' link for multi-location", () => {
+      render(
+        <HeroBanner
+          merchant={mockMerchant}
+          companySlug="joes-pizza"
+          locationCount={3}
+        />
+      );
+
+      expect(screen.getByText("View 3 Locations")).toBeInTheDocument();
+    });
+
+    it("should use singleLocation address when provided", () => {
+      render(
+        <HeroBanner
+          merchant={mockMerchant}
+          companySlug="joes-pizza"
+          singleLocation={{
+            address: "456 Oak Ave",
+            city: "Brooklyn",
+            state: "NY",
+            zipCode: "11201",
+          }}
+        />
+      );
+
+      expect(screen.getByText("456 Oak Ave, Brooklyn, NY 11201")).toBeInTheDocument();
+    });
+  });
+
   describe("background styling", () => {
     it("should set hero image as background", () => {
       const { container } = render(

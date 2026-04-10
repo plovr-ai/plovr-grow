@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getTodayInTimezone, getDateRangeInTimezone } from "../timezone";
+import { getTodayInTimezone, getDateRangeInTimezone, getLastNDaysInTimezone } from "../timezone";
 
 describe("Timezone Utilities", () => {
   describe("getTodayInTimezone", () => {
@@ -64,6 +64,39 @@ describe("Timezone Utilities", () => {
 
       // Should be approximately 24 hours (within 1 second tolerance)
       expect(diffHours).toBeCloseTo(24, 2);
+    });
+  });
+
+  describe("getLastNDaysInTimezone", () => {
+    it("should return from and to date strings in YYYY-MM-DD format", () => {
+      const result = getLastNDaysInTimezone("America/New_York", 30);
+      expect(result.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(result.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    it("should return 30 days range by default", () => {
+      const result = getLastNDaysInTimezone("America/Los_Angeles");
+      const from = new Date(result.from);
+      const to = new Date(result.to);
+      const diffDays = (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24);
+      // Should be approximately 30 days (can vary by 1 due to timezone)
+      expect(diffDays).toBeGreaterThanOrEqual(29);
+      expect(diffDays).toBeLessThanOrEqual(31);
+    });
+
+    it("should return 7 days range when specified", () => {
+      const result = getLastNDaysInTimezone("America/Chicago", 7);
+      const from = new Date(result.from);
+      const to = new Date(result.to);
+      const diffDays = (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24);
+      expect(diffDays).toBeGreaterThanOrEqual(6);
+      expect(diffDays).toBeLessThanOrEqual(8);
+    });
+
+    it("to date should be today in given timezone", () => {
+      const result = getLastNDaysInTimezone("America/New_York", 1);
+      const todayNY = getTodayInTimezone("America/New_York");
+      expect(result.to).toBe(todayNY);
     });
   });
 });

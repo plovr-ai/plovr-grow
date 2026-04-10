@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { parseModifierGroups } from "../utils";
+import { parseModifierGroups, convertToMenuDisplayData } from "../utils";
+import type { GetMenuResponseWithItemCount } from "../utils";
 
 describe("parseModifierGroups", () => {
   describe("basic parsing", () => {
@@ -270,6 +271,22 @@ describe("parseModifierGroups", () => {
     });
   });
 
+  describe("empty modifiers and choices", () => {
+    it("should return empty modifiers when both modifiers and choices are missing", () => {
+      const options = [
+        {
+          id: "empty",
+          name: "Empty Group",
+          type: "single",
+          required: false,
+        },
+      ];
+
+      const result = parseModifierGroups(options);
+      expect(result[0].modifiers).toHaveLength(0);
+    });
+  });
+
   describe("complete modifier group parsing", () => {
     it("should parse a complete modifier group with all new fields", () => {
       const options = [
@@ -312,5 +329,168 @@ describe("parseModifierGroups", () => {
         ],
       });
     });
+  });
+});
+
+describe("convertToMenuDisplayData", () => {
+  const baseResponse: GetMenuResponseWithItemCount = {
+    currentMenuId: "menu-1",
+    menus: [
+      { id: "menu-1", name: "Lunch", itemCount: 2 },
+      { id: "menu-2", name: "Empty Menu", itemCount: 0 },
+    ],
+    categories: [
+      {
+        id: "cat-1",
+        name: "Appetizers",
+        description: "Starters",
+        sortOrder: 0,
+        menuItems: [
+          {
+            id: "item-1",
+            name: "Spring Rolls",
+            description: "Crispy",
+            price: 8.99,
+            imageUrl: null,
+            modifiers: null,
+            tags: null,
+            status: "active",
+            taxes: [],
+          },
+        ],
+      },
+      {
+        id: "cat-2",
+        name: "Empty Category",
+        description: null,
+        sortOrder: 1,
+        menuItems: [],
+      },
+    ],
+  };
+
+  it("should filter out empty categories", () => {
+    const result = convertToMenuDisplayData(baseResponse, "test-co");
+    expect(result.categories).toHaveLength(1);
+    expect(result.categories[0].category.name).toBe("Appetizers");
+  });
+
+  it("should filter out empty menus (itemCount=0)", () => {
+    const result = convertToMenuDisplayData(baseResponse, "test-co");
+    expect(result.menus).toHaveLength(1);
+    expect(result.menus[0].name).toBe("Lunch");
+  });
+
+  it("should convert items correctly", () => {
+    const result = convertToMenuDisplayData(baseResponse, "test-co");
+    const item = result.categories[0].items[0];
+    expect(item.id).toBe("item-1");
+    expect(item.name).toBe("Spring Rolls");
+    expect(item.price).toBe(8.99);
+    expect(item.hasModifiers).toBe(false);
+    expect(item.isAvailable).toBe(true);
+    expect(item.tags).toEqual([]);
+  });
+
+  it("should set companySlug and currentMenuId", () => {
+    const result = convertToMenuDisplayData(baseResponse, "test-co");
+    expect(result.companySlug).toBe("test-co");
+    expect(result.currentMenuId).toBe("menu-1");
+  });
+
+  it("should handle items with modifiers", () => {
+    const withModifiers: GetMenuResponseWithItemCount = {
+      ...baseResponse,
+      categories: [
+        {
+          id: "cat-1",
+          name: "Mains",
+          description: null,
+          sortOrder: 0,
+          menuItems: [
+            {
+              id: "item-2",
+              name: "Pad Thai",
+              description: null,
+              price: 14.99,
+              imageUrl: "https://example.com/padthai.jpg",
+              modifiers: [
+                { id: "spice", name: "Spice Level", type: "single", required: true, modifiers: [{ id: "s1", name: "Mild", price: 0 }] },
+              ],
+              tags: [{ label: "Spicy", color: "red" }],
+              status: "active",
+              taxes: [{ taxConfigId: "t1", name: "Tax", rate: 0.08, roundingMethod: "half_up" }],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = convertToMenuDisplayData(withModifiers, "test-co");
+    const item = result.categories[0].items[0];
+    expect(item.hasModifiers).toBe(true);
+    expect(item.modifierGroups).toHaveLength(1);
+    expect(item.imageUrl).toBe("https://example.com/padthai.jpg");
+    expect(item.tags).toEqual([{ label: "Spicy", color: "red" }]);
+  });
+
+  it("should mark inactive items as unavailable", () => {
+    const withInactive: GetMenuResponseWithItemCount = {
+      ...baseResponse,
+      categories: [
+        {
+          id: "cat-1",
+          name: "Items",
+          description: null,
+          sortOrder: 0,
+          menuItems: [
+            {
+              id: "item-inactive",
+              name: "Unavailable Item",
+              description: null,
+              price: 5,
+              imageUrl: null,
+              modifiers: null,
+              tags: null,
+              status: "inactive",
+              taxes: [],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = convertToMenuDisplayData(withInactive, "test-co");
+    expect(result.categories[0].items[0].isAvailable).toBe(false);
+  });
+
+  it("should handle item with undefined taxes", () => {
+    const withNoTaxes: GetMenuResponseWithItemCount = {
+      menus: [{ id: "m1", name: "Menu", itemCount: 1 }],
+      categories: [
+        {
+          id: "cat-1",
+          name: "Test",
+          description: null,
+          sortOrder: 0,
+          menuItems: [
+            {
+              id: "item-no-tax",
+              name: "No Tax Item",
+              description: null,
+              price: 10,
+              imageUrl: null,
+              modifiers: null,
+              tags: null,
+              status: "active",
+              taxes: undefined as unknown as never[],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = convertToMenuDisplayData(withNoTaxes, "co");
+    expect(result.categories[0].items[0].taxes).toEqual([]);
   });
 });
