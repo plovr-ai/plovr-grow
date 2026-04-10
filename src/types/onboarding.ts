@@ -1,66 +1,82 @@
-// Onboarding step status
-export type OnboardingStepStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
+// Onboarding step statuses
+export type OnboardingStepStatus = "locked" | "pending" | "completed" | "skipped";
 
-// Onboarding overall status
-export type OnboardingStatus = 'not_started' | 'in_progress' | 'completed';
+// Overall onboarding status (stored in Company.onboardingStatus)
+export type OnboardingStatus = "not_started" | "in_progress" | "completed";
 
 // Step identifiers
-export type OnboardingStepId = 'website' | 'menu' | 'oo_config';
+export type OnboardingStepId = "website" | "gbp" | "menu" | "stripe";
 
-// Step metadata
+// Per-step state stored in onboardingData JSON
 export interface OnboardingStepInfo {
   status: OnboardingStepStatus;
-  completedAt: string | null;
-  data?: Record<string, unknown>; // Optional step-specific data
+  completedAt?: string;
 }
 
-// Complete onboarding data structure
+// Complete onboarding data structure (Company.onboardingData JSON)
 export interface OnboardingData {
-  steps: {
-    website: OnboardingStepInfo;
-    menu: OnboardingStepInfo;
-    oo_config: OnboardingStepInfo;
-  };
-  currentStep: OnboardingStepId;
-  startedAt: string;
+  steps: Record<OnboardingStepId, OnboardingStepInfo>;
+  dismissedAt?: string;
 }
 
-// Default initial state
+// Step order for iteration
+export const ONBOARDING_STEP_ORDER: OnboardingStepId[] = [
+  "website",
+  "gbp",
+  "menu",
+  "stripe",
+];
+
+// Steps that depend on website being completed
+export const WEBSITE_DEPENDENT_STEPS: OnboardingStepId[] = [
+  "gbp",
+  "menu",
+  "stripe",
+];
+
+// Default data for a brand-new user (no website yet)
 export const DEFAULT_ONBOARDING_DATA: OnboardingData = {
   steps: {
-    website: { status: 'pending', completedAt: null },
-    menu: { status: 'pending', completedAt: null },
-    oo_config: { status: 'pending', completedAt: null },
+    website: { status: "pending" },
+    gbp: { status: "locked" },
+    menu: { status: "locked" },
+    stripe: { status: "locked" },
   },
-  currentStep: 'website',
-  startedAt: new Date().toISOString(),
 };
 
-// Step configuration for UI
-export interface OnboardingStepConfig {
-  id: OnboardingStepId;
-  title: string;
-  description: string;
-  order: number;
+// Default data for a claimed user (website already generated)
+export const CLAIMED_USER_ONBOARDING_DATA: OnboardingData = {
+  steps: {
+    website: { status: "completed", completedAt: new Date().toISOString() },
+    gbp: { status: "pending" },
+    menu: { status: "pending" },
+    stripe: { status: "pending" },
+  },
+};
+
+/**
+ * Check if all steps are completed or skipped
+ */
+export function isOnboardingComplete(data: OnboardingData): boolean {
+  return ONBOARDING_STEP_ORDER.every(
+    (id) => data.steps[id].status === "completed" || data.steps[id].status === "skipped"
+  );
 }
 
-export const ONBOARDING_STEPS: OnboardingStepConfig[] = [
-  {
-    id: 'website',
-    title: 'Website Build',
-    description: 'Set up your restaurant website and branding',
-    order: 1,
-  },
-  {
-    id: 'menu',
-    title: 'Menu Build',
-    description: 'Create your menu categories and items',
-    order: 2,
-  },
-  {
-    id: 'oo_config',
-    title: 'Online Ordering',
-    description: 'Configure online ordering settings',
-    order: 3,
-  },
-];
+/**
+ * Count completed + skipped steps
+ */
+export function countFinishedSteps(data: OnboardingData): {
+  finished: number;
+  total: number;
+  skipped: number;
+} {
+  let finished = 0;
+  let skipped = 0;
+  for (const id of ONBOARDING_STEP_ORDER) {
+    const s = data.steps[id].status;
+    if (s === "completed" || s === "skipped") finished++;
+    if (s === "skipped") skipped++;
+  }
+  return { finished, total: ONBOARDING_STEP_ORDER.length, skipped };
+}
