@@ -65,27 +65,24 @@ export function OtpModal({
       // Only allow digits
       const digit = value.replace(/\D/g, "").slice(-1);
 
-      setCode((prev) => {
-        const newCode = [...prev];
-        newCode[index] = digit;
+      const newCode = [...code];
+      newCode[index] = digit;
+      setCode(newCode);
 
-        // Auto-submit when all digits entered
-        if (digit && index === 5) {
-          const fullCode = newCode.join("");
-          if (fullCode.length === 6) {
-            onVerify(fullCode);
-          }
+      // Auto-submit when all digits entered
+      if (digit && index === 5) {
+        const fullCode = newCode.join("");
+        if (fullCode.length === 6) {
+          onVerify(fullCode);
         }
-
-        return newCode;
-      });
+      }
 
       // Auto-focus next input
       if (digit && index < 5) {
         inputRefs.current[index + 1]?.focus();
       }
     },
-    [onVerify]
+    [code, onVerify]
   );
 
   const handleKeyDown = useCallback(
