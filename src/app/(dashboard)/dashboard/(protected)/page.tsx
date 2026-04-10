@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { companyService } from "@/services/company/company.service";
 import { menuService } from "@/services/menu/menu.service";
 import { AgentChatClient } from "@/components/dashboard/agent";
+import { OnboardingSection } from "@/components/dashboard/onboarding";
+import { Suspense } from "react";
 
 export default async function DashboardOverviewPage() {
   const session = await auth();
@@ -16,7 +18,6 @@ export default async function DashboardOverviewPage() {
   );
   if (!company) redirect("/dashboard/login");
 
-  // Get first merchant for the agent API
   const merchantId = company.merchants?.[0]?.id;
 
   if (!merchantId) {
@@ -34,13 +35,19 @@ export default async function DashboardOverviewPage() {
     );
   }
 
-  // Check if the company has any menus
   const tenantId = company.tenantId;
   const menuCount = await menuService.countMenus(tenantId, company.id);
   const hasMenu = menuCount > 0;
 
+  const showOnboarding = company.onboardingStatus !== "completed";
+
   return (
-    <div className="py-8">
+    <div className="space-y-8 py-8">
+      {showOnboarding && (
+        <Suspense>
+          <OnboardingSection />
+        </Suspense>
+      )}
       <AgentChatClient
         merchantId={merchantId}
         companyName={company.name}
