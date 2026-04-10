@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getStytchServerClient } from "@/lib/stytch";
 import { authService } from "@/services/auth";
+import { AppError } from "@/lib/errors";
+import { ErrorCodes } from "@/lib/errors/error-codes";
 
 export async function POST(request: Request) {
   try {
@@ -8,10 +10,7 @@ export async function POST(request: Request) {
     const { session_token } = body;
 
     if (!session_token) {
-      return NextResponse.json(
-        { error: "Missing session_token" },
-        { status: 400 }
-      );
+      throw new AppError(ErrorCodes.AUTH_MISSING_SESSION_TOKEN, undefined, 400);
     }
 
     // Verify Stytch session
@@ -22,20 +21,14 @@ export async function POST(request: Request) {
         session_token,
       });
     } catch {
-      return NextResponse.json(
-        { error: "Invalid Stytch session" },
-        { status: 401 }
-      );
+      throw new AppError(ErrorCodes.AUTH_INVALID_STYTCH_SESSION, undefined, 401);
     }
 
     const stytchUser = stytchResponse.user;
     const email = stytchUser.emails[0]?.email;
 
     if (!email) {
-      return NextResponse.json(
-        { error: "No email found in Stytch user" },
-        { status: 400 }
-      );
+      throw new AppError(ErrorCodes.AUTH_MISSING_EMAIL, undefined, 400);
     }
 
     // Find or create user in our database
@@ -56,9 +49,16 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { success: false, error: { code: error.code } },
+        { status: error.statusCode }
+      );
+    }
+
     console.error("Stytch callback error:", error);
     return NextResponse.json(
-      { error: "Authentication failed" },
+      { success: false, error: { code: ErrorCodes.AUTH_STYTCH_CALLBACK_FAILED } },
       { status: 500 }
     );
   }

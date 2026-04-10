@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+import { ErrorCodes } from "@/lib/errors/error-codes";
 
 vi.mock("@/lib/db", () => ({
   default: {
@@ -48,7 +49,7 @@ describe("POST /api/auth/claim", () => {
     });
   });
 
-  it("returns 400 when tenant is not in trial status", async () => {
+  it("returns 400 with CLAIM_TENANT_NOT_TRIAL when tenant is not in trial status", async () => {
     vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
       id: "tenant1", subscriptionStatus: "active", company: { id: "company1" },
     } as never);
@@ -56,17 +57,27 @@ describe("POST /api/auth/claim", () => {
       tenantId: "tenant1", email: "owner@test.com", name: "Owner",
     }));
     expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data).toEqual({
+      success: false,
+      error: { code: ErrorCodes.CLAIM_TENANT_NOT_TRIAL },
+    });
   });
 
-  it("returns 404 when tenant does not exist", async () => {
+  it("returns 404 with CLAIM_TENANT_NOT_FOUND when tenant does not exist", async () => {
     vi.mocked(prisma.tenant.findUnique).mockResolvedValue(null);
     const res = await POST(makeRequest({
       tenantId: "fake", email: "owner@test.com", name: "Owner",
     }));
     expect(res.status).toBe(404);
+    const data = await res.json();
+    expect(data).toEqual({
+      success: false,
+      error: { code: ErrorCodes.CLAIM_TENANT_NOT_FOUND },
+    });
   });
 
-  it("returns 409 when email already exists for this tenant", async () => {
+  it("returns 409 with AUTH_EMAIL_EXISTS when email already exists for this tenant", async () => {
     vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
       id: "tenant1", subscriptionStatus: "trial", company: { id: "company1" },
     } as never);
@@ -75,10 +86,32 @@ describe("POST /api/auth/claim", () => {
       tenantId: "tenant1", email: "owner@test.com", name: "Owner",
     }));
     expect(res.status).toBe(409);
+    const data = await res.json();
+    expect(data).toEqual({
+      success: false,
+      error: { code: ErrorCodes.AUTH_EMAIL_EXISTS },
+    });
   });
 
-  it("returns 400 for missing fields", async () => {
+  it("returns 400 with AUTH_VALIDATION_FAILED for missing fields", async () => {
     const res = await POST(makeRequest({ tenantId: "tenant1" }));
     expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.success).toBe(false);
+    expect(data.error).toEqual({ code: ErrorCodes.AUTH_VALIDATION_FAILED });
+    expect(data.fieldErrors).toBeDefined();
+  });
+
+  it("returns 500 with CLAIM_FAILED for unexpected errors", async () => {
+    vi.mocked(prisma.tenant.findUnique).mockRejectedValue(new Error("DB error"));
+    const res = await POST(makeRequest({
+      tenantId: "tenant1", email: "owner@test.com", name: "Owner",
+    }));
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data).toEqual({
+      success: false,
+      error: { code: ErrorCodes.CLAIM_FAILED },
+    });
   });
 });

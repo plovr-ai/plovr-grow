@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
+import { ErrorCodes } from "@/lib/errors/error-codes"
 import { GET } from "../route"
 
 vi.mock("@/services/stripe-connect", () => ({
@@ -14,12 +15,15 @@ describe("GET /api/auth/stripe/connect", () => {
     vi.clearAllMocks()
   })
 
-  it("should return 400 when tenantId is missing", async () => {
+  it("should return 400 with STRIPE_CONNECT_MISSING_TENANT when tenantId is missing", async () => {
     const request = new Request("http://localhost:3000/api/auth/stripe/connect")
     const response = await GET(request)
     expect(response.status).toBe(400)
     const body = await response.json()
-    expect(body).toEqual({ error: "tenantId is required" })
+    expect(body).toEqual({
+      success: false,
+      error: { code: ErrorCodes.STRIPE_CONNECT_MISSING_TENANT },
+    })
   })
 
   it("should redirect to OAuth URL when tenantId is provided", async () => {
