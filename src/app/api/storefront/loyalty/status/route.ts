@@ -31,12 +31,11 @@ export async function GET(request: NextRequest) {
     }
 
     const tenantId = company.tenantId;
-    const companyId = company.id;
 
     // Get customer dashboard data
     const dashboard = await loyaltyService.getCustomerDashboard(
       tenantId,
-      companyId,
+      tenantId,
       phone
     );
 

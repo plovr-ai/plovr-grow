@@ -30,7 +30,7 @@ describe("POST /api/dashboard/[merchantId]/loyalty/members/[memberId]/adjust-poi
     id: "merchant-1",
     name: "Test Merchant",
     company: {
-      id: "company-1",
+      id: "tenant-1",
       tenantId: "tenant-1",
     },
   };
@@ -38,7 +38,7 @@ describe("POST /api/dashboard/[merchantId]/loyalty/members/[memberId]/adjust-poi
   const mockMember = {
     id: "member-1",
     tenantId: "tenant-1",
-    companyId: "company-1",
+    companyId: "tenant-1",
     phone: "1234567890",
     points: 500,
   };

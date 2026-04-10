@@ -79,7 +79,7 @@ export async function POST(
 
     // Create company order for giftcard
     const order = await orderService.createCompanyOrder(company.tenantId, {
-      companyId: company.id,
+      companyId: company.tenantId,
       customerFirstName: data.buyerFirstName,
       customerLastName: data.buyerLastName,
       customerPhone: data.buyerPhone,
@@ -102,7 +102,7 @@ export async function POST(
     // Create the gift card record with generated card number
     const giftCard = await giftCardService.createGiftCard(
       company.tenantId,
-      company.id,
+      company.tenantId,
       {
         purchaseOrderId: order.id,
         amount: data.amount,

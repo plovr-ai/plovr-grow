@@ -33,12 +33,11 @@ export async function GET(request: NextRequest) {
     }
 
     const tenantId = company.tenantId;
-    const companyId = company.id;
 
     // Get member by phone
     const member = await loyaltyMemberService.getMemberByPhone(
       tenantId,
-      companyId,
+      tenantId,
       phone
     );
 

@@ -41,7 +41,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
   it("should accept and process email parameter", async () => {
     // Mock company lookup
     vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
-      id: "company-1",
+      id: "tenant-1",
       tenantId: "tenant-1",
       slug: "test-company",
       name: "Test Company",
@@ -67,7 +67,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
         email: "john@example.com",
         points: 0,
         tenantId: "tenant-1",
-        companyId: "company-1",
+        companyId: "tenant-1",
         totalOrders: 0,
         totalSpent: 0,
         lastOrderAt: null,
@@ -103,7 +103,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
     // Verify that enrollCustomer was called with email
     expect(loyaltyService.enrollCustomer).toHaveBeenCalledWith(
       "tenant-1",
-      "company-1",
+      "tenant-1",
       "+15551234567",
       {
         firstName: "John",
@@ -115,7 +115,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
 
   it("should handle empty email string", async () => {
     vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
-      id: "company-1",
+      id: "tenant-1",
       tenantId: "tenant-1",
       slug: "test-company",
       name: "Test Company",
@@ -138,7 +138,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
         email: null,
         points: 0,
         tenantId: "tenant-1",
-        companyId: "company-1",
+        companyId: "tenant-1",
         totalOrders: 0,
         totalSpent: 0,
         lastOrderAt: null,
@@ -173,7 +173,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
     // Verify that enrollCustomer was called with undefined for empty email
     expect(loyaltyService.enrollCustomer).toHaveBeenCalledWith(
       "tenant-1",
-      "company-1",
+      "tenant-1",
       "+15551234567",
       {
         firstName: "John",
@@ -233,7 +233,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
 
   it("should work without email parameter (backward compatibility)", async () => {
     vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
-      id: "company-1",
+      id: "tenant-1",
       tenantId: "tenant-1",
       slug: "test-company",
       name: "Test Company",
@@ -256,7 +256,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
         email: null,
         points: 0,
         tenantId: "tenant-1",
-        companyId: "company-1",
+        companyId: "tenant-1",
         totalOrders: 0,
         totalSpent: 0,
         lastOrderAt: null,
@@ -291,7 +291,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
     // Email should be undefined when not provided
     expect(loyaltyService.enrollCustomer).toHaveBeenCalledWith(
       "tenant-1",
-      "company-1",
+      "tenant-1",
       "+15551234567",
       {
         firstName: "John",
@@ -429,7 +429,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
 
   it("should return error when OTP verification fails", async () => {
     vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
-      id: "company-1",
+      id: "tenant-1",
       tenantId: "tenant-1",
       slug: "test-company",
       name: "Test Company",

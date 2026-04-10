@@ -3,7 +3,7 @@ import { z } from "zod";
 import { clearLoyaltySession } from "@/lib/loyalty-session";
 
 const logoutSchema = z.object({
-  companyId: z.string().min(1, "Company ID is required"),
+  tenantId: z.string().min(1, "Tenant ID is required"),
 });
 
 /**
@@ -26,10 +26,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { companyId } = validation.data;
+    const { tenantId } = validation.data;
 
-    // Clear the session cookie
-    await clearLoyaltySession(companyId);
+    // Clear the session cookie (tenantId === companyId)
+    await clearLoyaltySession(tenantId);
 
     return NextResponse.json({
       success: true,

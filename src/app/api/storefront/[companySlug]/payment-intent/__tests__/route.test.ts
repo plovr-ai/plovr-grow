@@ -20,7 +20,7 @@ import { merchantService } from "@/services/merchant";
 
 describe("POST /api/storefront/[companySlug]/payment-intent", () => {
   const mockCompany = {
-    id: "company-1",
+    id: "tenant-1",
     tenantId: "tenant-1",
     name: "Test Company",
     slug: "test-company",
@@ -92,7 +92,7 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
 
     expect(paymentService.createPaymentIntent).toHaveBeenCalledWith({
       tenantId: "tenant-1",
-      companyId: "company-1",
+      companyId: "tenant-1",
       merchantId: undefined,
       amount: 25.0,
       currency: "USD",

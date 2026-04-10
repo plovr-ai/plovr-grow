@@ -1,29 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLoyaltySession } from "@/lib/loyalty-session";
 import { loyaltyMemberService, loyaltyConfigService } from "@/services/loyalty";
-import { companyRepository } from "@/repositories/company.repository";
+import { tenantRepository } from "@/repositories/tenant.repository";
 
 /**
  * GET /api/storefront/loyalty/me
  * Get current logged-in loyalty member from session cookie
- * Query params: companyId (required)
+ * Query params: tenantId (required)
  */
 export async function GET(request: NextRequest) {
   try {
-    const companyId = request.nextUrl.searchParams.get("companyId");
+    const tenantId = request.nextUrl.searchParams.get("tenantId");
 
-    if (!companyId) {
+    if (!tenantId) {
       return NextResponse.json(
         {
           success: false,
-          error: "Company ID is required",
+          error: "Tenant ID is required",
         },
         { status: 400 }
       );
     }
 
-    // Get session from cookie
-    const session = await getLoyaltySession(companyId);
+    // Get session from cookie (tenantId === companyId)
+    const session = await getLoyaltySession(tenantId);
 
     if (!session) {
       return NextResponse.json({
@@ -32,19 +32,17 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get company to extract tenantId
-    const company = await companyRepository.getById(companyId);
-    if (!company) {
+    // Verify tenant exists
+    const tenant = await tenantRepository.getById(tenantId);
+    if (!tenant) {
       return NextResponse.json(
         {
           success: false,
-          error: "Company not found",
+          error: "Tenant not found",
         },
         { status: 404 }
       );
     }
-
-    const tenantId = company.tenantId;
 
     // Get member data (fresh from database)
     const member = await loyaltyMemberService.getMember(tenantId, session.memberId);
@@ -60,7 +58,7 @@ export async function GET(request: NextRequest) {
     // Get loyalty config for pointsPerDollar
     const pointsPerDollar = await loyaltyConfigService.getPointsPerDollar(
       tenantId,
-      companyId
+      tenantId
     );
 
     return NextResponse.json({

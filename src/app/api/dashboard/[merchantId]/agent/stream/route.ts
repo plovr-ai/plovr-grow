@@ -42,7 +42,7 @@ export async function POST(
 
   // Authentication check
   const session = await auth();
-  if (!session?.user?.id || !session?.user?.companyId) {
+  if (!session?.user?.id || !session?.user?.tenantId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -52,8 +52,8 @@ export async function POST(
     return NextResponse.json({ error: "Merchant not found" }, { status: 404 });
   }
 
-  // Verify the merchant belongs to the user's company
-  if (merchant.companyId !== session.user.companyId) {
+  // Verify the merchant belongs to the user's tenant
+  if (merchant.company.tenantId !== session.user.tenantId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -75,7 +75,6 @@ export async function POST(
 
   const { message, conversationId, context } = validation.data;
   const tenantId = merchant.company.tenantId;
-  const companyId = merchant.companyId;
   const userId = session.user.id;
 
   // Fetch subscription status server-side (secure)
@@ -89,7 +88,7 @@ export async function POST(
       try {
         const generator = dashboardAgentService.processMessageStream(
           tenantId,
-          companyId,
+          tenantId,
           merchantId,
           userId,
           {

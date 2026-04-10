@@ -29,11 +29,10 @@ export async function GET(
     }
 
     const tenantId = merchant.company.tenantId;
-    const companyId = merchant.company.id;
 
     const result = await loyaltyMemberService.getMembersByCompany(
       tenantId,
-      companyId,
+      tenantId,
       { page, pageSize, search }
     );
 

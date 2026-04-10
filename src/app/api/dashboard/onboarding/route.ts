@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { companyService } from "@/services/company/company.service";
+import { tenantService } from "@/services/tenant/tenant.service";
 import type { OnboardingStepId, OnboardingStepStatus } from "@/types/onboarding";
 import { ONBOARDING_STEP_ORDER } from "@/types/onboarding";
 import { z } from "zod";
@@ -9,16 +9,15 @@ import { z } from "zod";
 export async function GET() {
   try {
     const session = await auth();
-    if (!session?.user?.tenantId || !session?.user?.companyId) {
+    if (!session?.user?.tenantId) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const result = await companyService.getOnboardingStatus(
-      session.user.tenantId,
-      session.user.companyId
+    const result = await tenantService.getOnboardingStatus(
+      session.user.tenantId
     );
 
     return NextResponse.json({ success: true, data: result });
@@ -40,7 +39,7 @@ const updateSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user?.tenantId || !session?.user?.companyId) {
+    if (!session?.user?.tenantId) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
@@ -58,9 +57,8 @@ export async function POST(request: NextRequest) {
 
     const { stepId, status } = validation.data;
 
-    const result = await companyService.updateOnboardingStep(
+    const result = await tenantService.updateOnboardingStep(
       session.user.tenantId,
-      session.user.companyId,
       stepId as OnboardingStepId,
       status as OnboardingStepStatus
     );
