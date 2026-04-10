@@ -19,8 +19,8 @@ vi.mock("@/repositories/merchant.repository", () => ({
   },
 }));
 
-vi.mock("@/repositories/company.repository", () => ({
-  companyRepository: {
+vi.mock("@/repositories/tenant.repository", () => ({
+  tenantRepository: {
     getById: vi.fn(),
     getBySlugWithMerchants: vi.fn(),
   },
@@ -35,7 +35,7 @@ vi.mock("@/services/menu", () => ({
 
 // Import mocked modules
 import { merchantRepository } from "@/repositories/merchant.repository";
-import { companyRepository } from "@/repositories/company.repository";
+import { tenantRepository } from "@/repositories/tenant.repository";
 import { menuService } from "@/services/menu";
 
 describe("MerchantService (unit tests)", () => {
@@ -213,7 +213,7 @@ describe("MerchantService (unit tests)", () => {
     ];
 
     beforeEach(() => {
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue(
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
         mockCompanyWithMerchants as never
       );
       vi.mocked(menuService.getFeaturedItems).mockResolvedValue(
@@ -349,7 +349,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should return null for non-existent company", async () => {
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue(
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
         null as never
       );
 
@@ -359,7 +359,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should use default currency and locale when not configured", async () => {
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue({
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
         ...mockCompanyWithMerchants,
         settings: null,
       } as never);

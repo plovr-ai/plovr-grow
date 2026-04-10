@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { companyService } from "@/services/company";
+import { tenantService } from "@/services/tenant/tenant.service";
 import { CompanyInfoCard } from "@/components/dashboard/company/CompanyInfoCard";
 
 export default async function CompanyPage() {
@@ -12,7 +12,7 @@ export default async function CompanyPage() {
 
   const { companyId } = session.user;
 
-  const companyData = await companyService.getCompanyWithMerchants(companyId);
+  const companyData = await tenantService.getTenantWithMerchants(companyId);
 
   if (!companyData) {
     redirect("/dashboard/login");

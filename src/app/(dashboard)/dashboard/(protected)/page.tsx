@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { companyService } from "@/services/company/company.service";
+import { tenantService } from "@/services/tenant/tenant.service";
 import { menuService } from "@/services/menu/menu.service";
 import { AgentChatClient } from "@/components/dashboard/agent";
 import { OnboardingSection } from "@/components/dashboard/onboarding";
@@ -13,7 +13,7 @@ export default async function DashboardOverviewPage() {
     redirect("/dashboard/login");
   }
 
-  const company = await companyService.getCompanyWithMerchants(
+  const company = await tenantService.getTenantWithMerchants(
     session.user.companyId
   );
   if (!company) redirect("/dashboard/login");

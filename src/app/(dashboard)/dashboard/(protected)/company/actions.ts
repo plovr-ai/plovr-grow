@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@/lib/auth";
-import { companyService } from "@/services/company/company.service";
+import { tenantService } from "@/services/tenant/tenant.service";
 import { revalidatePath } from "next/cache";
 
 interface UpdateCompanySettingsInput {
@@ -19,7 +19,7 @@ export async function updateCompanySettingsAction(input: UpdateCompanySettingsIn
   const { companyId } = session.user;
 
   try {
-    await companyService.updateCompany(companyId, {
+    await tenantService.updateTenant(companyId, {
       currency: input.currency,
       locale: input.locale,
     });

@@ -14,7 +14,7 @@ import {
   type CardPaymentFormRef,
 } from "@storefront/components/checkout";
 import { usePaymentIntent } from "@storefront/hooks";
-import type { GiftcardConfig } from "@/types/company";
+import type { GiftcardConfig } from "@/types/tenant";
 
 interface GiftcardPageClientProps {
   companySlug: string;

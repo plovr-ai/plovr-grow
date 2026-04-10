@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { giftCardService } from "@/services/giftcard";
-import { companyService } from "@/services/company";
+import { tenantService } from "@/services/tenant/tenant.service";
 import { GiftcardOverviewClient } from "@/components/dashboard/giftcard";
 import { getLastNDaysInTimezone } from "@/lib/timezone";
 
@@ -26,7 +26,7 @@ export default async function GiftcardPage({ searchParams }: GiftcardPageProps) 
   const { tenantId, companyId } = session.user;
 
   // Get company for timezone
-  const company = await companyService.getCompany(companyId);
+  const company = await tenantService.getTenant(companyId);
   const companyTimezone = company?.timezone ?? "America/New_York";
 
   // Calculate default date range (last 30 days)

@@ -2,9 +2,9 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { DashboardLayoutClient } from "@/components/dashboard";
 import { merchantService } from "@/services/merchant";
-import { companyRepository } from "@/repositories/company.repository";
+import { tenantRepository } from "@/repositories/tenant.repository";
 import { subscriptionService } from "@/services/subscription";
-import { companyService } from "@/services/company/company.service";
+import { tenantService } from "@/services/tenant/tenant.service";
 import type { OnboardingData, OnboardingStatus } from "@/types/onboarding";
 
 export default async function ProtectedLayout({
@@ -23,7 +23,7 @@ export default async function ProtectedLayout({
 
   // Fetch company, merchants, and subscription data
   const [initialCompany, merchants, subscription] = await Promise.all([
-    companyRepository.getById(companyId),
+    tenantRepository.getById(companyId),
     merchantService.getMerchantsByCompanyId(tenantId, companyId),
     subscriptionService.getSubscriptionForDashboard(tenantId),
   ]);
@@ -37,8 +37,8 @@ export default async function ProtectedLayout({
   // Initialize onboarding if not started
   let company = initialCompany;
   if (company.onboardingStatus === "not_started") {
-    await companyService.initializeOnboarding(tenantId, company.id);
-    const updated = await companyRepository.getById(companyId);
+    await tenantService.initializeOnboarding(tenantId);
+    const updated = await tenantRepository.getById(companyId);
     if (updated) {
       company = updated;
     }
