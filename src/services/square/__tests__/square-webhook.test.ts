@@ -490,7 +490,7 @@ describe("SquareWebhookService", () => {
 
   describe("handler error branch coverage", () => {
     it("should handle non-Error thrown by handler (Unknown error)", async () => {
-      mockMerchantFindFirst.mockResolvedValue({ companyId: "company-1" });
+      mockMerchantFindFirst.mockResolvedValue({ tenantId: "tenant-1" });
       mockSyncCatalog.mockRejectedValue("string-error");
 
       const payload = buildPayload({ type: "catalog.version.updated" });
@@ -504,7 +504,7 @@ describe("SquareWebhookService", () => {
     });
 
     it("should re-throw non-Error from syncCatalog if not ALREADY_RUNNING", async () => {
-      mockMerchantFindFirst.mockResolvedValue({ companyId: "company-1" });
+      mockMerchantFindFirst.mockResolvedValue({ tenantId: "tenant-1" });
       mockSyncCatalog.mockRejectedValue("some non-Error");
 
       const payload = buildPayload({ type: "catalog.version.updated" });

@@ -59,17 +59,12 @@ import {
   reorderFeaturedItemsAction,
 } from "../actions";
 
-const mockAuth = vi.mocked(auth);
+const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
 const mockMenuService = vi.mocked(menuService);
 
 const TENANT_ID = "tenant-1";
-const COMPANY_ID = "company-1";
 
-const authenticatedSession = {
-  user: { tenantId: TENANT_ID, companyId: COMPANY_ID },
-};
-
-const tenantOnlySession = {
+const validSession = {
   user: { tenantId: TENANT_ID },
 };
 
@@ -82,7 +77,7 @@ describe("Menu Actions", () => {
 
   describe("createMenuAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockAuth.mockResolvedValue(null as never);
       const result = await createMenuAction({ name: "Lunch" });
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
@@ -93,15 +88,9 @@ describe("Menu Actions", () => {
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
-    it("should return unauthorized when session has no companyId", async () => {
-      mockAuth.mockResolvedValue({ user: { tenantId: TENANT_ID } });
-      const result = await createMenuAction({ name: "Lunch" });
-      expect(result).toEqual({ success: false, error: "Unauthorized" });
-    });
-
     it("should create menu successfully", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
-      mockMenuService.createMenu.mockResolvedValue({ id: "menu-1" });
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.createMenu.mockResolvedValue({ id: "menu-1" } as never);
 
       const result = await createMenuAction({
         name: "Lunch",
@@ -112,13 +101,12 @@ describe("Menu Actions", () => {
       expect(result).toEqual({ success: true, data: { id: "menu-1" } });
       expect(mockMenuService.createMenu).toHaveBeenCalledWith(
         TENANT_ID,
-        COMPANY_ID,
         { name: "Lunch", description: "Lunch menu", sortOrder: 1 }
       );
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.createMenu.mockRejectedValue(new Error("DB error"));
 
       const result = await createMenuAction({ name: "Lunch" });
@@ -127,7 +115,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.createMenu.mockRejectedValue("string error");
 
       const result = await createMenuAction({ name: "Lunch" });
@@ -143,14 +131,14 @@ describe("Menu Actions", () => {
 
   describe("updateMenuAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockAuth.mockResolvedValue(null as never);
       const result = await updateMenuAction("menu-1", { name: "Updated" });
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
     it("should update menu successfully", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      mockMenuService.updateMenu.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.updateMenu.mockResolvedValue(undefined as never);
 
       const result = await updateMenuAction("menu-1", { name: "Updated" });
 
@@ -163,7 +151,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.updateMenu.mockRejectedValue(new Error("Not found"));
 
       const result = await updateMenuAction("menu-1", { name: "Updated" });
@@ -172,7 +160,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.updateMenu.mockRejectedValue(42);
 
       const result = await updateMenuAction("menu-1", { name: "X" });
@@ -188,19 +176,13 @@ describe("Menu Actions", () => {
 
   describe("deleteMenuAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
-      const result = await deleteMenuAction("menu-1");
-      expect(result).toEqual({ success: false, error: "Unauthorized" });
-    });
-
-    it("should return unauthorized when missing companyId", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(null as never);
       const result = await deleteMenuAction("menu-1");
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
     it("should prevent deleting the last menu", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.countMenus.mockResolvedValue(1);
 
       const result = await deleteMenuAction("menu-1");
@@ -213,9 +195,9 @@ describe("Menu Actions", () => {
     });
 
     it("should delete menu when more than one exists", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.countMenus.mockResolvedValue(2);
-      mockMenuService.deleteMenu.mockResolvedValue(undefined);
+      mockMenuService.deleteMenu.mockResolvedValue(undefined as never);
 
       const result = await deleteMenuAction("menu-1");
 
@@ -227,7 +209,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.countMenus.mockResolvedValue(3);
       mockMenuService.deleteMenu.mockRejectedValue(new Error("DB error"));
 
@@ -237,7 +219,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.countMenus.mockRejectedValue(null);
 
       const result = await deleteMenuAction("menu-1");
@@ -253,14 +235,14 @@ describe("Menu Actions", () => {
 
   describe("updateMenuSortOrderAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockAuth.mockResolvedValue(null as never);
       const result = await updateMenuSortOrderAction([]);
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
     it("should update sort orders successfully", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      mockMenuService.updateMenuSortOrders.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.updateMenuSortOrders.mockResolvedValue(undefined as never);
 
       const updates = [
         { id: "m1", sortOrder: 0 },
@@ -276,7 +258,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.updateMenuSortOrders.mockRejectedValue(
         new Error("Fail")
       );
@@ -287,7 +269,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.updateMenuSortOrders.mockRejectedValue(undefined);
 
       const result = await updateMenuSortOrderAction([]);
@@ -303,16 +285,7 @@ describe("Menu Actions", () => {
 
   describe("createCategoryAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
-      const result = await createCategoryAction({
-        menuId: "menu-1",
-        name: "Appetizers",
-      });
-      expect(result).toEqual({ success: false, error: "Unauthorized" });
-    });
-
-    it("should return unauthorized when missing companyId", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(null as never);
       const result = await createCategoryAction({
         menuId: "menu-1",
         name: "Appetizers",
@@ -321,8 +294,8 @@ describe("Menu Actions", () => {
     });
 
     it("should create category successfully", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
-      mockMenuService.createCategory.mockResolvedValue({ id: "cat-1" });
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.createCategory.mockResolvedValue({ id: "cat-1" } as never);
 
       const result = await createCategoryAction({
         menuId: "menu-1",
@@ -335,7 +308,6 @@ describe("Menu Actions", () => {
       expect(result).toEqual({ success: true, data: { id: "cat-1" } });
       expect(mockMenuService.createCategory).toHaveBeenCalledWith(
         TENANT_ID,
-        COMPANY_ID,
         {
           menuId: "menu-1",
           name: "Appetizers",
@@ -347,7 +319,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.createCategory.mockRejectedValue(new Error("Dup name"));
 
       const result = await createCategoryAction({
@@ -359,7 +331,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.createCategory.mockRejectedValue(123);
 
       const result = await createCategoryAction({
@@ -378,14 +350,14 @@ describe("Menu Actions", () => {
 
   describe("updateCategoryAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockAuth.mockResolvedValue(null as never);
       const result = await updateCategoryAction("cat-1", { name: "Updated" });
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
     it("should update category successfully", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      mockMenuService.updateCategory.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.updateCategory.mockResolvedValue(undefined as never);
 
       const result = await updateCategoryAction("cat-1", {
         name: "Updated",
@@ -401,7 +373,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.updateCategory.mockRejectedValue(new Error("Nope"));
 
       const result = await updateCategoryAction("cat-1", { name: "X" });
@@ -410,7 +382,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.updateCategory.mockRejectedValue(false);
 
       const result = await updateCategoryAction("cat-1", { name: "X" });
@@ -426,14 +398,14 @@ describe("Menu Actions", () => {
 
   describe("deleteCategoryAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockAuth.mockResolvedValue(null as never);
       const result = await deleteCategoryAction("cat-1");
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
     it("should delete category successfully", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      mockMenuService.deleteCategory.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.deleteCategory.mockResolvedValue(undefined as never);
 
       const result = await deleteCategoryAction("cat-1");
 
@@ -445,7 +417,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.deleteCategory.mockRejectedValue(new Error("Fail"));
 
       const result = await deleteCategoryAction("cat-1");
@@ -454,7 +426,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.deleteCategory.mockRejectedValue(undefined);
 
       const result = await deleteCategoryAction("cat-1");
@@ -470,14 +442,14 @@ describe("Menu Actions", () => {
 
   describe("updateCategorySortOrderAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockAuth.mockResolvedValue(null as never);
       const result = await updateCategorySortOrderAction([]);
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
     it("should update category sort orders successfully", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      mockMenuService.updateCategorySortOrders.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.updateCategorySortOrders.mockResolvedValue(undefined as never);
 
       const updates = [{ id: "c1", sortOrder: 0 }];
       const result = await updateCategorySortOrderAction(updates);
@@ -490,7 +462,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.updateCategorySortOrders.mockRejectedValue(
         new Error("DB")
       );
@@ -501,7 +473,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.updateCategorySortOrders.mockRejectedValue(null);
 
       const result = await updateCategorySortOrderAction([]);
@@ -517,17 +489,7 @@ describe("Menu Actions", () => {
 
   describe("createMenuItemAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
-      const result = await createMenuItemAction({
-        categoryIds: ["cat-1"],
-        name: "Burger",
-        price: 12.99,
-      });
-      expect(result).toEqual({ success: false, error: "Unauthorized" });
-    });
-
-    it("should return unauthorized when missing companyId", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(null as never);
       const result = await createMenuItemAction({
         categoryIds: ["cat-1"],
         name: "Burger",
@@ -537,8 +499,8 @@ describe("Menu Actions", () => {
     });
 
     it("should create menu item successfully without tax configs", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
-      mockMenuService.createMenuItem.mockResolvedValue({ id: "item-1" });
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.createMenuItem.mockResolvedValue({ id: "item-1" } as never);
 
       const result = await createMenuItemAction({
         categoryIds: ["cat-1"],
@@ -552,7 +514,6 @@ describe("Menu Actions", () => {
       expect(result).toEqual({ success: true, data: { id: "item-1" } });
       expect(mockMenuService.createMenuItem).toHaveBeenCalledWith(
         TENANT_ID,
-        COMPANY_ID,
         {
           categoryIds: ["cat-1"],
           name: "Burger",
@@ -567,9 +528,9 @@ describe("Menu Actions", () => {
     });
 
     it("should create menu item with tax configs", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
-      mockMenuService.createMenuItem.mockResolvedValue({ id: "item-1" });
-      mockMenuService.setMenuItemTaxConfigs.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.createMenuItem.mockResolvedValue({ id: "item-1" } as never);
+      mockMenuService.setMenuItemTaxConfigs.mockResolvedValue(undefined as never);
 
       const result = await createMenuItemAction({
         categoryIds: ["cat-1"],
@@ -587,8 +548,8 @@ describe("Menu Actions", () => {
     });
 
     it("should not set tax configs when empty array", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
-      mockMenuService.createMenuItem.mockResolvedValue({ id: "item-1" });
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.createMenuItem.mockResolvedValue({ id: "item-1" } as never);
 
       const result = await createMenuItemAction({
         categoryIds: ["cat-1"],
@@ -602,7 +563,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.createMenuItem.mockRejectedValue(new Error("Bad input"));
 
       const result = await createMenuItemAction({
@@ -615,7 +576,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.createMenuItem.mockRejectedValue(undefined);
 
       const result = await createMenuItemAction({
@@ -635,14 +596,14 @@ describe("Menu Actions", () => {
 
   describe("updateMenuItemAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockAuth.mockResolvedValue(null as never);
       const result = await updateMenuItemAction("item-1", { name: "X" });
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
     it("should update menu item without tax configs", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      mockMenuService.updateMenuItem.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.updateMenuItem.mockResolvedValue(undefined as never);
 
       const result = await updateMenuItemAction("item-1", {
         name: "Updated Burger",
@@ -659,9 +620,9 @@ describe("Menu Actions", () => {
     });
 
     it("should update menu item with tax configs", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      mockMenuService.updateMenuItem.mockResolvedValue(undefined);
-      mockMenuService.setMenuItemTaxConfigs.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.updateMenuItem.mockResolvedValue(undefined as never);
+      mockMenuService.setMenuItemTaxConfigs.mockResolvedValue(undefined as never);
 
       const result = await updateMenuItemAction("item-1", {
         name: "Beer",
@@ -677,9 +638,9 @@ describe("Menu Actions", () => {
     });
 
     it("should update menu item with empty tax configs array (clear)", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      mockMenuService.updateMenuItem.mockResolvedValue(undefined);
-      mockMenuService.setMenuItemTaxConfigs.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.updateMenuItem.mockResolvedValue(undefined as never);
+      mockMenuService.setMenuItemTaxConfigs.mockResolvedValue(undefined as never);
 
       const result = await updateMenuItemAction("item-1", {
         taxConfigIds: [],
@@ -694,8 +655,8 @@ describe("Menu Actions", () => {
     });
 
     it("should update menu item with categoryIds", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      mockMenuService.updateMenuItem.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.updateMenuItem.mockResolvedValue(undefined as never);
 
       const result = await updateMenuItemAction("item-1", {
         categoryIds: ["cat-1", "cat-2"],
@@ -710,7 +671,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.updateMenuItem.mockRejectedValue(new Error("Nope"));
 
       const result = await updateMenuItemAction("item-1", { name: "X" });
@@ -719,7 +680,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.updateMenuItem.mockRejectedValue(null);
 
       const result = await updateMenuItemAction("item-1", { name: "X" });
@@ -735,14 +696,14 @@ describe("Menu Actions", () => {
 
   describe("deleteMenuItemAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockAuth.mockResolvedValue(null as never);
       const result = await deleteMenuItemAction("item-1");
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
     it("should permanently delete item when no categoryId", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      mockMenuService.deleteMenuItem.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.deleteMenuItem.mockResolvedValue(undefined as never);
 
       const result = await deleteMenuItemAction("item-1");
 
@@ -755,8 +716,8 @@ describe("Menu Actions", () => {
     });
 
     it("should unlink item from category when categoryId provided", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      mockMenuService.unlinkItemFromCategory.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.unlinkItemFromCategory.mockResolvedValue(undefined as never);
 
       const result = await deleteMenuItemAction("item-1", {
         categoryId: "cat-1",
@@ -772,7 +733,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.deleteMenuItem.mockRejectedValue(new Error("Fail"));
 
       const result = await deleteMenuItemAction("item-1");
@@ -781,7 +742,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.deleteMenuItem.mockRejectedValue(0);
 
       const result = await deleteMenuItemAction("item-1");
@@ -797,14 +758,14 @@ describe("Menu Actions", () => {
 
   describe("updateMenuItemSortOrderAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockAuth.mockResolvedValue(null as never);
       const result = await updateMenuItemSortOrderAction("cat-1", []);
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
     it("should update item sort orders successfully", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      mockMenuService.updateMenuItemSortOrders.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.updateMenuItemSortOrders.mockResolvedValue(undefined as never);
 
       const updates = [{ id: "i1", sortOrder: 0 }];
       const result = await updateMenuItemSortOrderAction("cat-1", updates);
@@ -817,7 +778,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.updateMenuItemSortOrders.mockRejectedValue(
         new Error("DB")
       );
@@ -828,7 +789,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.updateMenuItemSortOrders.mockRejectedValue(null);
 
       const result = await updateMenuItemSortOrderAction("cat-1", []);
@@ -844,14 +805,14 @@ describe("Menu Actions", () => {
 
   describe("linkItemToCategoryAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockAuth.mockResolvedValue(null as never);
       const result = await linkItemToCategoryAction("cat-1", "item-1");
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
     it("should link item to category successfully", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      mockMenuService.linkItemToCategory.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.linkItemToCategory.mockResolvedValue(undefined as never);
 
       const result = await linkItemToCategoryAction("cat-1", "item-1");
 
@@ -864,7 +825,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.linkItemToCategory.mockRejectedValue(
         new Error("Already linked")
       );
@@ -875,7 +836,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.linkItemToCategory.mockRejectedValue(undefined);
 
       const result = await linkItemToCategoryAction("cat-1", "item-1");
@@ -891,22 +852,16 @@ describe("Menu Actions", () => {
 
   describe("getAvailableItemsAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
-      const result = await getAvailableItemsAction("cat-1");
-      expect(result).toEqual({ success: false, error: "Unauthorized" });
-    });
-
-    it("should return unauthorized when missing companyId", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(null as never);
       const result = await getAvailableItemsAction("cat-1");
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
     it("should return available items successfully", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       const items = [
-        { id: "item-2", name: "Fries", price: 4.99 },
-        { id: "item-3", name: "Salad", price: 7.99 },
+        { id: "item-2", name: "Fries", description: null, price: 4.99, imageUrl: null, categoryNames: [] },
+        { id: "item-3", name: "Salad", description: null, price: 7.99, imageUrl: null, categoryNames: [] },
       ];
       mockMenuService.getAvailableItems.mockResolvedValue(items);
 
@@ -915,13 +870,12 @@ describe("Menu Actions", () => {
       expect(result).toEqual({ success: true, data: items });
       expect(mockMenuService.getAvailableItems).toHaveBeenCalledWith(
         TENANT_ID,
-        COMPANY_ID,
         "cat-1"
       );
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.getAvailableItems.mockRejectedValue(new Error("Fail"));
 
       const result = await getAvailableItemsAction("cat-1");
@@ -930,7 +884,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.getAvailableItems.mockRejectedValue(null);
 
       const result = await getAvailableItemsAction("cat-1");
@@ -946,33 +900,26 @@ describe("Menu Actions", () => {
 
   describe("addFeaturedItemAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
-      const result = await addFeaturedItemAction("item-1");
-      expect(result).toEqual({ success: false, error: "Unauthorized" });
-    });
-
-    it("should return unauthorized when missing companyId", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(null as never);
       const result = await addFeaturedItemAction("item-1");
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
     it("should add featured item successfully", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
-      mockMenuService.addFeaturedItem.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.addFeaturedItem.mockResolvedValue(undefined as never);
 
       const result = await addFeaturedItemAction("item-1");
 
       expect(result).toEqual({ success: true });
       expect(mockMenuService.addFeaturedItem).toHaveBeenCalledWith(
         TENANT_ID,
-        COMPANY_ID,
         "item-1"
       );
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.addFeaturedItem.mockRejectedValue(
         new Error("Max reached")
       );
@@ -983,7 +930,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.addFeaturedItem.mockRejectedValue(undefined);
 
       const result = await addFeaturedItemAction("item-1");
@@ -999,33 +946,26 @@ describe("Menu Actions", () => {
 
   describe("removeFeaturedItemAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
-      const result = await removeFeaturedItemAction("item-1");
-      expect(result).toEqual({ success: false, error: "Unauthorized" });
-    });
-
-    it("should return unauthorized when missing companyId", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
+      mockAuth.mockResolvedValue(null as never);
       const result = await removeFeaturedItemAction("item-1");
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
     it("should remove featured item successfully", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
-      mockMenuService.removeFeaturedItem.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.removeFeaturedItem.mockResolvedValue(undefined as never);
 
       const result = await removeFeaturedItemAction("item-1");
 
       expect(result).toEqual({ success: true });
       expect(mockMenuService.removeFeaturedItem).toHaveBeenCalledWith(
         TENANT_ID,
-        COMPANY_ID,
         "item-1"
       );
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.removeFeaturedItem.mockRejectedValue(
         new Error("Not featured")
       );
@@ -1036,7 +976,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.removeFeaturedItem.mockRejectedValue(null);
 
       const result = await removeFeaturedItemAction("item-1");
@@ -1052,20 +992,14 @@ describe("Menu Actions", () => {
 
   describe("reorderFeaturedItemsAction", () => {
     it("should return unauthorized when no session", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockAuth.mockResolvedValue(null as never);
       const result = await reorderFeaturedItemsAction(["item-1", "item-2"]);
       expect(result).toEqual({ success: false, error: "Unauthorized" });
     });
 
-    it("should return unauthorized when missing companyId", async () => {
-      mockAuth.mockResolvedValue(tenantOnlySession);
-      const result = await reorderFeaturedItemsAction(["item-1"]);
-      expect(result).toEqual({ success: false, error: "Unauthorized" });
-    });
-
     it("should reorder featured items successfully", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
-      mockMenuService.reorderFeaturedItems.mockResolvedValue(undefined);
+      mockAuth.mockResolvedValue(validSession);
+      mockMenuService.reorderFeaturedItems.mockResolvedValue(undefined as never);
 
       const ids = ["item-2", "item-1", "item-3"];
       const result = await reorderFeaturedItemsAction(ids);
@@ -1073,13 +1007,12 @@ describe("Menu Actions", () => {
       expect(result).toEqual({ success: true });
       expect(mockMenuService.reorderFeaturedItems).toHaveBeenCalledWith(
         TENANT_ID,
-        COMPANY_ID,
         ids
       );
     });
 
     it("should return error when service throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.reorderFeaturedItems.mockRejectedValue(
         new Error("Fail")
       );
@@ -1090,7 +1023,7 @@ describe("Menu Actions", () => {
     });
 
     it("should return generic error for non-Error throws", async () => {
-      mockAuth.mockResolvedValue(authenticatedSession);
+      mockAuth.mockResolvedValue(validSession);
       mockMenuService.reorderFeaturedItems.mockRejectedValue(undefined);
 
       const result = await reorderFeaturedItemsAction([]);

@@ -10,7 +10,7 @@ vi.mock("@/repositories/loyalty-member.repository", () => ({
     findOrCreate: vi.fn(),
     update: vi.fn(),
     updateOrderStats: vi.fn(),
-    getByCompany: vi.fn(),
+    getByTenant: vi.fn(),
     countByTenant: vi.fn(),
   },
 }));
@@ -248,7 +248,7 @@ describe("LoyaltyMemberService", () => {
         pageSize: 20,
         totalPages: 1,
       };
-      vi.mocked(loyaltyMemberRepository.getByCompany).mockResolvedValue(mockResult);
+      vi.mocked(loyaltyMemberRepository.getByTenant).mockResolvedValue(mockResult);
 
       const result = await service.getMembersByTenant("tenant-1", {
         page: 1,
@@ -258,7 +258,7 @@ describe("LoyaltyMemberService", () => {
 
       expect(result.items).toHaveLength(1);
       expect(result.total).toBe(1);
-      expect(loyaltyMemberRepository.getByCompany).toHaveBeenCalledWith(
+      expect(loyaltyMemberRepository.getByTenant).toHaveBeenCalledWith(
         "tenant-1",
         { page: 1, pageSize: 20, search: "john" }
       );

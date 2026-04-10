@@ -361,7 +361,7 @@ describe("SquareService", () => {
         new Error("Square API down")
       );
 
-      await expect(service.syncCatalog("t1", "m1", "c1")).rejects.toMatchObject({
+      await expect(service.syncCatalog("t1", "m1")).rejects.toMatchObject({
         code: "SQUARE_CATALOG_SYNC_FAILED",
       });
 
@@ -401,8 +401,13 @@ describe("SquareService", () => {
 
       const result = await service.pushOrder("t1", "m1", {
         orderId: "order-1",
-        locationId: "loc-1",
-        lineItems: [],
+        orderNumber: "ORD-001",
+        customerFirstName: "John",
+        customerLastName: "Doe",
+        customerPhone: "555-1234",
+        orderMode: "pickup",
+        items: [],
+        totalAmount: 10,
       });
 
       expect(squareOrderService.createOrder).toHaveBeenCalledWith(
@@ -410,14 +415,14 @@ describe("SquareService", () => {
         "m1",
         expect.objectContaining({ orderId: "order-1" })
       );
-      expect(result.success).toBe(true);
+      expect(result.squareOrderId).toBeDefined();
     });
 
     it("should throw INTEGRATION_NOT_CONNECTED when no connection", async () => {
       vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(null);
 
       await expect(
-        service.pushOrder("t1", "m1", { orderId: "o-1", locationId: "l-1", lineItems: [] })
+        service.pushOrder("t1", "m1", { orderId: "o-1", orderNumber: "ORD-001", customerFirstName: "J", customerLastName: "D", customerPhone: "555", orderMode: "pickup", items: [], totalAmount: 0 })
       ).rejects.toMatchObject({ code: "INTEGRATION_NOT_CONNECTED" });
     });
 
@@ -427,7 +432,7 @@ describe("SquareService", () => {
       );
 
       await expect(
-        service.pushOrder("t1", "m1", { orderId: "o-1", locationId: "l-1", lineItems: [] })
+        service.pushOrder("t1", "m1", { orderId: "o-1", orderNumber: "ORD-001", customerFirstName: "J", customerLastName: "D", customerPhone: "555", orderMode: "pickup", items: [], totalAmount: 0 })
       ).rejects.toMatchObject({ code: "INTEGRATION_TOKEN_EXPIRED" });
     });
 
@@ -445,8 +450,13 @@ describe("SquareService", () => {
 
       await service.pushOrder("t1", "m1", {
         orderId: "o-1",
-        locationId: "l-1",
-        lineItems: [],
+        orderNumber: "ORD-001",
+        customerFirstName: "J",
+        customerLastName: "D",
+        customerPhone: "555",
+        orderMode: "pickup",
+        items: [],
+        totalAmount: 0,
       });
 
       expect(squareOAuthService.refreshToken).toHaveBeenCalledWith("refresh-456");
@@ -464,7 +474,7 @@ describe("SquareService", () => {
       );
 
       await expect(
-        service.pushOrder("t1", "m1", { orderId: "o-1", locationId: "l-1", lineItems: [] })
+        service.pushOrder("t1", "m1", { orderId: "o-1", orderNumber: "ORD-001", customerFirstName: "J", customerLastName: "D", customerPhone: "555", orderMode: "pickup", items: [], totalAmount: 0 })
       ).rejects.toMatchObject({ code: "INTEGRATION_TOKEN_EXPIRED" });
     });
   });
@@ -523,9 +533,9 @@ describe("SquareService", () => {
             name: "Spring Rolls",
             description: "Crispy rolls",
             price: 8.99,
-            modifiers: [{ name: "Extra sauce", price: 0.5 }],
+            modifiers: { groups: [{ name: "Extra sauce", required: false, minSelect: 0, maxSelect: 1, options: [{ name: "Extra sauce", price: 0.5, externalId: "sq-mod-1" }] }] },
             categoryExternalIds: ["sq-cat-1"],
-            variationMappings: [{ externalId: "sq-var-1" }],
+            variationMappings: [{ externalId: "sq-var-1", name: "Regular" }],
           },
           {
             externalId: "sq-item-2",
@@ -542,7 +552,7 @@ describe("SquareService", () => {
         ],
       });
 
-      const result = await service.syncCatalog("t1", "m1", "c1");
+      const result = await service.syncCatalog("t1", "m1");
 
       expect(result.objectsSynced).toBe(5); // 2 categories + 2 items + 1 tax
       expect(result.objectsMapped).toBe(5);
@@ -569,7 +579,7 @@ describe("SquareService", () => {
         merchantTaxRate: { upsert: vi.fn() },
       };
       vi.mocked(prisma.$transaction).mockImplementationOnce(
-        (fn: (tx: unknown) => unknown) => fn(mockTx) as Promise<unknown>
+        ((fn: (tx: unknown) => unknown) => fn(mockTx) as Promise<unknown>) as never
       );
 
       vi.mocked(squareCatalogService.mapToMenuModels).mockReturnValueOnce({
@@ -578,7 +588,7 @@ describe("SquareService", () => {
         taxes: [],
       });
 
-      const result = await service.syncCatalog("t1", "m1", "c1");
+      const result = await service.syncCatalog("t1", "m1");
 
       expect(mockTx.menu.create).toHaveBeenCalled();
       expect(result.objectsSynced).toBe(1);
@@ -594,6 +604,7 @@ describe("SquareService", () => {
         externalSource: "SQUARE",
         externalType: "CATEGORY",
         externalId: "sq-cat-1",
+        deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -604,7 +615,7 @@ describe("SquareService", () => {
         taxes: [],
       });
 
-      const result = await service.syncCatalog("t1", "m1", "c1");
+      const result = await service.syncCatalog("t1", "m1");
 
       expect(result.objectsSynced).toBe(1);
       // Reset the mock back to default
@@ -623,7 +634,7 @@ describe("SquareService", () => {
         merchantId: "sq-merchant-1",
       });
 
-      const result = await service.syncCatalog("t1", "m1", "c1");
+      const result = await service.syncCatalog("t1", "m1");
 
       expect(squareOAuthService.refreshToken).toHaveBeenCalled();
       expect(squareCatalogService.fetchFullCatalog).toHaveBeenCalledWith("refreshed-token");
@@ -654,7 +665,7 @@ describe("SquareService", () => {
         "string error"
       );
 
-      await expect(service.syncCatalog("t1", "m1", "c1")).rejects.toMatchObject({
+      await expect(service.syncCatalog("t1", "m1")).rejects.toMatchObject({
         code: "SQUARE_CATALOG_SYNC_FAILED",
       });
 
@@ -686,7 +697,7 @@ describe("SquareService", () => {
         updatedAt: new Date(),
       });
 
-      await expect(service.syncCatalog("t1", "m1", "c1")).rejects.toMatchObject({
+      await expect(service.syncCatalog("t1", "m1")).rejects.toMatchObject({
         code: "INTEGRATION_TOKEN_EXPIRED",
       });
     });

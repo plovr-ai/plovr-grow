@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { auth, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { DashboardLayoutClient } from "@/components/dashboard";
 import { merchantService } from "@/services/merchant";

@@ -1,8 +1,10 @@
 import { tenantRepository } from "@/repositories/tenant.repository";
 import { merchantRepository } from "@/repositories/merchant.repository";
 import { AppError, ErrorCodes } from "@/lib/errors";
+import prisma from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import type { CreateTenantInput, UpdateTenantInput } from "./tenant.types";
+import { generateUniqueSlug } from "@/services/generator/slug.util";
 import {
   DEFAULT_ONBOARDING_DATA,
   WEBSITE_DEPENDENT_STEPS,
@@ -143,6 +145,90 @@ export class TenantService {
    */
   async getActiveMerchants(tenantId: string) {
     return merchantRepository.getActiveByTenantId(tenantId);
+  }
+
+  /**
+   * Update tenant and its first merchant with Google Places data during onboarding.
+   */
+  async updateFromPlaceDetails(
+    tenantId: string,
+    details: {
+      name: string;
+      address: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      phone?: string;
+      websiteUrl?: string;
+      businessHours?: unknown;
+      reviews?: Array<{ author: string; rating: number; text: string }>;
+    }
+  ) {
+    const tenant = await tenantRepository.getWithMerchants(tenantId);
+    if (!tenant) {
+      throw new AppError(ErrorCodes.TENANT_NOT_FOUND, undefined, 404);
+    }
+
+    const merchant = tenant.merchants?.[0];
+    if (!merchant) {
+      throw new AppError(ErrorCodes.MERCHANT_NOT_FOUND, undefined, 404);
+    }
+
+    // Generate new slugs based on real restaurant name
+    const newTenantSlug = await generateUniqueSlug(
+      details.name,
+      async (slug) =>
+        slug === tenant.slug ||
+        (await tenantRepository.getBySlug(slug)) === null
+    );
+    const newMerchantSlug = await generateUniqueSlug(
+      details.name,
+      async (slug) =>
+        slug === merchant.slug ||
+        (await merchantRepository.isSlugAvailable(slug))
+    );
+
+    const tenantSettings = {
+      ...((tenant.settings as Record<string, unknown>) ?? {}),
+      themePreset:
+        (tenant.settings as Record<string, unknown>)?.themePreset ?? "blue",
+      website: {
+        tagline: "",
+        heroImage: "",
+        socialLinks: [],
+        reviews: details.reviews?.slice(0, 5) ?? [],
+      },
+    };
+
+    // Update both in a transaction
+    await prisma.$transaction(async (tx) => {
+      await tx.tenant.update({
+        where: { id: tenantId },
+        data: {
+          name: details.name,
+          slug: newTenantSlug,
+          websiteUrl: details.websiteUrl,
+          settings: tenantSettings as Prisma.InputJsonValue,
+          source: "generator",
+        },
+      });
+
+      await tx.merchant.update({
+        where: { id: merchant.id },
+        data: {
+          name: details.name,
+          slug: newMerchantSlug,
+          address: details.address,
+          city: details.city,
+          state: details.state,
+          zipCode: details.zipCode,
+          phone: details.phone,
+          businessHours: details.businessHours as Prisma.InputJsonValue,
+        },
+      });
+    });
+
+    return { tenantSlug: newTenantSlug, merchantSlug: newMerchantSlug };
   }
 
   // ==================== Onboarding Methods ====================

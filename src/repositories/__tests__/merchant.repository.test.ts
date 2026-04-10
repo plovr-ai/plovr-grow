@@ -11,9 +11,6 @@ vi.mock("@/lib/db", () => ({
       create: vi.fn(),
       update: vi.fn(),
     },
-    company: {
-      findUnique: vi.fn(),
-    },
   },
 }));
 
@@ -29,7 +26,6 @@ describe("MerchantRepository", () => {
 
   const mockMerchant = {
     id: "merchant-1",
-    companyId: "company-1",
     tenantId: "tenant-1",
     slug: "joes-pizza-downtown",
     name: "Joe's Pizza - Downtown",
@@ -62,23 +58,18 @@ describe("MerchantRepository", () => {
     updatedAt: new Date(),
   };
 
-  const mockCompanyTenant = {
-    id: "company-1",
+  const mockTenant = {
+    id: "tenant-1",
     slug: "joes-pizza",
-    tenantId: "tenant-1",
     name: "Joe's Pizza",
     logoUrl: "https://example.com/logo.png",
     settings: {},
-    tenant: {
-      id: "tenant-1",
-      name: "Joe's Pizza Tenant",
-      subscriptionStatus: "active",
-    },
+    subscriptionStatus: "active",
   };
 
-  const mockMerchantWithCompany = {
+  const mockMerchantWithTenant = {
     ...mockMerchant,
-    company: mockCompanyTenant,
+    tenant: mockTenant,
   };
 
   beforeEach(() => {
@@ -108,43 +99,16 @@ describe("MerchantRepository", () => {
   });
 
   describe("getByTenantId", () => {
-    it("should return first merchant for tenant via company", async () => {
-      vi.mocked(prisma.company.findUnique).mockResolvedValue({
-        ...mockCompanyTenant,
-        merchants: [mockMerchant],
-      } as never);
+    it("should return merchants for a tenant ordered by name", async () => {
+      vi.mocked(prisma.merchant.findMany).mockResolvedValue([mockMerchant] as never);
 
       const result = await repository.getByTenantId("tenant-1");
 
-      expect(prisma.company.findUnique).toHaveBeenCalledWith({
+      expect(prisma.merchant.findMany).toHaveBeenCalledWith({
         where: { tenantId: "tenant-1", deleted: false },
-        include: {
-          merchants: {
-            where: { deleted: false },
-            take: 1,
-          },
-        },
+        orderBy: { name: "asc" },
       });
-      expect(result).toEqual(mockMerchant);
-    });
-
-    it("should return null when company not found", async () => {
-      vi.mocked(prisma.company.findUnique).mockResolvedValue(null);
-
-      const result = await repository.getByTenantId("non-existent");
-
-      expect(result).toBeNull();
-    });
-
-    it("should return null when company has no merchants", async () => {
-      vi.mocked(prisma.company.findUnique).mockResolvedValue({
-        ...mockCompanyTenant,
-        merchants: [],
-      } as never);
-
-      const result = await repository.getByTenantId("tenant-1");
-
-      expect(result).toBeNull();
+      expect(result).toHaveLength(1);
     });
   });
 
@@ -169,57 +133,39 @@ describe("MerchantRepository", () => {
     });
   });
 
-  describe("getBySlugWithCompany", () => {
-    it("should find merchant by slug with company and tenant included", async () => {
-      vi.mocked(prisma.merchant.findFirst).mockResolvedValue(mockMerchantWithCompany as never);
+  describe("getBySlugWithTenant", () => {
+    it("should find merchant by slug with tenant included", async () => {
+      vi.mocked(prisma.merchant.findFirst).mockResolvedValue(mockMerchantWithTenant as never);
 
-      const result = await repository.getBySlugWithCompany("joes-pizza-downtown");
+      const result = await repository.getBySlugWithTenant("joes-pizza-downtown");
 
       expect(prisma.merchant.findFirst).toHaveBeenCalledWith({
         where: { slug: "joes-pizza-downtown", deleted: false },
         include: {
-          company: {
-            include: {
-              tenant: true,
-            },
-          },
+          tenant: true,
         },
       });
-      expect(result).toEqual(mockMerchantWithCompany);
+      expect(result).toEqual(mockMerchantWithTenant);
     });
 
     it("should return null for non-existent slug", async () => {
       vi.mocked(prisma.merchant.findFirst).mockResolvedValue(null);
 
-      const result = await repository.getBySlugWithCompany("non-existent");
+      const result = await repository.getBySlugWithTenant("non-existent");
 
       expect(result).toBeNull();
     });
   });
 
-  describe("getByCompanyId", () => {
-    it("should return merchants ordered by name", async () => {
-      vi.mocked(prisma.merchant.findMany).mockResolvedValue([mockMerchant] as never);
-
-      const result = await repository.getByCompanyId("company-1");
-
-      expect(prisma.merchant.findMany).toHaveBeenCalledWith({
-        where: { companyId: "company-1", deleted: false },
-        orderBy: { name: "asc" },
-      });
-      expect(result).toHaveLength(1);
-    });
-  });
-
-  describe("getActiveByCompanyId", () => {
+  describe("getActiveByTenantId", () => {
     it("should return only active merchants", async () => {
       vi.mocked(prisma.merchant.findMany).mockResolvedValue([mockMerchant] as never);
 
-      const result = await repository.getActiveByCompanyId("company-1");
+      const result = await repository.getActiveByTenantId("tenant-1");
 
       expect(prisma.merchant.findMany).toHaveBeenCalledWith({
         where: {
-          companyId: "company-1",
+          tenantId: "tenant-1",
           status: "active",
           deleted: false,
         },
@@ -229,66 +175,54 @@ describe("MerchantRepository", () => {
     });
   });
 
-  describe("getByIdWithCompany", () => {
-    it("should find merchant by ID with company and tenant", async () => {
-      vi.mocked(prisma.merchant.findUnique).mockResolvedValue(mockMerchantWithCompany as never);
+  describe("getByIdWithTenant", () => {
+    it("should find merchant by ID with tenant", async () => {
+      vi.mocked(prisma.merchant.findUnique).mockResolvedValue(mockMerchantWithTenant as never);
 
-      const result = await repository.getByIdWithCompany("merchant-1");
+      const result = await repository.getByIdWithTenant("merchant-1");
 
       expect(prisma.merchant.findUnique).toHaveBeenCalledWith({
         where: { id: "merchant-1", deleted: false },
         include: {
-          company: {
-            include: {
-              tenant: true,
-            },
-          },
+          tenant: true,
         },
       });
-      expect(result).toEqual(mockMerchantWithCompany);
+      expect(result).toEqual(mockMerchantWithTenant);
     });
   });
 
-  describe("getByCompanyIdWithCompany", () => {
-    it("should return merchants with company info", async () => {
-      vi.mocked(prisma.merchant.findMany).mockResolvedValue([mockMerchantWithCompany] as never);
+  describe("getByTenantIdWithTenant", () => {
+    it("should return merchants with tenant info", async () => {
+      vi.mocked(prisma.merchant.findMany).mockResolvedValue([mockMerchantWithTenant] as never);
 
-      const result = await repository.getByCompanyIdWithCompany("company-1");
+      const result = await repository.getByTenantIdWithTenant("tenant-1");
 
       expect(prisma.merchant.findMany).toHaveBeenCalledWith({
-        where: { companyId: "company-1", deleted: false },
+        where: { tenantId: "tenant-1", deleted: false },
         orderBy: { name: "asc" },
         include: {
-          company: {
-            include: {
-              tenant: true,
-            },
-          },
+          tenant: true,
         },
       });
       expect(result).toHaveLength(1);
     });
   });
 
-  describe("getActiveByCompanyIdWithCompany", () => {
-    it("should return active merchants with company info", async () => {
-      vi.mocked(prisma.merchant.findMany).mockResolvedValue([mockMerchantWithCompany] as never);
+  describe("getActiveByTenantIdWithTenant", () => {
+    it("should return active merchants with tenant info", async () => {
+      vi.mocked(prisma.merchant.findMany).mockResolvedValue([mockMerchantWithTenant] as never);
 
-      const result = await repository.getActiveByCompanyIdWithCompany("company-1");
+      const result = await repository.getActiveByTenantIdWithTenant("tenant-1");
 
       expect(prisma.merchant.findMany).toHaveBeenCalledWith({
         where: {
-          companyId: "company-1",
+          tenantId: "tenant-1",
           status: "active",
           deleted: false,
         },
         orderBy: { name: "asc" },
         include: {
-          company: {
-            include: {
-              tenant: true,
-            },
-          },
+          tenant: true,
         },
       });
       expect(result).toHaveLength(1);
@@ -296,7 +230,7 @@ describe("MerchantRepository", () => {
   });
 
   describe("create", () => {
-    it("should create merchant with generated ID and connect company/tenant", async () => {
+    it("should create merchant with generated ID and connect tenant", async () => {
       vi.mocked(prisma.merchant.create).mockResolvedValue(mockMerchant as never);
 
       const createData = {
@@ -314,13 +248,12 @@ describe("MerchantRepository", () => {
         locale: "en-US",
       };
 
-      const result = await repository.create("company-1", "tenant-1", createData);
+      const result = await repository.create("tenant-1", createData);
 
       expect(prisma.merchant.create).toHaveBeenCalledWith({
         data: {
           id: "generated-id-123",
           ...createData,
-          company: { connect: { id: "company-1" } },
           tenant: { connect: { id: "tenant-1" } },
         },
       });
@@ -346,10 +279,10 @@ describe("MerchantRepository", () => {
   });
 
   describe("updateSettings", () => {
-    it("should update settings with company/tenant include", async () => {
+    it("should update settings with tenant include", async () => {
       const settings = { acceptsPickup: true, acceptsDelivery: false };
       vi.mocked(prisma.merchant.update).mockResolvedValue({
-        ...mockMerchantWithCompany,
+        ...mockMerchantWithTenant,
         settings,
       } as never);
 
@@ -359,11 +292,7 @@ describe("MerchantRepository", () => {
         where: { id: "merchant-1" },
         data: { settings },
         include: {
-          company: {
-            include: {
-              tenant: true,
-            },
-          },
+          tenant: true,
         },
       });
       expect(result.settings).toEqual(settings);
@@ -446,12 +375,10 @@ describe("MerchantRepository", () => {
     });
 
     it("should return false when no hours defined for today", async () => {
-      // Create business hours that exclude the current day
       const now = new Date();
       const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
       const currentDay = dayNames[now.getDay()];
 
-      // Build hours for all days except today
       const hours: Record<string, { open: string; close: string }> = {};
       for (const day of dayNames) {
         if (day !== currentDay) {
@@ -474,7 +401,6 @@ describe("MerchantRepository", () => {
       const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
       const currentDay = dayNames[now.getDay()];
 
-      // Set hours to cover the entire day
       vi.mocked(prisma.merchant.findUnique).mockResolvedValue({
         ...mockMerchant,
         businessHours: {
@@ -493,8 +419,6 @@ describe("MerchantRepository", () => {
       const currentDay = dayNames[now.getDay()];
       const currentTime = now.toTimeString().slice(0, 5);
 
-      // Set hours that definitely exclude current time
-      // If current time is before noon, set hours after noon; otherwise before noon
       const isBeforeNoon = currentTime < "12:00";
       const businessHours = isBeforeNoon
         ? { open: "13:00", close: "14:00" }

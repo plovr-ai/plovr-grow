@@ -124,7 +124,7 @@ export class CateringOrderService {
     tenantId: string,
     options: CateringOrderListOptions = {}
   ) {
-    const result = await cateringOrderRepository.getByCompany(
+    const result = await cateringOrderRepository.getByTenant(
       tenantId,
       {
         page: options.page,

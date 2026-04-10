@@ -19,7 +19,7 @@ vi.mock("@stripe/stripe-js", () => ({
 // Track the onReady callback so we can trigger it
 let capturedOnReady: (() => void) | undefined;
 let capturedRef: { current: { confirmPayment: () => Promise<{ success: boolean; error?: string }> } | null };
-const mockConfirmPayment = vi.fn<[], Promise<{ success: boolean; error?: string }>>().mockResolvedValue({ success: true });
+const mockConfirmPayment = vi.fn<() => Promise<{ success: boolean; error?: string }>>().mockResolvedValue({ success: true });
 
 vi.mock("@stripe/react-stripe-js", () => ({
   Elements: ({ children }: { children: React.ReactNode }) => <div data-testid="stripe-elements">{children}</div>,
@@ -1486,9 +1486,7 @@ describe("CheckoutPage", () => {
               logoUrl: null,
               currency: "USD",
               locale: "en-US",
-              timezone: "America/New_York",
-              companyId: "test-company-id",
-              companySlug: "test-company",
+              timezone: "America/New_York",              companySlug: "test-company",
               feeConfig: {
                 fees: [
                   { id: "fee-1", name: "Service Fee", displayName: "Service Charge", type: "percentage" as const, value: 0.05 },
@@ -1519,9 +1517,7 @@ describe("CheckoutPage", () => {
               logoUrl: null,
               currency: "USD",
               locale: "en-US",
-              timezone: "America/New_York",
-              companyId: "test-company-id",
-              companySlug: "test-company",
+              timezone: "America/New_York",              companySlug: "test-company",
               feeConfig: {
                 fees: [
                   { id: "fee-2", name: "Platform Fee", type: "fixed" as const, value: 1.5 },
@@ -1867,9 +1863,7 @@ describe("CheckoutPage", () => {
               logoUrl: null,
               currency: "USD",
               locale: "en-US",
-              timezone: "America/New_York",
-              companyId: "test-company-id",
-              companySlug: "test-company",
+              timezone: "America/New_York",              companySlug: "test-company",
               isTrial: true,
               tenantId: "trial-tenant-id",
             }}

@@ -7,9 +7,8 @@ import type { ReactNode } from "react";
 
 const mockDashboardValue: DashboardContextValue = {
   tenantId: "tenant-1",
-  companyId: "company-1",
-  company: {
-    id: "company-1",
+  tenant: {
+    id: "tenant-1",
     name: "Test Company",
     slug: "test-company",
     logoUrl: null,
@@ -18,6 +17,10 @@ const mockDashboardValue: DashboardContextValue = {
   currency: "USD",
   locale: "en-US",
   subscription: null,
+  onboarding: {
+    status: "not_started",
+    data: null,
+  },
 };
 
 const wrapper = ({ children }: { children: ReactNode }) => (

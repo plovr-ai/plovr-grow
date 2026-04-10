@@ -49,9 +49,7 @@ vi.mock("@/components/dashboard/menu/MenuItemFormPage", () => ({
 describe("NewMenuItemPage", () => {
   const mockSession = {
     user: {
-      tenantId: "tenant-1",
-      companyId: "company-1",
-    },
+      tenantId: "tenant-1",    },
   };
 
   const mockMenuData = {
@@ -104,7 +102,7 @@ describe("NewMenuItemPage", () => {
     });
 
     it("should redirect to login when session missing tenantId", async () => {
-      mockAuth.mockResolvedValue({ user: { companyId: "company-1" } });
+      mockAuth.mockResolvedValue({ user: {} });
 
       await expect(
         NewMenuItemPage({

@@ -38,9 +38,7 @@ describe("PointsService", () => {
 
   const mockMember = {
     id: "member-1",
-    tenantId: "tenant-1",
-    companyId: "company-1",
-    phone: "+12025551234",
+    tenantId: "tenant-1",    phone: "+12025551234",
     firstName: "John" as string | null,
     lastName: "Doe" as string | null,
     email: "john@example.com" as string | null,

@@ -307,13 +307,13 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
   });
 
   it("should award points with undefined merchantId for company-level orders", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue({
       id: "company-1",
       tenantId: "tenant-1",
       name: "Test Company",
       slug: "test-company",
       merchants: [],
-    } as unknown as CompanyWithMerchants);
+    } as unknown as TenantWithMerchants);
 
     vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
     vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);

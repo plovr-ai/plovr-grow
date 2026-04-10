@@ -21,8 +21,8 @@ vi.mock("@/repositories/giftcard.repository", () => ({
     getByIdForUpdate: vi.fn(),
     getByCardNumber: vi.fn(),
     getByPurchaseOrderId: vi.fn(),
-    getStatsByCompany: vi.fn(),
-    getByCompany: vi.fn(),
+    getStatsByTenant: vi.fn(),
+    getByTenant: vi.fn(),
     cardNumberExists: vi.fn(),
     create: vi.fn(),
     updateBalance: vi.fn(),
@@ -40,9 +40,7 @@ describe("GiftCardService", () => {
 
   const mockGiftCard = {
     id: "gc-1",
-    tenantId: "tenant-1",
-    companyId: "company-1",
-    cardNumber: "1234-5678-9012-3456",
+    tenantId: "tenant-1",    cardNumber: "1234-5678-9012-3456",
     initialAmount: new Decimal(50),
     currentBalance: new Decimal(50),
     purchaseOrderId: "order-0",
@@ -164,13 +162,13 @@ describe("GiftCardService", () => {
       vi.mocked(giftCardRepository.create).mockResolvedValue(mockGiftCard);
       vi.mocked(giftCardRepository.createTransaction).mockResolvedValue(mockTransaction);
 
-      const result = await service.createGiftCard("tenant-1", "company-1", {
+      const result = await service.createGiftCard("tenant-1", {
         amount: 50,
         purchaseOrderId: "order-0",
       });
 
       expect(giftCardRepository.cardNumberExists).toHaveBeenCalled();
-      expect(giftCardRepository.create).toHaveBeenCalledWith("tenant-1", "company-1", {
+      expect(giftCardRepository.create).toHaveBeenCalledWith("tenant-1", {
         cardNumber: "1111-2222-3333-4444",
         initialAmount: 50,
         purchaseOrderId: "order-0",
@@ -199,7 +197,7 @@ describe("GiftCardService", () => {
       vi.mocked(giftCardRepository.create).mockResolvedValue(mockGiftCard);
       vi.mocked(giftCardRepository.createTransaction).mockResolvedValue(mockTransaction);
 
-      await service.createGiftCard("tenant-1", "company-1", {
+      await service.createGiftCard("tenant-1", {
         amount: 50,
         purchaseOrderId: "order-0",
       });
@@ -211,7 +209,7 @@ describe("GiftCardService", () => {
       vi.mocked(giftCardRepository.cardNumberExists).mockResolvedValue(true);
 
       await expect(
-        service.createGiftCard("tenant-1", "company-1", {
+        service.createGiftCard("tenant-1", {
           amount: 50,
           purchaseOrderId: "order-0",
         })
@@ -223,7 +221,7 @@ describe("GiftCardService", () => {
     it("should return invalid_format when card number format is bad", async () => {
       vi.mocked(isValidGiftCardFormat).mockReturnValueOnce(false);
 
-      const result = await service.validateGiftCard("tenant-1", "company-1", "bad");
+      const result = await service.validateGiftCard("tenant-1", "bad");
 
       expect(result).toEqual({ valid: false, error: "invalid_format" });
     });
@@ -233,8 +231,7 @@ describe("GiftCardService", () => {
 
       const result = await service.validateGiftCard(
         "tenant-1",
-        "company-1",
-        "1234-5678-9012-3456"
+                "1234-5678-9012-3456"
       );
 
       expect(result).toEqual({ valid: false, error: "not_found" });
@@ -248,8 +245,7 @@ describe("GiftCardService", () => {
 
       const result = await service.validateGiftCard(
         "tenant-1",
-        "company-1",
-        "1234-5678-9012-3456"
+                "1234-5678-9012-3456"
       );
 
       expect(result).toEqual({ valid: false, error: "no_balance" });
@@ -260,8 +256,7 @@ describe("GiftCardService", () => {
 
       const result = await service.validateGiftCard(
         "tenant-1",
-        "company-1",
-        "1234-5678-9012-3456"
+                "1234-5678-9012-3456"
       );
 
       expect(result.valid).toBe(true);
@@ -279,7 +274,7 @@ describe("GiftCardService", () => {
     it("should return null when gift card is not found", async () => {
       vi.mocked(giftCardRepository.getByCardNumber).mockResolvedValue(null);
 
-      const result = await service.getBalance("tenant-1", "company-1", "1234567890123456");
+      const result = await service.getBalance("tenant-1", "1234567890123456");
 
       expect(result).toBeNull();
     });
@@ -287,7 +282,7 @@ describe("GiftCardService", () => {
     it("should return the current balance as a number", async () => {
       vi.mocked(giftCardRepository.getByCardNumber).mockResolvedValue(mockGiftCard);
 
-      const result = await service.getBalance("tenant-1", "company-1", "1234567890123456");
+      const result = await service.getBalance("tenant-1", "1234567890123456");
 
       expect(result).toBe(50);
     });
@@ -341,22 +336,21 @@ describe("GiftCardService", () => {
     });
   });
 
-  describe("getCompanyGiftCardStats", () => {
+  describe("getTenantGiftCardStats", () => {
     it("should delegate to repository", async () => {
       const mockStats = {
         totalCards: 10,
-        totalSold: 500,
+        totalValueSold: 500,
         totalRedeemed: 200,
-        totalBalance: 300,
+        activeBalance: 300,
       };
-      vi.mocked(giftCardRepository.getStatsByCompany).mockResolvedValue(mockStats);
+      vi.mocked(giftCardRepository.getStatsByTenant).mockResolvedValue(mockStats);
 
-      const result = await service.getCompanyGiftCardStats("tenant-1", "company-1");
+      const result = await service.getTenantGiftCardStats("tenant-1");
 
-      expect(giftCardRepository.getStatsByCompany).toHaveBeenCalledWith(
+      expect(giftCardRepository.getStatsByTenant).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
-        {}
+                {}
       );
       expect(result).toEqual(mockStats);
     });
@@ -364,30 +358,29 @@ describe("GiftCardService", () => {
     it("should pass date options to repository", async () => {
       const mockStats = {
         totalCards: 5,
-        totalSold: 250,
+        totalValueSold: 250,
         totalRedeemed: 100,
-        totalBalance: 150,
+        activeBalance: 150,
       };
-      vi.mocked(giftCardRepository.getStatsByCompany).mockResolvedValue(mockStats);
+      vi.mocked(giftCardRepository.getStatsByTenant).mockResolvedValue(mockStats);
       const dateFrom = new Date("2026-01-01");
       const dateTo = new Date("2026-03-01");
 
-      await service.getCompanyGiftCardStats("tenant-1", "company-1", {
+      await service.getTenantGiftCardStats("tenant-1", {
         dateFrom,
         dateTo,
       });
 
-      expect(giftCardRepository.getStatsByCompany).toHaveBeenCalledWith(
+      expect(giftCardRepository.getStatsByTenant).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
-        { dateFrom, dateTo }
+                { dateFrom, dateTo }
       );
     });
   });
 
-  describe("getCompanyGiftCards", () => {
+  describe("getTenantGiftCards", () => {
     it("should map repository results to GiftCardWithOrder format", async () => {
-      vi.mocked(giftCardRepository.getByCompany).mockResolvedValue({
+      vi.mocked(giftCardRepository.getByTenant).mockResolvedValue({
         items: [
           {
             id: "gc-1",
@@ -407,9 +400,10 @@ describe("GiftCardService", () => {
         total: 1,
         page: 1,
         pageSize: 20,
-      });
+        totalPages: 1,
+      } as never);
 
-      const result = await service.getCompanyGiftCards("tenant-1", "company-1");
+      const result = await service.getTenantGiftCards("tenant-1");
 
       expect(result.items).toHaveLength(1);
       expect(result.items[0]).toEqual({
@@ -430,23 +424,23 @@ describe("GiftCardService", () => {
     });
 
     it("should pass pagination and search options", async () => {
-      vi.mocked(giftCardRepository.getByCompany).mockResolvedValue({
+      vi.mocked(giftCardRepository.getByTenant).mockResolvedValue({
         items: [],
         total: 0,
         page: 2,
         pageSize: 10,
-      });
+        totalPages: 0,
+      } as never);
 
-      await service.getCompanyGiftCards("tenant-1", "company-1", {
+      await service.getTenantGiftCards("tenant-1", {
         page: 2,
         pageSize: 10,
         search: "1234",
       });
 
-      expect(giftCardRepository.getByCompany).toHaveBeenCalledWith(
+      expect(giftCardRepository.getByTenant).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
-        { page: 2, pageSize: 10, search: "1234" }
+                { page: 2, pageSize: 10, search: "1234" }
       );
     });
   });

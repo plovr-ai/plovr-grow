@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { gbpService } from "@/services/gbp";
 import { merchantService } from "@/services/merchant";
-import { companyService } from "@/services/company/company.service";
+import { tenantService } from "@/services/tenant/tenant.service";
 import { AppError } from "@/lib/errors";
 import { z } from "zod";
 
@@ -14,7 +14,7 @@ const syncSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user?.tenantId || !session?.user?.companyId) {
+    if (!session?.user?.tenantId) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { merchantId, locationName } = validation.data;
-    const { tenantId, companyId } = session.user;
+    const { tenantId } = session.user;
 
     // Sync location data from GBP
     const { merchantData } = await gbpService.syncLocation(
@@ -48,9 +48,8 @@ export async function POST(request: NextRequest) {
     await merchantService.updateMerchant(tenantId, merchantId, merchantData);
 
     // Mark GBP onboarding step as completed
-    await companyService.updateOnboardingStep(
+    await tenantService.updateOnboardingStep(
       tenantId,
-      companyId,
       "gbp",
       "completed"
     );

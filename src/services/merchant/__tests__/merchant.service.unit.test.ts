@@ -120,8 +120,7 @@ describe("MerchantService (unit tests)", () => {
     {
       id: "item-cheese-pizza",
       tenantId: "tenant-1",
-      companyId: "company-1",
-      categoryId: "cat-pizza",
+            categoryId: "cat-pizza",
       name: "Classic Cheese Pizza",
       description: "Fresh mozzarella and tomato sauce",
       price: new Prisma.Decimal(18.99),
@@ -137,8 +136,7 @@ describe("MerchantService (unit tests)", () => {
     {
       id: "item-pepperoni-pizza",
       tenantId: "tenant-1",
-      companyId: "company-1",
-      categoryId: "cat-pizza",
+            categoryId: "cat-pizza",
       name: "Pepperoni Pizza",
       description: "Classic pepperoni with mozzarella",
       price: new Prisma.Decimal(21.99),
@@ -359,37 +357,37 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should use company description as tagline fallback when website tagline missing", async () => {
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockCompanyWithMerchants,
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
         settings: { website: {} },
       } as never);
       vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
 
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(result?.tagline).toBe("Best pizza in town");
     });
 
     it("should use empty tagline when no website tagline and no description", async () => {
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockCompanyWithMerchants,
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
         description: null,
         settings: { website: {} },
       } as never);
       vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
 
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(result?.tagline).toBe("");
     });
 
     it("should include merchant contact info for single-merchant company", async () => {
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue(
-        mockCompanyWithMerchants as never
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
+        mockTenantWithMerchants as never
       );
       vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
 
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       // Single merchant company - should have merchant contact info
       expect(result?.address).toBe("123 Main St");
@@ -401,23 +399,23 @@ describe("MerchantService (unit tests)", () => {
 
     it("should exclude merchant contact info for multi-merchant company", async () => {
       const multiMerchantCompany = {
-        ...mockCompanyWithMerchants,
+        ...mockTenantWithMerchants,
         merchants: [
-          mockCompanyWithMerchants.merchants[0],
+          mockTenantWithMerchants.merchants[0],
           {
-            ...mockCompanyWithMerchants.merchants[0],
+            ...mockTenantWithMerchants.merchants[0],
             id: "merchant-2",
             slug: "joes-pizza-midtown",
             name: "Joe's Pizza - Midtown",
           },
         ],
       };
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue(
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
         multiMerchantCompany as never
       );
       vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
 
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(result?.address).toBe("");
       expect(result?.city).toBe("");
@@ -456,32 +454,32 @@ describe("MerchantService (unit tests)", () => {
         },
       ] as never);
 
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(result?.featuredItems).toHaveLength(1);
       expect(result?.featuredItems?.[0].name).toBe("Active Item");
     });
 
     it("should default logo to empty string when company logoUrl is null", async () => {
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockCompanyWithMerchants,
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
         logoUrl: null,
       } as never);
       vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
 
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(result?.logo).toBe("");
     });
 
     it("should return empty reviews when not configured", async () => {
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockCompanyWithMerchants,
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
         settings: { website: {} },
       } as never);
       vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
 
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(result?.reviews).toEqual([]);
     });
@@ -489,10 +487,9 @@ describe("MerchantService (unit tests)", () => {
 
   // ==================== getMerchantBySlug ====================
   describe("getMerchantBySlug()", () => {
-    const mockPrismaMerchantWithCompany = {
+    const mockPrismaMerchantWithTenant = {
       id: "merchant-1",
-      companyId: "company-1",
-      slug: "joes-pizza-downtown",
+            slug: "joes-pizza-downtown",
       name: "Joe's Pizza - Downtown",
       description: "Downtown location",
       address: "123 Main St",
@@ -514,52 +511,35 @@ describe("MerchantService (unit tests)", () => {
       tenantId: "tenant-1",
       createdAt: new Date(),
       updatedAt: new Date(),
-      company: {
-        id: "company-1",
+      tenant: {
+        id: "tenant-1",
         slug: "joes-pizza",
-        tenantId: "tenant-1",
         name: "Joe's Pizza",
-        legalName: null,
-        description: null,
         logoUrl: null,
-        websiteUrl: null,
-        supportEmail: null,
-        supportPhone: null,
-        taxId: null,
-        status: "active",
-        onboardingStatus: null,
-        onboardingData: null,
-        onboardingCompletedAt: null,
         settings: null,
+        subscriptionStatus: "active",
         deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
-        tenant: {
-          id: "tenant-1",
-          name: "Joe's Pizza Tenant",
-          subscriptionStatus: "active",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
       },
     };
 
     it("should return mapped merchant data for valid slug", async () => {
-      vi.mocked(merchantRepository.getBySlugWithCompany).mockResolvedValue(
-        mockPrismaMerchantWithCompany as never
+      vi.mocked(merchantRepository.getBySlugWithTenant).mockResolvedValue(
+        mockPrismaMerchantWithTenant as never
       );
 
       const result = await merchantService.getMerchantBySlug("joes-pizza-downtown");
 
-      expect(merchantRepository.getBySlugWithCompany).toHaveBeenCalledWith("joes-pizza-downtown");
+      expect(merchantRepository.getBySlugWithTenant).toHaveBeenCalledWith("joes-pizza-downtown");
       expect(result).not.toBeNull();
       expect(result?.id).toBe("merchant-1");
       expect(result?.slug).toBe("joes-pizza-downtown");
-      expect(result?.company.tenantId).toBe("tenant-1");
+      expect(result?.tenant.tenantId).toBe("tenant-1");
     });
 
     it("should return null for non-existent slug", async () => {
-      vi.mocked(merchantRepository.getBySlugWithCompany).mockResolvedValue(null);
+      vi.mocked(merchantRepository.getBySlugWithTenant).mockResolvedValue(null);
 
       const result = await merchantService.getMerchantBySlug("non-existent");
 
@@ -567,14 +547,14 @@ describe("MerchantService (unit tests)", () => {
     });
   });
 
-  // ==================== getMerchantBySlugWithCompany ====================
-  describe("getMerchantBySlugWithCompany()", () => {
+  // ==================== getMerchantBySlugWithTenant ====================
+  describe("getMerchantBySlugWithTenant()", () => {
     it("should delegate to getMerchantBySlug", async () => {
-      vi.mocked(merchantRepository.getBySlugWithCompany).mockResolvedValue(null);
+      vi.mocked(merchantRepository.getBySlugWithTenant).mockResolvedValue(null);
 
-      const result = await merchantService.getMerchantBySlugWithCompany("test-slug");
+      const result = await merchantService.getMerchantBySlugWithTenant("test-slug");
 
-      expect(merchantRepository.getBySlugWithCompany).toHaveBeenCalledWith("test-slug");
+      expect(merchantRepository.getBySlugWithTenant).toHaveBeenCalledWith("test-slug");
       expect(result).toBeNull();
     });
   });
@@ -583,8 +563,7 @@ describe("MerchantService (unit tests)", () => {
   describe("getMerchantById()", () => {
     const mockPrismaData = {
       id: "merchant-1",
-      companyId: "company-1",
-      slug: "joes-pizza-downtown",
+            slug: "joes-pizza-downtown",
       name: "Joe's Pizza - Downtown",
       description: null,
       address: null,
@@ -606,47 +585,30 @@ describe("MerchantService (unit tests)", () => {
       tenantId: "tenant-1",
       createdAt: new Date(),
       updatedAt: new Date(),
-      company: {
-        id: "company-1",
+      tenant: {
+        id: "tenant-1",
         slug: "joes-pizza",
-        tenantId: "tenant-1",
         name: "Joe's Pizza",
-        legalName: null,
-        description: null,
         logoUrl: null,
-        websiteUrl: null,
-        supportEmail: null,
-        supportPhone: null,
-        taxId: null,
-        status: "active",
-        onboardingStatus: null,
-        onboardingData: null,
-        onboardingCompletedAt: null,
         settings: null,
+        subscriptionStatus: "active",
         deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
-        tenant: {
-          id: "tenant-1",
-          name: "Joe's Pizza Tenant",
-          subscriptionStatus: "active",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
       },
     };
 
     it("should return merchant for valid ID", async () => {
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(mockPrismaData as never);
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(mockPrismaData as never);
 
       const result = await merchantService.getMerchantById("merchant-1");
 
-      expect(merchantRepository.getByIdWithCompany).toHaveBeenCalledWith("merchant-1");
+      expect(merchantRepository.getByIdWithTenant).toHaveBeenCalledWith("merchant-1");
       expect(result?.id).toBe("merchant-1");
     });
 
     it("should return null when merchant not found", async () => {
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(null);
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(null);
 
       const result = await merchantService.getMerchantById("non-existent");
 
@@ -654,24 +616,24 @@ describe("MerchantService (unit tests)", () => {
     });
   });
 
-  // ==================== getCompanyBySlug ====================
-  describe("getCompanyBySlug()", () => {
+  // ==================== getTenantBySlug ====================
+  describe("getTenantBySlug()", () => {
     it("should return company with merchants for valid slug", async () => {
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue(
-        mockCompanyWithMerchants as never
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
+        mockTenantWithMerchants as never
       );
 
-      const result = await merchantService.getCompanyBySlug("joes-pizza");
+      const result = await merchantService.getTenantBySlug("joes-pizza");
 
-      expect(companyRepository.getBySlugWithMerchants).toHaveBeenCalledWith("joes-pizza");
-      expect(result?.id).toBe("company-1");
+      expect(tenantRepository.getBySlugWithMerchants).toHaveBeenCalledWith("joes-pizza");
+      expect(result?.id).toBe("tenant-1");
       expect(result?.merchants).toBeDefined();
     });
 
     it("should return null for non-existent slug", async () => {
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue(null);
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(null);
 
-      const result = await merchantService.getCompanyBySlug("non-existent");
+      const result = await merchantService.getTenantBySlug("non-existent");
 
       expect(result).toBeNull();
     });
@@ -681,8 +643,7 @@ describe("MerchantService (unit tests)", () => {
   describe("getWebsiteData()", () => {
     const mockPrismaMerchant = {
       id: "merchant-1",
-      companyId: "company-1",
-      slug: "joes-pizza-downtown",
+            slug: "joes-pizza-downtown",
       name: "Joe's Pizza - Downtown",
       description: "Downtown location",
       address: "123 Main St",
@@ -711,22 +672,11 @@ describe("MerchantService (unit tests)", () => {
       tenantId: "tenant-1",
       createdAt: new Date(),
       updatedAt: new Date(),
-      company: {
-        id: "company-1",
+      tenant: {
+        id: "tenant-1",
         slug: "joes-pizza",
-        tenantId: "tenant-1",
         name: "Joe's Pizza",
-        legalName: null,
-        description: null,
         logoUrl: "https://example.com/company-logo.png",
-        websiteUrl: null,
-        supportEmail: null,
-        supportPhone: null,
-        taxId: null,
-        status: "active",
-        onboardingStatus: null,
-        onboardingData: null,
-        onboardingCompletedAt: null,
         settings: {
           website: {
             tagline: "Company tagline",
@@ -734,21 +684,15 @@ describe("MerchantService (unit tests)", () => {
             socialLinks: [{ platform: "facebook", url: "https://facebook.com/joes" }],
           },
         },
+        subscriptionStatus: "active",
         deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
-        tenant: {
-          id: "tenant-1",
-          name: "Joe's Pizza Tenant",
-          subscriptionStatus: "active",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
       },
     };
 
     it("should return null when merchant not found", async () => {
-      vi.mocked(merchantRepository.getBySlugWithCompany).mockResolvedValue(null);
+      vi.mocked(merchantRepository.getBySlugWithTenant).mockResolvedValue(null);
 
       const result = await merchantService.getWebsiteData("non-existent");
 
@@ -756,7 +700,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should merge merchant and company data with merchant taking priority", async () => {
-      vi.mocked(merchantRepository.getBySlugWithCompany).mockResolvedValue(
+      vi.mocked(merchantRepository.getBySlugWithTenant).mockResolvedValue(
         mockPrismaMerchant as never
       );
 
@@ -780,7 +724,7 @@ describe("MerchantService (unit tests)", () => {
         ...mockPrismaMerchant,
         settings: null,
       };
-      vi.mocked(merchantRepository.getBySlugWithCompany).mockResolvedValue(
+      vi.mocked(merchantRepository.getBySlugWithTenant).mockResolvedValue(
         merchantNoWebsite as never
       );
 
@@ -794,7 +738,7 @@ describe("MerchantService (unit tests)", () => {
         ...mockPrismaMerchant,
         settings: null,
       };
-      vi.mocked(merchantRepository.getBySlugWithCompany).mockResolvedValue(
+      vi.mocked(merchantRepository.getBySlugWithTenant).mockResolvedValue(
         merchantNoWebsite as never
       );
 
@@ -807,12 +751,12 @@ describe("MerchantService (unit tests)", () => {
       const merchantNoBoth = {
         ...mockPrismaMerchant,
         settings: null,
-        company: {
-          ...mockPrismaMerchant.company,
+        tenant: {
+          ...mockPrismaMerchant.tenant,
           settings: null,
         },
       };
-      vi.mocked(merchantRepository.getBySlugWithCompany).mockResolvedValue(
+      vi.mocked(merchantRepository.getBySlugWithTenant).mockResolvedValue(
         merchantNoBoth as never
       );
 
@@ -826,7 +770,7 @@ describe("MerchantService (unit tests)", () => {
         ...mockPrismaMerchant,
         logoUrl: null,
       };
-      vi.mocked(merchantRepository.getBySlugWithCompany).mockResolvedValue(
+      vi.mocked(merchantRepository.getBySlugWithTenant).mockResolvedValue(
         merchantNoLogo as never
       );
 
@@ -847,13 +791,13 @@ describe("MerchantService (unit tests)", () => {
         logoUrl: null,
         bannerUrl: null,
         settings: null,
-        company: {
-          ...mockPrismaMerchant.company,
+        tenant: {
+          ...mockPrismaMerchant.tenant,
           logoUrl: null,
           settings: null,
         },
       };
-      vi.mocked(merchantRepository.getBySlugWithCompany).mockResolvedValue(
+      vi.mocked(merchantRepository.getBySlugWithTenant).mockResolvedValue(
         minimalMerchant as never
       );
 
@@ -872,7 +816,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should return social links from company settings", async () => {
-      vi.mocked(merchantRepository.getBySlugWithCompany).mockResolvedValue(
+      vi.mocked(merchantRepository.getBySlugWithTenant).mockResolvedValue(
         mockPrismaMerchant as never
       );
 
@@ -887,7 +831,7 @@ describe("MerchantService (unit tests)", () => {
         ...mockPrismaMerchant,
         businessHours: null,
       };
-      vi.mocked(merchantRepository.getBySlugWithCompany).mockResolvedValue(
+      vi.mocked(merchantRepository.getBySlugWithTenant).mockResolvedValue(
         merchantNullHours as never
       );
 
@@ -901,8 +845,7 @@ describe("MerchantService (unit tests)", () => {
   describe("getMerchant()", () => {
     const mockPrismaData = {
       id: "merchant-1",
-      companyId: "company-1",
-      slug: "joes-pizza-downtown",
+            slug: "joes-pizza-downtown",
       name: "Joe's Pizza - Downtown",
       description: null,
       address: null,
@@ -924,38 +867,21 @@ describe("MerchantService (unit tests)", () => {
       tenantId: "tenant-1",
       createdAt: new Date(),
       updatedAt: new Date(),
-      company: {
-        id: "company-1",
+      tenant: {
+        id: "tenant-1",
         slug: "joes-pizza",
-        tenantId: "tenant-1",
         name: "Joe's Pizza",
-        legalName: null,
-        description: null,
         logoUrl: null,
-        websiteUrl: null,
-        supportEmail: null,
-        supportPhone: null,
-        taxId: null,
-        status: "active",
-        onboardingStatus: null,
-        onboardingData: null,
-        onboardingCompletedAt: null,
         settings: null,
+        subscriptionStatus: "active",
         deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
-        tenant: {
-          id: "tenant-1",
-          name: "Joe's Pizza Tenant",
-          subscriptionStatus: "active",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
       },
     };
 
     it("should return merchant when tenantId matches", async () => {
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(mockPrismaData as never);
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(mockPrismaData as never);
 
       const result = await merchantService.getMerchant("tenant-1", "merchant-1");
 
@@ -963,7 +889,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should return null when merchant not found", async () => {
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(null);
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(null);
 
       const result = await merchantService.getMerchant("tenant-1", "non-existent");
 
@@ -971,7 +897,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should return null when tenantId does not match (tenant isolation)", async () => {
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(mockPrismaData as never);
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(mockPrismaData as never);
 
       const result = await merchantService.getMerchant("wrong-tenant", "merchant-1");
 
@@ -979,18 +905,10 @@ describe("MerchantService (unit tests)", () => {
     });
   });
 
-  // ==================== getMerchantsByCompanyId ====================
-  describe("getMerchantsByCompanyId()", () => {
-    const mockCompany = {
-      id: "company-1",
-      tenantId: "tenant-1",
-      slug: "joes-pizza",
-      name: "Joe's Pizza",
-    };
-
+  // ==================== getMerchantsByTenantId ====================
+  describe("getMerchantsByTenantId()", () => {
     const mockMerchantData = {
       id: "merchant-1",
-      companyId: "company-1",
       slug: "joes-pizza-downtown",
       name: "Joe's Pizza - Downtown",
       description: null,
@@ -1013,101 +931,62 @@ describe("MerchantService (unit tests)", () => {
       tenantId: "tenant-1",
       createdAt: new Date(),
       updatedAt: new Date(),
-      company: {
-        id: "company-1",
+      tenant: {
+        id: "tenant-1",
         slug: "joes-pizza",
-        tenantId: "tenant-1",
         name: "Joe's Pizza",
-        legalName: null,
-        description: null,
         logoUrl: null,
-        websiteUrl: null,
-        supportEmail: null,
-        supportPhone: null,
-        taxId: null,
-        status: "active",
-        onboardingStatus: null,
-        onboardingData: null,
-        onboardingCompletedAt: null,
         settings: null,
+        subscriptionStatus: "active",
         deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
-        tenant: {
-          id: "tenant-1",
-          name: "Joe's Pizza Tenant",
-          subscriptionStatus: "active",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
       },
     };
 
     it("should return all merchants when no status filter", async () => {
-      vi.mocked(companyRepository.getById).mockResolvedValue(mockCompany as never);
-      vi.mocked(merchantRepository.getByCompanyIdWithCompany).mockResolvedValue(
+      vi.mocked(merchantRepository.getByTenantIdWithTenant).mockResolvedValue(
         [mockMerchantData] as never
       );
 
-      const result = await merchantService.getMerchantsByCompanyId("tenant-1", "company-1");
+      const result = await merchantService.getMerchantsByTenantId("tenant-1");
 
-      expect(merchantRepository.getByCompanyIdWithCompany).toHaveBeenCalledWith("company-1");
+      expect(merchantRepository.getByTenantIdWithTenant).toHaveBeenCalledWith("tenant-1");
       expect(result).toHaveLength(1);
     });
 
     it("should return active merchants when status filter is 'active'", async () => {
-      vi.mocked(companyRepository.getById).mockResolvedValue(mockCompany as never);
-      vi.mocked(merchantRepository.getActiveByCompanyIdWithCompany).mockResolvedValue(
+      vi.mocked(merchantRepository.getActiveByTenantIdWithTenant).mockResolvedValue(
         [mockMerchantData] as never
       );
 
-      const result = await merchantService.getMerchantsByCompanyId(
+      const result = await merchantService.getMerchantsByTenantId(
         "tenant-1",
-        "company-1",
         { status: "active" }
       );
 
-      expect(merchantRepository.getActiveByCompanyIdWithCompany).toHaveBeenCalledWith("company-1");
+      expect(merchantRepository.getActiveByTenantIdWithTenant).toHaveBeenCalledWith("tenant-1");
       expect(result).toHaveLength(1);
-    });
-
-    it("should return empty array when company not found", async () => {
-      vi.mocked(companyRepository.getById).mockResolvedValue(null);
-
-      const result = await merchantService.getMerchantsByCompanyId("tenant-1", "non-existent");
-
-      expect(result).toEqual([]);
-    });
-
-    it("should return empty array when tenantId does not match company", async () => {
-      vi.mocked(companyRepository.getById).mockResolvedValue(mockCompany as never);
-
-      const result = await merchantService.getMerchantsByCompanyId("wrong-tenant", "company-1");
-
-      expect(result).toEqual([]);
     });
   });
 
   // ==================== createMerchant ====================
   describe("createMerchant()", () => {
-    const mockCompany = {
-      id: "company-1",
-      tenantId: "tenant-1",
+    const mockTenant = {
+      id: "tenant-1",
       slug: "joes-pizza",
       name: "Joe's Pizza",
     };
 
     const mockCreatedMerchant = {
       id: "new-merchant",
-      companyId: "company-1",
       slug: "new-location",
       name: "New Location",
     };
 
-    const mockCreatedMerchantWithCompany = {
+    const mockCreatedMerchantWithTenant = {
       id: "new-merchant",
-      companyId: "company-1",
-      slug: "new-location",
+            slug: "new-location",
       name: "New Location",
       description: null,
       address: null,
@@ -1129,52 +1008,34 @@ describe("MerchantService (unit tests)", () => {
       tenantId: "tenant-1",
       createdAt: new Date(),
       updatedAt: new Date(),
-      company: {
-        id: "company-1",
+      tenant: {
+        id: "tenant-1",
         slug: "joes-pizza",
-        tenantId: "tenant-1",
         name: "Joe's Pizza",
-        legalName: null,
-        description: null,
         logoUrl: null,
-        websiteUrl: null,
-        supportEmail: null,
-        supportPhone: null,
-        taxId: null,
-        status: "active",
-        onboardingStatus: null,
-        onboardingData: null,
-        onboardingCompletedAt: null,
         settings: null,
+        subscriptionStatus: "active",
         deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
-        tenant: {
-          id: "tenant-1",
-          name: "Joe's Pizza Tenant",
-          subscriptionStatus: "active",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
       },
     };
 
     it("should create merchant successfully", async () => {
-      vi.mocked(companyRepository.getById).mockResolvedValue(mockCompany as never);
+      vi.mocked(tenantRepository.getById).mockResolvedValue(mockTenant as never);
       vi.mocked(merchantRepository.isSlugAvailable).mockResolvedValue(true);
       vi.mocked(merchantRepository.create).mockResolvedValue(mockCreatedMerchant as never);
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(
-        mockCreatedMerchantWithCompany as never
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(
+        mockCreatedMerchantWithTenant as never
       );
 
-      const result = await merchantService.createMerchant("tenant-1", "company-1", {
+      const result = await merchantService.createMerchant("tenant-1", {
         slug: "new-location",
         name: "New Location",
       });
 
       expect(result.id).toBe("new-merchant");
       expect(merchantRepository.create).toHaveBeenCalledWith(
-        "company-1",
         "tenant-1",
         expect.objectContaining({
           slug: "new-location",
@@ -1187,52 +1048,41 @@ describe("MerchantService (unit tests)", () => {
       );
     });
 
-    it("should throw COMPANY_NOT_FOUND when company does not exist", async () => {
-      vi.mocked(companyRepository.getById).mockResolvedValue(null);
+    it("should throw TENANT_NOT_FOUND when company does not exist", async () => {
+      vi.mocked(tenantRepository.getById).mockResolvedValue(null);
 
       await expect(
-        merchantService.createMerchant("tenant-1", "non-existent", {
+        merchantService.createMerchant("non-existent", {
           slug: "new",
           name: "New",
         })
       ).rejects.toThrow(AppError);
 
       try {
-        await merchantService.createMerchant("tenant-1", "non-existent", {
+        await merchantService.createMerchant("non-existent", {
           slug: "new",
           name: "New",
         });
       } catch (error) {
         expect(error).toBeInstanceOf(AppError);
-        expect((error as AppError).code).toBe(ErrorCodes.COMPANY_NOT_FOUND);
+        expect((error as AppError).code).toBe(ErrorCodes.TENANT_NOT_FOUND);
         expect((error as AppError).statusCode).toBe(404);
       }
     });
 
-    it("should throw COMPANY_NOT_FOUND when tenantId does not match", async () => {
-      vi.mocked(companyRepository.getById).mockResolvedValue(mockCompany as never);
-
-      await expect(
-        merchantService.createMerchant("wrong-tenant", "company-1", {
-          slug: "new",
-          name: "New",
-        })
-      ).rejects.toThrow(AppError);
-    });
-
     it("should throw MERCHANT_SLUG_TAKEN when slug is unavailable", async () => {
-      vi.mocked(companyRepository.getById).mockResolvedValue(mockCompany as never);
+      vi.mocked(tenantRepository.getById).mockResolvedValue(mockTenant as never);
       vi.mocked(merchantRepository.isSlugAvailable).mockResolvedValue(false);
 
       await expect(
-        merchantService.createMerchant("tenant-1", "company-1", {
+        merchantService.createMerchant("tenant-1", {
           slug: "taken-slug",
           name: "New",
         })
       ).rejects.toThrow(AppError);
 
       try {
-        await merchantService.createMerchant("tenant-1", "company-1", {
+        await merchantService.createMerchant("tenant-1", {
           slug: "taken-slug",
           name: "New",
         });
@@ -1244,20 +1094,19 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should use default values for optional fields", async () => {
-      vi.mocked(companyRepository.getById).mockResolvedValue(mockCompany as never);
+      vi.mocked(tenantRepository.getById).mockResolvedValue(mockTenant as never);
       vi.mocked(merchantRepository.isSlugAvailable).mockResolvedValue(true);
       vi.mocked(merchantRepository.create).mockResolvedValue(mockCreatedMerchant as never);
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(
-        mockCreatedMerchantWithCompany as never
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(
+        mockCreatedMerchantWithTenant as never
       );
 
-      await merchantService.createMerchant("tenant-1", "company-1", {
+      await merchantService.createMerchant("tenant-1", {
         slug: "new",
         name: "New",
       });
 
       expect(merchantRepository.create).toHaveBeenCalledWith(
-        "company-1",
         "tenant-1",
         expect.objectContaining({
           country: "US",
@@ -1269,14 +1118,14 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should pass explicit values for optional fields", async () => {
-      vi.mocked(companyRepository.getById).mockResolvedValue(mockCompany as never);
+      vi.mocked(tenantRepository.getById).mockResolvedValue(mockTenant as never);
       vi.mocked(merchantRepository.isSlugAvailable).mockResolvedValue(true);
       vi.mocked(merchantRepository.create).mockResolvedValue(mockCreatedMerchant as never);
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(
-        mockCreatedMerchantWithCompany as never
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(
+        mockCreatedMerchantWithTenant as never
       );
 
-      await merchantService.createMerchant("tenant-1", "company-1", {
+      await merchantService.createMerchant("tenant-1", {
         slug: "new",
         name: "New",
         country: "CA",
@@ -1285,11 +1134,10 @@ describe("MerchantService (unit tests)", () => {
         locale: "en-CA",
         address: "456 Oak St",
         businessHours: { mon: { open: "09:00", close: "17:00" } },
-        settings: { acceptsPickup: true },
+        settings: { acceptsPickup: true, acceptsDelivery: false },
       });
 
       expect(merchantRepository.create).toHaveBeenCalledWith(
-        "company-1",
         "tenant-1",
         expect.objectContaining({
           country: "CA",
@@ -1306,8 +1154,7 @@ describe("MerchantService (unit tests)", () => {
   describe("updateMerchant()", () => {
     const mockExistingPrisma = {
       id: "merchant-1",
-      companyId: "company-1",
-      slug: "joes-pizza-downtown",
+            slug: "joes-pizza-downtown",
       name: "Joe's Pizza - Downtown",
       description: null,
       address: null,
@@ -1329,39 +1176,22 @@ describe("MerchantService (unit tests)", () => {
       tenantId: "tenant-1",
       createdAt: new Date(),
       updatedAt: new Date(),
-      company: {
-        id: "company-1",
+      tenant: {
+        id: "tenant-1",
         slug: "joes-pizza",
-        tenantId: "tenant-1",
         name: "Joe's Pizza",
-        legalName: null,
-        description: null,
         logoUrl: null,
-        websiteUrl: null,
-        supportEmail: null,
-        supportPhone: null,
-        taxId: null,
-        status: "active",
-        onboardingStatus: null,
-        onboardingData: null,
-        onboardingCompletedAt: null,
         settings: null,
+        subscriptionStatus: "active",
         deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
-        tenant: {
-          id: "tenant-1",
-          name: "Joe's Pizza Tenant",
-          subscriptionStatus: "active",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
       },
     };
 
     beforeEach(() => {
-      // getMerchant calls getByIdWithCompany
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(
+      // getMerchant calls getByIdWithTenant
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(
         mockExistingPrisma as never
       );
     });
@@ -1385,7 +1215,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should throw MERCHANT_NOT_FOUND when merchant does not exist", async () => {
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(null);
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(null);
 
       await expect(
         merchantService.updateMerchant("tenant-1", "non-existent", { name: "Test" })
@@ -1510,8 +1340,7 @@ describe("MerchantService (unit tests)", () => {
   describe("updateSettings()", () => {
     const mockPrismaData = {
       id: "merchant-1",
-      companyId: "company-1",
-      slug: "joes-pizza-downtown",
+            slug: "joes-pizza-downtown",
       name: "Joe's Pizza - Downtown",
       description: null,
       address: null,
@@ -1533,38 +1362,21 @@ describe("MerchantService (unit tests)", () => {
       tenantId: "tenant-1",
       createdAt: new Date(),
       updatedAt: new Date(),
-      company: {
-        id: "company-1",
+      tenant: {
+        id: "tenant-1",
         slug: "joes-pizza",
-        tenantId: "tenant-1",
         name: "Joe's Pizza",
-        legalName: null,
-        description: null,
         logoUrl: null,
-        websiteUrl: null,
-        supportEmail: null,
-        supportPhone: null,
-        taxId: null,
-        status: "active",
-        onboardingStatus: null,
-        onboardingData: null,
-        onboardingCompletedAt: null,
         settings: null,
+        subscriptionStatus: "active",
         deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
-        tenant: {
-          id: "tenant-1",
-          name: "Joe's Pizza Tenant",
-          subscriptionStatus: "active",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
       },
     };
 
     it("should update settings successfully", async () => {
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(mockPrismaData as never);
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(mockPrismaData as never);
       vi.mocked(merchantRepository.updateSettings).mockResolvedValue(mockPrismaData as never);
 
       const settings = { acceptsPickup: true, estimatedPrepTime: 30 };
@@ -1575,7 +1387,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should throw MERCHANT_NOT_FOUND when merchant does not exist", async () => {
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(null);
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(null);
 
       await expect(
         merchantService.updateSettings("tenant-1", "non-existent", { acceptsPickup: true })
@@ -1583,7 +1395,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should throw when tenantId does not match", async () => {
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(mockPrismaData as never);
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(mockPrismaData as never);
 
       await expect(
         merchantService.updateSettings("wrong-tenant", "merchant-1", { acceptsPickup: true })
@@ -1595,8 +1407,7 @@ describe("MerchantService (unit tests)", () => {
   describe("deleteMerchant()", () => {
     const mockPrismaData = {
       id: "merchant-1",
-      companyId: "company-1",
-      slug: "joes-pizza-downtown",
+            slug: "joes-pizza-downtown",
       name: "Joe's Pizza - Downtown",
       description: null,
       address: null,
@@ -1618,38 +1429,21 @@ describe("MerchantService (unit tests)", () => {
       tenantId: "tenant-1",
       createdAt: new Date(),
       updatedAt: new Date(),
-      company: {
-        id: "company-1",
+      tenant: {
+        id: "tenant-1",
         slug: "joes-pizza",
-        tenantId: "tenant-1",
         name: "Joe's Pizza",
-        legalName: null,
-        description: null,
         logoUrl: null,
-        websiteUrl: null,
-        supportEmail: null,
-        supportPhone: null,
-        taxId: null,
-        status: "active",
-        onboardingStatus: null,
-        onboardingData: null,
-        onboardingCompletedAt: null,
         settings: null,
+        subscriptionStatus: "active",
         deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
-        tenant: {
-          id: "tenant-1",
-          name: "Joe's Pizza Tenant",
-          subscriptionStatus: "active",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
       },
     };
 
     it("should delete merchant successfully", async () => {
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(mockPrismaData as never);
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(mockPrismaData as never);
       vi.mocked(merchantRepository.delete).mockResolvedValue({} as never);
 
       await merchantService.deleteMerchant("tenant-1", "merchant-1");
@@ -1658,7 +1452,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should throw MERCHANT_NOT_FOUND when merchant does not exist", async () => {
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(null);
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(null);
 
       await expect(
         merchantService.deleteMerchant("tenant-1", "non-existent")
@@ -1666,7 +1460,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should throw when tenantId does not match", async () => {
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(mockPrismaData as never);
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(mockPrismaData as never);
 
       await expect(
         merchantService.deleteMerchant("wrong-tenant", "merchant-1")
@@ -1695,16 +1489,16 @@ describe("MerchantService (unit tests)", () => {
     });
   });
 
-  // ==================== mapper branch coverage (toCompanyWithMerchants null branches) ====================
+  // ==================== mapper branch coverage (toTenantWithMerchants null branches) ====================
   describe("mapper null-coalescing branches", () => {
-    it("should map null company description/logoUrl to undefined via toCompanyWithMerchants", async () => {
+    it("should map null company description/logoUrl to undefined via toTenantWithMerchants", async () => {
       const companyWithNullFields = {
-        ...mockCompanyWithMerchants,
+        ...mockTenantWithMerchants,
         description: null,
         logoUrl: null,
         merchants: [
           {
-            ...mockCompanyWithMerchants.merchants[0],
+            ...mockTenantWithMerchants.merchants[0],
             description: null,
             address: null,
             city: null,
@@ -1717,11 +1511,11 @@ describe("MerchantService (unit tests)", () => {
           },
         ],
       };
-      vi.mocked(companyRepository.getBySlugWithMerchants).mockResolvedValue(
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
         companyWithNullFields as never
       );
 
-      const result = await merchantService.getCompanyBySlug("joes-pizza");
+      const result = await merchantService.getTenantBySlug("joes-pizza");
 
       expect(result).not.toBeNull();
       expect(result?.description).toBeUndefined();
@@ -1736,7 +1530,7 @@ describe("MerchantService (unit tests)", () => {
       expect(result?.merchants[0].email).toBeUndefined();
       expect(result?.merchants[0].logoUrl).toBeUndefined();
       expect(result?.merchants[0].bannerUrl).toBeUndefined();
-      expect(result?.merchants[0].company.logoUrl).toBeUndefined();
+      expect(result?.merchants[0].tenant.logoUrl).toBeUndefined();
     });
   });
 
@@ -1745,8 +1539,7 @@ describe("MerchantService (unit tests)", () => {
     it("should use empty object fallback when existing settings is null", async () => {
       const mockWithNullSettings = {
         id: "merchant-1",
-        companyId: "company-1",
-        slug: "joes-pizza-downtown",
+                slug: "joes-pizza-downtown",
         name: "Joe's Pizza - Downtown",
         description: null,
         address: null,
@@ -1768,36 +1561,19 @@ describe("MerchantService (unit tests)", () => {
         tenantId: "tenant-1",
         createdAt: new Date(),
         updatedAt: new Date(),
-        company: {
-          id: "company-1",
+        tenant: {
+          id: "tenant-1",
           slug: "joes-pizza",
-          tenantId: "tenant-1",
           name: "Joe's Pizza",
-          legalName: null,
-          description: null,
           logoUrl: null,
-          websiteUrl: null,
-          supportEmail: null,
-          supportPhone: null,
-          taxId: null,
-          status: "active",
-          onboardingStatus: null,
-          onboardingData: null,
-          onboardingCompletedAt: null,
           settings: null,
+          subscriptionStatus: "active",
           deleted: false,
           createdAt: new Date(),
           updatedAt: new Date(),
-          tenant: {
-            id: "tenant-1",
-            name: "Joe's Pizza Tenant",
-            subscriptionStatus: "active",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
         },
       };
-      vi.mocked(merchantRepository.getByIdWithCompany).mockResolvedValue(
+      vi.mocked(merchantRepository.getByIdWithTenant).mockResolvedValue(
         mockWithNullSettings as never
       );
       vi.mocked(merchantRepository.update).mockResolvedValue({} as never);

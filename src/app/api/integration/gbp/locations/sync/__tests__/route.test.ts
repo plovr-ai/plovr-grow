@@ -21,25 +21,24 @@ vi.mock("@/services/merchant", () => ({
   },
 }));
 
-vi.mock("@/services/company/company.service", () => ({
-  companyService: {
+vi.mock("@/services/tenant/tenant.service", () => ({
+  tenantService: {
     updateOnboardingStep: vi.fn(),
   },
 }));
 
 import { gbpService } from "@/services/gbp";
 import { merchantService } from "@/services/merchant";
-import { companyService } from "@/services/company/company.service";
+import { tenantService } from "@/services/tenant/tenant.service";
 import { AppError, ErrorCodes } from "@/lib/errors";
 
 const mockSyncLocation = vi.mocked(gbpService.syncLocation);
 const mockUpdateMerchant = vi.mocked(merchantService.updateMerchant);
-const mockUpdateOnboardingStep = vi.mocked(companyService.updateOnboardingStep);
+const mockUpdateOnboardingStep = vi.mocked(tenantService.updateOnboardingStep);
 
 const mockSession = {
   user: {
     tenantId: "tenant-1",
-    companyId: "company-1",
   },
 };
 
@@ -69,16 +68,6 @@ describe("POST /api/integration/gbp/locations/sync", () => {
 
   it("should return 401 when session has no tenantId", async () => {
     mockAuth.mockResolvedValue({ user: {} });
-
-    const response = await POST(createRequest({ merchantId: "m1", locationName: "loc/1" }));
-    const data = await response.json();
-
-    expect(response.status).toBe(401);
-    expect(data.success).toBe(false);
-  });
-
-  it("should return 401 when session has no companyId", async () => {
-    mockAuth.mockResolvedValue({ user: { tenantId: "t1" } });
 
     const response = await POST(createRequest({ merchantId: "m1", locationName: "loc/1" }));
     const data = await response.json();
@@ -122,7 +111,7 @@ describe("POST /api/integration/gbp/locations/sync", () => {
 
     mockSyncLocation.mockResolvedValue({ merchantData });
     mockUpdateMerchant.mockResolvedValue({} as ReturnType<typeof merchantService.updateMerchant> extends Promise<infer T> ? T : never);
-    mockUpdateOnboardingStep.mockResolvedValue({} as ReturnType<typeof companyService.updateOnboardingStep> extends Promise<infer T> ? T : never);
+    mockUpdateOnboardingStep.mockResolvedValue({} as ReturnType<typeof tenantService.updateOnboardingStep> extends Promise<infer T> ? T : never);
 
     const response = await POST(
       createRequest({ merchantId: "m1", locationName: "locations/456" })
@@ -137,7 +126,6 @@ describe("POST /api/integration/gbp/locations/sync", () => {
     expect(mockUpdateMerchant).toHaveBeenCalledWith("tenant-1", "m1", merchantData);
     expect(mockUpdateOnboardingStep).toHaveBeenCalledWith(
       "tenant-1",
-      "company-1",
       "gbp",
       "completed"
     );

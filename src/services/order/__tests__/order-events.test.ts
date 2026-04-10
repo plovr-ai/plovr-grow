@@ -331,7 +331,7 @@ describe("OrderEventEmitter", () => {
   describe("development mode logging", () => {
     it("should register onAny handler in development mode", async () => {
       const originalNodeEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = "development";
+      (process.env as Record<string, string | undefined>).NODE_ENV = "development";
 
       // Reset modules to re-trigger module-level code with NODE_ENV=development
       vi.resetModules();
@@ -366,7 +366,7 @@ describe("OrderEventEmitter", () => {
       expect(orderEventCalls.length).toBeGreaterThan(0);
 
       consoleSpy.mockRestore();
-      process.env.NODE_ENV = originalNodeEnv;
+      (process.env as Record<string, string | undefined>).NODE_ENV = originalNodeEnv;
     });
   });
 

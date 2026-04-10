@@ -988,9 +988,8 @@ describe("LoyaltyMemberDetailClient", () => {
           <DashboardProvider
             value={{
               tenantId: "tenant-1",
-              companyId: "company-1",
-              company: {
-                id: "company-1",
+              tenant: {
+                id: "tenant-1",
                 name: "Test Company",
                 slug: "test-company",
                 logoUrl: null,
@@ -999,6 +998,10 @@ describe("LoyaltyMemberDetailClient", () => {
               currency: "USD",
               locale: "en-US",
               subscription: null,
+              onboarding: {
+                status: "not_started",
+                data: null,
+              },
             }}
           >
             {children}

@@ -76,7 +76,7 @@ export class CateringService {
       merchantId?: string;
     }
   ): Promise<PaginatedCateringLeadsWithMerchant> {
-    const result = await this.repository.getByCompany(
+    const result = await this.repository.getByTenant(
       tenantId,
       options
     );
