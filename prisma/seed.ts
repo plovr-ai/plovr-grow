@@ -84,20 +84,6 @@ async function syncLoyaltyMemberStats() {
 async function main() {
   console.log("Seeding database...");
 
-  // Create a demo tenant
-  const tenant = await prisma.tenant.upsert({
-    where: { id: "tenant-joes-pizza" },
-    update: {},
-    create: {
-      id: "tenant-joes-pizza",
-      name: "Joe's Pizza",
-      subscriptionPlan: "free",
-      subscriptionStatus: "active",
-    },
-  });
-
-  console.log(`Created tenant: ${tenant.name} (${tenant.id})`);
-
   // Website settings data (shared between create and update)
   const joesPizzaWebsiteSettings = {
     defaultCurrency: "USD",
@@ -147,10 +133,9 @@ async function main() {
     },
   };
 
-  // Company data (shared between create and update)
-  const joesPizzaCompanyData = {
+  // Tenant data (shared between create and update)
+  const joesPizzaTenantData = {
     name: "Joe's Pizza",
-    legalName: "Joe's Pizza Inc.",
     description: "Authentic New York style pizza since 1985",
     logoUrl: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=200&h=200&fit=crop",
     websiteUrl: "https://joespizza.com",
@@ -162,19 +147,20 @@ async function main() {
     settings: joesPizzaWebsiteSettings,
   };
 
-  // Create company (brand)
-  const company = await prisma.company.upsert({
-    where: { tenantId: tenant.id },
-    update: joesPizzaCompanyData,
+  // Create tenant (brand + tenant combined)
+  const tenant = await prisma.tenant.upsert({
+    where: { id: "tenant-joes-pizza" },
+    update: joesPizzaTenantData,
     create: {
-      id: "company-joes-pizza",
-      tenantId: tenant.id,
+      id: "tenant-joes-pizza",
       slug: "joes-pizza",
-      ...joesPizzaCompanyData,
+      subscriptionPlan: "free",
+      subscriptionStatus: "active",
+      ...joesPizzaTenantData,
     },
   });
 
-  console.log(`Created company: ${company.name} (${company.id})`);
+  console.log(`Created tenant: ${tenant.name} (${tenant.id})`);
 
   // Create merchant (store)
   const merchant = await prisma.merchant.upsert({
@@ -183,7 +169,6 @@ async function main() {
     create: {
       id: "merchant-joes-pizza-main",
       tenantId: tenant.id,
-      companyId: company.id,
       slug: "joes-pizza",
       name: "Joe's Pizza - Main Street",
       description: "Our flagship location in the heart of NYC",
@@ -243,7 +228,6 @@ async function main() {
     create: {
       id: "merchant-joes-downtown",
       tenantId: tenant.id,
-      companyId: company.id,
       slug: "joes-pizza-downtown",
       name: "Joe's Pizza - Downtown",
       description: "Our flagship downtown location",
@@ -302,7 +286,6 @@ async function main() {
     create: {
       id: "merchant-joes-midtown",
       tenantId: tenant.id,
-      companyId: company.id,
       slug: "joes-pizza-midtown",
       name: "Joe's Pizza - Midtown",
       description: "Convenient midtown location",
@@ -365,7 +348,6 @@ async function main() {
     create: {
       id: "tax-joes-standard",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Standard Tax",
       description: "Standard sales tax",
       roundingMethod: "half_up",
@@ -379,7 +361,6 @@ async function main() {
     create: {
       id: "tax-joes-alcohol",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Alcohol Tax",
       description: "Additional tax for alcoholic beverages",
       roundingMethod: "half_up",
@@ -500,7 +481,6 @@ async function main() {
     create: {
       id: "loyalty-config-joes-pizza",
       tenantId: tenant.id,
-      companyId: company.id,
       pointsPerDollar: 1,
       status: "active",
     },
@@ -510,20 +490,6 @@ async function main() {
 
   // ==================== Bella's Bakery (Single Location) ====================
   console.log("\nCreating Bella's Bakery (single location)...");
-
-  // Create tenant for Bella's Bakery
-  const bellaTenant = await prisma.tenant.upsert({
-    where: { id: "tenant-bellas-bakery" },
-    update: {},
-    create: {
-      id: "tenant-bellas-bakery",
-      name: "Bella's Bakery",
-      subscriptionPlan: "free",
-      subscriptionStatus: "active",
-    },
-  });
-
-  console.log(`Created tenant: ${bellaTenant.name} (${bellaTenant.id})`);
 
   // Website settings for Bella's Bakery
   const bellasBakeryWebsiteSettings = {
@@ -573,10 +539,9 @@ async function main() {
     },
   };
 
-  // Company data for Bella's Bakery
-  const bellasBakeryCompanyData = {
+  // Tenant data for Bella's Bakery
+  const bellasBakeryTenantData = {
     name: "Bella's Bakery",
-    legalName: "Bella's Artisan Bakery LLC",
     description: "Artisan breads and pastries handcrafted daily since 2010",
     logoUrl: "https://images.unsplash.com/photo-1486427944299-d1955d23e34d?w=200&h=200&fit=crop",
     websiteUrl: "https://bellasbakery.com",
@@ -588,19 +553,20 @@ async function main() {
     settings: bellasBakeryWebsiteSettings,
   };
 
-  // Create company for Bella's Bakery
-  const bellaCompany = await prisma.company.upsert({
-    where: { tenantId: bellaTenant.id },
-    update: bellasBakeryCompanyData,
+  // Create tenant for Bella's Bakery
+  const bellaTenant = await prisma.tenant.upsert({
+    where: { id: "tenant-bellas-bakery" },
+    update: bellasBakeryTenantData,
     create: {
-      id: "company-bellas-bakery",
-      tenantId: bellaTenant.id,
+      id: "tenant-bellas-bakery",
       slug: "bellas-bakery",
-      ...bellasBakeryCompanyData,
+      subscriptionPlan: "free",
+      subscriptionStatus: "active",
+      ...bellasBakeryTenantData,
     },
   });
 
-  console.log(`Created company: ${bellaCompany.name} (${bellaCompany.id})`);
+  console.log(`Created tenant: ${bellaTenant.name} (${bellaTenant.id})`);
 
   // Create single merchant for Bella's Bakery
   const bellaMerchant = await prisma.merchant.upsert({
@@ -609,7 +575,6 @@ async function main() {
     create: {
       id: "merchant-bellas-sf",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       slug: "bellas-bakery-sf",
       name: "Bella's Bakery",
       description: "Our cozy bakery in the heart of San Francisco's Mission District",
@@ -660,7 +625,6 @@ async function main() {
     create: {
       id: "bella-menu-main",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       name: "Main Menu",
       sortOrder: 0,
     },
@@ -675,7 +639,6 @@ async function main() {
     create: {
       id: "bella-cat-bread",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       menuId: bellaMenu.id,
       name: "Artisan Breads",
       description: "Handcrafted breads baked fresh daily",
@@ -689,7 +652,6 @@ async function main() {
     create: {
       id: "bella-cat-pastry",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       menuId: bellaMenu.id,
       name: "Pastries",
       description: "Sweet and savory pastries",
@@ -703,7 +665,6 @@ async function main() {
     create: {
       id: "bella-cat-coffee",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       menuId: bellaMenu.id,
       name: "Coffee & Drinks",
       description: "Specialty coffee and beverages",
@@ -719,7 +680,6 @@ async function main() {
     {
       id: "bella-item-sourdough",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       name: "Sourdough Loaf",
       description: "Our signature 24-hour fermented sourdough with a crispy crust and soft interior",
       price: 8.99,
@@ -730,7 +690,6 @@ async function main() {
     {
       id: "bella-item-baguette",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       name: "French Baguette",
       description: "Traditional French baguette with a golden crust",
       price: 4.49,
@@ -741,7 +700,6 @@ async function main() {
     {
       id: "bella-item-focaccia",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       name: "Rosemary Focaccia",
       description: "Italian flatbread with fresh rosemary and sea salt",
       price: 6.99,
@@ -753,7 +711,6 @@ async function main() {
     {
       id: "bella-item-croissant",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       name: "Butter Croissant",
       description: "Flaky, golden layers of French butter perfection",
       price: 4.49,
@@ -764,7 +721,6 @@ async function main() {
     {
       id: "bella-item-almond-danish",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       name: "Almond Danish",
       description: "Sweet almond cream in a buttery Danish pastry",
       price: 5.29,
@@ -775,7 +731,6 @@ async function main() {
     {
       id: "bella-item-chocolate-croissant",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       name: "Chocolate Croissant",
       description: "Buttery croissant filled with rich dark chocolate",
       price: 4.99,
@@ -786,7 +741,6 @@ async function main() {
     {
       id: "bella-item-cinnamon-roll",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       name: "Cinnamon Roll",
       description: "Warm, gooey cinnamon roll with cream cheese frosting",
       price: 5.49,
@@ -798,7 +752,6 @@ async function main() {
     {
       id: "bella-item-cappuccino",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       name: "Cappuccino",
       description: "Rich espresso with perfectly steamed milk and foam",
       price: 4.99,
@@ -831,7 +784,6 @@ async function main() {
     {
       id: "bella-item-latte",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       name: "Café Latte",
       description: "Smooth espresso with steamed milk",
       price: 5.49,
@@ -853,7 +805,6 @@ async function main() {
     {
       id: "bella-item-drip-coffee",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       name: "Drip Coffee",
       description: "House blend drip coffee",
       price: 2.99,
@@ -875,7 +826,7 @@ async function main() {
   ];
 
   for (const item of bellaMenuItems) {
-    const { id, tenantId, companyId, ...updateData } = item;
+    const { id, tenantId, ...updateData } = item;
     await prisma.menuItem.upsert({
       where: { id: item.id },
       update: updateData,
@@ -935,8 +886,8 @@ async function main() {
     const menuItemId = bellaFeaturedItemIds[i];
     await prisma.featuredItem.upsert({
       where: {
-        companyId_menuItemId: {
-          companyId: bellaCompany.id,
+        tenantId_menuItemId: {
+          tenantId: bellaTenant.id,
           menuItemId,
         },
       },
@@ -944,7 +895,6 @@ async function main() {
       create: {
         id: `featured-bella-${menuItemId}`,
         tenantId: bellaTenant.id,
-        companyId: bellaCompany.id,
         menuItemId,
         sortOrder: i + 1,
       },
@@ -960,7 +910,6 @@ async function main() {
     create: {
       id: "tax-bella-standard",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       name: "CA Sales Tax",
       description: "California sales tax",
       roundingMethod: "half_up",
@@ -1013,7 +962,6 @@ async function main() {
     create: {
       id: "loyalty-config-bellas-bakery",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       pointsPerDollar: 2, // 2 points per dollar for bakery
       status: "active",
     },
@@ -1029,7 +977,6 @@ async function main() {
     create: {
       id: "joes-menu-main",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Main Menu",
       sortOrder: 0,
     },
@@ -1046,7 +993,6 @@ async function main() {
     create: {
       id: "cat-pizza",
       tenantId: tenant.id,
-      companyId: company.id,
       menuId: joesMenu.id,
       name: "Pizza",
       description: "Our famous New York style pizzas",
@@ -1062,7 +1008,6 @@ async function main() {
     create: {
       id: "cat-sides",
       tenantId: tenant.id,
-      companyId: company.id,
       menuId: joesMenu.id,
       name: "Sides",
       description: "Appetizers and sides",
@@ -1078,7 +1023,6 @@ async function main() {
     create: {
       id: "cat-pasta",
       tenantId: tenant.id,
-      companyId: company.id,
       menuId: joesMenu.id,
       name: "Pasta",
       description: "Homemade pasta dishes",
@@ -1094,7 +1038,6 @@ async function main() {
     create: {
       id: "cat-drinks",
       tenantId: tenant.id,
-      companyId: company.id,
       menuId: joesMenu.id,
       name: "Drinks",
       description: "Beverages",
@@ -1110,7 +1053,6 @@ async function main() {
     {
       id: "item-cheese-pizza",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Classic Cheese Pizza",
       description: "Our signature pizza with fresh mozzarella and house-made tomato sauce",
       price: 18.99,
@@ -1148,7 +1090,6 @@ async function main() {
     {
       id: "item-pepperoni-pizza",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Pepperoni Pizza",
       description: "Classic pepperoni with premium mozzarella cheese",
       price: 21.99,
@@ -1171,7 +1112,6 @@ async function main() {
     {
       id: "item-margherita-pizza",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Margherita Pizza",
       description: "Fresh tomatoes, mozzarella, basil, and olive oil",
       price: 19.99,
@@ -1194,7 +1134,6 @@ async function main() {
     {
       id: "item-supreme-pizza",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Supreme Pizza",
       description: "Pepperoni, sausage, peppers, onions, and mushrooms",
       price: 24.99,
@@ -1218,7 +1157,6 @@ async function main() {
     {
       id: "item-spaghetti-meatballs",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Spaghetti & Meatballs",
       description: "Classic spaghetti with house-made meatballs and marinara sauce",
       price: 16.99,
@@ -1229,7 +1167,6 @@ async function main() {
     {
       id: "item-fettuccine-alfredo",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Fettuccine Alfredo",
       description: "Creamy parmesan alfredo sauce over fettuccine",
       price: 15.99,
@@ -1252,7 +1189,6 @@ async function main() {
     {
       id: "item-baked-ziti",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Baked Ziti",
       description: "Ziti pasta baked with ricotta, mozzarella, and marinara",
       price: 14.99,
@@ -1264,7 +1200,6 @@ async function main() {
     {
       id: "item-garlic-knots",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Garlic Knots",
       description: "Fresh baked knots with garlic butter (6 pieces)",
       price: 5.99,
@@ -1275,7 +1210,6 @@ async function main() {
     {
       id: "item-mozzarella-sticks",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Mozzarella Sticks",
       description: "Crispy fried mozzarella served with marinara (6 pieces)",
       price: 7.99,
@@ -1286,7 +1220,6 @@ async function main() {
     {
       id: "item-caesar-salad",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Caesar Salad",
       description: "Crisp romaine, parmesan, croutons, and caesar dressing",
       price: 8.99,
@@ -1322,7 +1255,6 @@ async function main() {
     {
       id: "item-fountain-drink",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Fountain Drink",
       description: "Coca-Cola, Sprite, Fanta, or Lemonade",
       price: 2.99,
@@ -1344,7 +1276,6 @@ async function main() {
     {
       id: "item-italian-soda",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Italian Soda",
       description: "Sparkling water with your choice of flavor",
       price: 3.99,
@@ -1366,7 +1297,6 @@ async function main() {
     {
       id: "item-water",
       tenantId: tenant.id,
-      companyId: company.id,
       name: "Bottled Water",
       description: "Purified spring water",
       price: 1.99,
@@ -1376,7 +1306,7 @@ async function main() {
   ];
 
   for (const item of menuItems) {
-    const { id, tenantId, companyId, ...updateData } = item;
+    const { id, tenantId, ...updateData } = item;
     await prisma.menuItem.upsert({
       where: { id: item.id },
       update: updateData,
@@ -1440,8 +1370,8 @@ async function main() {
     const menuItemId = joesFeaturedItemIds[i];
     await prisma.featuredItem.upsert({
       where: {
-        companyId_menuItemId: {
-          companyId: company.id,
+        tenantId_menuItemId: {
+          tenantId: tenant.id,
           menuItemId,
         },
       },
@@ -1449,7 +1379,6 @@ async function main() {
       create: {
         id: `featured-joes-${menuItemId}`,
         tenantId: tenant.id,
-        companyId: company.id,
         menuItemId,
         sortOrder: i + 1,
       },
@@ -1495,7 +1424,6 @@ async function main() {
     create: {
       id: "user-joes-pizza-owner",
       tenantId: tenant.id,
-      companyId: company.id,
       email: "joe@joespizza.com",
       passwordHash: joesPasswordHash,
       name: "Joe Smith",
@@ -1519,7 +1447,6 @@ async function main() {
     create: {
       id: "user-bellas-bakery-owner",
       tenantId: bellaTenant.id,
-      companyId: bellaCompany.id,
       email: "bella@bellasbakery.com",
       passwordHash: bellaPasswordHash,
       name: "Bella Martinez",
@@ -1533,27 +1460,12 @@ async function main() {
   // ==================== Onboarding Test Account ====================
   console.log("\nCreating onboarding test account...");
 
-  // Create onboarding test tenant
+  // Create onboarding test tenant (with onboarding NOT completed)
   const onboardingTenant = await prisma.tenant.upsert({
     where: { id: "tenant-onboarding-test" },
     update: {},
     create: {
       id: "tenant-onboarding-test",
-      name: "Onboarding Test Restaurant",
-      subscriptionPlan: "free",
-      subscriptionStatus: "active",
-    },
-  });
-
-  console.log(`Created onboarding tenant: ${onboardingTenant.name}`);
-
-  // Create company with onboarding NOT completed
-  const onboardingCompany = await prisma.company.upsert({
-    where: { tenantId: onboardingTenant.id },
-    update: {},
-    create: {
-      id: "company-onboarding-test",
-      tenantId: onboardingTenant.id,
       slug: "onboarding-test",
       name: "New Restaurant",
       description: "Testing onboarding flow",
@@ -1562,10 +1474,12 @@ async function main() {
       currency: "USD",
       locale: "en-US",
       timezone: "America/Los_Angeles",
+      subscriptionPlan: "free",
+      subscriptionStatus: "active",
     },
   });
 
-  console.log(`Created onboarding company: ${onboardingCompany.name} (status: ${onboardingCompany.onboardingStatus})`);
+  console.log(`Created onboarding tenant: ${onboardingTenant.name} (status: ${onboardingTenant.onboardingStatus})`);
 
   // Create a merchant for the onboarding test (needed for dashboard route)
   const onboardingMerchant = await prisma.merchant.upsert({
@@ -1574,7 +1488,6 @@ async function main() {
     create: {
       id: "merchant-onboarding-test",
       tenantId: onboardingTenant.id,
-      companyId: onboardingCompany.id,
       slug: "test-restaurant",
       name: "Test Restaurant - Main Location",
       description: "Onboarding test location",
@@ -1608,7 +1521,6 @@ async function main() {
     create: {
       id: "user-onboarding-test",
       tenantId: onboardingTenant.id,
-      companyId: onboardingCompany.id,
       email: "test@example.com",
       passwordHash: passwordHash,
       name: "Onboarding Test User",
