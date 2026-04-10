@@ -4,6 +4,8 @@ import { DashboardLayoutClient } from "@/components/dashboard";
 import { merchantService } from "@/services/merchant";
 import { companyRepository } from "@/repositories/company.repository";
 import { subscriptionService } from "@/services/subscription";
+import { companyService } from "@/services/company/company.service";
+import type { OnboardingData, OnboardingStatus } from "@/types/onboarding";
 
 export default async function ProtectedLayout({
   children,
@@ -20,7 +22,7 @@ export default async function ProtectedLayout({
   const { tenantId, companyId } = session.user;
 
   // Fetch company, merchants, and subscription data
-  const [company, merchants, subscription] = await Promise.all([
+  let [company, merchants, subscription] = await Promise.all([
     companyRepository.getById(companyId),
     merchantService.getMerchantsByCompanyId(tenantId, companyId),
     subscriptionService.getSubscriptionForDashboard(tenantId),
@@ -31,6 +33,15 @@ export default async function ProtectedLayout({
     // Sign out to clear the invalid session and prevent infinite redirect loop.
     await signOut({ redirect: false });
     redirect("/dashboard/login");
+  }
+
+  // Initialize onboarding if not started
+  if (company.onboardingStatus === "not_started") {
+    await companyService.initializeOnboarding(company.id);
+    const updated = await companyRepository.getById(companyId);
+    if (updated) {
+      company = updated;
+    }
   }
 
   // Use first merchant's currency/locale as default for Dashboard
@@ -57,6 +68,10 @@ export default async function ProtectedLayout({
     currency: defaultCurrency,
     locale: defaultLocale,
     subscription,
+    onboarding: {
+      status: company.onboardingStatus as OnboardingStatus,
+      data: company.onboardingData as unknown as OnboardingData | null,
+    },
   };
 
   return (

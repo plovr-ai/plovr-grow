@@ -2,6 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import type { DashboardSubscriptionInfo } from "@/services/subscription/subscription.types";
+import type { OnboardingData, OnboardingStatus } from "@/types/onboarding";
 
 export interface MerchantInfo {
   id: string;
@@ -27,6 +28,10 @@ export interface DashboardContextValue {
   currency: string;
   locale: string;
   subscription: DashboardSubscriptionInfo | null;
+  onboarding: {
+    status: OnboardingStatus;
+    data: OnboardingData | null;
+  };
 }
 
 interface DashboardProviderProps {
@@ -70,4 +75,9 @@ export function useDashboardCurrency(): string {
 export function useDashboardLocale(): string {
   const { locale } = useDashboard();
   return locale;
+}
+
+export function useOnboarding() {
+  const { onboarding } = useDashboard();
+  return onboarding;
 }
