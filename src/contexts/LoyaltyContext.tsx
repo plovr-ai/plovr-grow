@@ -38,7 +38,7 @@ interface LoyaltyProviderProps {
 }
 
 export function LoyaltyProvider({ children }: LoyaltyProviderProps) {
-  const { companyId } = useMerchantConfig();
+  const { tenantId } = useMerchantConfig();
 
   const [member, setMember] = useState<LoyaltyMember | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,14 +46,14 @@ export function LoyaltyProvider({ children }: LoyaltyProviderProps) {
 
   // Fetch member data from /me API on mount
   const fetchMember = useCallback(async () => {
-    if (!companyId) {
+    if (!tenantId) {
       setIsLoading(false);
       return;
     }
 
     try {
       const response = await fetch(
-        `/api/storefront/loyalty/me?companyId=${encodeURIComponent(companyId)}`
+        `/api/storefront/loyalty/me?tenantId=${encodeURIComponent(tenantId)}`
       );
       const data = await response.json();
 
@@ -69,7 +69,7 @@ export function LoyaltyProvider({ children }: LoyaltyProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [companyId]);
+  }, [tenantId]);
 
   // Initialize on mount
   useEffect(() => {
@@ -85,7 +85,7 @@ export function LoyaltyProvider({ children }: LoyaltyProviderProps) {
 
   // Logout: call API to clear cookie and reset state
   const logout = useCallback(async () => {
-    if (!companyId) return;
+    if (!tenantId) return;
 
     try {
       await fetch("/api/storefront/loyalty/logout", {
@@ -93,20 +93,20 @@ export function LoyaltyProvider({ children }: LoyaltyProviderProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ companyId }),
+        body: JSON.stringify({ tenantId }),
       });
     } catch (error) {
       console.error("[LoyaltyContext] Failed to logout:", error);
     } finally {
       setMember(null);
     }
-  }, [companyId]);
+  }, [tenantId]);
 
   // Refresh member data from API
   const refreshMember = useCallback(async () => {
-    if (!companyId || !member) return;
+    if (!tenantId || !member) return;
     await fetchMember();
-  }, [companyId, member, fetchMember]);
+  }, [tenantId, member, fetchMember]);
 
   const value: LoyaltyContextValue = {
     member,

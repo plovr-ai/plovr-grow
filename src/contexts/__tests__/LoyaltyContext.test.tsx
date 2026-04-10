@@ -14,7 +14,7 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 // Helper to create wrapper with both providers
-function createWrapper(companyId: string | null = "test-company-id") {
+function createWrapper(tenantId: string | null = "test-company-id") {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <MerchantProvider
@@ -24,7 +24,7 @@ function createWrapper(companyId: string | null = "test-company-id") {
           currency: "USD",
           locale: "en-US",
           timezone: "America/New_York",
-          companyId,
+          tenantId,
           companySlug: "test-company",
         }}
       >
@@ -44,7 +44,7 @@ describe("LoyaltyContext", () => {
   });
 
   describe("LoyaltyProvider", () => {
-    it("should fetch member data on mount when companyId is provided", async () => {
+    it("should fetch member data on mount when tenantId is provided", async () => {
       const mockMember = {
         id: "member-123",
         phone: "+11234567890",
@@ -75,13 +75,13 @@ describe("LoyaltyContext", () => {
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "/api/storefront/loyalty/me?companyId=test-company-id"
+        "/api/storefront/loyalty/me?tenantId=test-company-id"
       );
       expect(result.current.member).toEqual(mockMember);
       expect(result.current.pointsPerDollar).toBe(2);
     });
 
-    it("should not fetch when companyId is null", async () => {
+    it("should not fetch when tenantId is null", async () => {
       const { result } = renderHook(() => useLoyalty(), {
         wrapper: createWrapper(null),
       });
@@ -293,7 +293,7 @@ describe("LoyaltyContext", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ companyId: "test-company-id" }),
+        body: JSON.stringify({ tenantId: "test-company-id" }),
       });
       expect(result.current.member).toBeNull();
     });
@@ -340,7 +340,7 @@ describe("LoyaltyContext", () => {
       consoleSpy.mockRestore();
     });
 
-    it("should not call API when companyId is null", async () => {
+    it("should not call API when tenantId is null", async () => {
       mockFetch.mockClear();
 
       const { result } = renderHook(() => useLoyalty(), {
@@ -432,9 +432,9 @@ describe("LoyaltyContext", () => {
   });
 
   describe("tenant isolation", () => {
-    it("should use companyId in API requests for tenant isolation", async () => {
-      const companyIdA = "company-a-123";
-      const companyIdB = "company-b-456";
+    it("should use tenantId in API requests for tenant isolation", async () => {
+      const tenantIdA = "company-a-123";
+      const tenantIdB = "company-b-456";
 
       // Test with Company A
       mockFetch.mockResolvedValueOnce({
@@ -449,12 +449,12 @@ describe("LoyaltyContext", () => {
       });
 
       renderHook(() => useLoyalty(), {
-        wrapper: createWrapper(companyIdA),
+        wrapper: createWrapper(tenantIdA),
       });
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
-          `/api/storefront/loyalty/me?companyId=${companyIdA}`
+          `/api/storefront/loyalty/me?tenantId=${tenantIdA}`
         );
       });
 
@@ -473,12 +473,12 @@ describe("LoyaltyContext", () => {
       });
 
       renderHook(() => useLoyalty(), {
-        wrapper: createWrapper(companyIdB),
+        wrapper: createWrapper(tenantIdB),
       });
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
-          `/api/storefront/loyalty/me?companyId=${companyIdB}`
+          `/api/storefront/loyalty/me?tenantId=${tenantIdB}`
         );
       });
     });

@@ -9,16 +9,16 @@ import { Suspense } from "react";
 export default async function DashboardOverviewPage() {
   const session = await auth();
 
-  if (!session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const company = await tenantService.getTenantWithMerchants(
-    session.user.companyId
-  );
-  if (!company) redirect("/dashboard/login");
+  const { tenantId } = session.user;
 
-  const merchantId = company.merchants?.[0]?.id;
+  const tenant = await tenantService.getTenantWithMerchants(tenantId);
+  if (!tenant) redirect("/dashboard/login");
+
+  const merchantId = tenant.merchants?.[0]?.id;
 
   if (!merchantId) {
     return (
@@ -35,11 +35,10 @@ export default async function DashboardOverviewPage() {
     );
   }
 
-  const tenantId = company.tenantId;
-  const menuCount = await menuService.countMenus(tenantId, company.id);
+  const menuCount = await menuService.countMenus(tenantId);
   const hasMenu = menuCount > 0;
 
-  const showOnboarding = company.onboardingStatus !== "completed";
+  const showOnboarding = tenant.onboardingStatus !== "completed";
 
   return (
     <div className="space-y-8 py-8">
@@ -50,7 +49,7 @@ export default async function DashboardOverviewPage() {
       )}
       <AgentChatClient
         merchantId={merchantId}
-        companyName={company.name}
+        companyName={tenant.name}
         hasMenu={hasMenu}
       />
     </div>

@@ -18,7 +18,6 @@ export interface MerchantConfig {
   tipConfig: TipConfig;
   feeConfig: FeeConfig;
   companySlug: string | null;
-  companyId: string | null;
   tenantId: string | null;
   isTrial: boolean;
 }
@@ -35,7 +34,6 @@ interface MerchantProviderProps {
     tipConfig?: TipConfig;
     feeConfig?: FeeConfig;
     companySlug?: string | null;
-    companyId?: string | null;
     tenantId?: string | null;
     isTrial?: boolean;
   };
@@ -55,11 +53,10 @@ export function MerchantProvider({ children, config }: MerchantProviderProps) {
       tipConfig: config.tipConfig ?? DEFAULT_TIP_CONFIG,
       feeConfig: config.feeConfig ?? DEFAULT_FEE_CONFIG,
       companySlug: config.companySlug ?? null,
-      companyId: config.companyId ?? null,
       tenantId: config.tenantId ?? null,
       isTrial: config.isTrial ?? false,
     }),
-    [config.name, config.logoUrl, config.currency, config.locale, config.timezone, config.country, config.tipConfig, config.feeConfig, config.companySlug, config.companyId, config.tenantId, config.isTrial]
+    [config.name, config.logoUrl, config.currency, config.locale, config.timezone, config.country, config.tipConfig, config.feeConfig, config.companySlug, config.tenantId, config.isTrial]
   );
 
   return (
@@ -100,11 +97,6 @@ export function useTimezone(): string {
 export function useCompanySlug(): string | null {
   const { companySlug } = useMerchantConfig();
   return companySlug;
-}
-
-export function useCompanyId(): string | null {
-  const { companyId } = useMerchantConfig();
-  return companyId;
 }
 
 export function useCountry(): string {

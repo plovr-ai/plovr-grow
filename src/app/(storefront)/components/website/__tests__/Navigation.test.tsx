@@ -20,7 +20,7 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
         currency: "USD",
         locale: "en-US",
         timezone: "America/New_York",
-        companyId: "test-company-id",
+        tenantId: "test-company-id",
         companySlug: "test-company",
       }}
     >

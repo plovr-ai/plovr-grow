@@ -54,7 +54,6 @@ export default async function MerchantLayout({ children, params }: LayoutProps) 
           tipConfig: merchant?.settings?.tipConfig,
           feeConfig: merchant?.settings?.feeConfig,
           companySlug: merchant?.company?.slug ?? null,
-          companyId: merchant?.company?.id ?? null,
           tenantId,
           isTrial,
         }}
