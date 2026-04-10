@@ -5,7 +5,7 @@ export type TenantStatus = "active" | "inactive" | "suspended";
 
 export interface TenantInfo {
   id: string;
-  slug: string;
+  slug: string | null;
   name: string;
   description: string | null;
   logoUrl: string | null;
@@ -79,7 +79,7 @@ export interface TenantWithMerchants extends TenantInfo {
 }
 
 export interface CreateTenantInput {
-  slug: string;
+  slug?: string;
   name: string;
   description?: string;
   logoUrl?: string;

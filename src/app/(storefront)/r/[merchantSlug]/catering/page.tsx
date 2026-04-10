@@ -39,7 +39,7 @@ export default async function CateringPage({ params }: CateringPageProps) {
       <Navigation
         logo={websiteData.logo}
         restaurantName={merchant.company.name}
-        companySlug={merchant.company.slug}
+        companySlug={merchant.company.slug ?? undefined}
         menuLink={menuLink}
         cateringLink={cateringLink}
         isLoyaltyEnabled={isLoyaltyEnabled}
@@ -66,7 +66,7 @@ export default async function CateringPage({ params }: CateringPageProps) {
 
       <Footer
         merchant={websiteData}
-        companySlug={merchant.company.slug}
+        companySlug={merchant.company.slug ?? undefined}
         menuLink={menuLink}
       />
     </main>
