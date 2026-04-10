@@ -30,7 +30,6 @@ export interface MerchantSettings {
 
 export interface MerchantInfo {
   id: string;
-  companyId: string;
   slug: string;
   name: string;
   description: string | null;
@@ -81,7 +80,6 @@ export interface PublicMerchantInfo {
 export interface MerchantContext {
   merchantId: string;
   merchantSlug: string;
-  companyId: string;
   tenantId: string;
 }
 
