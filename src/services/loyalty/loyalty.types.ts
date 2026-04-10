@@ -5,7 +5,6 @@ import type { LoyaltyConfig, LoyaltyMember, PointTransaction } from "@prisma/cli
 export interface LoyaltyConfigData {
   id: string;
   tenantId: string;
-  companyId: string;
   pointsPerDollar: number;
   status: string;
   createdAt: Date;
@@ -22,7 +21,6 @@ export interface UpsertLoyaltyConfigInput {
 export interface LoyaltyMemberData {
   id: string;
   tenantId: string;
-  companyId: string;
   phone: string;
   email: string | null;
   firstName: string | null;
@@ -127,7 +125,6 @@ export function toLoyaltyConfigData(config: LoyaltyConfig): LoyaltyConfigData {
   return {
     id: config.id,
     tenantId: config.tenantId,
-    companyId: config.companyId,
     pointsPerDollar: Number(config.pointsPerDollar),
     status: config.status,
     createdAt: config.createdAt,
@@ -139,7 +136,6 @@ export function toLoyaltyMemberData(member: LoyaltyMember): LoyaltyMemberData {
   return {
     id: member.id,
     tenantId: member.tenantId,
-    companyId: member.companyId,
     phone: member.phone,
     email: member.email,
     firstName: member.firstName,

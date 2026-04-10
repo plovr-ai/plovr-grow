@@ -30,14 +30,12 @@ export class LoyaltyService {
    */
   async processOrderCompletion(
     tenantId: string,
-    companyId: string,
     orderId: string,
     data: OrderCompletionData
   ): Promise<PointsEarnResult | null> {
     // Check if loyalty is enabled
     const isEnabled = await loyaltyConfigService.isLoyaltyEnabled(
-      tenantId,
-      companyId
+      tenantId
     );
     if (!isEnabled) {
       return null;
@@ -54,14 +52,12 @@ export class LoyaltyService {
 
     // Get points per dollar config
     const pointsPerDollar = await loyaltyConfigService.getPointsPerDollar(
-      tenantId,
-      companyId
+      tenantId
     );
 
     // Find or create member
     const { member } = await loyaltyMemberService.findOrCreateByPhone(
       tenantId,
-      companyId,
       data.customerPhone,
       {
         phone: data.customerPhone,
@@ -95,12 +91,11 @@ export class LoyaltyService {
    */
   async getCustomerDashboard(
     tenantId: string,
-    companyId: string,
     phone: string
   ): Promise<CustomerLoyaltyDashboard> {
     const [config, member] = await Promise.all([
-      loyaltyConfigService.getLoyaltyConfig(tenantId, companyId),
-      loyaltyMemberService.getMemberByPhone(tenantId, companyId, phone),
+      loyaltyConfigService.getLoyaltyConfig(tenantId),
+      loyaltyMemberService.getMemberByPhone(tenantId, phone),
     ]);
 
     return {
@@ -113,8 +108,8 @@ export class LoyaltyService {
   /**
    * Check if loyalty is enabled for a company
    */
-  async isLoyaltyEnabled(tenantId: string, companyId: string): Promise<boolean> {
-    return loyaltyConfigService.isLoyaltyEnabled(tenantId, companyId);
+  async isLoyaltyEnabled(tenantId: string): Promise<boolean> {
+    return loyaltyConfigService.isLoyaltyEnabled(tenantId);
   }
 
   /**
@@ -122,12 +117,10 @@ export class LoyaltyService {
    */
   async getCustomerLoyaltyStatus(
     tenantId: string,
-    companyId: string,
     phone: string
   ): Promise<LoyaltyStatus | null> {
     return loyaltyMemberService.getLoyaltyStatusByPhone(
       tenantId,
-      companyId,
       phone
     );
   }
@@ -137,13 +130,11 @@ export class LoyaltyService {
    */
   async enrollCustomer(
     tenantId: string,
-    companyId: string,
     phone: string,
     data?: { firstName?: string; lastName?: string; email?: string }
   ): Promise<{ member: LoyaltyMemberData; isNew: boolean }> {
     return loyaltyMemberService.findOrCreateByPhone(
       tenantId,
-      companyId,
       phone,
       data ? { phone, firstName: data.firstName, lastName: data.lastName, email: data.email } : undefined
     );

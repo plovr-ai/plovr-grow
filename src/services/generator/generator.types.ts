@@ -29,7 +29,6 @@ export interface GenerationStatusResult {
 
 export interface GeneratedTenantData {
   tenantId: string;
-  companyId: string;
   merchantId: string;
   companySlug: string;
   merchantSlug: string;

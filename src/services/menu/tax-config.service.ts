@@ -28,11 +28,10 @@ export class TaxConfigService {
    * Get all tax configs for a company
    */
   async getTaxConfigs(
-    tenantId: string,
-    companyId: string
+    tenantId: string
   ): Promise<TaxConfigData[]> {
     const repository = await getRepository();
-    const configs = await repository.getTaxConfigsByCompany(tenantId, companyId);
+    const configs = await repository.getTaxConfigsByTenant(tenantId);
 
     return configs.map((c) => ({
       id: c.id,
@@ -109,11 +108,10 @@ export class TaxConfigService {
    */
   async getTaxConfigsWithRates(
     tenantId: string,
-    companyId: string,
     merchants: Array<{ id: string; name: string }>
   ): Promise<TaxConfigWithRates[]> {
     const repository = await getRepository();
-    const taxConfigs = await repository.getTaxConfigsByCompany(tenantId, companyId);
+    const taxConfigs = await repository.getTaxConfigsByTenant(tenantId);
 
     // Get all merchant tax rates in parallel
     const merchantRatesPromises = merchants.map((merchant) =>
@@ -169,12 +167,11 @@ export class TaxConfigService {
    */
   async createTaxConfig(
     tenantId: string,
-    companyId: string,
     input: CreateTaxConfigInput
   ): Promise<TaxConfigInfo> {
     const repository = await getRepository();
 
-    const config = await repository.createTaxConfig(tenantId, companyId, {
+    const config = await repository.createTaxConfig(tenantId, {
       name: input.name,
       description: input.description,
       roundingMethod: input.roundingMethod,
@@ -203,7 +200,6 @@ export class TaxConfigService {
    */
   async updateTaxConfig(
     tenantId: string,
-    companyId: string,
     id: string,
     input: UpdateTaxConfigInput
   ): Promise<void> {

@@ -44,7 +44,6 @@ export class PaymentService {
       stripeAccountId: connectAccount.stripeAccountId,
       metadata: {
         tenantId: request.tenantId,
-        companyId: request.companyId,
         ...(request.merchantId && { merchantId: request.merchantId }),
         ...(request.orderId && { orderId: request.orderId }),
       },

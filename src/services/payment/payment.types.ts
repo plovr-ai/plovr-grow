@@ -1,6 +1,5 @@
 export interface CreatePaymentIntentRequest {
   tenantId: string;
-  companyId: string;
   merchantId?: string;
   amount: number;
   currency?: string;
