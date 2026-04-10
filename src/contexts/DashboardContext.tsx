@@ -77,7 +77,3 @@ export function useDashboardLocale(): string {
   return locale;
 }
 
-export function useOnboarding() {
-  const { onboarding } = useDashboard();
-  return onboarding;
-}

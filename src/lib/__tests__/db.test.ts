@@ -21,13 +21,13 @@ describe("db", () => {
   it("should export a prisma instance", async () => {
     process.env.NODE_ENV = "test";
     const mod = await import("../db");
-    expect(mod.prisma).toBeDefined();
+    expect(mod.default).toBeDefined();
   });
 
   it("should cache prisma on globalThis in non-production mode", async () => {
     process.env.NODE_ENV = "test";
     const mod = await import("../db");
     const g = globalThis as unknown as { prisma: unknown };
-    expect(g.prisma).toBe(mod.prisma);
+    expect(g.prisma).toBe(mod.default);
   });
 });
