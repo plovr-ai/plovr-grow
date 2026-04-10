@@ -33,11 +33,11 @@ export default async function LoyaltyMemberDetailPage({
   const session = await auth();
 
   // Verify session
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   // Parse URL parameters
   const currentTab = search.tab ?? "orders";
@@ -51,8 +51,8 @@ export default async function LoyaltyMemberDetailPage({
     notFound();
   }
 
-  // Validate member belongs to this company
-  if (member.companyId !== companyId) {
+  // Validate member belongs to this tenant
+  if (member.tenantId !== tenantId) {
     notFound();
   }
 

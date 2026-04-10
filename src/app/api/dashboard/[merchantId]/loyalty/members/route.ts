@@ -30,8 +30,7 @@ export async function GET(
 
     const tenantId = merchant.company.tenantId;
 
-    const result = await loyaltyMemberService.getMembersByCompany(
-      tenantId,
+    const result = await loyaltyMemberService.getMembersByTenant(
       tenantId,
       { page, pageSize, search }
     );
@@ -39,7 +38,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: {
-        members: result.items.map((m) => ({
+        members: result.items.map((m: typeof result.items[number]) => ({
           id: m.id,
           phone: m.phone,
           firstName: m.firstName,

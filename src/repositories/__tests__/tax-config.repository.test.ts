@@ -34,13 +34,12 @@ describe("TaxConfigRepository", () => {
     repository = new TaxConfigRepository();
   });
 
-  describe("getTaxConfigsByCompany", () => {
+  describe("getTaxConfigsByTenant", () => {
     it("should return all active tax configs for a company", async () => {
       const mockConfigs = [
         {
           id: "tax-1",
           tenantId: "tenant-1",
-          companyId: "company-1",
           name: "Standard Tax",
           description: "Standard sales tax",
           roundingMethod: "half_up",
@@ -52,7 +51,6 @@ describe("TaxConfigRepository", () => {
         {
           id: "tax-2",
           tenantId: "tenant-1",
-          companyId: "company-1",
           name: "Alcohol Tax",
           description: "Additional alcohol tax",
           roundingMethod: "half_up",
@@ -65,15 +63,11 @@ describe("TaxConfigRepository", () => {
 
       vi.mocked(prisma.taxConfig.findMany).mockResolvedValue(mockConfigs);
 
-      const result = await repository.getTaxConfigsByCompany(
-        "tenant-1",
-        "company-1"
-      );
+      const result = await repository.getTaxConfigsByTenant("tenant-1");
 
       expect(prisma.taxConfig.findMany).toHaveBeenCalledWith({
         where: {
           tenantId: "tenant-1",
-          companyId: "company-1",
           status: "active",
           deleted: false,
         },
@@ -88,10 +82,7 @@ describe("TaxConfigRepository", () => {
     it("should return empty array when no configs exist", async () => {
       vi.mocked(prisma.taxConfig.findMany).mockResolvedValue([]);
 
-      const result = await repository.getTaxConfigsByCompany(
-        "tenant-1",
-        "company-1"
-      );
+      const result = await repository.getTaxConfigsByTenant("tenant-1");
 
       expect(result).toHaveLength(0);
     });
@@ -102,7 +93,6 @@ describe("TaxConfigRepository", () => {
       const mockConfig = {
         id: "tax-1",
         tenantId: "tenant-1",
-        companyId: "company-1",
         name: "Standard Tax",
         description: "Standard sales tax",
         roundingMethod: "half_up",
@@ -144,7 +134,6 @@ describe("TaxConfigRepository", () => {
         {
           id: "tax-1",
           tenantId: "tenant-1",
-          companyId: "company-1",
           name: "Standard Tax",
           description: null,
           roundingMethod: "half_up",
@@ -156,7 +145,6 @@ describe("TaxConfigRepository", () => {
         {
           id: "tax-2",
           tenantId: "tenant-1",
-          companyId: "company-1",
           name: "Alcohol Tax",
           description: null,
           roundingMethod: "half_up",
@@ -456,7 +444,6 @@ describe("TaxConfigRepository", () => {
       const mockConfig = {
         id: "tax-new",
         tenantId: "tenant-1",
-        companyId: "company-1",
         name: "New Tax",
         description: "A new tax",
         roundingMethod: "half_up",
@@ -468,7 +455,7 @@ describe("TaxConfigRepository", () => {
 
       vi.mocked(prisma.taxConfig.create).mockResolvedValue(mockConfig);
 
-      const result = await repository.createTaxConfig("tenant-1", "company-1", {
+      const result = await repository.createTaxConfig("tenant-1", {
         name: "New Tax",
         description: "A new tax",
         roundingMethod: "half_up",
@@ -478,7 +465,6 @@ describe("TaxConfigRepository", () => {
         data: {
           id: expect.any(String),
           tenantId: "tenant-1",
-          companyId: "company-1",
           name: "New Tax",
           description: "A new tax",
           roundingMethod: "half_up",
@@ -491,7 +477,6 @@ describe("TaxConfigRepository", () => {
       const mockConfig = {
         id: "tax-new",
         tenantId: "tenant-1",
-        companyId: "company-1",
         name: "Simple Tax",
         description: null,
         roundingMethod: "half_up",
@@ -503,7 +488,7 @@ describe("TaxConfigRepository", () => {
 
       vi.mocked(prisma.taxConfig.create).mockResolvedValue(mockConfig);
 
-      await repository.createTaxConfig("tenant-1", "company-1", {
+      await repository.createTaxConfig("tenant-1", {
         name: "Simple Tax",
       });
 
@@ -511,7 +496,6 @@ describe("TaxConfigRepository", () => {
         data: {
           id: expect.any(String),
           tenantId: "tenant-1",
-          companyId: "company-1",
           name: "Simple Tax",
           description: undefined,
           roundingMethod: "half_up",

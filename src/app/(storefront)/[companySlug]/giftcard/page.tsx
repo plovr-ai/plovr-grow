@@ -22,8 +22,7 @@ export default async function GiftcardPage({
 
   // Check if loyalty is enabled
   const isLoyaltyEnabled = await loyaltyConfigService.isLoyaltyEnabled(
-    company.tenantId,
-    company.id
+    company.tenantId
   );
 
   // Get giftcard config (default if not configured)

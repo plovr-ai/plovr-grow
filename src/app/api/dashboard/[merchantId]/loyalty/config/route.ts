@@ -26,7 +26,7 @@ export async function GET(
 
     const tenantId = merchant.company.tenantId;
 
-    const config = await loyaltyConfigService.getLoyaltyConfig(tenantId, tenantId);
+    const config = await loyaltyConfigService.getLoyaltyConfig(tenantId);
 
     return NextResponse.json({
       success: true,
@@ -87,7 +87,6 @@ export async function PUT(
     const tenantId = merchant.company.tenantId;
 
     const config = await loyaltyConfigService.upsertLoyaltyConfig(
-      tenantId,
       tenantId,
       validation.data
     );

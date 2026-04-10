@@ -49,7 +49,6 @@ export async function POST(request: NextRequest) {
     // Check if member already exists
     const existingMember = await loyaltyMemberService.getMemberByPhone(
       tenantId,
-      tenantId,
       phone
     );
     const purpose = existingMember ? "login" : "register";
@@ -70,7 +69,6 @@ export async function POST(request: NextRequest) {
 
     // Enroll or get member
     const { member, isNew } = await loyaltyService.enrollCustomer(
-      tenantId,
       tenantId,
       phone,
       {

@@ -23,7 +23,6 @@ describe("OrdersManagementClient", () => {
     {
       id: "order1",
       tenantId: "tenant1",
-      companyId: "company1",
       merchantId: "merchant1",
       loyaltyMemberId: null,
       orderNumber: "ORD-001",

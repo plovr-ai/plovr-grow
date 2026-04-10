@@ -19,14 +19,14 @@ export default async function GiftcardPage({ searchParams }: GiftcardPageProps) 
   const session = await auth();
 
   // Verify session
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
-  // Get company for timezone
-  const company = await tenantService.getTenant(companyId);
+  // Get tenant for timezone
+  const company = await tenantService.getTenant(tenantId);
   const companyTimezone = company?.timezone ?? "America/New_York";
 
   // Calculate default date range (last 30 days)
@@ -45,11 +45,11 @@ export default async function GiftcardPage({ searchParams }: GiftcardPageProps) 
 
   // Fetch stats and gift cards in parallel
   const [stats, giftCardsData] = await Promise.all([
-    giftCardService.getCompanyGiftCardStats(tenantId, companyId, {
+    giftCardService.getTenantGiftCardStats(tenantId, {
       dateFrom,
       dateTo,
     }),
-    giftCardService.getCompanyGiftCards(tenantId, companyId, {
+    giftCardService.getTenantGiftCards(tenantId, {
       page: currentPage,
       pageSize: 20,
       search: searchQuery,

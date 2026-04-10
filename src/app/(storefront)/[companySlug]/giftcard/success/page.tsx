@@ -38,8 +38,7 @@ export default async function GiftcardSuccessPage({
 
   // Check if loyalty is enabled
   const isLoyaltyEnabled = await loyaltyConfigService.isLoyaltyEnabled(
-    company.tenantId,
-    company.id
+    company.tenantId
   );
 
   // Get currency/locale from first merchant or use defaults

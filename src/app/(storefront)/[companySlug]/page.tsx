@@ -29,8 +29,7 @@ export default async function CompanyHomePage({ params }: PageProps) {
 
   // Check if loyalty is enabled for this company
   const isLoyaltyEnabled = await loyaltyConfigService.isLoyaltyEnabled(
-    company.tenantId,
-    company.id
+    company.tenantId
   );
 
   // Determine the menu and catering links:

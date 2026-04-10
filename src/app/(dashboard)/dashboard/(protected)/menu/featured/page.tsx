@@ -7,16 +7,16 @@ import { FeaturedItemsClient } from "@/components/dashboard/menu/FeaturedItemsCl
 export default async function FeaturedItemsPage() {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   // Get featured items and all menu data in parallel
   const [featuredItems, menuData] = await Promise.all([
-    menuService.getFeaturedItems(tenantId, companyId),
-    menuService.getMenuForDashboard(tenantId, companyId),
+    menuService.getFeaturedItems(tenantId),
+    menuService.getMenuForDashboard(tenantId),
   ]);
 
   // Get all active items from all categories

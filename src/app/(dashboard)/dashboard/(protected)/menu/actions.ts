@@ -24,14 +24,14 @@ export async function createMenuAction(
 ): Promise<ActionResult<{ id: string }>> {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   try {
-    const menu = await menuService.createMenu(tenantId, companyId, input);
+    const menu = await menuService.createMenu(tenantId, input);
 
     revalidatePath("/dashboard/menu", "page");
 
@@ -82,15 +82,15 @@ export async function updateMenuAction(
 export async function deleteMenuAction(id: string): Promise<ActionResult> {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   try {
     // Check if this is the last menu
-    const menuCount = await menuService.countMenus(tenantId, companyId);
+    const menuCount = await menuService.countMenus(tenantId);
     if (menuCount <= 1) {
       return { success: false, error: "Cannot delete the last menu" };
     }
@@ -150,14 +150,14 @@ export async function createCategoryAction(
 ): Promise<ActionResult<{ id: string }>> {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   try {
-    const category = await menuService.createCategory(tenantId, companyId, {
+    const category = await menuService.createCategory(tenantId, {
       menuId: input.menuId,
       name: input.name,
       description: input.description,
@@ -280,14 +280,14 @@ export async function createMenuItemAction(
 ): Promise<ActionResult<{ id: string }>> {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   try {
-    const item = await menuService.createMenuItem(tenantId, companyId, {
+    const item = await menuService.createMenuItem(tenantId, {
       categoryIds: input.categoryIds,
       name: input.name,
       description: input.description,
@@ -464,14 +464,14 @@ export async function getAvailableItemsAction(
 ): Promise<ActionResult<import("@/services/menu/menu.types").AvailableItem[]>> {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   try {
-    const items = await menuService.getAvailableItems(tenantId, companyId, categoryId);
+    const items = await menuService.getAvailableItems(tenantId, categoryId);
     return { success: true, data: items };
   } catch (error) {
     console.error("Failed to get available items:", error);
@@ -491,14 +491,14 @@ export async function addFeaturedItemAction(
 ): Promise<ActionResult> {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   try {
-    await menuService.addFeaturedItem(tenantId, companyId, menuItemId);
+    await menuService.addFeaturedItem(tenantId, menuItemId);
 
     revalidatePath("/dashboard/menu/featured", "page");
 
@@ -520,14 +520,14 @@ export async function removeFeaturedItemAction(
 ): Promise<ActionResult> {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   try {
-    await menuService.removeFeaturedItem(tenantId, companyId, menuItemId);
+    await menuService.removeFeaturedItem(tenantId, menuItemId);
 
     revalidatePath("/dashboard/menu/featured", "page");
 
@@ -549,14 +549,14 @@ export async function reorderFeaturedItemsAction(
 ): Promise<ActionResult> {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   try {
-    await menuService.reorderFeaturedItems(tenantId, companyId, orderedMenuItemIds);
+    await menuService.reorderFeaturedItems(tenantId, orderedMenuItemIds);
 
     revalidatePath("/dashboard/menu/featured", "page");
 

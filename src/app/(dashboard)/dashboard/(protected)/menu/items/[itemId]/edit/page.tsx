@@ -12,19 +12,19 @@ interface PageProps {
 export default async function EditMenuItemPage({ params, searchParams }: PageProps) {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
   const { itemId } = await params;
   const { menuId } = await searchParams;
 
   // Get menu data and tax configs
   // Pass menuId to get the correct menu's categories
   const [menuData, taxConfigs] = await Promise.all([
-    menuService.getMenuForDashboard(tenantId, companyId, menuId),
-    taxConfigService.getTaxConfigs(tenantId, companyId),
+    menuService.getMenuForDashboard(tenantId, menuId),
+    taxConfigService.getTaxConfigs(tenantId),
   ]);
 
   // Find the item and its category

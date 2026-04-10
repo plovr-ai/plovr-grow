@@ -21,8 +21,7 @@ export default auth((req) => {
   // Only redirect if user has a complete profile (tenant + company),
   // otherwise let them stay on auth pages to avoid infinite redirect loop
   if (isPublicRoute && isLoggedIn) {
-    const hasCompleteProfile =
-      req.auth?.user?.tenantId && req.auth?.user?.companyId;
+    const hasCompleteProfile = !!req.auth?.user?.tenantId;
     if (hasCompleteProfile) {
       return NextResponse.redirect(new URL("/dashboard", nextUrl));
     }

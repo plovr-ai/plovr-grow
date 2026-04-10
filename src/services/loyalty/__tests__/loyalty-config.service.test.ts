@@ -5,7 +5,7 @@ import { LoyaltyConfigService } from "../loyalty-config.service";
 // Mock repository
 vi.mock("@/repositories/loyalty-config.repository", () => ({
   loyaltyConfigRepository: {
-    getByCompanyId: vi.fn(),
+    getByTenantId: vi.fn(),
     create: vi.fn(),
     upsert: vi.fn(),
     setStatus: vi.fn(),
@@ -20,7 +20,6 @@ describe("LoyaltyConfigService", () => {
   const mockConfig = {
     id: "config-1",
     tenantId: "tenant-1",
-    companyId: "company-1",
     pointsPerDollar: new Decimal(1.5),
     status: "active",
     deleted: false,
@@ -34,31 +33,29 @@ describe("LoyaltyConfigService", () => {
   });
 
   describe("getLoyaltyConfig", () => {
-    it("should return loyalty config for a company", async () => {
-      vi.mocked(loyaltyConfigRepository.getByCompanyId).mockResolvedValue(mockConfig);
+    it("should return loyalty config for a tenant", async () => {
+      vi.mocked(loyaltyConfigRepository.getByTenantId).mockResolvedValue(mockConfig);
 
-      const result = await service.getLoyaltyConfig("tenant-1", "company-1");
+      const result = await service.getLoyaltyConfig("tenant-1");
 
       expect(result).toEqual({
         id: "config-1",
         tenantId: "tenant-1",
-        companyId: "company-1",
         pointsPerDollar: 1.5,
         status: "active",
         createdAt: mockConfig.createdAt,
         updatedAt: mockConfig.updatedAt,
       });
 
-      expect(loyaltyConfigRepository.getByCompanyId).toHaveBeenCalledWith(
-        "tenant-1",
-        "company-1"
+      expect(loyaltyConfigRepository.getByTenantId).toHaveBeenCalledWith(
+        "tenant-1"
       );
     });
 
     it("should return null if config not found", async () => {
-      vi.mocked(loyaltyConfigRepository.getByCompanyId).mockResolvedValue(null);
+      vi.mocked(loyaltyConfigRepository.getByTenantId).mockResolvedValue(null);
 
-      const result = await service.getLoyaltyConfig("tenant-1", "company-1");
+      const result = await service.getLoyaltyConfig("tenant-1");
 
       expect(result).toBeNull();
     });
@@ -66,28 +63,28 @@ describe("LoyaltyConfigService", () => {
 
   describe("isLoyaltyEnabled", () => {
     it("should return true if loyalty is active", async () => {
-      vi.mocked(loyaltyConfigRepository.getByCompanyId).mockResolvedValue(mockConfig);
+      vi.mocked(loyaltyConfigRepository.getByTenantId).mockResolvedValue(mockConfig);
 
-      const result = await service.isLoyaltyEnabled("tenant-1", "company-1");
+      const result = await service.isLoyaltyEnabled("tenant-1");
 
       expect(result).toBe(true);
     });
 
     it("should return false if loyalty is inactive", async () => {
-      vi.mocked(loyaltyConfigRepository.getByCompanyId).mockResolvedValue({
+      vi.mocked(loyaltyConfigRepository.getByTenantId).mockResolvedValue({
         ...mockConfig,
         status: "inactive",
       });
 
-      const result = await service.isLoyaltyEnabled("tenant-1", "company-1");
+      const result = await service.isLoyaltyEnabled("tenant-1");
 
       expect(result).toBe(false);
     });
 
     it("should return false if config not found", async () => {
-      vi.mocked(loyaltyConfigRepository.getByCompanyId).mockResolvedValue(null);
+      vi.mocked(loyaltyConfigRepository.getByTenantId).mockResolvedValue(null);
 
-      const result = await service.isLoyaltyEnabled("tenant-1", "company-1");
+      const result = await service.isLoyaltyEnabled("tenant-1");
 
       expect(result).toBe(false);
     });
@@ -95,17 +92,17 @@ describe("LoyaltyConfigService", () => {
 
   describe("getPointsPerDollar", () => {
     it("should return configured points per dollar", async () => {
-      vi.mocked(loyaltyConfigRepository.getByCompanyId).mockResolvedValue(mockConfig);
+      vi.mocked(loyaltyConfigRepository.getByTenantId).mockResolvedValue(mockConfig);
 
-      const result = await service.getPointsPerDollar("tenant-1", "company-1");
+      const result = await service.getPointsPerDollar("tenant-1");
 
       expect(result).toBe(1.5);
     });
 
     it("should return default 1 if config not found", async () => {
-      vi.mocked(loyaltyConfigRepository.getByCompanyId).mockResolvedValue(null);
+      vi.mocked(loyaltyConfigRepository.getByTenantId).mockResolvedValue(null);
 
-      const result = await service.getPointsPerDollar("tenant-1", "company-1");
+      const result = await service.getPointsPerDollar("tenant-1");
 
       expect(result).toBe(1);
     });
@@ -118,7 +115,7 @@ describe("LoyaltyConfigService", () => {
         pointsPerDollar: new Decimal(2.0),
       });
 
-      const result = await service.upsertLoyaltyConfig("tenant-1", "company-1", {
+      const result = await service.upsertLoyaltyConfig("tenant-1", {
         pointsPerDollar: 2.0,
         status: "active",
       });
@@ -126,7 +123,6 @@ describe("LoyaltyConfigService", () => {
       expect(result.pointsPerDollar).toBe(2.0);
       expect(loyaltyConfigRepository.upsert).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         {
           pointsPerDollar: 2.0,
           status: "active",
@@ -137,25 +133,23 @@ describe("LoyaltyConfigService", () => {
 
   describe("enableLoyalty", () => {
     it("should enable loyalty if config exists", async () => {
-      vi.mocked(loyaltyConfigRepository.getByCompanyId).mockResolvedValue(mockConfig);
+      vi.mocked(loyaltyConfigRepository.getByTenantId).mockResolvedValue(mockConfig);
 
-      await service.enableLoyalty("tenant-1", "company-1");
+      await service.enableLoyalty("tenant-1");
 
       expect(loyaltyConfigRepository.setStatus).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "active"
       );
     });
 
     it("should create new config if not exists", async () => {
-      vi.mocked(loyaltyConfigRepository.getByCompanyId).mockResolvedValue(null);
+      vi.mocked(loyaltyConfigRepository.getByTenantId).mockResolvedValue(null);
 
-      await service.enableLoyalty("tenant-1", "company-1");
+      await service.enableLoyalty("tenant-1");
 
       expect(loyaltyConfigRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         { status: "active" }
       );
     });
@@ -163,11 +157,10 @@ describe("LoyaltyConfigService", () => {
 
   describe("disableLoyalty", () => {
     it("should disable loyalty", async () => {
-      await service.disableLoyalty("tenant-1", "company-1");
+      await service.disableLoyalty("tenant-1");
 
       expect(loyaltyConfigRepository.setStatus).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "inactive"
       );
     });
@@ -175,33 +168,31 @@ describe("LoyaltyConfigService", () => {
 
   describe("setLoyaltyStatus", () => {
     it("should update status if config exists", async () => {
-      vi.mocked(loyaltyConfigRepository.getByCompanyId).mockResolvedValue(mockConfig);
+      vi.mocked(loyaltyConfigRepository.getByTenantId).mockResolvedValue(mockConfig);
 
-      await service.setLoyaltyStatus("tenant-1", "company-1", "inactive");
+      await service.setLoyaltyStatus("tenant-1", "inactive");
 
       expect(loyaltyConfigRepository.setStatus).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "inactive"
       );
     });
 
     it("should create config if not exists and status is active", async () => {
-      vi.mocked(loyaltyConfigRepository.getByCompanyId).mockResolvedValue(null);
+      vi.mocked(loyaltyConfigRepository.getByTenantId).mockResolvedValue(null);
 
-      await service.setLoyaltyStatus("tenant-1", "company-1", "active");
+      await service.setLoyaltyStatus("tenant-1", "active");
 
       expect(loyaltyConfigRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         { status: "active" }
       );
     });
 
     it("should do nothing if config not exists and status is inactive", async () => {
-      vi.mocked(loyaltyConfigRepository.getByCompanyId).mockResolvedValue(null);
+      vi.mocked(loyaltyConfigRepository.getByTenantId).mockResolvedValue(null);
 
-      await service.setLoyaltyStatus("tenant-1", "company-1", "inactive");
+      await service.setLoyaltyStatus("tenant-1", "inactive");
 
       expect(loyaltyConfigRepository.create).not.toHaveBeenCalled();
       expect(loyaltyConfigRepository.setStatus).not.toHaveBeenCalled();

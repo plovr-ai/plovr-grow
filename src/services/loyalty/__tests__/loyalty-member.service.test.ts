@@ -11,7 +11,7 @@ vi.mock("@/repositories/loyalty-member.repository", () => ({
     update: vi.fn(),
     updateOrderStats: vi.fn(),
     getByCompany: vi.fn(),
-    countByCompany: vi.fn(),
+    countByTenant: vi.fn(),
   },
 }));
 
@@ -23,7 +23,6 @@ describe("LoyaltyMemberService", () => {
   const mockMember = {
     id: "member-1",
     tenantId: "tenant-1",
-    companyId: "company-1",
     phone: "+12025551234",
     firstName: "John",
     lastName: "Doe",
@@ -78,7 +77,6 @@ describe("LoyaltyMemberService", () => {
 
       const result = await service.getMemberByPhone(
         "tenant-1",
-        "company-1",
         "+12025551234"
       );
 
@@ -88,7 +86,6 @@ describe("LoyaltyMemberService", () => {
       });
       expect(loyaltyMemberRepository.getByPhone).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "+12025551234"
       );
     });
@@ -98,7 +95,6 @@ describe("LoyaltyMemberService", () => {
 
       const result = await service.getMemberByPhone(
         "tenant-1",
-        "company-1",
         "+12025559999"
       );
 
@@ -115,7 +111,6 @@ describe("LoyaltyMemberService", () => {
 
       const result = await service.findOrCreateByPhone(
         "tenant-1",
-        "company-1",
         "+12025551234"
       );
 
@@ -131,7 +126,6 @@ describe("LoyaltyMemberService", () => {
 
       const result = await service.findOrCreateByPhone(
         "tenant-1",
-        "company-1",
         "+12025559999",
         { phone: "+12025559999", firstName: "Jane", lastName: "Doe", email: "jane@example.com" }
       );
@@ -139,7 +133,6 @@ describe("LoyaltyMemberService", () => {
       expect(result.isNew).toBe(true);
       expect(loyaltyMemberRepository.findOrCreate).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "+12025559999",
         { firstName: "Jane", lastName: "Doe", email: "jane@example.com" }
       );
@@ -188,7 +181,6 @@ describe("LoyaltyMemberService", () => {
 
       const result = await service.getLoyaltyStatusByPhone(
         "tenant-1",
-        "company-1",
         "+12025551234"
       );
 
@@ -204,7 +196,6 @@ describe("LoyaltyMemberService", () => {
 
       const result = await service.getLoyaltyStatusByPhone(
         "tenant-1",
-        "company-1",
         "+12025559999"
       );
 
@@ -248,7 +239,7 @@ describe("LoyaltyMemberService", () => {
     });
   });
 
-  describe("getMembersByCompany", () => {
+  describe("getMembersByTenant", () => {
     it("should return paginated members", async () => {
       const mockResult = {
         items: [mockMember],
@@ -259,7 +250,7 @@ describe("LoyaltyMemberService", () => {
       };
       vi.mocked(loyaltyMemberRepository.getByCompany).mockResolvedValue(mockResult);
 
-      const result = await service.getMembersByCompany("tenant-1", "company-1", {
+      const result = await service.getMembersByTenant("tenant-1", {
         page: 1,
         pageSize: 20,
         search: "john",
@@ -269,7 +260,6 @@ describe("LoyaltyMemberService", () => {
       expect(result.total).toBe(1);
       expect(loyaltyMemberRepository.getByCompany).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         { page: 1, pageSize: 20, search: "john" }
       );
     });
@@ -277,14 +267,13 @@ describe("LoyaltyMemberService", () => {
 
   describe("getMemberCount", () => {
     it("should return member count", async () => {
-      vi.mocked(loyaltyMemberRepository.countByCompany).mockResolvedValue(100);
+      vi.mocked(loyaltyMemberRepository.countByTenant).mockResolvedValue(100);
 
-      const result = await service.getMemberCount("tenant-1", "company-1");
+      const result = await service.getMemberCount("tenant-1");
 
       expect(result).toBe(100);
-      expect(loyaltyMemberRepository.countByCompany).toHaveBeenCalledWith(
-        "tenant-1",
-        "company-1"
+      expect(loyaltyMemberRepository.countByTenant).toHaveBeenCalledWith(
+        "tenant-1"
       );
     });
   });

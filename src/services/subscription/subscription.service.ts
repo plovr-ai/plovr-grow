@@ -632,11 +632,7 @@ export class SubscriptionService {
       where: { id: tenantId },
       select: {
         name: true,
-        company: {
-          select: {
-            supportEmail: true,
-          },
-        },
+        supportEmail: true,
       },
     });
 
@@ -644,7 +640,7 @@ export class SubscriptionService {
 
     return {
       name: tenant.name,
-      email: tenant.company?.supportEmail ?? null,
+      email: tenant.supportEmail ?? null,
     };
   }
 

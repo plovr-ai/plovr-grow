@@ -110,8 +110,7 @@ export class TenantService {
       );
     }
 
-    // Pass tenantId as companyId too — will be simplified in Task 4
-    return merchantRepository.create(tenantId, tenantId, {
+    return merchantRepository.create(tenantId, {
       slug: input.slug,
       name: input.name,
       description: input.description,
@@ -134,18 +133,16 @@ export class TenantService {
 
   /**
    * Get all merchants for a tenant.
-   * NOTE: Uses getByCompanyId which will be renamed in Task 4.
    */
   async getMerchants(tenantId: string) {
-    return merchantRepository.getByCompanyId(tenantId);
+    return merchantRepository.getByTenantId(tenantId);
   }
 
   /**
    * Get active merchants for a tenant.
-   * NOTE: Uses getActiveByCompanyId which will be renamed in Task 4.
    */
   async getActiveMerchants(tenantId: string) {
-    return merchantRepository.getActiveByCompanyId(tenantId);
+    return merchantRepository.getActiveByTenantId(tenantId);
   }
 
   // ==================== Onboarding Methods ====================

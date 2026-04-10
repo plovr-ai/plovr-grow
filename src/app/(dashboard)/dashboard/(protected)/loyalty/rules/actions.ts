@@ -12,14 +12,14 @@ interface UpdateLoyaltyConfigInput {
 export async function updateLoyaltyConfigAction(input: UpdateLoyaltyConfigInput) {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   try {
-    await loyaltyConfigService.upsertLoyaltyConfig(tenantId, companyId, {
+    await loyaltyConfigService.upsertLoyaltyConfig(tenantId, {
       status: input.status,
       pointsPerDollar: input.pointsPerDollar,
     });

@@ -1,7 +1,7 @@
 // Website Template Types
 
 import type { TipConfig, FeeConfig } from "./index";
-import type { SocialLink } from "./company";
+import type { SocialLink } from "./tenant";
 import type { BusinessHoursMap } from "./merchant";
 
 // Re-export for convenience

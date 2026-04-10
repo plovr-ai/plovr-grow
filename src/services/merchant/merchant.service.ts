@@ -115,8 +115,7 @@ export class MerchantService {
     // Fetch featured items from the dedicated featured_items table
     let featuredItems: WebsiteMerchantData["featuredItems"] = [];
     const featuredItemsData = await menuService.getFeaturedItems(
-      company.tenantId,
-      company.id
+      company.tenantId
     );
 
     if (featuredItemsData.length > 0) {

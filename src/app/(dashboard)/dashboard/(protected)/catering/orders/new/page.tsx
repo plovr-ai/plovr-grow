@@ -20,17 +20,14 @@ export default async function NewCateringOrderPage({
   const session = await auth();
 
   // Verify session
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   // Fetch merchants
-  const merchants = await merchantService.getMerchantsByCompanyId(
-    tenantId,
-    companyId
-  );
+  const merchants = await merchantService.getMerchantsByCompanyId(tenantId);
 
   // Get selected merchant (or first one)
   const selectedMerchantId = search.merchantId || merchants[0]?.id;
@@ -41,7 +38,7 @@ export default async function NewCateringOrderPage({
   }
 
   // Fetch all menus for the company
-  const allMenus = await menuService.getMenus(tenantId, companyId);
+  const allMenus = await menuService.getMenus(tenantId);
   const activeMenus = allMenus.filter((m) => m.status === "active");
 
   // Fetch menu items for all menus

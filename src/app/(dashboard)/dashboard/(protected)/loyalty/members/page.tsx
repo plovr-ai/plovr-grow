@@ -17,20 +17,19 @@ export default async function LoyaltyMembersPage({
   const session = await auth();
 
   // Verify session
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   // Parse filter parameters
   const currentPage = parseInt(search.page ?? "1", 10);
   const searchQuery = search.search;
 
   // Fetch members with pagination
-  const membersData = await loyaltyMemberService.getMembersByCompany(
+  const membersData = await loyaltyMemberService.getMembersByTenant(
     tenantId,
-    companyId,
     {
       page: currentPage,
       pageSize: 20,

@@ -206,7 +206,6 @@ export async function POST(
     const order = await orderService.createMerchantOrderAtomic(
       tenantId,
       {
-        companyId: tenantId,
         merchantId: merchant.id,
         loyaltyMemberId: body.loyaltyMemberId,
         customerFirstName: formValidation.data.customerFirstName,
@@ -240,16 +239,10 @@ export async function POST(
     // Gift card payment portion earns DOUBLE points (2x)
     if (body.loyaltyMemberId) {
       try {
-        const isEnabled = await loyaltyConfigService.isLoyaltyEnabled(
-          tenantId,
-          tenantId
-        );
+        const isEnabled = await loyaltyConfigService.isLoyaltyEnabled(tenantId);
 
         if (isEnabled) {
-          const pointsPerDollar = await loyaltyConfigService.getPointsPerDollar(
-            tenantId,
-            tenantId
-          );
+          const pointsPerDollar = await loyaltyConfigService.getPointsPerDollar(tenantId);
 
           const giftCardPortion = Number(order.giftCardPayment) || 0;
           const cashPortion = Number(order.cashPayment) || 0;

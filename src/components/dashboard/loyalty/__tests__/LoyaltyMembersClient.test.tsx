@@ -22,7 +22,6 @@ function Wrapper({ children }: { children: ReactNode }) {
     <DashboardProvider
       value={{
         tenantId: "tenant-1",
-        companyId: "company-1",
         company: {
           id: "company-1",
           name: "Test Company",
@@ -55,7 +54,6 @@ describe("LoyaltyMembersClient", () => {
     {
       id: "member-1",
       tenantId: "tenant-1",
-      companyId: "company-1",
       phone: "2125551234",
       email: "john@example.com",
       firstName: "John",
@@ -71,7 +69,6 @@ describe("LoyaltyMembersClient", () => {
     {
       id: "member-2",
       tenantId: "tenant-1",
-      companyId: "company-1",
       phone: "3105559876",
       email: null,
       firstName: null,
@@ -87,7 +84,6 @@ describe("LoyaltyMembersClient", () => {
     {
       id: "member-3",
       tenantId: "tenant-1",
-      companyId: "company-1",
       phone: "4155554567",
       email: "bob@example.com",
       firstName: "Bob",

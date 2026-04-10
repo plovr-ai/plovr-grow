@@ -22,11 +22,11 @@ export default async function CateringOrdersPage({
   const session = await auth();
 
   // Verify session
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   // Parse filter parameters
   const currentPage = parseInt(search.page ?? "1", 10);
@@ -35,10 +35,7 @@ export default async function CateringOrdersPage({
   const merchantIdFilter = search.merchantId;
 
   // Fetch merchants for filter dropdown
-  const merchants = await merchantService.getMerchantsByCompanyId(
-    tenantId,
-    companyId
-  );
+  const merchants = await merchantService.getMerchantsByCompanyId(tenantId);
 
   // Default merchant ID for API calls (always select first merchant if not specified)
   const defaultMerchantId = merchants[0]?.id;
@@ -47,7 +44,6 @@ export default async function CateringOrdersPage({
   // Fetch orders with pagination (always filter by merchant for catering)
   const ordersData = await cateringOrderService.getCompanyOrders(
     tenantId,
-    companyId,
     {
       page: currentPage,
       pageSize: 20,

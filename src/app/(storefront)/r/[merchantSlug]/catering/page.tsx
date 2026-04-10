@@ -27,8 +27,7 @@ export default async function CateringPage({ params }: CateringPageProps) {
 
   // Check if loyalty is enabled for this company
   const isLoyaltyEnabled = await loyaltyConfigService.isLoyaltyEnabled(
-    merchant.company.tenantId,
-    merchant.company.id
+    merchant.company.tenantId
   );
 
   // Build navigation links (merchant-level)

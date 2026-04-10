@@ -296,7 +296,7 @@ describe("SquareService", () => {
       });
 
       await expect(
-        service.syncCatalog("t1", "m1", "c1")
+        service.syncCatalog("t1", "m1")
       ).rejects.toMatchObject({ code: "SQUARE_SYNC_ALREADY_RUNNING" });
     });
 
@@ -306,7 +306,7 @@ describe("SquareService", () => {
       );
 
       await expect(
-        service.syncCatalog("t1", "m1", "c1")
+        service.syncCatalog("t1", "m1")
       ).rejects.toMatchObject({ code: "INTEGRATION_NOT_CONNECTED" });
     });
 
@@ -329,7 +329,7 @@ describe("SquareService", () => {
         updatedAt: new Date(),
       });
 
-      const result = await service.syncCatalog("t1", "m1", "c1");
+      const result = await service.syncCatalog("t1", "m1");
 
       expect(result.objectsSynced).toBe(0);
       expect(result.objectsMapped).toBe(0);

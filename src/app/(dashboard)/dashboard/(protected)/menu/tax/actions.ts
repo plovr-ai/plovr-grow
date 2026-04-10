@@ -22,14 +22,14 @@ interface UpdateTaxConfigInput {
 export async function createTaxConfigAction(input: CreateTaxConfigInput) {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   try {
-    const taxConfig = await taxConfigService.createTaxConfig(tenantId, companyId, {
+    const taxConfig = await taxConfigService.createTaxConfig(tenantId, {
       name: input.name,
       description: input.description,
       roundingMethod: input.roundingMethod,
@@ -51,14 +51,14 @@ export async function createTaxConfigAction(input: CreateTaxConfigInput) {
 export async function updateTaxConfigAction(id: string, input: UpdateTaxConfigInput) {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { tenantId, companyId } = session.user;
+  const { tenantId } = session.user;
 
   try {
-    await taxConfigService.updateTaxConfig(tenantId, companyId, id, {
+    await taxConfigService.updateTaxConfig(tenantId, id, {
       name: input.name,
       description: input.description,
       roundingMethod: input.roundingMethod,

@@ -127,7 +127,7 @@ export class SquareWebhookService {
   }): Promise<void> {
     const merchant = await prisma.merchant.findFirst({
       where: { id: connection.merchantId },
-      select: { companyId: true },
+      select: { tenantId: true },
     });
     if (!merchant) {
       console.error(
@@ -141,8 +141,7 @@ export class SquareWebhookService {
     try {
       await squareService.syncCatalog(
         connection.tenantId,
-        connection.merchantId,
-        merchant.companyId
+        connection.merchantId
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "";

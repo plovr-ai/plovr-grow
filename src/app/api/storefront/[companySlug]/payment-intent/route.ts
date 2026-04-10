@@ -45,7 +45,6 @@ export async function POST(
     // Create PaymentIntent at company level (no merchantId)
     const result = await paymentService.createPaymentIntent({
       tenantId: company.tenantId,
-      companyId: company.tenantId,
       merchantId: undefined,
       amount,
       currency,

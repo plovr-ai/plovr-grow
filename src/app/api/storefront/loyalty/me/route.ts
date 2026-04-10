@@ -56,10 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get loyalty config for pointsPerDollar
-    const pointsPerDollar = await loyaltyConfigService.getPointsPerDollar(
-      tenantId,
-      tenantId
-    );
+    const pointsPerDollar = await loyaltyConfigService.getPointsPerDollar(tenantId);
 
     return NextResponse.json({
       success: true,

@@ -34,8 +34,7 @@ export async function POST(request: NextRequest) {
     const { merchantId } = validation.data;
     const result = await squareService.syncCatalog(
       session.user.tenantId,
-      merchantId,
-      session.user.tenantId
+      merchantId
     );
 
     return NextResponse.json({
