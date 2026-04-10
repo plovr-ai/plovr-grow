@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
 
     // Verify member exists and belongs to this tenant
     const member = await loyaltyMemberService.getMember(tenantId, memberId);

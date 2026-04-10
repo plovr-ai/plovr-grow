@@ -51,7 +51,7 @@ describe("POST /api/auth/claim", () => {
 
   it("returns 400 with CLAIM_TENANT_NOT_TRIAL when tenant is not in trial status", async () => {
     vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
-      id: "tenant1", subscriptionStatus: "active", company: { id: "company1" },
+      id: "tenant1", subscriptionStatus: "active",
     } as never);
     const res = await POST(makeRequest({
       tenantId: "tenant1", email: "owner@test.com", name: "Owner",
@@ -79,7 +79,7 @@ describe("POST /api/auth/claim", () => {
 
   it("returns 409 with AUTH_EMAIL_EXISTS when email already exists for this tenant", async () => {
     vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
-      id: "tenant1", subscriptionStatus: "trial", company: { id: "company1" },
+      id: "tenant1", subscriptionStatus: "trial",
     } as never);
     vi.mocked(prisma.user.findFirst).mockResolvedValue({ id: "existing-user" } as never);
     const res = await POST(makeRequest({

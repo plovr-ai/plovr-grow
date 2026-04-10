@@ -52,7 +52,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
 
     const order = await cateringOrderService.getOrder(tenantId, orderId);
     if (!order) {
@@ -103,7 +103,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
     const input = validation.data;
 
     // If only status is being updated, use updateOrderStatus
@@ -163,7 +163,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
 
     await cateringOrderService.deleteOrder(tenantId, orderId);
 

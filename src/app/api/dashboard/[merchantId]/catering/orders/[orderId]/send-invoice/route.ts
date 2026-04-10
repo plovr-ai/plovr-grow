@@ -39,7 +39,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
 
     // Check if invoice already exists
     const existingInvoice = await invoiceService.getInvoiceByCateringOrderId(

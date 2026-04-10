@@ -21,12 +21,12 @@ import {
   LOCALE_OPTIONS,
   TIMEZONE_OPTIONS,
 } from "@/constants/i18n";
-import type { MerchantWithCompany } from "@/services/merchant/merchant.types";
+import type { MerchantWithTenant } from "@/services/merchant/merchant.types";
 import type { BusinessHoursMap, MerchantStatus } from "@/types/merchant";
 import type { TipConfig, FeeConfig } from "@/types";
 
 interface LocationConfigFormProps {
-  merchant: MerchantWithCompany;
+  merchant: MerchantWithTenant;
 }
 
 const STATUS_OPTIONS = [

@@ -15,7 +15,7 @@ vi.mock("@/repositories/order.repository", () => ({
   orderRepository: {
     create: vi.fn(),
     getByIdWithMerchant: vi.fn(),
-    getCompanyOrders: vi.fn(),
+    getTenantOrders: vi.fn(),
     getOrdersByLoyaltyMember: vi.fn(),
     updateLoyaltyMemberId: vi.fn(),
   },
@@ -936,7 +936,7 @@ describe("OrderService", () => {
     });
   });
 
-  describe("getCompanyOrders()", () => {
+  describe("getTenantOrders()", () => {
     it("should call repository with correct parameters", async () => {
       const mockResult = {
         items: [],
@@ -945,7 +945,7 @@ describe("OrderService", () => {
         pageSize: 20,
         totalPages: 0,
       };
-      vi.mocked(orderRepository.getCompanyOrders).mockResolvedValue(mockResult);
+      vi.mocked(orderRepository.getTenantOrders).mockResolvedValue(mockResult);
 
       const options = {
         status: "created" as OrderStatus,
@@ -954,9 +954,9 @@ describe("OrderService", () => {
         pageSize: 10,
       };
 
-      await orderService.getCompanyOrders("tenant-1", options);
+      await orderService.getTenantOrders("tenant-1", options);
 
-      expect(orderRepository.getCompanyOrders).toHaveBeenCalledWith(
+      expect(orderRepository.getTenantOrders).toHaveBeenCalledWith(
         "tenant-1",
         options
       );
@@ -988,9 +988,9 @@ describe("OrderService", () => {
         pageSize: 20,
         totalPages: 1,
       };
-      vi.mocked(orderRepository.getCompanyOrders).mockResolvedValue(mockResult as never);
+      vi.mocked(orderRepository.getTenantOrders).mockResolvedValue(mockResult as never);
 
-      const result = await orderService.getCompanyOrders("tenant-1");
+      const result = await orderService.getTenantOrders("tenant-1");
 
       expect(result.items).toHaveLength(2);
       expect(result.total).toBe(2);

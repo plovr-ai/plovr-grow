@@ -20,7 +20,7 @@ vi.mock("@/services/loyalty", () => ({
 
 vi.mock("@/services/merchant", () => ({
   merchantService: {
-    getCompanyBySlug: vi.fn(),
+    getTenantBySlug: vi.fn(),
   },
 }));
 
@@ -31,7 +31,7 @@ vi.mock("@/lib/loyalty-session", () => ({
 import { otpService } from "@/services/otp";
 import { loyaltyService, loyaltyMemberService } from "@/services/loyalty";
 import { merchantService } from "@/services/merchant";
-import type { CompanyWithMerchants } from "@/services/merchant/merchant.types";
+import type { TenantWithMerchants } from "@/services/merchant/merchant.types";
 
 describe("POST /api/storefront/loyalty/otp/verify", () => {
   beforeEach(() => {
@@ -40,12 +40,12 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
 
   it("should accept and process email parameter", async () => {
     // Mock company lookup
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue({
       id: "tenant-1",
       tenantId: "tenant-1",
       slug: "test-company",
       name: "Test Company",
-    } as unknown as CompanyWithMerchants);
+    } as unknown as TenantWithMerchants);
 
     // Mock existing member check
     vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue(null);
@@ -112,12 +112,12 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
   });
 
   it("should handle empty email string", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue({
       id: "tenant-1",
       tenantId: "tenant-1",
       slug: "test-company",
       name: "Test Company",
-    } as unknown as CompanyWithMerchants);
+    } as unknown as TenantWithMerchants);
 
     vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue(null);
 
@@ -228,12 +228,12 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
   });
 
   it("should work without email parameter (backward compatibility)", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue({
       id: "tenant-1",
       tenantId: "tenant-1",
       slug: "test-company",
       name: "Test Company",
-    } as unknown as CompanyWithMerchants);
+    } as unknown as TenantWithMerchants);
 
     vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue(null);
 
@@ -396,7 +396,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
   });
 
   it("should return error when company not found", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(null);
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(null);
 
     const request = new NextRequest(
       "http://localhost:3000/api/storefront/loyalty/otp/verify",
@@ -422,12 +422,12 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
   });
 
   it("should return error when OTP verification fails", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue({
       id: "tenant-1",
       tenantId: "tenant-1",
       slug: "test-company",
       name: "Test Company",
-    } as unknown as CompanyWithMerchants);
+    } as unknown as TenantWithMerchants);
 
     vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue(null);
 

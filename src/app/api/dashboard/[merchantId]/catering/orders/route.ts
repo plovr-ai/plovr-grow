@@ -60,9 +60,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
 
-    const result = await cateringOrderService.getCompanyOrders(
+    const result = await cateringOrderService.getTenantOrders(
       tenantId,
       {
         page,
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
     const input = validation.data;
 
     const order = await cateringOrderService.createOrder(tenantId, merchantId, {

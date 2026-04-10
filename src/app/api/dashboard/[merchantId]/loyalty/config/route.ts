@@ -24,7 +24,7 @@ export async function GET(
       );
     }
 
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
 
     const config = await loyaltyConfigService.getLoyaltyConfig(tenantId);
 
@@ -84,7 +84,7 @@ export async function PUT(
       );
     }
 
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
 
     const config = await loyaltyConfigService.upsertLoyaltyConfig(
       tenantId,

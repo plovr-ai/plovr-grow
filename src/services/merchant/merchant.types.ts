@@ -11,9 +11,9 @@ import type {
 // ==================== Response Types ====================
 
 /**
- * Merchant with Company info - 用于需要 Company 上下文的场景
+ * Merchant with Tenant info - 用于需要 Tenant 上下文的场景
  */
-export interface MerchantWithCompany {
+export interface MerchantWithTenant {
   id: string;
   slug: string;
   name: string;
@@ -35,25 +35,21 @@ export interface MerchantWithCompany {
 
   status: MerchantStatus;
   settings?: MerchantSettings;
-  company: {
+  tenant: {
     id: string;
     slug: string | null;
     tenantId: string;
     name: string;
     logoUrl?: string;
     settings?: TenantSettings;
-    tenant: {
-      id: string;
-      name: string;
-      subscriptionStatus: string;
-    };
+    subscriptionStatus: string;
   };
 }
 
 /**
- * Company with Merchants - 用于品牌页面展示门店列表
+ * Tenant with Merchants - 用于品牌页面展示门店列表
  */
-export interface CompanyWithMerchants {
+export interface TenantWithMerchants {
   id: string;
   slug: string | null;
   tenantId: string;
@@ -61,16 +57,12 @@ export interface CompanyWithMerchants {
   description?: string;
   logoUrl?: string;
   settings?: TenantSettings;
-  tenant: {
-    id: string;
-    name: string;
-    subscriptionStatus: string;
-  };
-  merchants: MerchantWithCompany[];
+  subscriptionStatus: string;
+  merchants: MerchantWithTenant[];
 }
 
 /**
- * Merchant 基础信息 - 不含 Company 关联
+ * Merchant 基础信息 - 不含 Tenant 关联
  */
 export interface MerchantBasic {
   id: string;

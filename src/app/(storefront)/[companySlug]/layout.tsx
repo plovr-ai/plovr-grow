@@ -13,7 +13,7 @@ export async function generateMetadata({
   params,
 }: LayoutProps): Promise<Metadata> {
   const { companySlug } = await params;
-  const company = await merchantService.getCompanyBySlug(companySlug);
+  const company = await merchantService.getTenantBySlug(companySlug);
 
   if (!company) {
     return {
@@ -33,13 +33,13 @@ export async function generateMetadata({
 
 export default async function CompanyLayout({ children, params }: LayoutProps) {
   const { companySlug } = await params;
-  const company = await merchantService.getCompanyBySlug(companySlug);
+  const company = await merchantService.getTenantBySlug(companySlug);
 
   if (!company) {
     notFound();
   }
 
-  const isTrial = company.tenant.subscriptionStatus === "trial";
+  const isTrial = company.subscriptionStatus === "trial";
 
   // Use company info for brand-level pages
   const defaultTipConfig = {

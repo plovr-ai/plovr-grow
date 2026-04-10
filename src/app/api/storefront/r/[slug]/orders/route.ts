@@ -57,7 +57,7 @@ export async function POST(
     }
 
     // Get tenantId from merchant -> company -> tenant chain
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
 
     // Parse request body
     const body: OrderRequestBody = await request.json();

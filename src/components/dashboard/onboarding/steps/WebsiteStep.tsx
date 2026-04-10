@@ -13,7 +13,7 @@ interface WebsiteStepProps {
 
 export function WebsiteStep({ status }: WebsiteStepProps) {
   const t = useTranslations("onboarding.steps.website");
-  const { company } = useDashboard();
+  const { tenant } = useDashboard();
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [progress, setProgress] = useState<string | null>(null);
@@ -23,9 +23,9 @@ export function WebsiteStep({ status }: WebsiteStepProps) {
     return (
       <div className="space-y-3">
         <p className="text-sm text-green-700">{t("completedDescription")}</p>
-        {company.slug && (
+        {tenant.slug && (
           <a
-            href={`/${company.slug}`}
+            href={`/${tenant.slug}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"

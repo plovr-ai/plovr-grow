@@ -11,7 +11,7 @@ vi.mock("@/services/payment", () => ({
 
 vi.mock("@/services/merchant", () => ({
   merchantService: {
-    getCompanyBySlug: vi.fn(),
+    getTenantBySlug: vi.fn(),
   },
 }));
 
@@ -37,7 +37,7 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
   });
 
   it("should create PaymentIntent successfully", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
       mockCompany as never
     );
     vi.mocked(paymentService.createPaymentIntent).mockResolvedValue(
@@ -68,7 +68,7 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
   });
 
   it("should create PaymentIntent with merchantId undefined (company-level)", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
       mockCompany as never
     );
     vi.mocked(paymentService.createPaymentIntent).mockResolvedValue(
@@ -99,7 +99,7 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
   });
 
   it("should return 404 when company not found", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(null);
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(null);
 
     const request = new NextRequest(
       "http://localhost:3000/api/storefront/non-existent/payment-intent",
@@ -123,7 +123,7 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
   });
 
   it("should return 400 for invalid amount (negative)", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
       mockCompany as never
     );
 
@@ -149,7 +149,7 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
   });
 
   it("should return 400 for zero amount", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
       mockCompany as never
     );
 
@@ -175,7 +175,7 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
   });
 
   it("should return 400 for missing amount", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
       mockCompany as never
     );
 
@@ -200,7 +200,7 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
   });
 
   it("should use default currency when not provided", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
       mockCompany as never
     );
     vi.mocked(paymentService.createPaymentIntent).mockResolvedValue(
@@ -233,7 +233,7 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
   });
 
   it("should return 500 when paymentService throws error", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
       mockCompany as never
     );
     vi.mocked(paymentService.createPaymentIntent).mockRejectedValue(
@@ -262,7 +262,7 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
   });
 
   it("should handle non-Error exceptions", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
       mockCompany as never
     );
     vi.mocked(paymentService.createPaymentIntent).mockRejectedValue(

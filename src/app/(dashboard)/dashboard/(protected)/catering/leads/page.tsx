@@ -33,7 +33,7 @@ export default async function CateringLeadsPage({
   const merchantIdFilter = search.merchantId;
 
   // Fetch merchants for filter dropdown
-  const merchants = await merchantService.getMerchantsByCompanyId(tenantId);
+  const merchants = await merchantService.getMerchantsByTenantId(tenantId);
 
   // Fetch leads with pagination
   const leadsData = await cateringService.getLeadsByCompany(

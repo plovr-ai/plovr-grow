@@ -27,7 +27,7 @@ export default async function CateringPage({ params }: CateringPageProps) {
 
   // Check if loyalty is enabled for this company
   const isLoyaltyEnabled = await loyaltyConfigService.isLoyaltyEnabled(
-    merchant.company.tenantId
+    merchant.tenant.tenantId
   );
 
   // Build navigation links (merchant-level)
@@ -38,8 +38,8 @@ export default async function CateringPage({ params }: CateringPageProps) {
     <main className="min-h-screen">
       <Navigation
         logo={websiteData.logo}
-        restaurantName={merchant.company.name}
-        companySlug={merchant.company.slug ?? undefined}
+        restaurantName={merchant.tenant.name}
+        companySlug={merchant.tenant.slug ?? undefined}
         menuLink={menuLink}
         cateringLink={cateringLink}
         isLoyaltyEnabled={isLoyaltyEnabled}
@@ -66,7 +66,7 @@ export default async function CateringPage({ params }: CateringPageProps) {
 
       <Footer
         merchant={websiteData}
-        companySlug={merchant.company.slug ?? undefined}
+        companySlug={merchant.tenant.slug ?? undefined}
         menuLink={menuLink}
       />
     </main>

@@ -29,7 +29,7 @@ describe("POST /api/dashboard/[merchantId]/loyalty/members/[memberId]/adjust-poi
   const mockMerchant = {
     id: "merchant-1",
     name: "Test Merchant",
-    company: {
+    tenant: {
       id: "tenant-1",
       tenantId: "tenant-1",
     },

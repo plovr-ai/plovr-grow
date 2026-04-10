@@ -26,5 +26,5 @@ export {
 } from "./DashboardContext";
 export type {
   DashboardContextValue,
-  CompanyInfo,
+  TenantBrandInfo,
 } from "./DashboardContext";

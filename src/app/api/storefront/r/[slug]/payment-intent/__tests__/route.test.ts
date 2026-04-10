@@ -22,8 +22,8 @@ describe("POST /api/storefront/r/[slug]/payment-intent", () => {
   const mockMerchant = {
     id: "merchant-1",
     slug: "test-restaurant",
-    company: {
-      id: "company-1",
+    tenant: {
+      id: "tenant-1",
       tenantId: "tenant-1",
     },
   };

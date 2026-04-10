@@ -19,7 +19,7 @@ export async function GET(
     }
 
     // Get tenantId from merchant -> company -> tenant chain
-    const tenantId = merchant.company.tenantId;
+    const tenantId = merchant.tenant.tenantId;
 
     // Fetch order with timeline
     const order = await orderService.getOrderWithTimeline(tenantId, orderId);

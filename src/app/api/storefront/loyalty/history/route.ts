@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get company by slug
-    const company = await merchantService.getCompanyBySlug(companySlug);
+    const company = await merchantService.getTenantBySlug(companySlug);
     if (!company) {
       return NextResponse.json(
         {

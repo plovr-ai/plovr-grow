@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const { orderId, memberId, companySlug } = validation.data;
 
     // Get company
-    const company = await merchantService.getCompanyBySlug(companySlug);
+    const company = await merchantService.getTenantBySlug(companySlug);
     if (!company) {
       return NextResponse.json(
         { success: false, error: "Company not found" },

@@ -6,10 +6,10 @@ import { AppError, ErrorCodes } from "@/lib/errors";
 // Mock repositories
 vi.mock("@/repositories/merchant.repository", () => ({
   merchantRepository: {
-    getBySlugWithCompany: vi.fn(),
-    getByIdWithCompany: vi.fn(),
-    getByCompanyIdWithCompany: vi.fn(),
-    getActiveByCompanyIdWithCompany: vi.fn(),
+    getBySlugWithTenant: vi.fn(),
+    getByIdWithTenant: vi.fn(),
+    getByTenantIdWithTenant: vi.fn(),
+    getActiveByTenantIdWithTenant: vi.fn(),
     isSlugAvailable: vi.fn(),
     isOpen: vi.fn(),
     create: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock("@/repositories/tenant.repository", () => ({
 
 vi.mock("@/services/menu", () => ({
   menuService: {
-    getMenuItemsByCompanyId: vi.fn(),
+    getMenuItemsByTenantId: vi.fn(),
     getFeaturedItems: vi.fn(),
   },
 }));
@@ -42,7 +42,7 @@ describe("MerchantService (unit tests)", () => {
   let merchantService: MerchantService;
 
   // Mock data
-  const mockCompanyWithMerchants = {
+  const mockTenantWithMerchants = {
     id: "tenant-1",
     tenantId: "tenant-1",
     slug: "joes-pizza",
@@ -58,6 +58,12 @@ describe("MerchantService (unit tests)", () => {
     onboardingStatus: "completed",
     onboardingData: null,
     onboardingCompletedAt: null,
+    subscriptionPlan: "pro",
+    subscriptionStatus: "active",
+    stripeConnectStatus: null,
+    currency: "USD",
+    locale: "en-US",
+    timezone: "America/New_York",
     settings: {
       defaultCurrency: "USD",
       defaultLocale: "en-US",
@@ -82,14 +88,10 @@ describe("MerchantService (unit tests)", () => {
     },
     createdAt: new Date(),
     updatedAt: new Date(),
-    tenant: {
-      id: "tenant-1",
-      name: "Joe's Pizza Tenant",
-    },
     merchants: [
       {
         id: "merchant-1",
-        companyId: "company-1",
+        tenantId: "tenant-1",
         slug: "joes-pizza-downtown",
         name: "Joe's Pizza - Downtown",
         description: "Downtown location",
@@ -110,18 +112,6 @@ describe("MerchantService (unit tests)", () => {
         settings: {},
         createdAt: new Date(),
         updatedAt: new Date(),
-        company: {
-          id: "company-1",
-          slug: "joes-pizza",
-          tenantId: "tenant-1",
-          name: "Joe's Pizza",
-          logoUrl: "https://example.com/logo.png",
-          settings: {},
-          tenant: {
-            id: "tenant-1",
-            name: "Joe's Pizza Tenant",
-          },
-        },
       },
     ],
   };
@@ -179,7 +169,7 @@ describe("MerchantService (unit tests)", () => {
     merchantService = new MerchantService();
   });
 
-  describe("getCompanyWebsiteData()", () => {
+  describe("getTenantWebsiteData()", () => {
     // Mock data for featured items (matching FeaturedItemData type)
     const mockFeaturedItemsData = [
       {
@@ -214,7 +204,7 @@ describe("MerchantService (unit tests)", () => {
 
     beforeEach(() => {
       vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
-        mockCompanyWithMerchants as never
+        mockTenantWithMerchants as never
       );
       vi.mocked(menuService.getFeaturedItems).mockResolvedValue(
         mockFeaturedItemsData as never
@@ -222,7 +212,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should return website data with company info", async () => {
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(result).not.toBeNull();
       expect(result?.name).toBe("Joe's Pizza");
@@ -232,7 +222,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should fetch featured items from menu database", async () => {
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(menuService.getFeaturedItems).toHaveBeenCalledWith(
         "tenant-1"
@@ -241,7 +231,7 @@ describe("MerchantService (unit tests)", () => {
     });
 
     it("should map menu items to FeaturedItem format", async () => {
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       const featuredItems = result?.featuredItems;
       expect(featuredItems?.[0]).toMatchObject({
@@ -259,7 +249,7 @@ describe("MerchantService (unit tests)", () => {
     it("should set hasModifiers to false in current implementation", async () => {
       // NOTE: The current implementation always sets hasModifiers to false
       // as fetching modifier options would require additional queries
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       const pepperoniItem = result?.featuredItems?.find(
         (item) => item.id === "featured-2"
@@ -270,7 +260,7 @@ describe("MerchantService (unit tests)", () => {
     it("should return empty featuredItems when no featured items configured", async () => {
       vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
 
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(menuService.getFeaturedItems).toHaveBeenCalledWith(
         "tenant-1"
@@ -281,7 +271,7 @@ describe("MerchantService (unit tests)", () => {
     it("should return empty featuredItems when getFeaturedItems returns empty", async () => {
       vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
 
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(result?.featuredItems).toEqual([]);
     });
@@ -304,7 +294,7 @@ describe("MerchantService (unit tests)", () => {
         },
       ] as never);
 
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(result?.featuredItems?.[0].image).toBe("");
     });
@@ -327,20 +317,20 @@ describe("MerchantService (unit tests)", () => {
         },
       ] as never);
 
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(result?.featuredItems?.[0].description).toBe("");
     });
 
     it("should return reviews from company settings", async () => {
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(result?.reviews).toHaveLength(1);
       expect(result?.reviews?.[0].customerName).toBe("John D.");
     });
 
     it("should return socialLinks from company settings", async () => {
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(result?.socialLinks).toHaveLength(1);
       expect(result?.socialLinks[0].platform).toBe("facebook");
@@ -351,18 +341,18 @@ describe("MerchantService (unit tests)", () => {
         null as never
       );
 
-      const result = await merchantService.getCompanyWebsiteData("non-existent");
+      const result = await merchantService.getTenantWebsiteData("non-existent");
 
       expect(result).toBeNull();
     });
 
     it("should use default currency and locale when not configured", async () => {
       vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockCompanyWithMerchants,
+        ...mockTenantWithMerchants,
         settings: null,
       } as never);
 
-      const result = await merchantService.getCompanyWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
 
       expect(result?.currency).toBe("USD");
       expect(result?.locale).toBe("en-US");

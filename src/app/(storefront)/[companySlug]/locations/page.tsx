@@ -11,14 +11,14 @@ interface PageProps {
 export default async function LocationsPage({ params, searchParams }: PageProps) {
   const { companySlug } = await params;
   const { addItem } = await searchParams;
-  const company = await merchantService.getCompanyBySlug(companySlug);
+  const company = await merchantService.getTenantBySlug(companySlug);
 
   if (!company) {
     notFound();
   }
 
   // Get website display data from database
-  const websiteData = await merchantService.getCompanyWebsiteData(companySlug);
+  const websiteData = await merchantService.getTenantWebsiteData(companySlug);
   if (!websiteData) {
     notFound();
   }

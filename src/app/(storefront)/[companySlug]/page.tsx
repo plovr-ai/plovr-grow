@@ -15,14 +15,14 @@ interface PageProps {
 
 export default async function CompanyHomePage({ params }: PageProps) {
   const { companySlug } = await params;
-  const company = await merchantService.getCompanyBySlug(companySlug);
+  const company = await merchantService.getTenantBySlug(companySlug);
 
   if (!company) {
     notFound();
   }
 
   // Get website display data from database
-  const websiteData = await merchantService.getCompanyWebsiteData(companySlug);
+  const websiteData = await merchantService.getTenantWebsiteData(companySlug);
   if (!websiteData) {
     notFound();
   }

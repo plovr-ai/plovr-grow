@@ -13,11 +13,11 @@ export default async function GiftcardPage({
   const { companySlug } = await params;
 
   // Get company data
-  const company = await merchantService.getCompanyBySlug(companySlug);
+  const company = await merchantService.getTenantBySlug(companySlug);
   if (!company) notFound();
 
   // Get website data for Navigation/Footer
-  const websiteData = await merchantService.getCompanyWebsiteData(companySlug);
+  const websiteData = await merchantService.getTenantWebsiteData(companySlug);
   if (!websiteData) notFound();
 
   // Check if loyalty is enabled

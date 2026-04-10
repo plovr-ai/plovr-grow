@@ -53,9 +53,9 @@ export class OrderRepository {
   }
 
   /**
-   * Get orders for a company (all merchants under the company)
+   * Get orders for a tenant (all merchants under the tenant)
    */
-  async getCompanyOrders(
+  async getTenantOrders(
     tenantId: string,
     options: {
       status?: OrderStatus;

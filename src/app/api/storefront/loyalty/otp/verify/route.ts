@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const { phone, code, companySlug, firstName, lastName, email } = validation.data;
 
     // Get company by slug
-    const company = await merchantService.getCompanyBySlug(companySlug);
+    const company = await merchantService.getTenantBySlug(companySlug);
     if (!company) {
       return NextResponse.json(
         {
