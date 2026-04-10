@@ -1,4 +1,4 @@
-import { auth, signOut } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { DashboardLayoutClient } from "@/components/dashboard";
 import { merchantService } from "@/services/merchant";
@@ -30,9 +30,8 @@ export default async function ProtectedLayout({
 
   if (!initialCompany) {
     // Company not found in database — session has stale/invalid companyId.
-    // Sign out to clear the invalid session and prevent infinite redirect loop.
-    await signOut({ redirect: false });
-    redirect("/dashboard/login");
+    // Redirect to login (signOut can't be called during render in Next.js 16).
+    redirect("/api/auth/signout?callbackUrl=/dashboard/login");
   }
 
   // Initialize onboarding if not started
