@@ -179,5 +179,3 @@ export interface ToolValidationResult {
   errors?: string[];
 }
 
-// Re-export ImportResult from onboarding-agent for convenience
-export type { ImportResult } from "@/services/onboarding-agent";

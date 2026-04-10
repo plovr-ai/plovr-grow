@@ -7,7 +7,7 @@ import type {
   StreamEvent,
   QuickAction,
 } from "./dashboard-agent.types";
-import { toolRegistry, extractUrlsFromMessage } from "./tools";
+import { toolRegistry } from "./tools";
 import { intentClassifier } from "./intent";
 
 /**
@@ -54,11 +54,7 @@ export class DashboardAgentService {
     // Step 2: Classify intent
     const intent = await intentClassifier.classify(message, currentContext);
 
-    // Step 3: Check if this is a URL-containing message for onboarding
-    const extractedUrls = extractUrlsFromMessage(message);
-    const hasUrls = Object.keys(extractedUrls).length > 0;
-
-    // Step 4: Determine response strategy
+    // Step 3: Determine response strategy
     // For non-subscribed users, prioritize subscription guidance
     if (!isSubscribed) {
       // Allow subscription-related intents or explicit subscription requests
@@ -76,20 +72,7 @@ export class DashboardAgentService {
     }
 
     // Subscribed users: normal flow
-    if (hasUrls && (intent.category === "onboarding" || currentContext.onboardingState?.status === "collecting_urls")) {
-      // Execute onboarding import
-      yield* this.handleOnboardingImport(
-        tenantId,
-        companyId,
-        merchantId,
-        userId,
-        extractedUrls,
-        currentContext
-      );
-    } else if (intent.category === "onboarding" && !hasUrls) {
-      // User wants to import but hasn't provided URLs yet
-      yield* this.handleOnboardingStart(currentContext);
-    } else if (intent.category === "general_help" || intent.confidence < 0.5) {
+    if (intent.category === "general_help" || intent.confidence < 0.5) {
       // Show help or handle unknown intent
       yield* this.handleGeneralResponse(intent, currentContext);
     } else {
@@ -217,221 +200,6 @@ export class DashboardAgentService {
   }
 
   /**
-   * Handle onboarding start - prompt user for URLs
-   */
-  private async *handleOnboardingStart(
-    context: ConversationContext
-  ): AsyncGenerator<StreamEvent> {
-    // Update context to collecting_urls state
-    const updatedContext: ConversationContext = {
-      ...context,
-      onboardingState: {
-        status: "collecting_urls",
-        collectedUrls: {},
-      },
-      activeIntent: {
-        category: "onboarding",
-        action: "import_menu",
-        confidence: 1,
-        entities: {},
-      },
-    };
-
-    yield {
-      type: "text",
-      data: "I'd be happy to help you import your menu! Please provide at least one of the following URLs:\n\n" +
-        "• **Your Website** - Your restaurant's official website\n" +
-        "• **DoorDash** - Your DoorDash store page\n" +
-        "• **Uber Eats** - Your Uber Eats store page\n" +
-        "• **Google Business** - Your Google Business profile\n\n" +
-        "Just paste the URL(s) and I'll extract your menu automatically.",
-    };
-
-    yield {
-      type: "context_update",
-      data: updatedContext,
-    };
-
-    yield { type: "done", data: null };
-  }
-
-  /**
-   * Handle onboarding import - execute the tool
-   */
-  private async *handleOnboardingImport(
-    tenantId: string,
-    companyId: string,
-    merchantId: string,
-    userId: string,
-    urls: Record<string, string>,
-    context: ConversationContext
-  ): AsyncGenerator<StreamEvent> {
-    const tool = toolRegistry.get("onboarding_import");
-    if (!tool) {
-      yield { type: "error", data: "Import tool not available" };
-      yield { type: "done", data: null };
-      return;
-    }
-
-    // Validate URLs
-    const validation = tool.validateArgs(urls);
-    if (!validation.valid) {
-      yield {
-        type: "text",
-        data: `I couldn't process the URLs: ${validation.errors?.join(", ")}. Please check and try again.`,
-      };
-      yield { type: "done", data: null };
-      return;
-    }
-
-    // Update context
-    const updatedContext: ConversationContext = {
-      ...context,
-      onboardingState: {
-        status: "importing",
-        collectedUrls: urls as { website?: string; doordash?: string; ubereats?: string; google?: string },
-      },
-    };
-
-    yield {
-      type: "context_update",
-      data: updatedContext,
-    };
-
-    // Notify tool start
-    yield {
-      type: "tool_start",
-      data: {
-        toolId: tool.definition.id,
-        toolName: tool.definition.name,
-      },
-    };
-
-    // Show progress
-    yield {
-      type: "progress",
-      data: {
-        stage: "scraping",
-        progress: 20,
-        message: `Fetching data from ${Object.keys(urls).length} source(s)...`,
-      },
-    };
-
-    // Execute the tool
-    try {
-      const result = await tool.execute(urls, {
-        tenantId,
-        companyId,
-        merchantId,
-        userId,
-        conversationContext: context,
-      });
-
-      // Update progress
-      yield {
-        type: "progress",
-        data: {
-          stage: "complete",
-          progress: 100,
-          message: "Import complete!",
-        },
-      };
-
-      // Tool result
-      yield {
-        type: "tool_end",
-        data: result,
-      };
-
-      // Generate follow-up text
-      if (result.success && result.data) {
-        const importResult = result.data as { created: { categories: unknown[]; items: unknown[] }; warnings: string[] };
-        const categoryCount = importResult.created?.categories?.length || 0;
-        const itemCount = importResult.created?.items?.length || 0;
-
-        yield {
-          type: "text",
-          data: `Great news! I successfully imported your menu:\n\n` +
-            `• **${categoryCount}** categories\n` +
-            `• **${itemCount}** menu items\n\n` +
-            (importResult.warnings?.length > 0
-              ? `⚠️ There were ${importResult.warnings.length} warning(s) during import.\n\n`
-              : "") +
-            `You can now view and edit your menu in the Menu section.`,
-        };
-
-        // Provide quick actions
-        yield {
-          type: "quick_actions",
-          data: [
-            {
-              id: "view_menu",
-              label: "View Menu",
-              action: { type: "navigate", payload: "/dashboard/menu" },
-            },
-            {
-              id: "import_again",
-              label: "Import Again",
-              action: { type: "send_message", payload: "I want to import my menu" },
-            },
-          ] as QuickAction[],
-        };
-
-        // Update context to completed
-        yield {
-          type: "context_update",
-          data: {
-            ...context,
-            onboardingState: {
-              status: "completed",
-              collectedUrls: urls as { website?: string; doordash?: string; ubereats?: string; google?: string },
-            },
-          },
-        };
-      } else {
-        yield {
-          type: "text",
-          data: `I encountered an issue while importing: ${result.error || "Unknown error"}. ` +
-            `Please check the URLs and try again, or you can create your menu manually.`,
-        };
-
-        yield {
-          type: "quick_actions",
-          data: [
-            {
-              id: "try_again",
-              label: "Try Again",
-              action: { type: "send_message", payload: "I want to import my menu" },
-            },
-            {
-              id: "create_manual",
-              label: "Create Manually",
-              action: { type: "navigate", payload: "/dashboard/menu/items/new" },
-            },
-          ] as QuickAction[],
-        };
-      }
-    } catch (error) {
-      yield {
-        type: "tool_end",
-        data: {
-          toolId: tool.definition.id,
-          toolName: tool.definition.name,
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        },
-      };
-
-      yield {
-        type: "text",
-        data: "Sorry, something went wrong during the import. Please try again later.",
-      };
-    }
-
-    yield { type: "done", data: null };
-  }
-
-  /**
    * Handle general response for help or unknown intents
    */
   private async *handleGeneralResponse(
@@ -552,32 +320,20 @@ export class DashboardAgentService {
       };
     }
 
-    // Subscribed users without menu: onboarding guidance
+    // Subscribed users without menu: simple welcome
     if (!hasMenu) {
       content.push({
         type: "text",
-        text: `🎉 Great! Your subscription is now active, ${companyName}!\n\n` +
-          `Now let's set up your restaurant. I can help you:\n` +
-          `1. **Import your menu** from DoorDash, UberEats, or your website\n` +
-          `2. **Set up business info** like hours, address, and contact details\n` +
-          `3. **Configure settings** for ordering, payments, and more\n\n` +
-          `What would you like to do first?`,
+        text: `Welcome to ${companyName}! I'm your AI assistant.\n\nHow can I help you today?`,
       });
 
       content.push({
         type: "quick_actions",
         quickActions: [
           {
-            id: "import_menu",
-            label: "Import Menu",
-            description: "Import from website, DoorDash, Uber Eats, or Google",
-            action: { type: "send_message", payload: "I want to import my menu" },
-          },
-          {
-            id: "create_manual",
-            label: "Create Manually",
-            description: "Add menu items one by one",
-            action: { type: "navigate", payload: "/dashboard/menu/items/new" },
+            id: "view_menu",
+            label: "Manage Menu",
+            action: { type: "navigate", payload: "/dashboard/menu" },
           },
         ],
       });
