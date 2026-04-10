@@ -11,13 +11,27 @@ datasource db {
 model Tenant {
   id                      String                 @id
   name                    String
+  slug                    String                 @unique
+  description             String?                @db.Text
+  logoUrl                 String?                @map("logo_url")
+  websiteUrl              String?                @map("website_url")
+  supportEmail            String?                @map("support_email")
+  supportPhone            String?                @map("support_phone")
+  currency                String                 @default("USD")
+  locale                  String                 @default("en-US")
+  timezone                String                 @default("America/New_York")
+  settings                Json?
+  status                  String                 @default("active")
+  onboardingStatus        String                 @default("not_started") @map("onboarding_status")
+  onboardingData          Json?                  @map("onboarding_data")
+  onboardingCompletedAt   DateTime?              @map("onboarding_completed_at")
+  source                  String?
   subscriptionPlan        String                 @default("free") @map("subscription_plan")
   subscriptionStatus      String                 @default("active") @map("subscription_status")
   stripeConnectStatus     String?                @map("stripe_connect_status")
   deleted                 Boolean                @default(false)
   createdAt               DateTime               @default(now()) @map("created_at")
   updatedAt               DateTime               @updatedAt @map("updated_at")
-  company                 Company?
   stripeConnectAccount    StripeConnectAccount?
   menus                   Menu[]
   menuCategories          MenuCategory[]
@@ -25,7 +39,7 @@ model Tenant {
   orders                  Order[]
   users                   User[]
   taxConfigs              TaxConfig[]
-  loyaltyConfigs          LoyaltyConfig[]
+  loyaltyConfig           LoyaltyConfig?
   loyaltyMembers          LoyaltyMember[]
   pointTransactions       PointTransaction[]
   otpVerifications        OtpVerification[]
@@ -52,56 +66,13 @@ model Tenant {
   integrationSyncRecords IntegrationSyncRecord[]
   webhookEvents          WebhookEvent[]
 
-  @@map("tenants")
-}
-
-model Company {
-  id                    String          @id
-  tenantId              String          @unique @map("tenant_id")
-  slug                  String          @unique
-  name                  String
-  legalName             String?         @map("legal_name")
-  description           String?         @db.Text
-  logoUrl               String?         @map("logo_url")
-  websiteUrl            String?         @map("website_url")
-  supportEmail          String?         @map("support_email")
-  supportPhone          String?         @map("support_phone")
-  currency              String          @default("USD")
-  locale                String          @default("en-US")
-  timezone              String          @default("America/New_York")
-  settings              Json?
-  status                String          @default("active")
-  onboardingStatus      String          @default("not_started") @map("onboarding_status")
-  onboardingData        Json?           @map("onboarding_data")
-  onboardingCompletedAt DateTime?       @map("onboarding_completed_at")
-  source                String?
-  deleted               Boolean         @default(false)
-  createdAt             DateTime        @default(now()) @map("created_at")
-  updatedAt             DateTime        @updatedAt @map("updated_at")
-  tenant                Tenant          @relation(fields: [tenantId], references: [id])
-  menus                 Menu[]
-  menuCategories        MenuCategory[]
-  menuItems             MenuItem[]
-  merchants             Merchant[]
-  users                 User[]
-  taxConfigs            TaxConfig[]
-  loyaltyConfig         LoyaltyConfig?
-  loyaltyMembers        LoyaltyMember[]
-  featuredItems         FeaturedItem[]
-  orders                Order[]
-  giftCards             GiftCard[]
-  companyOrderSequences CompanyOrderSequence[]
-  stripeCustomers       StripeCustomer[]
-
   @@index([slug])
-  @@index([tenantId])
-  @@map("companies")
+  @@map("tenants")
 }
 
 model Menu {
   id          String         @id
   tenantId    String         @map("tenant_id")
-  companyId   String         @map("company_id")
   name        String
   description String?        @db.Text
   sortOrder   Int            @default(0) @map("sort_order")
@@ -110,19 +81,16 @@ model Menu {
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
   tenant      Tenant         @relation(fields: [tenantId], references: [id])
-  company     Company        @relation(fields: [companyId], references: [id])
   categories  MenuCategory[]
 
   @@index([tenantId])
-  @@index([companyId])
-  @@index([companyId, sortOrder])
+  @@index([tenantId, sortOrder])
   @@map("menus")
 }
 
 model MenuCategory {
   id            String             @id
   tenantId      String             @map("tenant_id")
-  companyId     String             @map("company_id")
   menuId        String             @map("menu_id")
   name          String
   description   String?            @db.Text
@@ -132,14 +100,12 @@ model MenuCategory {
   deleted       Boolean            @default(false)
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
-  company       Company            @relation(fields: [companyId], references: [id])
   tenant        Tenant             @relation(fields: [tenantId], references: [id])
   menu          Menu               @relation(fields: [menuId], references: [id])
   categoryItems MenuCategoryItem[]
 
-  @@index([companyId])
-  @@index([companyId, sortOrder])
   @@index([tenantId])
+  @@index([tenantId, sortOrder])
   @@index([menuId])
   @@map("menu_categories")
 }
@@ -147,7 +113,6 @@ model MenuCategory {
 model MenuItem {
   id            String             @id
   tenantId      String             @map("tenant_id")
-  companyId     String             @map("company_id")
   name          String
   description   String?            @db.Text
   price         Decimal            @db.Decimal(10, 2)
@@ -159,15 +124,13 @@ model MenuItem {
   deleted       Boolean            @default(false)
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
-  company       Company            @relation(fields: [companyId], references: [id])
   tenant        Tenant             @relation(fields: [tenantId], references: [id])
   menuItemTaxes MenuItemTax[]
   categories    MenuCategoryItem[]
   featuredItems FeaturedItem[]
 
-  @@index([companyId])
-  @@index([companyId, status])
   @@index([tenantId])
+  @@index([tenantId, status])
   @@map("menu_items")
 }
 
@@ -194,7 +157,6 @@ model MenuCategoryItem {
 model Merchant {
   id                String             @id
   tenantId          String             @map("tenant_id")
-  companyId         String             @map("company_id")
   slug              String             @unique
   name              String
   description       String?            @db.Text
@@ -217,7 +179,6 @@ model Merchant {
   createdAt         DateTime           @default(now()) @map("created_at")
   updatedAt         DateTime           @updatedAt @map("updated_at")
   tenant            Tenant             @relation(fields: [tenantId], references: [id])
-  company           Company            @relation(fields: [companyId], references: [id])
   orders            Order[]
   merchantTaxRates  MerchantTaxRate[]
   pointTransactions PointTransaction[]
@@ -229,7 +190,6 @@ model Merchant {
   webhookEvents          WebhookEvent[]
 
   @@index([tenantId])
-  @@index([companyId])
   @@index([slug])
   @@index([status])
   @@map("merchants")
@@ -238,7 +198,6 @@ model Merchant {
 model Order {
   id                    String                 @id
   tenantId              String                 @map("tenant_id")
-  companyId             String                 @map("company_id")
   merchantId            String?                @map("merchant_id")
   loyaltyMemberId       String?                @map("loyalty_member_id")
   orderNumber           String                 @map("order_number")
@@ -272,7 +231,6 @@ model Order {
   deleted               Boolean                @default(false)
   createdAt             DateTime               @default(now()) @map("created_at")
   updatedAt             DateTime               @updatedAt @map("updated_at")
-  company               Company                @relation(fields: [companyId], references: [id])
   merchant              Merchant?              @relation(fields: [merchantId], references: [id])
   tenant                Tenant                 @relation(fields: [tenantId], references: [id])
   loyaltyMember         LoyaltyMember?         @relation(fields: [loyaltyMemberId], references: [id])
@@ -282,7 +240,6 @@ model Order {
   payments              Payment[]
 
   @@unique([tenantId, orderNumber])
-  @@index([companyId])
   @@index([merchantId])
   @@index([loyaltyMemberId])
   @@index([tenantId, createdAt])
@@ -296,7 +253,6 @@ model Order {
 model User {
   id           String    @id
   tenantId     String    @map("tenant_id")
-  companyId    String?   @map("company_id")
   email        String
   passwordHash  String?   @map("password_hash")
   stytchUserId  String?   @unique @map("stytch_user_id")
@@ -307,11 +263,9 @@ model User {
   deleted      Boolean   @default(false)
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
-  company      Company?  @relation(fields: [companyId], references: [id])
   tenant       Tenant    @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, email])
-  @@index([companyId])
   @@index([tenantId])
   @@map("users")
 }
@@ -321,7 +275,6 @@ model User {
 model TaxConfig {
   id               String            @id
   tenantId         String            @map("tenant_id")
-  companyId        String            @map("company_id")
   name             String
   description      String?           @db.Text
   roundingMethod   String            @default("half_up") @map("rounding_method")
@@ -330,13 +283,11 @@ model TaxConfig {
   createdAt        DateTime          @default(now()) @map("created_at")
   updatedAt        DateTime          @updatedAt @map("updated_at")
   tenant           Tenant            @relation(fields: [tenantId], references: [id])
-  company          Company           @relation(fields: [companyId], references: [id])
   merchantTaxRates MerchantTaxRate[]
   menuItemTaxes    MenuItemTax[]
 
   @@index([tenantId])
-  @@index([companyId])
-  @@index([companyId, status])
+  @@index([tenantId, status])
   @@map("tax_configs")
 }
 
@@ -380,8 +331,7 @@ model MenuItemTax {
 
 model LoyaltyConfig {
   id              String   @id
-  tenantId        String   @map("tenant_id")
-  companyId       String   @unique @map("company_id")
+  tenantId        String   @unique @map("tenant_id")
   pointsPerDollar Decimal  @default(1) @map("points_per_dollar") @db.Decimal(5, 2)
   status          String   @default("active")
   deleted         Boolean  @default(false)
@@ -389,16 +339,13 @@ model LoyaltyConfig {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
-  company Company @relation(fields: [companyId], references: [id])
 
-  @@index([tenantId])
   @@map("loyalty_configs")
 }
 
 model LoyaltyMember {
   id          String    @id
   tenantId    String    @map("tenant_id")
-  companyId   String    @map("company_id")
   phone       String
   email       String?
   firstName   String?   @map("first_name")
@@ -412,15 +359,13 @@ model LoyaltyMember {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  company           Company            @relation(fields: [companyId], references: [id])
   tenant            Tenant             @relation(fields: [tenantId], references: [id])
   pointTransactions PointTransaction[]
   orders            Order[]
   stripeCustomer    StripeCustomer?
 
-  @@unique([tenantId, companyId, phone])
+  @@unique([tenantId, phone])
   @@index([phone])
-  @@index([companyId])
   @@index([tenantId])
   @@map("loyalty_members")
 }
@@ -479,7 +424,6 @@ model OtpVerification {
 model FeaturedItem {
   id         String   @id
   tenantId   String   @map("tenant_id")
-  companyId  String   @map("company_id")
   menuItemId String   @map("menu_item_id")
   sortOrder  Int      @default(0) @map("sort_order")
   deleted    Boolean  @default(false)
@@ -487,12 +431,10 @@ model FeaturedItem {
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   tenant   Tenant   @relation(fields: [tenantId], references: [id])
-  company  Company  @relation(fields: [companyId], references: [id])
   menuItem MenuItem @relation(fields: [menuItemId], references: [id])
 
-  @@unique([companyId, menuItemId])
+  @@unique([tenantId, menuItemId])
   @@index([tenantId])
-  @@index([companyId])
   @@index([menuItemId])
   @@map("featured_items")
 }
@@ -612,7 +554,6 @@ model Invoice {
 model GiftCard {
   id              String                @id
   tenantId        String                @map("tenant_id")
-  companyId       String                @map("company_id")
   cardNumber      String                @unique @map("card_number")
   initialAmount   Decimal               @map("initial_amount") @db.Decimal(10, 2)
   currentBalance  Decimal               @map("current_balance") @db.Decimal(10, 2)
@@ -622,12 +563,10 @@ model GiftCard {
   updatedAt       DateTime              @updatedAt @map("updated_at")
 
   tenant        Tenant                  @relation(fields: [tenantId], references: [id])
-  company       Company                 @relation(fields: [companyId], references: [id])
   purchaseOrder Order                   @relation("GiftCardPurchase", fields: [purchaseOrderId], references: [id])
   transactions  GiftCardTransaction[]
 
   @@index([tenantId])
-  @@index([companyId])
   @@index([cardNumber])
   @@map("gift_cards")
 }
@@ -682,7 +621,6 @@ model OrderSequence {
 model CompanyOrderSequence {
   id        String   @id
   tenantId  String   @map("tenant_id")
-  companyId String   @map("company_id")
   date      String   // Format: "2026-01-27"
   sequence  Int      @default(0)
   deleted   Boolean  @default(false)
@@ -690,11 +628,9 @@ model CompanyOrderSequence {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
-  company Company @relation(fields: [companyId], references: [id])
 
-  @@unique([tenantId, companyId, date])
+  @@unique([tenantId, date])
   @@index([tenantId])
-  @@index([companyId])
   @@index([date])
   @@map("company_order_sequences")
 }
@@ -783,7 +719,6 @@ model Payment {
 model StripeCustomer {
   id                String   @id
   tenantId          String   @map("tenant_id")
-  companyId         String   @map("company_id")
   loyaltyMemberId   String   @unique @map("loyalty_member_id")
   stripeCustomerId  String   @unique @map("stripe_customer_id")
   deleted           Boolean  @default(false)
@@ -791,11 +726,9 @@ model StripeCustomer {
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   tenant        Tenant        @relation(fields: [tenantId], references: [id])
-  company       Company       @relation(fields: [companyId], references: [id])
   loyaltyMember LoyaltyMember @relation(fields: [loyaltyMemberId], references: [id])
 
   @@index([tenantId])
-  @@index([companyId])
   @@index([stripeCustomerId])
   @@map("stripe_customers")
 }
