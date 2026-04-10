@@ -87,7 +87,7 @@ function createWrapper(currency = "USD", locale = "en-US") {
           currency,
           locale,
           timezone: "America/New_York",
-          companyId: "test-company-id",
+          tenantId: "test-company-id",
           companySlug: "test-company",
           tipConfig: {
             mode: "percentage",

@@ -6,13 +6,13 @@ import { CompanyInfoCard } from "@/components/dashboard/company/CompanyInfoCard"
 export default async function CompanyPage() {
   const session = await auth();
 
-  if (!session?.user?.tenantId || !session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     redirect("/dashboard/login");
   }
 
-  const { companyId } = session.user;
+  const { tenantId } = session.user;
 
-  const companyData = await tenantService.getTenantWithMerchants(companyId);
+  const companyData = await tenantService.getTenantWithMerchants(tenantId);
 
   if (!companyData) {
     redirect("/dashboard/login");

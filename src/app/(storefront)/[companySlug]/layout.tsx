@@ -59,8 +59,8 @@ export default async function CompanyLayout({ children, params }: LayoutProps) {
           locale: "en-US",
           timezone: "America/New_York",
           tipConfig: defaultTipConfig,
-          companyId: company.id,
           companySlug: company.slug,
+          tenantId: company.tenantId,
         }}
       >
         <LoyaltyProvider>{children}</LoyaltyProvider>

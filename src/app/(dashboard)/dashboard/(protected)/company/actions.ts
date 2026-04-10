@@ -12,14 +12,14 @@ interface UpdateCompanySettingsInput {
 export async function updateCompanySettingsAction(input: UpdateCompanySettingsInput) {
   const session = await auth();
 
-  if (!session?.user?.companyId) {
+  if (!session?.user?.tenantId) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { companyId } = session.user;
+  const { tenantId } = session.user;
 
   try {
-    await tenantService.updateTenant(companyId, {
+    await tenantService.updateTenant(tenantId, {
       currency: input.currency,
       locale: input.locale,
     });
