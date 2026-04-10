@@ -22,13 +22,13 @@ export default async function ProtectedLayout({
   const { tenantId, companyId } = session.user;
 
   // Fetch company, merchants, and subscription data
-  let [company, merchants, subscription] = await Promise.all([
+  const [initialCompany, merchants, subscription] = await Promise.all([
     companyRepository.getById(companyId),
     merchantService.getMerchantsByCompanyId(tenantId, companyId),
     subscriptionService.getSubscriptionForDashboard(tenantId),
   ]);
 
-  if (!company) {
+  if (!initialCompany) {
     // Company not found in database — session has stale/invalid companyId.
     // Sign out to clear the invalid session and prevent infinite redirect loop.
     await signOut({ redirect: false });
@@ -36,6 +36,7 @@ export default async function ProtectedLayout({
   }
 
   // Initialize onboarding if not started
+  let company = initialCompany;
   if (company.onboardingStatus === "not_started") {
     await companyService.initializeOnboarding(company.id);
     const updated = await companyRepository.getById(companyId);
