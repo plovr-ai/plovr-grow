@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "../route";
+import { ErrorCodes } from "@/lib/errors/error-codes";
 
 vi.mock("@/lib/stytch", () => ({
   getStytchServerClient: vi.fn(),
@@ -29,7 +30,10 @@ describe("POST /api/auth/stytch/callback", () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe("Missing session_token");
+    expect(data).toEqual({
+      success: false,
+      error: { code: ErrorCodes.AUTH_MISSING_SESSION_TOKEN },
+    });
   });
 
   it("should return 401 when Stytch session is invalid", async () => {
@@ -48,7 +52,10 @@ describe("POST /api/auth/stytch/callback", () => {
     const data = await response.json();
 
     expect(response.status).toBe(401);
-    expect(data.error).toBe("Invalid Stytch session");
+    expect(data).toEqual({
+      success: false,
+      error: { code: ErrorCodes.AUTH_INVALID_STYTCH_SESSION },
+    });
   });
 
   it("should return 400 when user has no email", async () => {
@@ -69,7 +76,10 @@ describe("POST /api/auth/stytch/callback", () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe("No email found in Stytch user");
+    expect(data).toEqual({
+      success: false,
+      error: { code: ErrorCodes.AUTH_MISSING_EMAIL },
+    });
   });
 
   it("should return user data on success", async () => {
@@ -121,6 +131,9 @@ describe("POST /api/auth/stytch/callback", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Authentication failed");
+    expect(data).toEqual({
+      success: false,
+      error: { code: ErrorCodes.AUTH_STYTCH_CALLBACK_FAILED },
+    });
   });
 });
