@@ -74,7 +74,7 @@ const mockMerchant = {
   slug: "test-merchant",
   currency: "USD",
   company: {
-    id: "company-1",
+    id: "tenant-1",
     tenantId: "tenant-1",
   },
 };
@@ -142,7 +142,7 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
     expect(orderService.createMerchantOrderAtomic).toHaveBeenCalledWith(
       "tenant-1",
       expect.objectContaining({
-        companyId: "company-1",
+        companyId: "tenant-1",
         merchantId: "merchant-1",
         customerFirstName: "John",
         orderMode: "pickup",

@@ -45,7 +45,6 @@ export async function POST(request: Request) {
         name: user.name,
         role: user.role,
         tenantId: user.tenantId,
-        companyId: user.companyId,
       },
     });
   } catch (error) {

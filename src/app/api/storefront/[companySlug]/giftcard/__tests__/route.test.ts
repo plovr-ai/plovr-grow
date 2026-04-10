@@ -42,7 +42,7 @@ import { stripeConnectService } from "@/services/stripe-connect";
 
 describe("POST /api/storefront/[companySlug]/giftcard", () => {
   const mockCompany = {
-    id: "company-1",
+    id: "tenant-1",
     tenantId: "tenant-1",
     name: "Test Company",
     slug: "test-company",
@@ -550,7 +550,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       });
 
       expect(orderService.createCompanyOrder).toHaveBeenCalledWith("tenant-1", {
-        companyId: "company-1",
+        companyId: "tenant-1",
         customerFirstName: "John",
         customerLastName: "Doe",
         customerPhone: "(555) 123-4567",
@@ -593,7 +593,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
 
       expect(giftCardService.createGiftCard).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
+        "tenant-1",
         {
           purchaseOrderId: "order-1",
           amount: 50,

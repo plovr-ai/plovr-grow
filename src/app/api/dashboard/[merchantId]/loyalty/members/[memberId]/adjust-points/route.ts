@@ -30,9 +30,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const tenantId = merchant.company.tenantId;
-    const companyId = merchant.company.id;
 
-    // Verify member exists and belongs to this company
+    // Verify member exists and belongs to this tenant
     const member = await loyaltyMemberService.getMember(tenantId, memberId);
     if (!member) {
       return NextResponse.json(
@@ -41,7 +40,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    if (member.companyId !== companyId) {
+    if (member.companyId !== tenantId) {
       return NextResponse.json(
         { success: false, error: "Member does not belong to this company" },
         { status: 403 }

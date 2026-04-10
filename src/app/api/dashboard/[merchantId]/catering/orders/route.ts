@@ -61,11 +61,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const tenantId = merchant.company.tenantId;
-    const companyId = merchant.company.id;
 
     const result = await cateringOrderService.getCompanyOrders(
       tenantId,
-      companyId,
+      tenantId,
       {
         page,
         pageSize,

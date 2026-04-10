@@ -45,12 +45,11 @@ export async function POST(request: NextRequest) {
     }
 
     const tenantId = company.tenantId;
-    const companyId = company.id;
 
     // Check if member already exists
     const existingMember = await loyaltyMemberService.getMemberByPhone(
       tenantId,
-      companyId,
+      tenantId,
       phone
     );
     const purpose = existingMember ? "login" : "register";
@@ -72,7 +71,7 @@ export async function POST(request: NextRequest) {
     // Enroll or get member
     const { member, isNew } = await loyaltyService.enrollCustomer(
       tenantId,
-      companyId,
+      tenantId,
       phone,
       {
         firstName,
@@ -81,8 +80,8 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Set HTTP-only cookie for session persistence
-    await setLoyaltySession(companyId, member.id, member.phone);
+    // Set HTTP-only cookie for session persistence (tenantId === companyId)
+    await setLoyaltySession(tenantId, member.id, member.phone);
 
     return NextResponse.json({
       success: true,

@@ -5,7 +5,6 @@ import { z } from "zod";
 
 const syncSchema = z.object({
   merchantId: z.string().min(1),
-  companyId: z.string().min(1),
 });
 
 export async function POST(request: NextRequest) {
@@ -32,11 +31,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { merchantId, companyId } = validation.data;
+    const { merchantId } = validation.data;
     const result = await squareService.syncCatalog(
       session.user.tenantId,
       merchantId,
-      companyId
+      session.user.tenantId
     );
 
     return NextResponse.json({

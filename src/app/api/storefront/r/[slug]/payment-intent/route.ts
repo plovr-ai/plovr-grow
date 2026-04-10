@@ -24,9 +24,8 @@ export async function POST(
       );
     }
 
-    // Get tenantId and companyId from merchant
+    // Get tenantId from merchant
     const tenantId = merchant.company.tenantId;
-    const companyId = merchant.company.id;
 
     // Parse and validate request body
     const body = await request.json();
@@ -49,7 +48,7 @@ export async function POST(
     // Create PaymentIntent
     const result = await paymentService.createPaymentIntent({
       tenantId,
-      companyId,
+      companyId: tenantId,
       merchantId: merchant.id,
       amount,
       currency,

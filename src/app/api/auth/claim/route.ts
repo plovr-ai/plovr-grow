@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     await prisma.user.create({
       data: {
         id: generateEntityId(), tenantId,
-        companyId: tenant.company?.id,
+        companyId: tenantId,
         email, passwordHash: null, name, role: "owner", status: "active",
       },
     });

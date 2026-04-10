@@ -40,10 +40,9 @@ export async function POST(request: NextRequest) {
     }
 
     const tenantId = company.tenantId;
-    const companyId = company.id;
 
     // Check if loyalty is enabled
-    const isEnabled = await loyaltyConfigService.isLoyaltyEnabled(tenantId, companyId);
+    const isEnabled = await loyaltyConfigService.isLoyaltyEnabled(tenantId, tenantId);
     if (!isEnabled) {
       return NextResponse.json(
         {
@@ -57,7 +56,7 @@ export async function POST(request: NextRequest) {
     // Check if member already exists
     const existingMember = await loyaltyMemberService.getMemberByPhone(
       tenantId,
-      companyId,
+      tenantId,
       phone
     );
     const isNewMember = !existingMember;

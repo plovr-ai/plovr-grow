@@ -67,7 +67,7 @@ describe("GET /api/storefront/loyalty/order-points-status", () => {
 
   it("should return pointsAwarded: true when points already awarded", async () => {
     vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
-      id: "company-1",
+      id: "tenant-1",
       tenantId: "tenant-1",
       name: "Test Company",
       slug: "test-company",
@@ -94,7 +94,7 @@ describe("GET /api/storefront/loyalty/order-points-status", () => {
 
   it("should return pointsAwarded: false when points not awarded", async () => {
     vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
-      id: "company-1",
+      id: "tenant-1",
       tenantId: "tenant-1",
       name: "Test Company",
       slug: "test-company",
