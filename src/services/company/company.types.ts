@@ -23,16 +23,24 @@ export type {
 
 // Service-specific types
 export interface CreateTenantWithCompanyInput {
-  tenantName: string;
-  companySlug: string;
+  // Tenant
+  tenantName?: string;
+  subscriptionStatus?: string;
+  // Company
   companyName: string;
-  companyLegalName?: string;
-  companyDescription?: string;
-  companyLogoUrl?: string;
+  companySlug?: string; // auto-generated if omitted
   companyWebsiteUrl?: string;
-  companySupportEmail?: string;
-  companySupportPhone?: string;
+  companySettings?: Record<string, unknown>;
   companyCurrency?: string;
   companyLocale?: string;
   companyTimezone?: string;
+  source?: string;
+  // Merchant (defaults to companyName if omitted)
+  merchantName?: string;
+  merchantAddress?: string;
+  merchantCity?: string;
+  merchantState?: string;
+  merchantZipCode?: string;
+  merchantPhone?: string;
+  merchantBusinessHours?: unknown;
 }

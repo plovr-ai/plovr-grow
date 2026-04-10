@@ -47,59 +47,28 @@ export function WebsiteStep({ status }: WebsiteStepProps) {
     setProgress(t("generating"));
 
     try {
-      const createRes = await fetch("/api/generator/create", {
+      // Call onboarding-specific API that updates existing Company + Merchant
+      // with Google Places data (instead of creating new entities)
+      const res = await fetch("/api/dashboard/onboarding/website", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          placeId: place.placeId,
-          placeName: place.name,
-        }),
+        body: JSON.stringify({ placeId: place.placeId }),
       });
-      const createData = await createRes.json();
+      const data = await res.json();
 
-      if (!createRes.ok || !createData.success) {
-        setError(createData.error ?? "Failed to start generation");
+      if (!res.ok || !data.success) {
+        setError(data.error ?? "Failed to set up website");
         setProgress(null);
         return;
       }
 
-      if (createData.data.existingSlug) {
-        await markStepComplete();
-        return;
-      }
-
-      const genId = createData.data.generationId;
-
-      const pollInterval = setInterval(async () => {
-        const statusRes = await fetch(`/api/generator/${genId}/status`);
-        const statusData = await statusRes.json();
-
-        if (statusData.data?.status === "completed") {
-          clearInterval(pollInterval);
-          await markStepComplete();
-        } else if (statusData.data?.status === "failed") {
-          clearInterval(pollInterval);
-          setError(statusData.data.errorMessage ?? "Generation failed");
-          setProgress(null);
-        }
-      }, 2000);
-    } catch {
-      setError("Something went wrong");
-      setProgress(null);
-    }
-  }
-
-  async function markStepComplete() {
-    const res = await fetch("/api/dashboard/onboarding", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stepId: "website", status: "completed" }),
-    });
-
-    if (res.ok) {
+      // Success — refresh to show updated state
       startTransition(() => {
         router.refresh();
       });
+    } catch {
+      setError("Something went wrong");
+      setProgress(null);
     }
   }
 
