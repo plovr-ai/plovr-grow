@@ -6,14 +6,11 @@
  */
 
 import { toolRegistry } from "./tool-registry";
-import { onboardingTool } from "./onboarding.tool";
 import { subscriptionTool } from "./subscription.tool";
 
 // Register all tools
-toolRegistry.register(onboardingTool);
 toolRegistry.register(subscriptionTool);
 
 // Export registry and utilities
 export { toolRegistry } from "./tool-registry";
-export { extractUrlsFromMessage } from "./onboarding.tool";
 export type { Tool, BaseTool } from "./tool.interface";

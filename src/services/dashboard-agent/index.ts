@@ -37,8 +37,6 @@ export type {
   ToolParameterType,
   ToolExecutionContext,
   ToolValidationResult,
-  // Re-exported
-  ImportResult,
 } from "./dashboard-agent.types";
 
 // Export tool registry for extensibility
