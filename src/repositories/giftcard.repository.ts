@@ -12,7 +12,6 @@ export class GiftCardRepository {
    */
   async create(
     tenantId: string,
-    companyId: string,
     data: {
       cardNumber: string;
       initialAmount: number;
@@ -23,7 +22,6 @@ export class GiftCardRepository {
       data: {
         id: generateEntityId(),
         tenantId,
-        companyId,
         cardNumber: data.cardNumber,
         initialAmount: data.initialAmount,
         currentBalance: data.initialAmount,
@@ -66,11 +64,10 @@ export class GiftCardRepository {
   /**
    * Get gift card by card number
    */
-  async getByCardNumber(tenantId: string, companyId: string, cardNumber: string) {
+  async getByCardNumber(tenantId: string, cardNumber: string) {
     return prisma.giftCard.findFirst({
       where: {
         tenantId,
-        companyId,
         cardNumber,
         deleted: false,
       },
@@ -153,9 +150,8 @@ export class GiftCardRepository {
   /**
    * Get gift card statistics for a company
    */
-  async getStatsByCompany(
+  async getStatsByTenant(
     tenantId: string,
-    companyId: string,
     options: {
       dateFrom?: Date;
       dateTo?: Date;
@@ -178,7 +174,7 @@ export class GiftCardRepository {
           }
         : {};
 
-    const giftCardWhere = { tenantId, companyId, deleted: false, ...dateFilter };
+    const giftCardWhere = { tenantId, deleted: false, ...dateFilter };
 
     const [totals, activeBalanceSum, redemptionTotal] = await Promise.all([
       // Sum initial amounts and count total
@@ -197,7 +193,7 @@ export class GiftCardRepository {
         where: {
           tenantId,
           deleted: false,
-          giftCard: { companyId, ...dateFilter },
+          giftCard: { ...dateFilter },
           type: "redemption",
         },
         _sum: { amount: true },
@@ -215,9 +211,8 @@ export class GiftCardRepository {
   /**
    * Get gift cards for a company with pagination
    */
-  async getByCompany(
+  async getByTenant(
     tenantId: string,
-    companyId: string,
     options: {
       page?: number;
       pageSize?: number;
@@ -230,7 +225,6 @@ export class GiftCardRepository {
 
     const where: Prisma.GiftCardWhereInput = {
       tenantId,
-      companyId,
       deleted: false,
       ...(search && {
         OR: [

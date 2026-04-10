@@ -3,13 +3,12 @@ import { generateEntityId } from "@/lib/id";
 
 export class FeaturedItemRepository {
   /**
-   * Get all featured items for a company with their menu item details
+   * Get all featured items for a tenant with their menu item details
    */
-  async getByCompanyId(tenantId: string, companyId: string) {
+  async getByTenantId(tenantId: string) {
     return prisma.featuredItem.findMany({
       where: {
         tenantId,
-        companyId,
         deleted: false,
       },
       include: {
@@ -22,20 +21,18 @@ export class FeaturedItemRepository {
   }
 
   /**
-   * Set featured items for a company (replace all)
+   * Set featured items for a tenant (replace all)
    * Soft deletes existing items, then inserts new ones
    */
   async setFeaturedItems(
     tenantId: string,
-    companyId: string,
     menuItemIds: string[]
   ) {
     return prisma.$transaction(async (tx) => {
-      // Soft delete all existing featured items for this company
+      // Soft delete all existing featured items for this tenant
       await tx.featuredItem.updateMany({
         where: {
           tenantId,
-          companyId,
           deleted: false,
         },
         data: {
@@ -50,7 +47,6 @@ export class FeaturedItemRepository {
           data: menuItemIds.map((menuItemId, index) => ({
             id: generateEntityId(),
             tenantId,
-            companyId,
             menuItemId,
             sortOrder: index,
           })),
@@ -64,14 +60,12 @@ export class FeaturedItemRepository {
    */
   async addFeaturedItem(
     tenantId: string,
-    companyId: string,
     menuItemId: string
   ) {
     // Get the current max sort order
     const maxSortOrder = await prisma.featuredItem.aggregate({
       where: {
         tenantId,
-        companyId,
         deleted: false,
       },
       _max: {
@@ -85,7 +79,6 @@ export class FeaturedItemRepository {
       data: {
         id: generateEntityId(),
         tenantId,
-        companyId,
         menuItemId,
         sortOrder: newSortOrder,
       },
@@ -97,13 +90,11 @@ export class FeaturedItemRepository {
    */
   async removeFeaturedItem(
     tenantId: string,
-    companyId: string,
     menuItemId: string
   ) {
     return prisma.featuredItem.updateMany({
       where: {
         tenantId,
-        companyId,
         menuItemId,
         deleted: false,
       },
@@ -119,14 +110,12 @@ export class FeaturedItemRepository {
    */
   async reorderFeaturedItems(
     tenantId: string,
-    companyId: string,
     orderedMenuItemIds: string[]
   ) {
     const queries = orderedMenuItemIds.map((menuItemId, index) =>
       prisma.featuredItem.updateMany({
         where: {
           tenantId,
-          companyId,
           menuItemId,
         },
         data: {

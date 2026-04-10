@@ -8,11 +8,10 @@ export class TaxConfigRepository {
   /**
    * Get all tax configs for a company
    */
-  async getTaxConfigsByCompany(tenantId: string, companyId: string) {
+  async getTaxConfigsByTenant(tenantId: string) {
     return prisma.taxConfig.findMany({
       where: {
         tenantId,
-        companyId,
         status: "active",
         deleted: false,
       },
@@ -228,7 +227,6 @@ export class TaxConfigRepository {
    */
   async createTaxConfig(
     tenantId: string,
-    companyId: string,
     data: {
       name: string;
       description?: string | null;
@@ -239,7 +237,6 @@ export class TaxConfigRepository {
       data: {
         id: generateEntityId(),
         tenantId,
-        companyId,
         name: data.name,
         description: data.description,
         roundingMethod: data.roundingMethod ?? "half_up",

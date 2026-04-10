@@ -10,9 +10,8 @@ export class OrderRepository {
    */
   async create(
     tenantId: string,
-    companyId: string,
     merchantId: string | null,
-    data: Omit<Prisma.OrderCreateInput, "tenant" | "company" | "merchant" | "loyaltyMember" | "id">,
+    data: Omit<Prisma.OrderCreateInput, "tenant" | "merchant" | "loyaltyMember" | "id">,
     loyaltyMemberId?: string,
     tx?: DbClient
   ) {
@@ -22,7 +21,6 @@ export class OrderRepository {
         id: generateEntityId(),
         ...data,
         tenant: { connect: { id: tenantId } },
-        company: { connect: { id: companyId } },
         ...(merchantId && { merchant: { connect: { id: merchantId } } }),
         ...(loyaltyMemberId && {
           loyaltyMember: { connect: { id: loyaltyMemberId } },
@@ -59,7 +57,6 @@ export class OrderRepository {
    */
   async getCompanyOrders(
     tenantId: string,
-    companyId: string,
     options: {
       status?: OrderStatus;
       fulfillmentStatus?: FulfillmentStatus;
@@ -92,7 +89,6 @@ export class OrderRepository {
 
     const where: Prisma.OrderWhereInput = {
       tenantId,
-      companyId,
       deleted: false,
       ...(merchantId && { merchantId }),
       ...(status && { status }),

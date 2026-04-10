@@ -177,16 +177,12 @@ export class PointTransactionRepository {
    */
   async getCompanyStats(
     tenantId: string,
-    companyId: string,
     dateFrom?: Date,
     dateTo?: Date
   ) {
     const where: Prisma.PointTransactionWhereInput = {
       tenantId,
       deleted: false,
-      loyaltyMember: {
-        companyId,
-      },
     };
 
     if (dateFrom || dateTo) {

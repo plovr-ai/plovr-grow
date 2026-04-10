@@ -83,7 +83,6 @@ export class PaymentRepository {
             id: true,
             orderNumber: true,
             tenantId: true,
-            companyId: true,
             merchantId: true,
           },
         },

@@ -82,18 +82,17 @@ export class MenuRepository {
     });
   }
 
-  // ==================== Company-scoped query methods (legacy) ====================
+  // ==================== Tenant-scoped query methods (legacy) ====================
 
   /**
    * Get all categories with all items for dashboard (no status filter)
    * Returns everything including inactive categories and items
    * @deprecated Use getCategoriesWithItemsByMenuForDashboard instead
    */
-  async getCategoriesWithItemsForDashboard(tenantId: string, companyId: string) {
+  async getCategoriesWithItemsForDashboard(tenantId: string) {
     return prisma.menuCategory.findMany({
       where: {
         tenantId,
-        companyId,
         deleted: false,
       },
       include: {
@@ -120,11 +119,10 @@ export class MenuRepository {
    * All merchants under this company share the same menu
    * @deprecated Use getCategoriesWithItemsByMenu instead
    */
-  async getCategoriesWithItemsByCompany(tenantId: string, companyId: string) {
+  async getCategoriesWithItemsByCompany(tenantId: string) {
     return prisma.menuCategory.findMany({
       where: {
         tenantId,
-        companyId,
         status: "active",
         deleted: false,
       },
@@ -213,14 +211,12 @@ export class MenuRepository {
    */
   async getItemsByIdsByCompany(
     tenantId: string,
-    companyId: string,
     itemIds: string[]
   ) {
     return prisma.menuItem.findMany({
       where: {
         id: { in: itemIds },
         tenantId,
-        companyId,
         status: "active",
         deleted: false,
       },
@@ -234,16 +230,14 @@ export class MenuRepository {
    */
   async createCategory(
     tenantId: string,
-    companyId: string,
     menuId: string,
-    data: Omit<Prisma.MenuCategoryCreateInput, "id" | "tenant" | "company" | "menu">
+    data: Omit<Prisma.MenuCategoryCreateInput, "id" | "tenant" | "menu">
   ) {
     return prisma.menuCategory.create({
       data: {
         id: generateEntityId(),
         ...data,
         tenant: { connect: { id: tenantId } },
-        company: { connect: { id: companyId } },
         menu: { connect: { id: menuId } },
       },
     });
@@ -272,15 +266,13 @@ export class MenuRepository {
    */
   async createItem(
     tenantId: string,
-    companyId: string,
-    data: Omit<Prisma.MenuItemCreateInput, "id" | "tenant" | "company">
+    data: Omit<Prisma.MenuItemCreateInput, "id" | "tenant">
   ) {
     return prisma.menuItem.create({
       data: {
         id: generateEntityId(),
         ...data,
         tenant: { connect: { id: tenantId } },
-        company: { connect: { id: companyId } },
       },
     });
   }
@@ -382,11 +374,10 @@ export class MenuRepository {
   /**
    * Get all active items for a company (item pool for "Add Existing" feature)
    */
-  async getAllItemsByCompany(tenantId: string, companyId: string) {
+  async getAllItemsByCompany(tenantId: string) {
     return prisma.menuItem.findMany({
       where: {
         tenantId,
-        companyId,
         status: { in: ["active", "out_of_stock"] },
         deleted: false,
       },
