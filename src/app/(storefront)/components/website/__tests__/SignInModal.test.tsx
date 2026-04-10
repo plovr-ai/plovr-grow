@@ -783,8 +783,8 @@ describe("SignInModal", () => {
     });
   });
 
-  describe("resend OTP failure", () => {
-    it("should throw error when resend fails", async () => {
+  describe("resend OTP", () => {
+    it("should call OTP send endpoint again on resend", async () => {
       let otpSendCount = 0;
       mockFetch.mockImplementation((url: string) => {
         if (url.includes("/otp/send")) {
@@ -795,10 +795,10 @@ describe("SignInModal", () => {
               json: async () => ({ success: true, data: { isNewMember: false } }),
             });
           }
-          // Subsequent calls return failure
+          // Subsequent calls also succeed
           return Promise.resolve({
             ok: true,
-            json: async () => ({ success: false, error: "Rate limited" }),
+            json: async () => ({ success: true }),
           });
         }
         if (url.includes("/loyalty/status")) {

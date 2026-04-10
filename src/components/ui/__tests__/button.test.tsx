@@ -6,12 +6,12 @@ describe("Button", () => {
   it("should render as Slot when asChild is true", () => {
     render(
       <Button asChild>
-        <a href="/test">Link Button</a>
+        <span data-href="/test">Link Button</span>
       </Button>
     );
 
-    const link = screen.getByRole("link", { name: "Link Button" });
-    expect(link).toHaveAttribute("href", "/test");
-    expect(link).toHaveAttribute("data-slot", "button");
+    const el = screen.getByText("Link Button");
+    expect(el).toHaveAttribute("data-href", "/test");
+    expect(el).toHaveAttribute("data-slot", "button");
   });
 });
