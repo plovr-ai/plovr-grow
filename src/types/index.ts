@@ -118,18 +118,6 @@ export interface OrderItemData {
   imageUrl?: string | null;  // Item image URL for display
 }
 
-export interface CreateOrderInput {
-  tenantId: string;
-  customerName: string;
-  customerPhone: string;
-  customerEmail?: string;
-  orderMode: OrderMode;
-  items: OrderItemData[];
-  notes?: string;
-  deliveryAddress?: DeliveryAddress;
-  scheduledAt?: Date;
-}
-
 export interface DeliveryAddress {
   street: string;
   apt?: string;
@@ -177,18 +165,3 @@ export const DEFAULT_FEE_CONFIG: FeeConfig = {
 
 // Note: BusinessHours and MerchantSettings are now defined in ./merchant.ts
 
-// ==================== API Response Types ====================
-
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
-
-export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
