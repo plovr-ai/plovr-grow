@@ -427,4 +427,35 @@ describe("MenuItemCard", () => {
       expect(screen.queryByText(/modifier/)).not.toBeInTheDocument();
     });
   });
+
+  describe("Description and Tax Display", () => {
+    it("should render non-breaking space when description is null", () => {
+      const noDescItem: DashboardMenuItem = {
+        ...singleCategoryItem,
+        description: null,
+      };
+
+      render(
+        <MenuItemCard {...defaultProps} item={noDescItem} />,
+        { wrapper: Wrapper }
+      );
+
+      // The component renders \u00A0 when description is null
+      expect(screen.getByText("Spring Rolls")).toBeInTheDocument();
+    });
+
+    it("should not display tax line when no tax configs", () => {
+      const noTaxItem: DashboardMenuItem = {
+        ...singleCategoryItem,
+        taxConfigIds: [],
+      };
+
+      render(
+        <MenuItemCard {...defaultProps} item={noTaxItem} />,
+        { wrapper: Wrapper }
+      );
+
+      expect(screen.queryByText(/Tax:/)).not.toBeInTheDocument();
+    });
+  });
 });

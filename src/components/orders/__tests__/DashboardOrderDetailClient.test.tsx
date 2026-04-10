@@ -321,4 +321,325 @@ describe("DashboardOrderDetailClient", () => {
       expect(backLink).toBeInTheDocument();
     });
   });
+
+  describe("delivery order", () => {
+    const deliveryOrder = {
+      ...mockOrder,
+      orderMode: "delivery",
+      deliveryFee: 5.99,
+      deliveryAddress: {
+        street: "123 Main St",
+        apt: "Apt 4B",
+        city: "New York",
+        state: "NY",
+        zipCode: "10001",
+        instructions: "Leave at door",
+      },
+    };
+
+    it("should display delivery address for delivery orders", () => {
+      render(
+        <DashboardOrderDetailClient order={deliveryOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Delivery Address")).toBeInTheDocument();
+      expect(screen.getByText(/123 Main St/)).toBeInTheDocument();
+      expect(screen.getByText(/Apt 4B/)).toBeInTheDocument();
+      expect(screen.getByText(/New York, NY 10001/)).toBeInTheDocument();
+      expect(screen.getByText("Leave at door")).toBeInTheDocument();
+    });
+
+    it("should show delivery fee in price summary", () => {
+      render(
+        <DashboardOrderDetailClient order={deliveryOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Delivery Fee")).toBeInTheDocument();
+    });
+
+    it("should display 'Out for Delivery' and 'Delivered' labels for delivery orders", () => {
+      const paidDeliveryOrder = {
+        ...deliveryOrder,
+        status: "completed",
+        fulfillmentStatus: "confirmed",
+      };
+
+      render(
+        <DashboardOrderDetailClient order={paidDeliveryOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Out for Delivery")).toBeInTheDocument();
+      expect(screen.getByText("Delivered")).toBeInTheDocument();
+    });
+  });
+
+  describe("cancelled order", () => {
+    const cancelledOrder = {
+      ...mockOrder,
+      status: "canceled",
+      cancelReason: "Customer requested cancellation",
+      cancelledAt: new Date("2024-01-15T11:00:00Z"),
+      timeline: [
+        ...mockOrder.timeline,
+        { status: "canceled" as const, timestamp: "2024-01-15T11:00:00Z" },
+      ],
+    };
+
+    it("should show cancelled state in status progress", () => {
+      render(
+        <DashboardOrderDetailClient order={cancelledOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Order Cancelled")).toBeInTheDocument();
+      expect(screen.getByText("This order has been cancelled")).toBeInTheDocument();
+    });
+
+    it("should display cancel reason in timeline", () => {
+      render(
+        <DashboardOrderDetailClient order={cancelledOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText(/Reason: Customer requested cancellation/)).toBeInTheDocument();
+    });
+  });
+
+  describe("payment pending order", () => {
+    it("should show awaiting payment state for created status", () => {
+      const pendingOrder = {
+        ...mockOrder,
+        status: "created",
+        paidAt: null,
+      };
+
+      render(
+        <DashboardOrderDetailClient order={pendingOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Awaiting Payment")).toBeInTheDocument();
+      expect(screen.getByText("Please complete the payment to proceed")).toBeInTheDocument();
+    });
+
+    it("should show partial payment state", () => {
+      const partialOrder = {
+        ...mockOrder,
+        status: "partial_paid",
+      };
+
+      render(
+        <DashboardOrderDetailClient order={partialOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Partial Payment Received")).toBeInTheDocument();
+      expect(screen.getByText("Please complete the remaining payment")).toBeInTheDocument();
+    });
+  });
+
+  describe("discount display", () => {
+    it("should show discount when present", () => {
+      const orderWithDiscount = {
+        ...mockOrder,
+        discount: 3.0,
+      };
+
+      render(
+        <DashboardOrderDetailClient order={orderWithDiscount} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Discount")).toBeInTheDocument();
+    });
+
+    it("should not show discount when zero", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.queryByText("Discount")).not.toBeInTheDocument();
+    });
+
+    it("should not show delivery fee when zero", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.queryByText("Delivery Fee")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("no email customer", () => {
+    it("should not render email when null", () => {
+      const orderNoEmail = {
+        ...mockOrder,
+        customerEmail: null,
+      };
+
+      render(
+        <DashboardOrderDetailClient order={orderNoEmail} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.queryByText("john@example.com")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("no notes", () => {
+    it("should not render notes section when null", () => {
+      const orderNoNotes = {
+        ...mockOrder,
+        notes: null,
+      };
+
+      render(
+        <DashboardOrderDetailClient order={orderNoNotes} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.queryByText("Order Notes")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("item count singular", () => {
+    it("should show singular 'item' when only 1 item with quantity 1", () => {
+      const singleItemOrder = {
+        ...mockOrder,
+        items: [
+          {
+            menuItemId: "item-1",
+            name: "Classic Burger",
+            price: 12.99,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 12.99,
+          },
+        ],
+      };
+
+      render(
+        <DashboardOrderDetailClient order={singleItemOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Order Items (1 item)")).toBeInTheDocument();
+    });
+  });
+
+  describe("sales channel labels", () => {
+    it("should display catering label for catering orders", () => {
+      const cateringOrder = {
+        ...mockOrder,
+        salesChannel: "catering",
+      };
+
+      render(
+        <DashboardOrderDetailClient order={cateringOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText(/Catering/)).toBeInTheDocument();
+    });
+  });
+
+  describe("fulfillment progress", () => {
+    it("should show Ready for Pickup for pickup orders", () => {
+      render(
+        <DashboardOrderDetailClient order={mockOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Ready for Pickup")).toBeInTheDocument();
+      expect(screen.getByText("Picked Up")).toBeInTheDocument();
+    });
+
+    it("should show fulfilled step as completed when order is fulfilled", () => {
+      const fulfilledOrder = {
+        ...mockOrder,
+        fulfillmentStatus: "fulfilled",
+      };
+
+      render(
+        <DashboardOrderDetailClient order={fulfilledOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("Picked Up")).toBeInTheDocument();
+    });
+  });
+
+  describe("timeline with Date objects", () => {
+    it("should handle Date object timestamps in timeline", () => {
+      const orderWithDateTimeline = {
+        ...mockOrder,
+        timeline: [
+          { status: "created" as const, timestamp: new Date("2024-01-15T10:30:00Z") },
+          { status: "confirmed" as const, timestamp: new Date("2024-01-15T10:35:00Z") },
+        ],
+      };
+
+      render(
+        <DashboardOrderDetailClient order={orderWithDateTimeline} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      // Timeline should still render
+      expect(screen.getByText("Order Timeline")).toBeInTheDocument();
+    });
+
+    it("should handle unknown timeline status with fallback config", () => {
+      const orderWithUnknownStatus = {
+        ...mockOrder,
+        timeline: [
+          { status: "created" as const, timestamp: "2024-01-15T10:30:00Z" },
+          // Cast to allow unknown status
+          { status: "unknown_status" as "created", timestamp: "2024-01-15T10:36:00Z" },
+        ],
+      };
+
+      render(
+        <DashboardOrderDetailClient order={orderWithUnknownStatus} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      // Should render with fallback label (the status string itself)
+      expect(screen.getByText("unknown_status")).toBeInTheDocument();
+    });
+  });
+
+  describe("phone number formatting", () => {
+    it("should format 10-digit phone number", () => {
+      const orderWith10DigitPhone = {
+        ...mockOrder,
+        customerPhone: "5551234567",
+      };
+
+      render(
+        <DashboardOrderDetailClient order={orderWith10DigitPhone} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("(555) 123-4567")).toBeInTheDocument();
+    });
+
+    it("should return raw phone for non-standard formats", () => {
+      const orderWithOddPhone = {
+        ...mockOrder,
+        customerPhone: "12345",
+      };
+
+      render(
+        <DashboardOrderDetailClient order={orderWithOddPhone} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("12345")).toBeInTheDocument();
+    });
+  });
 });

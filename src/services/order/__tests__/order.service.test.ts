@@ -17,6 +17,7 @@ vi.mock("@/repositories/order.repository", () => ({
     getByIdWithMerchant: vi.fn(),
     getCompanyOrders: vi.fn(),
     getOrdersByLoyaltyMember: vi.fn(),
+    updateLoyaltyMemberId: vi.fn(),
   },
 }));
 
@@ -73,6 +74,7 @@ vi.mock("@/repositories/tax-config.repository", () => ({
 import { orderRepository } from "@/repositories/order.repository";
 import { sequenceRepository } from "@/repositories/sequence.repository";
 import { taxConfigRepository } from "@/repositories/tax-config.repository";
+import { pointTransactionRepository } from "@/repositories/point-transaction.repository";
 import { menuService, taxConfigService } from "@/services/menu";
 import { merchantService } from "@/services/merchant";
 import { giftCardService } from "@/services/giftcard";
@@ -674,6 +676,39 @@ describe("OrderService", () => {
     });
   });
 
+  describe("createCompanyOrder() - branch coverage", () => {
+    it("should default customerEmail to null when not provided", async () => {
+      vi.mocked(sequenceRepository.getNextCompanyOrderSequence).mockResolvedValue(1);
+      vi.mocked(orderRepository.create).mockResolvedValue({
+        id: "order-gc-2",
+        orderNumber: "GC-20260410-0001",
+      } as never);
+
+      await orderService.createCompanyOrder("tenant-1", {
+        companyId: "company-1",
+        customerFirstName: "Jane",
+        customerLastName: "Smith",
+        customerPhone: "555-0000",
+        // no customerEmail
+        items: [
+          {
+            menuItemId: "gc-1",
+            name: "$10 Gift Card",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 10,
+            taxes: [],
+          },
+        ],
+      });
+
+      const createCall = vi.mocked(orderRepository.create).mock.calls[0];
+      const orderData = createCall[3] as Record<string, unknown>;
+      expect(orderData.customerEmail).toBeNull();
+    });
+  });
+
   describe("calculateOrderTotals()", () => {
     beforeEach(() => {
       // Default: no taxes assigned to items
@@ -1258,6 +1293,283 @@ describe("OrderService", () => {
       expect(eventHandler).not.toHaveBeenCalled();
 
       unsubscribe();
+    });
+  });
+
+  describe("getOrder()", () => {
+    it("should delegate to orderRepository.getByIdWithMerchant", async () => {
+      const mockOrder = { id: "order-1", orderNumber: "ORD-001" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
+
+      const result = await orderService.getOrder("tenant-1", "order-1");
+
+      expect(orderRepository.getByIdWithMerchant).toHaveBeenCalledWith("tenant-1", "order-1");
+      expect(result).toEqual(mockOrder);
+    });
+
+    it("should return null when order not found", async () => {
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(null);
+
+      const result = await orderService.getOrder("tenant-1", "nonexistent");
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("getOrderWithTimeline()", () => {
+    const now = new Date("2026-04-10T12:00:00Z");
+
+    it("should return null when order not found", async () => {
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(null);
+
+      const result = await orderService.getOrderWithTimeline("tenant-1", "order-1");
+
+      expect(result).toBeNull();
+    });
+
+    it("should build timeline with all events for a fully fulfilled order", async () => {
+      const paidAt = new Date("2026-04-10T12:01:00Z");
+      const confirmedAt = new Date("2026-04-10T12:02:00Z");
+      const preparingAt = new Date("2026-04-10T12:05:00Z");
+      const readyAt = new Date("2026-04-10T12:20:00Z");
+      const fulfilledAt = new Date("2026-04-10T12:25:00Z");
+
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue({
+        id: "order-1",
+        status: "paid",
+        fulfillmentStatus: "fulfilled",
+        createdAt: now,
+        paidAt,
+        confirmedAt,
+        preparingAt,
+        readyAt,
+        fulfilledAt,
+        cancelledAt: null,
+      } as never);
+
+      vi.mocked(pointTransactionRepository.getByOrderId).mockResolvedValue(null);
+
+      const result = await orderService.getOrderWithTimeline("tenant-1", "order-1");
+
+      expect(result).not.toBeNull();
+      expect(result!.timeline).toHaveLength(6);
+      expect(result!.timeline[0]).toEqual({ type: "payment", status: "created", timestamp: now });
+      expect(result!.timeline[1]).toEqual({ type: "payment", status: "completed", timestamp: paidAt });
+      expect(result!.timeline[2]).toEqual({ type: "fulfillment", status: "confirmed", timestamp: confirmedAt });
+      expect(result!.timeline[3]).toEqual({ type: "fulfillment", status: "preparing", timestamp: preparingAt });
+      expect(result!.timeline[4]).toEqual({ type: "fulfillment", status: "ready", timestamp: readyAt });
+      expect(result!.timeline[5]).toEqual({ type: "fulfillment", status: "fulfilled", timestamp: fulfilledAt });
+      expect(result!.pointsEarned).toBeUndefined();
+    });
+
+    it("should include cancelled event in timeline", async () => {
+      const cancelledAt = new Date("2026-04-10T12:03:00Z");
+
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue({
+        id: "order-1",
+        status: "canceled",
+        fulfillmentStatus: "pending",
+        createdAt: now,
+        paidAt: null,
+        confirmedAt: null,
+        preparingAt: null,
+        readyAt: null,
+        fulfilledAt: null,
+        cancelledAt,
+      } as never);
+
+      vi.mocked(pointTransactionRepository.getByOrderId).mockResolvedValue(null);
+
+      const result = await orderService.getOrderWithTimeline("tenant-1", "order-1");
+
+      expect(result!.timeline).toHaveLength(2);
+      expect(result!.timeline[1]).toEqual({ type: "payment", status: "canceled", timestamp: cancelledAt });
+    });
+
+    it("should include pointsEarned when earn transaction exists", async () => {
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue({
+        id: "order-1",
+        status: "paid",
+        fulfillmentStatus: "fulfilled",
+        createdAt: now,
+        paidAt: new Date("2026-04-10T12:01:00Z"),
+        confirmedAt: null,
+        preparingAt: null,
+        readyAt: null,
+        fulfilledAt: null,
+        cancelledAt: null,
+      } as never);
+
+      vi.mocked(pointTransactionRepository.getByOrderId).mockResolvedValue({
+        id: "pt-1",
+        type: "earn",
+        points: 100,
+      } as never);
+
+      const result = await orderService.getOrderWithTimeline("tenant-1", "order-1");
+
+      expect(result!.pointsEarned).toBe(100);
+    });
+
+    it("should not include pointsEarned for non-earn transaction types", async () => {
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue({
+        id: "order-1",
+        status: "paid",
+        fulfillmentStatus: "fulfilled",
+        createdAt: now,
+        paidAt: null,
+        confirmedAt: null,
+        preparingAt: null,
+        readyAt: null,
+        fulfilledAt: null,
+        cancelledAt: null,
+      } as never);
+
+      vi.mocked(pointTransactionRepository.getByOrderId).mockResolvedValue({
+        id: "pt-1",
+        type: "redeem",
+        points: 50,
+      } as never);
+
+      const result = await orderService.getOrderWithTimeline("tenant-1", "order-1");
+
+      expect(result!.pointsEarned).toBeUndefined();
+    });
+
+    it("should sort timeline events by timestamp", async () => {
+      // Create events out of chronological order to verify sorting
+      const cancelledAt = new Date("2026-04-10T12:01:00Z");
+      const paidAt = new Date("2026-04-10T12:00:30Z");
+
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue({
+        id: "order-1",
+        status: "canceled",
+        fulfillmentStatus: "pending",
+        createdAt: now,
+        paidAt,
+        confirmedAt: null,
+        preparingAt: null,
+        readyAt: null,
+        fulfilledAt: null,
+        cancelledAt,
+      } as never);
+
+      vi.mocked(pointTransactionRepository.getByOrderId).mockResolvedValue(null);
+
+      const result = await orderService.getOrderWithTimeline("tenant-1", "order-1");
+
+      // Should be sorted: created -> paid -> cancelled
+      expect(result!.timeline[0].status).toBe("created");
+      expect(result!.timeline[1].status).toBe("completed");
+      expect(result!.timeline[2].status).toBe("canceled");
+    });
+  });
+
+  describe("linkLoyaltyMember()", () => {
+    it("should delegate to orderRepository.updateLoyaltyMemberId", async () => {
+      vi.mocked(orderRepository.updateLoyaltyMemberId).mockResolvedValue({
+        id: "order-1",
+        loyaltyMemberId: "member-1",
+      } as never);
+
+      const result = await orderService.linkLoyaltyMember("tenant-1", "order-1", "member-1");
+
+      expect(orderRepository.updateLoyaltyMemberId).toHaveBeenCalledWith(
+        "tenant-1",
+        "order-1",
+        "member-1"
+      );
+      expect(result).toEqual(expect.objectContaining({ loyaltyMemberId: "member-1" }));
+    });
+  });
+
+  describe("createMerchantOrder() - branch coverage", () => {
+    const mockInput = {
+      companyId: "company-1",
+      merchantId: "merchant-1",
+      customerFirstName: "Jane",
+      customerLastName: "Smith",
+      customerPhone: "555-0000",
+      orderMode: "pickup" as const,
+      items: [
+        {
+          menuItemId: "item-1",
+          name: "Test Item",
+          price: 10.0,
+          quantity: 1,
+          selectedModifiers: [],
+          totalPrice: 10.0,
+          taxes: [],
+        },
+      ],
+      tipAmount: 0,
+    };
+
+    beforeEach(() => {
+      vi.mocked(menuService.getMenuItemsByIds).mockResolvedValue([
+        { id: "item-1", name: "Test Item" },
+      ] as never);
+      vi.mocked(taxConfigService.getTaxConfigsMap).mockResolvedValue(new Map());
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(new Map());
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([]);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(new Map());
+      vi.mocked(merchantService.getMerchant).mockResolvedValue({
+        id: "merchant-1",
+        name: "Test Merchant",
+        slug: "test-merchant",
+      } as never);
+      vi.mocked(sequenceRepository.getNextOrderSequence).mockResolvedValue(1);
+      vi.mocked(orderRepository.create).mockResolvedValue({
+        id: "order-1",
+        orderNumber: "001",
+      } as never);
+    });
+
+    it("should use ISO date when merchant has no timezone", async () => {
+      vi.mocked(merchantService.getMerchantById).mockResolvedValue({
+        id: "merchant-1",
+        name: "Test Merchant",
+        slug: "test-merchant",
+        timezone: undefined,
+      } as never);
+
+      await orderService.createMerchantOrder("tenant-1", mockInput);
+
+      expect(orderRepository.create).toHaveBeenCalled();
+    });
+
+    it("should default customerEmail to null when not provided", async () => {
+      vi.mocked(merchantService.getMerchantById).mockResolvedValue({
+        id: "merchant-1",
+        name: "Test Merchant",
+        slug: "test-merchant",
+        timezone: "America/New_York",
+      } as never);
+
+      await orderService.createMerchantOrder("tenant-1", mockInput);
+
+      const createCall = vi.mocked(orderRepository.create).mock.calls[0];
+      // The 4th argument is the order data object
+      const orderData = createCall[3] as Record<string, unknown>;
+      expect(orderData.customerEmail).toBeNull();
+    });
+
+    it("should handle missing tax config in item tax resolution", async () => {
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([["item-1", ["tax-missing"]]])
+      );
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([]);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(new Map());
+      vi.mocked(merchantService.getMerchantById).mockResolvedValue({
+        id: "merchant-1",
+        name: "Test Merchant",
+        slug: "test-merchant",
+        timezone: "America/New_York",
+      } as never);
+
+      await orderService.createMerchantOrder("tenant-1", mockInput);
+
+      expect(orderRepository.create).toHaveBeenCalled();
     });
   });
 });

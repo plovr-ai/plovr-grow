@@ -133,6 +133,19 @@ describe("SquareWebhookService", () => {
     it("should return false for empty signature", () => {
       expect(service.verifySignature('{"test":"data"}', "")).toBe(false);
     });
+
+    it("should return false when crypto throws (catch branch)", async () => {
+      const { squareConfig } = await import("../square.config");
+      const origKey = squareConfig.webhookSignatureKey;
+      // Setting key to null forces createHmac to throw
+      (squareConfig as Record<string, unknown>).webhookSignatureKey = null;
+
+      const result = service.verifySignature('{"test":"data"}', "somesig");
+
+      expect(result).toBe(false);
+
+      (squareConfig as Record<string, unknown>).webhookSignatureKey = origKey;
+    });
   });
 
   // ==================== handleWebhook ====================
@@ -448,6 +461,95 @@ describe("SquareWebhookService", () => {
         "we-1",
         "processed"
       );
+    });
+
+    it("should not update order when payment status is neither COMPLETED nor FAILED", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+
+      const pendingPayload = buildPayload({
+        type: "payment.updated",
+        data: {
+          type: "payment",
+          id: "sq-payment-1",
+          object: {
+            payment: {
+              id: "sq-payment-1",
+              order_id: "sq-order-1",
+              status: "PENDING",
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(pendingPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("handler error branch coverage", () => {
+    it("should handle non-Error thrown by handler (Unknown error)", async () => {
+      mockMerchantFindFirst.mockResolvedValue({ companyId: "company-1" });
+      mockSyncCatalog.mockRejectedValue("string-error");
+
+      const payload = buildPayload({ type: "catalog.version.updated" });
+      await service.handleWebhook(JSON.stringify(payload));
+
+      expect(mockUpdateWebhookEventStatus).toHaveBeenCalledWith(
+        "we-1",
+        "failed",
+        "Unknown error"
+      );
+    });
+
+    it("should re-throw non-Error from syncCatalog if not ALREADY_RUNNING", async () => {
+      mockMerchantFindFirst.mockResolvedValue({ companyId: "company-1" });
+      mockSyncCatalog.mockRejectedValue("some non-Error");
+
+      const payload = buildPayload({ type: "catalog.version.updated" });
+
+      // The non-Error thrown from handleCatalogChange gets caught by handleWebhook's outer catch
+      // Since "some non-Error" is a string (not instanceof Error), message becomes ""
+      // "" does not include "ALREADY_RUNNING", so it re-throws
+      // Then the outer catch in handleWebhook catches it with "Unknown error"
+      await service.handleWebhook(JSON.stringify(payload));
+
+      expect(mockUpdateWebhookEventStatus).toHaveBeenCalledWith(
+        "we-1",
+        "failed",
+        "Unknown error"
+      );
+    });
+  });
+
+  describe("order.updated handler - no timestamp field", () => {
+    it("should not set timestamp field when status has no corresponding timestamp", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+
+      const proposedPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              fulfillments: [{ state: "PROPOSED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(proposedPayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: { fulfillmentStatus: "pending" },
+      });
     });
   });
 });

@@ -83,6 +83,16 @@ describe("datetime utilities", () => {
       });
       expect(result).toContain("Monday");
     });
+
+    it("should handle Date object input (non-string branch)", () => {
+      const result = formatDateTime(testDate, "America/New_York", "en-US");
+      expect(result).toContain("Jan 15, 2024");
+    });
+
+    it("should handle string input", () => {
+      const result = formatDateTime("2024-01-15T20:30:00Z", "America/New_York", "en-US");
+      expect(result).toContain("Jan 15, 2024");
+    });
   });
 
   describe("getTimezoneAbbr", () => {
@@ -104,6 +114,16 @@ describe("datetime utilities", () => {
       const winterDate = new Date("2024-01-15T12:00:00Z");
       const result = getTimezoneAbbr("America/Los_Angeles", winterDate);
       expect(result).toBe("PST");
+    });
+
+    it("should handle string date input in formatDate", () => {
+      const result = formatDate("2024-07-15T12:00:00Z", "America/New_York", "en-US");
+      expect(result).toBe("Jul 15, 2024");
+    });
+
+    it("should handle string date input in formatTime", () => {
+      const result = formatTime("2024-01-15T20:30:00Z", "America/New_York", "en-US");
+      expect(result).toBe("3:30 PM");
     });
 
     it("should use current date when no date provided", () => {
@@ -132,6 +152,15 @@ describe("datetime utilities", () => {
         "en-US"
       );
       expect(result).toBe("Jan 15, 2024 at 12:30 PM PST");
+    });
+
+    it("should handle string date input", () => {
+      const result = formatDateTimeWithTimezone(
+        "2024-01-15T20:30:00Z",
+        "America/New_York",
+        "en-US"
+      );
+      expect(result).toBe("Jan 15, 2024 at 3:30 PM EST");
     });
   });
 });

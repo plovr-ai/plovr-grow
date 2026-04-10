@@ -538,6 +538,395 @@ describe("SquareCatalogService", () => {
       expect(item.modifiers).toBeNull();
     });
 
+    it("should use production environment when configured", async () => {
+      const { squareConfig: configMock } = await import("../square.config");
+      const origEnv = configMock.environment;
+      (configMock as Record<string, unknown>).environment = "production";
+
+      mockCatalogObjects = [];
+      mockCatalogApi.list.mockImplementation(() =>
+        Promise.resolve(makePage([]))
+      );
+
+      await service.fetchFullCatalog("test-token");
+
+      const squareModule = await import("square");
+      const ClientMock = squareModule.SquareClient as unknown as ReturnType<typeof vi.fn>;
+      const lastCallArgs = ClientMock.mock.calls[ClientMock.mock.calls.length - 1][0];
+      expect(lastCallArgs.environment).toBe("production");
+
+      (configMock as Record<string, unknown>).environment = origEnv;
+    });
+
+    it("should handle taxes with null name and null percentage", () => {
+      const catalog: SquareCatalogResult = {
+        categories: [],
+        items: [],
+        modifierLists: [],
+        taxes: [
+          {
+            type: "TAX",
+            id: "tax-1",
+            taxData: {
+              name: null,
+              percentage: null,
+              enabled: true,
+            },
+          },
+        ],
+      };
+
+      const result = service.mapToMenuModels(catalog);
+
+      expect(result.taxes).toHaveLength(1);
+      expect(result.taxes[0]).toEqual({
+        externalId: "tax-1",
+        name: "Tax",
+        percentage: 0,
+      });
+    });
+
+    it("should handle category with null name", () => {
+      const catalog: SquareCatalogResult = {
+        categories: [
+          { type: "CATEGORY", id: "cat-1", categoryData: { name: null } },
+        ],
+        items: [],
+        modifierLists: [],
+        taxes: [],
+      };
+
+      const result = service.mapToMenuModels(catalog);
+
+      expect(result.categories[0].name).toBe("Unnamed");
+    });
+
+    it("should handle item with null name and null description", () => {
+      const catalog: SquareCatalogResult = {
+        categories: [],
+        items: [
+          {
+            type: "ITEM",
+            id: "item-1",
+            itemData: {
+              name: null,
+              description: null,
+              variations: [
+                {
+                  id: "var-1",
+                  type: "ITEM_VARIATION",
+                  itemVariationData: {
+                    name: null,
+                    priceMoney: { amount: null },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+        modifierLists: [],
+        taxes: [],
+      };
+
+      const result = service.mapToMenuModels(catalog);
+
+      expect(result.items[0].name).toBe("Unnamed");
+      expect(result.items[0].description).toBeNull();
+      expect(result.items[0].price).toBe(0);
+      expect(result.items[0].variationMappings[0].name).toBe("Default");
+    });
+
+    it("should handle modifier list with null name and null modifier data", () => {
+      const catalog: SquareCatalogResult = {
+        categories: [],
+        items: [
+          {
+            type: "ITEM",
+            id: "item-1",
+            itemData: {
+              name: "Burger",
+              description: null,
+              variations: [
+                {
+                  id: "var-1",
+                  type: "ITEM_VARIATION",
+                  itemVariationData: {
+                    name: "Regular",
+                    priceMoney: { amount: BigInt(1000), currency: "USD" },
+                  },
+                },
+              ],
+              modifierListInfo: [
+                { modifierListId: "ml-1", enabled: true },
+                { modifierListId: "ml-missing", enabled: true },
+              ],
+            },
+          },
+        ],
+        modifierLists: [
+          {
+            type: "MODIFIER_LIST",
+            id: "ml-1",
+            modifierListData: {
+              name: null,
+              selectionType: "MULTIPLE",
+              modifiers: [
+                {
+                  id: "mod-1",
+                  type: "MODIFIER",
+                  modifierData: { name: null, priceMoney: { amount: null } },
+                },
+              ],
+            },
+          },
+        ],
+        taxes: [],
+      };
+
+      const result = service.mapToMenuModels(catalog);
+
+      const item = result.items[0];
+      expect(item.modifiers).not.toBeNull();
+      expect(item.modifiers!.groups).toHaveLength(1);
+      expect(item.modifiers!.groups[0].name).toBe("Options");
+      expect(item.modifiers!.groups[0].options[0].name).toBe("Option");
+      expect(item.modifiers!.groups[0].options[0].price).toBe(0);
+    });
+
+    it("should default variation name to 'Default' when null in multi-variation Size group", () => {
+      const catalog: SquareCatalogResult = {
+        categories: [],
+        items: [
+          {
+            type: "ITEM",
+            id: "item-1",
+            itemData: {
+              name: "Drink",
+              description: null,
+              variations: [
+                {
+                  id: "var-1",
+                  type: "ITEM_VARIATION",
+                  itemVariationData: {
+                    name: null,
+                    priceMoney: { amount: BigInt(300), currency: "USD" },
+                  },
+                },
+                {
+                  id: "var-2",
+                  type: "ITEM_VARIATION",
+                  itemVariationData: {
+                    name: "Large",
+                    priceMoney: { amount: BigInt(500), currency: "USD" },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+        modifierLists: [],
+        taxes: [],
+      };
+
+      const result = service.mapToMenuModels(catalog);
+
+      const sizeGroup = result.items[0].modifiers!.groups[0];
+      expect(sizeGroup.options[0].name).toBe("Default");
+      expect(sizeGroup.options[1].name).toBe("Large");
+    });
+
+    it("should handle item with undefined variations", () => {
+      const catalog: SquareCatalogResult = {
+        categories: [],
+        items: [
+          {
+            type: "ITEM",
+            id: "item-1",
+            itemData: {
+              name: "Simple Item",
+              description: null,
+              // variations is undefined
+            },
+          },
+        ],
+        modifierLists: [],
+        taxes: [],
+      };
+
+      const result = service.mapToMenuModels(catalog);
+
+      expect(result.items[0].price).toBe(0);
+      expect(result.items[0].variationMappings).toEqual([]);
+    });
+
+    it("should handle modifier list with undefined modifiers", () => {
+      const catalog: SquareCatalogResult = {
+        categories: [],
+        items: [
+          {
+            type: "ITEM",
+            id: "item-1",
+            itemData: {
+              name: "Burger",
+              description: null,
+              variations: [
+                {
+                  id: "var-1",
+                  type: "ITEM_VARIATION",
+                  itemVariationData: {
+                    name: "Regular",
+                    priceMoney: { amount: BigInt(1000), currency: "USD" },
+                  },
+                },
+              ],
+              modifierListInfo: [
+                { modifierListId: "ml-1", enabled: true },
+              ],
+            },
+          },
+        ],
+        modifierLists: [
+          {
+            type: "MODIFIER_LIST",
+            id: "ml-1",
+            modifierListData: {
+              name: "Toppings",
+              selectionType: "MULTIPLE",
+              // modifiers is undefined
+            },
+          },
+        ],
+        taxes: [],
+      };
+
+      const result = service.mapToMenuModels(catalog);
+
+      const group = result.items[0].modifiers!.groups[0];
+      expect(group.maxSelect).toBe(10);
+      expect(group.options).toEqual([]);
+    });
+
+    it("should handle modifierListInfo being undefined", () => {
+      const catalog: SquareCatalogResult = {
+        categories: [],
+        items: [
+          {
+            type: "ITEM",
+            id: "item-1",
+            itemData: {
+              name: "Simple",
+              description: null,
+              variations: [
+                {
+                  id: "var-1",
+                  type: "ITEM_VARIATION",
+                  itemVariationData: {
+                    name: "Regular",
+                    priceMoney: { amount: BigInt(500), currency: "USD" },
+                  },
+                },
+              ],
+              // modifierListInfo is undefined
+            },
+          },
+        ],
+        modifierLists: [],
+        taxes: [],
+      };
+
+      const result = service.mapToMenuModels(catalog);
+
+      expect(result.items[0].modifiers).toBeNull();
+    });
+
+    it("should skip modifier list entries with no modifierListData", () => {
+      const catalog: SquareCatalogResult = {
+        categories: [],
+        items: [
+          {
+            type: "ITEM",
+            id: "item-1",
+            itemData: {
+              name: "Burger",
+              description: null,
+              variations: [
+                {
+                  id: "var-1",
+                  type: "ITEM_VARIATION",
+                  itemVariationData: {
+                    name: "Regular",
+                    priceMoney: { amount: BigInt(1000), currency: "USD" },
+                  },
+                },
+              ],
+              modifierListInfo: [
+                { modifierListId: "ml-1", enabled: true },
+              ],
+            },
+          },
+        ],
+        modifierLists: [
+          {
+            type: "MODIFIER_LIST",
+            id: "ml-1",
+            // no modifierListData
+          },
+        ],
+        taxes: [],
+      };
+
+      const result = service.mapToMenuModels(catalog);
+
+      expect(result.items[0].modifiers).toBeNull();
+    });
+
+    it("should handle modifier list with empty modifiers array", () => {
+      const catalog: SquareCatalogResult = {
+        categories: [],
+        items: [
+          {
+            type: "ITEM",
+            id: "item-1",
+            itemData: {
+              name: "Burger",
+              description: null,
+              variations: [
+                {
+                  id: "var-1",
+                  type: "ITEM_VARIATION",
+                  itemVariationData: {
+                    name: "Regular",
+                    priceMoney: { amount: BigInt(1000), currency: "USD" },
+                  },
+                },
+              ],
+              modifierListInfo: [
+                { modifierListId: "ml-1", enabled: true },
+              ],
+            },
+          },
+        ],
+        modifierLists: [
+          {
+            type: "MODIFIER_LIST",
+            id: "ml-1",
+            modifierListData: {
+              name: "Toppings",
+              selectionType: "MULTIPLE",
+              modifiers: [],
+            },
+          },
+        ],
+        taxes: [],
+      };
+
+      const result = service.mapToMenuModels(catalog);
+
+      // Even with 0 modifiers, the group is added (maxSelect fallback to 10)
+      expect(result.items[0].modifiers).not.toBeNull();
+      expect(result.items[0].modifiers!.groups[0].maxSelect).toBe(10);
+    });
+
     it("should set categoryExternalIds to empty array when item has no categoryId", () => {
       const catalog: SquareCatalogResult = {
         categories: [],

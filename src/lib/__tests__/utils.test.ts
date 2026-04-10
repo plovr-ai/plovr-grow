@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { formatPrice, formatPhone, formatPhoneInput } from "../utils";
+import {
+  formatPrice,
+  formatPhone,
+  formatPhoneInput,
+  generateOrderNumber,
+  generateCateringOrderNumber,
+  generateGiftcardOrderNumber,
+  generateInvoiceNumber,
+  cn,
+} from "../utils";
 
 describe("formatPrice", () => {
   describe("USD currency", () => {
@@ -97,6 +106,70 @@ describe("formatPrice", () => {
       const result = formatPrice(1000000, "USD", "en-US");
       expect(result).toBe("$1,000,000.00");
     });
+  });
+});
+
+describe("cn", () => {
+  it("should merge tailwind classes", () => {
+    const result = cn("px-4", "py-2", "px-6");
+    expect(result).toContain("px-6");
+    expect(result).toContain("py-2");
+    expect(result).not.toContain("px-4");
+  });
+
+  it("should handle conditional classes", () => {
+    const result = cn("base", false && "hidden", "visible");
+    expect(result).toContain("base");
+    expect(result).toContain("visible");
+  });
+});
+
+describe("generateOrderNumber", () => {
+  it("should generate order number without timezone (UTC)", () => {
+    const result = generateOrderNumber(42);
+    expect(result).toMatch(/^\d{8}-0042$/);
+  });
+
+  it("should generate order number with timezone", () => {
+    const result = generateOrderNumber(1, "America/New_York");
+    expect(result).toMatch(/^\d{8}-0001$/);
+  });
+
+  it("should pad sequence to 4 digits", () => {
+    const result = generateOrderNumber(1);
+    expect(result).toMatch(/-0001$/);
+  });
+});
+
+describe("generateCateringOrderNumber", () => {
+  it("should generate catering order number without timezone", () => {
+    const result = generateCateringOrderNumber(5);
+    expect(result).toMatch(/^CTR-\d{8}-0005$/);
+  });
+
+  it("should generate catering order number with timezone", () => {
+    const result = generateCateringOrderNumber(1, "America/Los_Angeles");
+    expect(result).toMatch(/^CTR-\d{8}-0001$/);
+  });
+});
+
+describe("generateGiftcardOrderNumber", () => {
+  it("should generate giftcard order number without timezone", () => {
+    const result = generateGiftcardOrderNumber(3);
+    expect(result).toMatch(/^GC-\d{8}-0003$/);
+  });
+
+  it("should generate giftcard order number with timezone", () => {
+    const result = generateGiftcardOrderNumber(1, "America/Chicago");
+    expect(result).toMatch(/^GC-\d{8}-0001$/);
+  });
+});
+
+describe("generateInvoiceNumber", () => {
+  it("should generate invoice number with padded sequence", () => {
+    expect(generateInvoiceNumber(1)).toBe("INV-000001");
+    expect(generateInvoiceNumber(42)).toBe("INV-000042");
+    expect(generateInvoiceNumber(123456)).toBe("INV-123456");
   });
 });
 

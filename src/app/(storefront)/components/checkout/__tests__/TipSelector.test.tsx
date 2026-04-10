@@ -248,6 +248,182 @@ describe("TipSelector", () => {
     });
   });
 
+  describe("custom tip clears percentage on focus", () => {
+    it("should clear percentage tip when custom input is focused", () => {
+      const onChange = vi.fn();
+      const config: TipConfig = {
+        mode: "percentage",
+        tiers: [0.15, 0.2],
+        allowCustom: true,
+      };
+      const value: TipInput = { type: "percentage", percentage: 0.15 };
+
+      render(
+        <TipSelector subtotal={30} value={value} onChange={onChange} />,
+        { wrapper: createWrapper(config) }
+      );
+
+      const input = screen.getByPlaceholderText("Custom");
+      fireEvent.focus(input);
+
+      expect(onChange).toHaveBeenCalledWith(null);
+    });
+
+    it("should reject negative custom tip value", () => {
+      const onChange = vi.fn();
+      const config: TipConfig = {
+        mode: "percentage",
+        tiers: [0.15],
+        allowCustom: true,
+      };
+
+      render(
+        <TipSelector subtotal={30} value={null} onChange={onChange} />,
+        { wrapper: createWrapper(config) }
+      );
+
+      const input = screen.getByPlaceholderText("Custom");
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: "-5" } });
+
+      expect(onChange).toHaveBeenCalledWith(null);
+    });
+
+    it("should round custom tip to 2 decimal places", () => {
+      const onChange = vi.fn();
+      const config: TipConfig = {
+        mode: "percentage",
+        tiers: [0.15],
+        allowCustom: true,
+      };
+
+      render(
+        <TipSelector subtotal={30} value={null} onChange={onChange} />,
+        { wrapper: createWrapper(config) }
+      );
+
+      const input = screen.getByPlaceholderText("Custom");
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: "5.555" } });
+
+      expect(onChange).toHaveBeenCalledWith({ type: "fixed", amount: 5.56 });
+    });
+  });
+
+  describe("fixed mode selection", () => {
+    it("should highlight the selected fixed option", () => {
+      const onChange = vi.fn();
+      const config: TipConfig = {
+        mode: "fixed",
+        tiers: [1, 2, 3],
+        allowCustom: true,
+      };
+      const value: TipInput = { type: "fixed", amount: 2 };
+
+      render(
+        <TipSelector subtotal={30} value={value} onChange={onChange} />,
+        { wrapper: createWrapper(config) }
+      );
+
+      const selectedButton = screen.getByText("$2.00").closest("button");
+      expect(selectedButton).toHaveClass("border-theme-primary");
+    });
+  });
+
+  describe("sync effect - custom value in fixed mode", () => {
+    it("should set custom activeType when value is fixed but not a preset tier", () => {
+      const onChange = vi.fn();
+      const config: TipConfig = {
+        mode: "fixed",
+        tiers: [1, 2, 3],
+        allowCustom: true,
+      };
+      // A custom fixed value that is NOT in tiers
+      const value: TipInput = { type: "fixed", amount: 7.5 };
+
+      render(
+        <TipSelector subtotal={30} value={value} onChange={onChange} />,
+        { wrapper: createWrapper(config) }
+      );
+
+      // The custom input should show the custom value
+      const input = screen.getByPlaceholderText("Custom");
+      expect(input).toBeInTheDocument();
+
+      // None of the preset buttons should be highlighted
+      const noneButton = screen.getByText("None").closest("button");
+      expect(noneButton).not.toHaveClass("border-theme-primary");
+    });
+
+    it("should not focus custom when value is null and activeType is custom", () => {
+      const onChange = vi.fn();
+      const config: TipConfig = {
+        mode: "percentage",
+        tiers: [0.15, 0.2],
+        allowCustom: true,
+      };
+
+      const { rerender } = render(
+        <TipSelector subtotal={30} value={null} onChange={onChange} />,
+        { wrapper: createWrapper(config) }
+      );
+
+      // Focus custom input
+      const input = screen.getByPlaceholderText("Custom");
+      fireEvent.focus(input);
+
+      // Now rerender with null value while activeType is "custom"
+      rerender(
+        <TipSelector subtotal={30} value={null} onChange={onChange} />
+      );
+
+      // Should stay in custom mode (not reset to "none")
+      expect(input).toBeInTheDocument();
+    });
+  });
+
+  describe("none tip selection", () => {
+    it("should call onChange with null when None is clicked", () => {
+      const onChange = vi.fn();
+      const config: TipConfig = {
+        mode: "percentage",
+        tiers: [0.15, 0.2],
+        allowCustom: true,
+      };
+      const value: TipInput = { type: "percentage", percentage: 0.15 };
+
+      render(
+        <TipSelector subtotal={30} value={value} onChange={onChange} />,
+        { wrapper: createWrapper(config) }
+      );
+
+      fireEvent.click(screen.getByText("None"));
+      expect(onChange).toHaveBeenCalledWith(null);
+    });
+  });
+
+  describe("custom focus when non-percentage", () => {
+    it("should not call onChange when focusing custom input without percentage value", () => {
+      const onChange = vi.fn();
+      const config: TipConfig = {
+        mode: "percentage",
+        tiers: [0.15],
+        allowCustom: true,
+      };
+
+      render(
+        <TipSelector subtotal={30} value={null} onChange={onChange} />,
+        { wrapper: createWrapper(config) }
+      );
+
+      const input = screen.getByPlaceholderText("Custom");
+      fireEvent.focus(input);
+
+      // Should NOT call onChange with null because value is not percentage
+      expect(onChange).not.toHaveBeenCalled();
+    });
+  });
+
   describe("disabled state", () => {
     it("should disable all buttons when disabled prop is true", () => {
       const onChange = vi.fn();

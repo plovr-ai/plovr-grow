@@ -2,6 +2,21 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MenuTabs } from "../MenuTabs";
 import type { MenuInfo } from "@/services/menu/menu.types";
+import type { DragEndEvent } from "@dnd-kit/core";
+
+// Capture onDragEnd callback
+let capturedOnDragEnd: ((event: DragEndEvent) => void) | null = null;
+
+vi.mock("@dnd-kit/core", async () => {
+  const actual = await vi.importActual<typeof import("@dnd-kit/core")>("@dnd-kit/core");
+  return {
+    ...actual,
+    DndContext: ({ children, onDragEnd }: { children: React.ReactNode; onDragEnd?: (event: DragEndEvent) => void; [key: string]: unknown }) => {
+      capturedOnDragEnd = onDragEnd || null;
+      return <>{children}</>;
+    },
+  };
+});
 
 describe("MenuTabs", () => {
   const mockMenus: MenuInfo[] = [
@@ -162,6 +177,85 @@ describe("MenuTabs", () => {
 
       expect(screen.getByText("Add Menu")).toBeInTheDocument();
       expect(screen.queryByText("Main Menu")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Add Menu Button", () => {
+    it("should have sr-only label text for Add Menu button", () => {
+      render(<MenuTabs {...defaultProps} />);
+
+      const srOnlyText = document.querySelector(".sr-only");
+      expect(srOnlyText).toHaveTextContent("Add Menu");
+    });
+
+    it("should call onAddMenu when clicking the plus button in header", () => {
+      const onAddMenu = vi.fn();
+      render(<MenuTabs {...defaultProps} onAddMenu={onAddMenu} />);
+
+      // The Plus button is a ghost variant button with sr-only text
+      const addButton = screen.getByText("Add Menu").closest("button");
+      expect(addButton).toBeInTheDocument();
+      fireEvent.click(addButton!);
+
+      expect(onAddMenu).toHaveBeenCalled();
+    });
+  });
+
+  describe("Single Menu", () => {
+    it("should render correctly with a single menu", () => {
+      const singleMenu = [mockMenus[0]];
+      render(<MenuTabs {...defaultProps} menus={singleMenu} />);
+
+      expect(screen.getByText("Main Menu")).toBeInTheDocument();
+      expect(screen.queryByText("Lunch Menu")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("handleDragEnd", () => {
+    it("should call onReorderMenus when items are reordered", () => {
+      const onReorderMenus = vi.fn();
+      render(<MenuTabs {...defaultProps} onReorderMenus={onReorderMenus} />);
+
+      // Simulate a drag end event that swaps menu-1 and menu-2
+      if (capturedOnDragEnd) {
+        capturedOnDragEnd({
+          active: { id: "menu-1" },
+          over: { id: "menu-2" },
+        } as DragEndEvent);
+      }
+
+      expect(onReorderMenus).toHaveBeenCalledWith([
+        { id: "menu-2", sortOrder: 0 },
+        { id: "menu-1", sortOrder: 1 },
+      ]);
+    });
+
+    it("should not call onReorderMenus when dropped on same position", () => {
+      const onReorderMenus = vi.fn();
+      render(<MenuTabs {...defaultProps} onReorderMenus={onReorderMenus} />);
+
+      if (capturedOnDragEnd) {
+        capturedOnDragEnd({
+          active: { id: "menu-1" },
+          over: { id: "menu-1" },
+        } as DragEndEvent);
+      }
+
+      expect(onReorderMenus).not.toHaveBeenCalled();
+    });
+
+    it("should not call onReorderMenus when over is null", () => {
+      const onReorderMenus = vi.fn();
+      render(<MenuTabs {...defaultProps} onReorderMenus={onReorderMenus} />);
+
+      if (capturedOnDragEnd) {
+        capturedOnDragEnd({
+          active: { id: "menu-1" },
+          over: null,
+        } as DragEndEvent);
+      }
+
+      expect(onReorderMenus).not.toHaveBeenCalled();
     });
   });
 });

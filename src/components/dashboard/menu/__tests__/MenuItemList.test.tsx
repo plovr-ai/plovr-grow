@@ -4,6 +4,7 @@ import { type ReactNode } from "react";
 import { DashboardProvider } from "@/contexts";
 import { MenuItemList } from "../MenuItemList";
 import type { DashboardCategory, TaxConfigOption } from "@/services/menu/menu.types";
+import type { DragEndEvent } from "@dnd-kit/core";
 
 // Helper wrapper with DashboardContext
 function Wrapper({ children }: { children: ReactNode }) {
@@ -54,9 +55,15 @@ vi.mock("../MenuItemCard", () => ({
   ),
 }));
 
+// Capture onDragEnd callback
+let capturedOnDragEnd: ((event: DragEndEvent) => void) | null = null;
+
 // Mock @dnd-kit components
 vi.mock("@dnd-kit/core", () => ({
-  DndContext: ({ children }: { children: ReactNode }) => <>{children}</>,
+  DndContext: ({ children, onDragEnd }: { children: ReactNode; onDragEnd?: (event: DragEndEvent) => void }) => {
+    capturedOnDragEnd = onDragEnd || null;
+    return <>{children}</>;
+  },
   closestCenter: vi.fn(),
   KeyboardSensor: vi.fn(),
   PointerSensor: vi.fn(),
@@ -264,6 +271,18 @@ describe("MenuItemList", () => {
       expect(screen.queryByText("Add Existing Item")).not.toBeInTheDocument();
     });
 
+    it("should toggle dropdown closed when clicking Add Item button again", () => {
+      render(<MenuItemList {...defaultProps} />, { wrapper: Wrapper });
+
+      const addButton = screen.getByRole("button", { name: /add item/i });
+      fireEvent.click(addButton);
+      expect(screen.getByText("Create New Item")).toBeInTheDocument();
+
+      // Click again to close
+      fireEvent.click(addButton);
+      expect(screen.queryByText("Create New Item")).not.toBeInTheDocument();
+    });
+
     it("should close dropdown when clicking outside", async () => {
       render(<MenuItemList {...defaultProps} />, { wrapper: Wrapper });
 
@@ -317,6 +336,61 @@ describe("MenuItemList", () => {
       fireEvent.click(item);
 
       expect(defaultProps.onEditItem).toHaveBeenCalledWith("item-1");
+    });
+  });
+
+  describe("Drag and Drop", () => {
+    it("should call updateMenuItemSortOrderAction when items are reordered", () => {
+      render(<MenuItemList {...defaultProps} />, { wrapper: Wrapper });
+
+      if (capturedOnDragEnd) {
+        capturedOnDragEnd({
+          active: { id: "item-1" },
+          over: { id: "item-2" },
+        } as DragEndEvent);
+      }
+
+      expect(mockUpdateMenuItemSortOrderAction).toHaveBeenCalledWith(
+        "cat-1",
+        [
+          { id: "item-2", sortOrder: 0 },
+          { id: "item-1", sortOrder: 1 },
+        ]
+      );
+    });
+
+    it("should not call action when dropped on same position", () => {
+      render(<MenuItemList {...defaultProps} />, { wrapper: Wrapper });
+
+      if (capturedOnDragEnd) {
+        capturedOnDragEnd({
+          active: { id: "item-1" },
+          over: { id: "item-1" },
+        } as DragEndEvent);
+      }
+
+      expect(mockUpdateMenuItemSortOrderAction).not.toHaveBeenCalled();
+    });
+
+    it("should not call action when over is null", () => {
+      render(<MenuItemList {...defaultProps} />, { wrapper: Wrapper });
+
+      if (capturedOnDragEnd) {
+        capturedOnDragEnd({
+          active: { id: "item-1" },
+          over: null,
+        } as DragEndEvent);
+      }
+
+      expect(mockUpdateMenuItemSortOrderAction).not.toHaveBeenCalled();
+    });
+
+    it("should not crash when category is null and drag occurs", () => {
+      capturedOnDragEnd = null;
+      render(<MenuItemList {...defaultProps} category={null} />, { wrapper: Wrapper });
+
+      // When category is null, DndContext is not rendered, so no drag handler
+      expect(screen.getByText("Select a category to view items")).toBeInTheDocument();
     });
   });
 });

@@ -248,5 +248,22 @@ describe("POST /api/dashboard/[merchantId]/loyalty/members/[memberId]/adjust-poi
       expect(data.success).toBe(false);
       expect(data.error).toBe("Failed to adjust points");
     });
+
+    it("should return 500 for non-Error exceptions", async () => {
+      mockMerchantService.getMerchantById.mockResolvedValue(mockMerchant as never);
+      mockLoyaltyMemberService.getMember.mockResolvedValue(mockMember as never);
+      mockPointsService.adjustPoints.mockRejectedValue("string error");
+
+      const request = createRequest({
+        points: 100,
+        description: "Test",
+      });
+      const response = await POST(request, { params });
+      const data = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(data.success).toBe(false);
+      expect(data.error).toBe("Failed to adjust points");
+    });
   });
 });

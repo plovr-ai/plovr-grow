@@ -480,5 +480,63 @@ describe("AddExistingItemModal", () => {
         expect(screen.getByText("Failed to load items")).toBeInTheDocument();
       });
     });
+
+    it("should display default error when load fails without error message", async () => {
+      mockGetAvailableItemsAction.mockResolvedValue({
+        success: false,
+      });
+
+      render(<AddExistingItemModal {...defaultProps} />, { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(screen.getByText("Failed to load items")).toBeInTheDocument();
+      });
+    });
+
+    it("should not add items when none are selected", async () => {
+      mockGetAvailableItemsAction.mockResolvedValue({
+        success: true,
+        data: mockAvailableItems,
+      });
+
+      render(<AddExistingItemModal {...defaultProps} />, { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(screen.getByText("Spring Rolls")).toBeInTheDocument();
+      });
+
+      // The add button should be disabled when no items selected
+      const addButton = screen.getByRole("button", { name: /add.*item/i });
+      expect(addButton).toBeDisabled();
+      fireEvent.click(addButton);
+
+      // linkItemToCategoryAction should NOT be called
+      expect(mockLinkItemToCategoryAction).not.toHaveBeenCalled();
+    });
+
+    it("should show default error when link fails without error message", async () => {
+      mockGetAvailableItemsAction.mockResolvedValue({
+        success: true,
+        data: mockAvailableItems,
+      });
+      mockLinkItemToCategoryAction.mockResolvedValue({
+        success: false,
+      });
+
+      render(<AddExistingItemModal {...defaultProps} />, { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(screen.getByText("Spring Rolls")).toBeInTheDocument();
+      });
+
+      // Select an item and add it
+      const springRollsBtn = screen.getByText("Spring Rolls").closest("button");
+      fireEvent.click(springRollsBtn!);
+      fireEvent.click(screen.getByRole("button", { name: /add 1 item/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Failed to add item")).toBeInTheDocument();
+      });
+    });
   });
 });

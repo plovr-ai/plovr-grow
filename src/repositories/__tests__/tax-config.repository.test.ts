@@ -542,6 +542,71 @@ describe("TaxConfigRepository", () => {
     });
   });
 
+  describe("deleteMerchantTaxRate", () => {
+    it("should soft delete a merchant tax rate", async () => {
+      vi.mocked(prisma.merchantTaxRate.updateMany).mockResolvedValue({
+        count: 1,
+      });
+
+      await repository.deleteMerchantTaxRate("merchant-1", "tax-1");
+
+      expect(prisma.merchantTaxRate.updateMany).toHaveBeenCalledWith({
+        where: {
+          merchantId: "merchant-1",
+          taxConfigId: "tax-1",
+          deleted: false,
+        },
+        data: {
+          deleted: true,
+          updatedAt: expect.any(Date),
+        },
+      });
+    });
+  });
+
+  describe("getTaxConfigMerchantRates", () => {
+    it("should return all merchant rates for a specific tax config", async () => {
+      const mockRates = [
+        {
+          id: "mtr-1",
+          merchantId: "merchant-1",
+          taxConfigId: "tax-1",
+          rate: 0.0825,
+          deleted: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "mtr-2",
+          merchantId: "merchant-2",
+          taxConfigId: "tax-1",
+          rate: 0.09,
+          deleted: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      vi.mocked(prisma.merchantTaxRate.findMany).mockResolvedValue(
+        mockRates as unknown as ReturnType<
+          typeof prisma.merchantTaxRate.findMany
+        > extends Promise<infer T>
+          ? T
+          : never
+      );
+
+      const result = await repository.getTaxConfigMerchantRates("tax-1");
+
+      expect(prisma.merchantTaxRate.findMany).toHaveBeenCalledWith({
+        where: {
+          taxConfigId: "tax-1",
+          deleted: false,
+        },
+      });
+      expect(result).toHaveLength(2);
+    });
+  });
+
   describe("deleteTaxConfig", () => {
     it("should soft delete a tax config by setting status to inactive and deleted to true", async () => {
       vi.mocked(prisma.taxConfig.updateMany).mockResolvedValue({ count: 1 });

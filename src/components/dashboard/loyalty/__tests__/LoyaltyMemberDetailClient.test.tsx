@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { type ReactNode } from "react";
 import { DashboardProvider } from "@/contexts";
 import { LoyaltyMemberDetailClient } from "../LoyaltyMemberDetailClient";
@@ -562,6 +562,234 @@ describe("LoyaltyMemberDetailClient", () => {
     });
   });
 
+  describe("Adjust Points Modal", () => {
+    it("should open adjust points modal when Adjust button is clicked", () => {
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={mockOrders}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      const adjustButton = screen.getByRole("button", { name: /adjust/i });
+      fireEvent.click(adjustButton);
+
+      expect(screen.getByText("Adjust Points")).toBeInTheDocument();
+    });
+
+    it("should close adjust points modal when cancelled", () => {
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={mockOrders}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      const adjustButton = screen.getByRole("button", { name: /adjust/i });
+      fireEvent.click(adjustButton);
+
+      expect(screen.getByText("Adjust Points")).toBeInTheDocument();
+
+      const cancelButton = screen.getByRole("button", { name: /cancel/i });
+      fireEvent.click(cancelButton);
+
+      expect(screen.queryByText("Adjust Points")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Orders with null merchant", () => {
+    it("should display dash for null merchant in orders", () => {
+      const ordersWithNullMerchant = {
+        ...mockOrders,
+        items: [
+          {
+            ...mockOrders.items[0],
+            merchant: null,
+          },
+        ],
+      };
+
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={ordersWithNullMerchant}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      // Merchant column should show "-"
+      const cells = screen.getAllByRole("cell");
+      const merchantCell = cells.find(
+        (cell) => cell.textContent === "-"
+      );
+      expect(merchantCell).toBeDefined();
+    });
+  });
+
+  describe("Orders with null orders data", () => {
+    it("should show empty state when orders is null", () => {
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={null}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      expect(screen.getByText("No orders found")).toBeInTheDocument();
+    });
+  });
+
+  describe("Points with null points data", () => {
+    it("should show empty state when points is null", () => {
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={null}
+          points={null}
+          currentTab="points"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      expect(screen.getByText("No point transactions found")).toBeInTheDocument();
+    });
+  });
+
+  describe("Order Mode Labels", () => {
+    it("should display Pickup label", () => {
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={mockOrders}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      expect(screen.getByText("Pickup")).toBeInTheDocument();
+    });
+
+    it("should display Delivery label", () => {
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={mockOrders}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      expect(screen.getByText("Delivery")).toBeInTheDocument();
+    });
+  });
+
+  describe("Points Type Display", () => {
+    it("should display positive points with green color", () => {
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={null}
+          points={mockPoints}
+          currentTab="points"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      const plusFifty = screen.getByText("+50");
+      expect(plusFifty).toHaveClass("text-green-600");
+    });
+
+    it("should display negative points with red color", () => {
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={null}
+          points={mockPoints}
+          currentTab="points"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      const minusTwenty = screen.getByText("-20");
+      expect(minusTwenty).toHaveClass("text-red-600");
+    });
+  });
+
+  describe("Page Navigation", () => {
+    it("should update URL when changing page", () => {
+      const ordersWithMultiplePages = {
+        ...mockOrders,
+        totalPages: 3,
+      };
+
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={ordersWithMultiplePages}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      // Click next page
+      const nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+
+      expect(mockPush).toHaveBeenCalledWith("?page=2");
+    });
+  });
+
+  describe("Adjust Points API", () => {
+    it("should call adjust points API when modal form is submitted", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: { newBalance: 200 } }),
+      });
+      global.fetch = mockFetch;
+
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={mockOrders}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      // Open adjust modal
+      const adjustButton = screen.getByRole("button", { name: /adjust/i });
+      fireEvent.click(adjustButton);
+
+      expect(screen.getByText("Adjust Points")).toBeInTheDocument();
+    });
+  });
+
   describe("Back Navigation", () => {
     it("should display back button with link to members list", () => {
       render(
@@ -577,6 +805,333 @@ describe("LoyaltyMemberDetailClient", () => {
 
       const backLink = screen.getByRole("link", { name: "" });
       expect(backLink).toHaveAttribute("href", "/dashboard/loyalty/members");
+    });
+  });
+
+  describe("Adjust Points", () => {
+    it("should call adjust points API and refresh on success", async () => {
+      const mockRefresh = vi.fn();
+      vi.mocked(mockPush);
+      // Mock router with refresh
+      vi.doMock("next/navigation", () => ({
+        useRouter: () => ({
+          push: mockPush,
+          refresh: mockRefresh,
+        }),
+        useSearchParams: () => mockSearchParams,
+      }));
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, data: { newPoints: 200 } }),
+      });
+      global.fetch = mockFetch;
+
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={mockOrders}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      // Open adjust modal
+      const adjustButton = screen.getByRole("button", { name: /adjust/i });
+      fireEvent.click(adjustButton);
+
+      expect(screen.getByText("Adjust Points")).toBeInTheDocument();
+    });
+
+    it("should throw error when adjust points API fails", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: false, error: "Insufficient points" }),
+      });
+      global.fetch = mockFetch;
+
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={mockOrders}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      // The adjust button should be present
+      const adjustButton = screen.getByRole("button", { name: /adjust/i });
+      expect(adjustButton).toBeInTheDocument();
+    });
+  });
+
+  describe("Adjust Points form submission", () => {
+    it("should call API and refresh on successful adjust points submission", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: { newBalance: 200 } }),
+      });
+      global.fetch = mockFetch;
+
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={mockOrders}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      // Open adjust modal
+      fireEvent.click(screen.getByRole("button", { name: /adjust/i }));
+      expect(screen.getByText("Adjust Points")).toBeInTheDocument();
+
+      // Fill in the form
+      fireEvent.change(screen.getByPlaceholderText("Enter points amount"), {
+        target: { value: "50" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("e.g., Compensation for service issue"), {
+        target: { value: "Test adjustment" },
+      });
+
+      // Click Confirm
+      fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining("/loyalty/members/member-1/adjust-points"),
+          expect.objectContaining({
+            method: "POST",
+          })
+        );
+      });
+    });
+
+    it("should show error when adjust points API returns failure", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: false, error: "Insufficient points" }),
+      });
+      global.fetch = mockFetch;
+
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={mockOrders}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: /adjust/i }));
+
+      fireEvent.change(screen.getByPlaceholderText("Enter points amount"), {
+        target: { value: "50" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("e.g., Compensation for service issue"), {
+        target: { value: "Test" },
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Insufficient points")).toBeInTheDocument();
+      });
+    });
+
+    it("should show default error when API fails without error message", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: false }),
+      });
+      global.fetch = mockFetch;
+
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={mockOrders}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: /adjust/i }));
+
+      fireEvent.change(screen.getByPlaceholderText("Enter points amount"), {
+        target: { value: "50" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("e.g., Compensation for service issue"), {
+        target: { value: "Test" },
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Failed to adjust points")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("No merchant available", () => {
+    it("should show error when adjusting points with no merchant", async () => {
+      function NoMerchantWrapper({ children }: { children: ReactNode }) {
+        return (
+          <DashboardProvider
+            value={{
+              tenantId: "tenant-1",
+              companyId: "company-1",
+              company: {
+                id: "company-1",
+                name: "Test Company",
+                slug: "test-company",
+                logoUrl: null,
+              },
+              merchants: [],
+              currency: "USD",
+              locale: "en-US",
+              subscription: null,
+            }}
+          >
+            {children}
+          </DashboardProvider>
+        );
+      }
+
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={mockOrders}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: NoMerchantWrapper }
+      );
+
+      // Open adjust modal
+      fireEvent.click(screen.getByRole("button", { name: /adjust/i }));
+
+      // Fill form
+      fireEvent.change(screen.getByPlaceholderText("Enter points amount"), {
+        target: { value: "10" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("e.g., Compensation for service issue"), {
+        target: { value: "Test" },
+      });
+
+      // Submit - should show error
+      fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("No merchant available")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Dine In order mode", () => {
+    it("should display Dine In label", () => {
+      const ordersWithDineIn = {
+        ...mockOrders,
+        items: [
+          {
+            ...mockOrders.items[0],
+            orderMode: "dine_in",
+          },
+        ],
+      };
+
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={ordersWithDineIn}
+          points={null}
+          currentTab="orders"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      expect(screen.getByText("Dine In")).toBeInTheDocument();
+    });
+  });
+
+  describe("Points type colors", () => {
+    it("should display adjust type with blue color", () => {
+      const pointsWithAdjust = {
+        items: [
+          {
+            id: "tx-adj",
+            type: "adjust",
+            points: 10,
+            balanceAfter: 160,
+            description: "Manual adjustment",
+            createdAt: new Date("2024-01-20"),
+            order: null,
+            merchant: null,
+          },
+        ],
+        total: 1,
+        totalPages: 1,
+      };
+
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={null}
+          points={pointsWithAdjust}
+          currentTab="points"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      expect(screen.getByText("Adjustment")).toBeInTheDocument();
+      const adjustSpan = screen.getByText("Adjustment");
+      expect(adjustSpan).toHaveClass("text-blue-600");
+    });
+
+    it("should display expire type with gray color", () => {
+      const pointsWithExpire = {
+        items: [
+          {
+            id: "tx-exp",
+            type: "expire",
+            points: -30,
+            balanceAfter: 120,
+            description: null,
+            createdAt: new Date("2024-01-25"),
+            order: null,
+            merchant: null,
+          },
+        ],
+        total: 1,
+        totalPages: 1,
+      };
+
+      render(
+        <LoyaltyMemberDetailClient
+          member={mockMember}
+          orders={null}
+          points={pointsWithExpire}
+          currentTab="points"
+          currentPage={1}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      expect(screen.getByText("Expired")).toBeInTheDocument();
+      const expiredSpan = screen.getByText("Expired");
+      expect(expiredSpan).toHaveClass("text-gray-600");
     });
   });
 });

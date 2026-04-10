@@ -365,6 +365,149 @@ describe("PointsService", () => {
     });
   });
 
+  describe("awardPointsWithCustomAmount - full flow", () => {
+    it("should award custom points successfully", async () => {
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+      vi.mocked(pointTransactionRepository.create).mockResolvedValue({
+        ...mockTransaction,
+        points: 50,
+        balanceAfter: 150,
+      });
+      vi.mocked(loyaltyMemberRepository.updatePoints).mockResolvedValue(mockMember);
+
+      const result = await service.awardPointsWithCustomAmount("tenant-1", "member-1", {
+        points: 50,
+        orderId: "order-2",
+        merchantId: "merchant-1",
+        description: "Double points promotion",
+      });
+
+      expect(result.pointsEarned).toBe(50);
+      expect(result.newBalance).toBe(150);
+      expect(prisma.$transaction).toHaveBeenCalledOnce();
+    });
+
+    it("should throw error if member not found", async () => {
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(null);
+
+      await expect(
+        service.awardPointsWithCustomAmount("tenant-1", "member-1", {
+          points: 50,
+        })
+      ).rejects.toThrow("LOYALTY_MEMBER_NOT_FOUND");
+    });
+
+    it("should return 0 points for zero or negative custom amount", async () => {
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+
+      const result = await service.awardPointsWithCustomAmount("tenant-1", "member-1", {
+        points: 0,
+      });
+
+      expect(result.pointsEarned).toBe(0);
+      expect(result.newBalance).toBe(100);
+      expect(pointTransactionRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("should rethrow non-P2002 errors", async () => {
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+
+      const genericError = new Error("Connection lost");
+      vi.mocked(prisma.$transaction).mockRejectedValue(genericError);
+
+      await expect(
+        service.awardPointsWithCustomAmount("tenant-1", "member-1", {
+          points: 50,
+          orderId: "order-1",
+        })
+      ).rejects.toThrow("Connection lost");
+    });
+
+    it("should skip orderId check when no orderId provided", async () => {
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+      vi.mocked(pointTransactionRepository.create).mockResolvedValue({
+        ...mockTransaction,
+        points: 50,
+        balanceAfter: 150,
+      });
+      vi.mocked(loyaltyMemberRepository.updatePoints).mockResolvedValue(mockMember);
+
+      const result = await service.awardPointsWithCustomAmount("tenant-1", "member-1", {
+        points: 50,
+      });
+
+      expect(pointTransactionRepository.hasEarnedForOrder).not.toHaveBeenCalled();
+      expect(result.pointsEarned).toBe(50);
+    });
+  });
+
+  describe("getTotalPointsEarned", () => {
+    it("should delegate to transaction repository", async () => {
+      vi.mocked(pointTransactionRepository.getTotalPointsEarned).mockResolvedValue(500);
+
+      const result = await service.getTotalPointsEarned("tenant-1", "member-1");
+
+      expect(result).toBe(500);
+      expect(pointTransactionRepository.getTotalPointsEarned).toHaveBeenCalledWith(
+        "tenant-1",
+        "member-1"
+      );
+    });
+  });
+
+  describe("buildIdempotentResult - edge case", () => {
+    it("should throw LOYALTY_POINTS_ALREADY_AWARDED when existing transaction not found", async () => {
+      vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(true);
+      vi.mocked(pointTransactionRepository.getEarnTransactionForOrder).mockResolvedValue(null);
+
+      await expect(
+        service.awardPoints("tenant-1", "member-1", {
+          orderAmount: 25,
+          pointsPerDollar: 1,
+          orderId: "order-1",
+        })
+      ).rejects.toThrow("LOYALTY_POINTS_ALREADY_AWARDED");
+    });
+  });
+
+  describe("awardPoints - no orderId", () => {
+    it("should skip duplicate check when no orderId provided", async () => {
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+      vi.mocked(pointTransactionRepository.create).mockResolvedValue(mockTransaction);
+      vi.mocked(loyaltyMemberRepository.updatePoints).mockResolvedValue(mockMember);
+
+      const result = await service.awardPoints("tenant-1", "member-1", {
+        orderAmount: 25,
+        pointsPerDollar: 1,
+      });
+
+      expect(pointTransactionRepository.hasEarnedForOrder).not.toHaveBeenCalled();
+      expect(result.pointsEarned).toBe(25);
+    });
+
+    it("should rethrow P2002 when no orderId provided", async () => {
+      vi.mocked(loyaltyMemberRepository.getById).mockResolvedValue(mockMember);
+
+      const p2002Error = new Prisma.PrismaClientKnownRequestError(
+        "Unique constraint failed",
+        { code: "P2002", clientVersion: "5.0.0", meta: { target: ["tenant_id", "order_id", "type"] } }
+      );
+      vi.mocked(prisma.$transaction).mockRejectedValue(p2002Error);
+
+      await expect(
+        service.awardPoints("tenant-1", "member-1", {
+          orderAmount: 25,
+          pointsPerDollar: 1,
+          // no orderId
+        })
+      ).rejects.toThrow(Prisma.PrismaClientKnownRequestError);
+    });
+  });
+
   describe("hasEarnedForOrder", () => {
     it("should return true if points already earned", async () => {
       vi.mocked(pointTransactionRepository.hasEarnedForOrder).mockResolvedValue(true);

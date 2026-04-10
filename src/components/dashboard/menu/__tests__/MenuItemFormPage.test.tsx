@@ -283,6 +283,15 @@ describe("MenuItemFormPage", () => {
       expect(screen.getByLabelText("Out of Stock")).toBeInTheDocument();
     });
 
+    it("should allow changing status to out of stock", () => {
+      render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
+
+      const outOfStock = screen.getByLabelText("Out of Stock");
+      fireEvent.click(outOfStock);
+
+      expect(outOfStock).toBeChecked();
+    });
+
     it("should NOT have Hidden/inactive status option", () => {
       render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
 

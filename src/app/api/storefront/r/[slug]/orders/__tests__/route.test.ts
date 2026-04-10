@@ -367,6 +367,142 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
     expect(json.error).toEqual({ code: "PAYMENT_ALREADY_PROCESSED" });
   });
 
+  it("should return 404 when merchant not found", async () => {
+    vi.mocked(merchantService.getMerchantBySlug).mockResolvedValue(null as never);
+
+    const request = createRequest(validBody);
+    const response = await POST(request, { params: Promise.resolve({ slug: "unknown" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(json.error).toBe("Restaurant not found");
+  });
+
+  it("should return 400 for validation failure", async () => {
+    vi.mocked(checkoutFormSchema.safeParse).mockReturnValue({
+      success: false,
+      error: {
+        flatten: () => ({
+          fieldErrors: { customerFirstName: ["First name is required"] },
+          formErrors: [],
+        }),
+      },
+    } as never);
+
+    const request = createRequest(validBody);
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json.error).toBe("Validation failed");
+  });
+
+  it("should return 400 for empty cart", async () => {
+    const request = createRequest({ ...validBody, items: [] });
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json.error).toBe("Cart is empty");
+  });
+
+  it("should return 400 when gift card not found", async () => {
+    vi.mocked(giftCardService.getGiftCard).mockResolvedValue(null as never);
+
+    const request = createRequest({
+      ...validBody,
+      giftCardPayment: { giftCardId: "gc-missing", amount: 10 },
+    });
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json.error).toBe("Gift card not found");
+  });
+
+  it("should return 400 when gift card has no balance", async () => {
+    vi.mocked(giftCardService.getGiftCard).mockResolvedValue({
+      id: "gc-1",
+      currentBalance: 0,
+      cardNumber: "1234",
+      initialAmount: 50,
+      createdAt: new Date(),
+    } as never);
+
+    const request = createRequest({
+      ...validBody,
+      giftCardPayment: { giftCardId: "gc-1", amount: 10 },
+    });
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json.error).toBe("Gift card has no balance");
+  });
+
+  it("should return 400 when gift card has insufficient balance", async () => {
+    vi.mocked(giftCardService.getGiftCard).mockResolvedValue({
+      id: "gc-1",
+      currentBalance: 5,
+      cardNumber: "1234",
+      initialAmount: 50,
+      createdAt: new Date(),
+    } as never);
+
+    const request = createRequest({
+      ...validBody,
+      giftCardPayment: { giftCardId: "gc-1", amount: 10 },
+    });
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json.error).toBe("Insufficient gift card balance");
+  });
+
+  it("should return 400 when payment provider not configured", async () => {
+    vi.mocked(orderService.calculateOrderTotals).mockResolvedValue({
+      subtotal: 20, taxAmount: 0, taxBreakdown: [], feesAmount: 0, feesBreakdown: [],
+      tipAmount: 0, deliveryFee: 0, discount: 0, totalAmount: 20,
+    } as never);
+    vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue(null as never);
+
+    const request = createRequest({
+      ...validBody,
+      paymentMethod: "card",
+      stripePaymentIntentId: "pi_test",
+    });
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json.error).toBe("Payment provider not configured");
+  });
+
+  it("should return 400 when payment verification fails", async () => {
+    vi.mocked(orderService.calculateOrderTotals).mockResolvedValue({
+      subtotal: 20, taxAmount: 0, taxBreakdown: [], feesAmount: 0, feesBreakdown: [],
+      tipAmount: 0, deliveryFee: 0, discount: 0, totalAmount: 20,
+    } as never);
+    vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue({
+      stripeAccountId: "acct_test",
+    } as never);
+    vi.mocked(paymentService.verifyPayment).mockResolvedValue({
+      success: false, error: "Payment failed",
+    } as never);
+
+    const request = createRequest({
+      ...validBody,
+      paymentMethod: "card",
+      stripePaymentIntentId: "pi_fail",
+    });
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json.error).toBe("Payment failed");
+  });
+
   it("should still succeed when loyalty points awarding fails (outside transaction)", async () => {
     const { loyaltyConfigService, pointsService } = await import("@/services/loyalty");
 
@@ -394,5 +530,223 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
     // Order should still succeed even though points failed
     expect(response.status).toBe(201);
     expect(json.success).toBe(true);
+  });
+
+  it("should not award points when loyalty is not enabled", async () => {
+    const { loyaltyConfigService, pointsService } = await import("@/services/loyalty");
+
+    vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(false);
+
+    vi.mocked(orderService.createMerchantOrderAtomic).mockResolvedValue({
+      ...mockOrder,
+      giftCardPayment: 0,
+      cashPayment: 20,
+    } as never);
+
+    const bodyWithLoyalty = {
+      ...validBody,
+      loyaltyMemberId: "member-1",
+    };
+
+    const request = createRequest(bodyWithLoyalty);
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(json.success).toBe(true);
+    expect(pointsService.awardPointsWithCustomAmount).not.toHaveBeenCalled();
+  });
+
+  it("should not award points when totalPoints is 0", async () => {
+    const { loyaltyConfigService, pointsService } = await import("@/services/loyalty");
+
+    vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
+    vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(0);
+
+    vi.mocked(orderService.createMerchantOrderAtomic).mockResolvedValue({
+      ...mockOrder,
+      giftCardPayment: 0,
+      cashPayment: 0,
+    } as never);
+
+    const bodyWithLoyalty = {
+      ...validBody,
+      loyaltyMemberId: "member-1",
+    };
+
+    const request = createRequest(bodyWithLoyalty);
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(json.success).toBe(true);
+    expect(pointsService.awardPointsWithCustomAmount).not.toHaveBeenCalled();
+  });
+
+  it("should award 2x points for gift card portion and include both in description", async () => {
+    const { loyaltyConfigService, pointsService } = await import("@/services/loyalty");
+
+    vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
+    vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(1);
+
+    vi.mocked(orderService.createMerchantOrderAtomic).mockResolvedValue({
+      ...mockOrder,
+      orderNumber: "20260410-0001",
+      giftCardPayment: 10,
+      cashPayment: 10,
+    } as never);
+
+    const bodyWithLoyalty = {
+      ...validBody,
+      loyaltyMemberId: "member-1",
+    };
+
+    const request = createRequest(bodyWithLoyalty);
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+
+    expect(response.status).toBe(201);
+    expect(pointsService.awardPointsWithCustomAmount).toHaveBeenCalledWith(
+      "tenant-1",
+      "member-1",
+      expect.objectContaining({
+        points: 30, // 10*1*2 + 10*1 = 30
+        description: expect.stringContaining("2x"),
+      })
+    );
+  });
+
+  it("should include 2x bonus description for gift-card-only payment", async () => {
+    const { loyaltyConfigService, pointsService } = await import("@/services/loyalty");
+
+    vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
+    vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(1);
+
+    vi.mocked(orderService.createMerchantOrderAtomic).mockResolvedValue({
+      ...mockOrder,
+      orderNumber: "20260410-0002",
+      giftCardPayment: 20,
+      cashPayment: 0,
+    } as never);
+
+    const bodyWithLoyalty = {
+      ...validBody,
+      loyaltyMemberId: "member-1",
+    };
+
+    const request = createRequest(bodyWithLoyalty);
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+
+    expect(response.status).toBe(201);
+    expect(pointsService.awardPointsWithCustomAmount).toHaveBeenCalledWith(
+      "tenant-1",
+      "member-1",
+      expect.objectContaining({
+        points: 40, // 20*1*2 = 40
+        description: expect.stringContaining("2x bonus on gift card payment"),
+      })
+    );
+  });
+
+  it("should return 400 when payment verification fails with default error", async () => {
+    vi.mocked(orderService.calculateOrderTotals).mockResolvedValue({
+      subtotal: 20, taxAmount: 0, taxBreakdown: [], feesAmount: 0, feesBreakdown: [],
+      tipAmount: 0, deliveryFee: 0, discount: 0, totalAmount: 20,
+    } as never);
+    vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue({
+      stripeAccountId: "acct_test",
+    } as never);
+    vi.mocked(paymentService.verifyPayment).mockResolvedValue({
+      success: false,
+    } as never);
+
+    const request = createRequest({
+      ...validBody,
+      paymentMethod: "card",
+      stripePaymentIntentId: "pi_fail_no_msg",
+    });
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json.error).toBe("Payment verification failed");
+  });
+
+  it("should return 400 for missing items field", async () => {
+    const request = createRequest({ ...validBody, items: undefined as never });
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(json.error).toBe("Cart is empty");
+  });
+
+  it("should skip card verification when expectedCardPayment is 0 (gift card covers full amount)", async () => {
+    vi.mocked(orderService.calculateOrderTotals).mockResolvedValue({
+      subtotal: 20, taxAmount: 0, taxBreakdown: [], feesAmount: 0, feesBreakdown: [],
+      tipAmount: 0, deliveryFee: 0, discount: 0, totalAmount: 20,
+    } as never);
+
+    vi.mocked(giftCardService.getGiftCard).mockResolvedValue({
+      id: "gc-full",
+      currentBalance: 50,
+      cardNumber: "1234",
+      initialAmount: 50,
+      createdAt: new Date(),
+    } as never);
+
+    const request = createRequest({
+      ...validBody,
+      paymentMethod: "card",
+      stripePaymentIntentId: "pi_should_skip",
+      giftCardPayment: { giftCardId: "gc-full", amount: 20 },
+    });
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(json.success).toBe(true);
+    // verifyPayment should not have been called since gift card covered everything
+    expect(paymentService.verifyPayment).not.toHaveBeenCalled();
+  });
+
+  it("should use merchant currency for payment record, defaulting to USD when null", async () => {
+    const merchantNoCurrency = {
+      ...mockMerchant,
+      currency: null,
+    };
+    vi.mocked(merchantService.getMerchantBySlug).mockResolvedValue(merchantNoCurrency as never);
+
+    vi.mocked(orderService.calculateOrderTotals).mockResolvedValue({
+      subtotal: 20, taxAmount: 0, taxBreakdown: [], feesAmount: 0, feesBreakdown: [],
+      tipAmount: 0, deliveryFee: 0, discount: 0, totalAmount: 20,
+    } as never);
+    vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue({
+      stripeAccountId: "acct_test",
+    } as never);
+    vi.mocked(paymentService.verifyPayment).mockResolvedValue({
+      success: true,
+      paymentIntentId: "pi_cur",
+      status: "succeeded",
+      amount: 2000,
+    } as never);
+    vi.mocked(paymentService.paymentIntentExists).mockResolvedValue(false);
+
+    const request = createRequest({
+      ...validBody,
+      paymentMethod: "card",
+      stripePaymentIntentId: "pi_cur",
+    });
+    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+
+    expect(response.status).toBe(201);
+    expect(orderService.createMerchantOrderAtomic).toHaveBeenCalledWith(
+      "tenant-1",
+      expect.any(Object),
+      expect.objectContaining({
+        payment: expect.objectContaining({
+          currency: "USD",
+        }),
+      })
+    );
   });
 });

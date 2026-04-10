@@ -3,8 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { CompanyInfoCard } from "../CompanyInfoCard";
 
 // Mock Next.js navigation
+const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
+    push: mockPush,
     refresh: vi.fn(),
   }),
 }));
@@ -223,6 +225,64 @@ describe("CompanyInfoCard", () => {
       render(<CompanyInfoCard company={suspendedCompany} />);
       const badge = screen.getByText("Suspended");
       expect(badge).toHaveClass("bg-red-100", "text-red-800");
+    });
+  });
+
+  describe("Store click navigation", () => {
+    it("should navigate to store detail when clicking a store", () => {
+      render(<CompanyInfoCard company={mockCompany} />);
+      fireEvent.click(screen.getByText("Joe's Pizza Downtown"));
+      expect(mockPush).toHaveBeenCalledWith("/dashboard/locations/merchant-1");
+    });
+
+    it("should render merchant without city/state", () => {
+      const companyWithNoCityMerchant = {
+        ...mockCompany,
+        merchants: [
+          {
+            id: "merchant-no-city",
+            name: "No City Store",
+            slug: "no-city",
+            city: null,
+            state: null,
+            status: "active",
+          },
+        ],
+      };
+      render(<CompanyInfoCard company={companyWithNoCityMerchant} />);
+      expect(screen.getByText("No City Store")).toBeInTheDocument();
+      // Should not have city/state text
+      expect(screen.queryByText(", ")).not.toBeInTheDocument();
+    });
+
+    it("should render merchant with unknown status using fallback color", () => {
+      const companyWithUnknownStatus = {
+        ...mockCompany,
+        merchants: [
+          {
+            id: "merchant-unknown",
+            name: "Unknown Status Store",
+            slug: "unknown-status",
+            city: "Test",
+            state: "TX",
+            status: "pending" as "active",
+          },
+        ],
+      };
+      render(<CompanyInfoCard company={companyWithUnknownStatus} />);
+      expect(screen.getByText("Pending")).toBeInTheDocument();
+    });
+  });
+
+  describe("link formatting", () => {
+    it("should add https prefix to non-http website URLs", () => {
+      const companyWithPlainUrl = {
+        ...mockCompany,
+        websiteUrl: "joespizza.com",
+      };
+      render(<CompanyInfoCard company={companyWithPlainUrl} />);
+      const link = screen.getByText("joespizza.com");
+      expect(link).toHaveAttribute("href", "https://joespizza.com");
     });
   });
 

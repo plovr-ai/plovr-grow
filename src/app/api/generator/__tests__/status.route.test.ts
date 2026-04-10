@@ -37,4 +37,13 @@ describe("GET /api/generator/{generationId}/status", () => {
     const res = await GET(req, makeParams("fake"));
     expect(res.status).toBe(404);
   });
+
+  it("returns 500 when service throws", async () => {
+    mockGetStatus.mockRejectedValue(new Error("DB error"));
+    const req = new NextRequest("http://localhost/api/generator/gen-err/status");
+    const res = await GET(req, makeParams("gen-err"));
+    const data = await res.json();
+    expect(res.status).toBe(500);
+    expect(data.error).toBe("Internal server error");
+  });
 });

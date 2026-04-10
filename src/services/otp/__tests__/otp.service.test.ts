@@ -220,6 +220,44 @@ describe("OtpService", () => {
     });
   });
 
+  describe("verifyOtp - edge cases", () => {
+    it("should return VALIDATION_FAILED for undefined reason", async () => {
+      vi.mocked(otpVerificationRepository.isValid).mockResolvedValue({
+        valid: false,
+        reason: undefined as never,
+      });
+
+      const result = await service.verifyOtp(
+        "tenant-1",
+        "+12025551234",
+        "123456",
+        "login"
+      );
+
+      expect(result.verified).toBe(false);
+      expect(result.errorCode).toBe("VALIDATION_FAILED");
+    });
+  });
+
+  describe("generateOtpCode - production mode", () => {
+    it("should generate random 6-digit code in non-development mode", async () => {
+      const origEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = "production";
+
+      vi.mocked(smsService.verifyPhoneFormat).mockReturnValue(true);
+      vi.mocked(otpVerificationRepository.upsert).mockResolvedValue(mockOtpRecord);
+      vi.mocked(smsService.sendOtp).mockResolvedValue({ success: true });
+
+      await service.sendOtp("tenant-1", "+12025551234", "login");
+
+      const upsertCall = vi.mocked(otpVerificationRepository.upsert).mock.calls[0];
+      const code = upsertCall[3]; // 4th arg is the code
+      expect(code).toMatch(/^\d{6}$/);
+
+      process.env.NODE_ENV = origEnv;
+    });
+  });
+
   describe("cleanupExpired", () => {
     it("should clean up expired OTP records", async () => {
       vi.mocked(otpVerificationRepository.deleteExpired).mockResolvedValue({

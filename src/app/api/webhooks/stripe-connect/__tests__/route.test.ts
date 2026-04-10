@@ -258,6 +258,39 @@ describe("POST /api/webhooks/stripe-connect", () => {
       );
     });
 
+    it("should fallback to account.id when event.account is missing", async () => {
+      const event = {
+        type: "account.updated",
+        // No 'account' field on the event
+        data: {
+          object: {
+            id: "acct_fallback",
+            charges_enabled: true,
+            payouts_enabled: true,
+            details_submitted: true,
+          },
+        },
+      };
+
+      vi.mocked(stripeService.verifyConnectWebhookSignature).mockReturnValue(
+        event as never
+      );
+      vi.mocked(stripeConnectService.handleAccountUpdated).mockResolvedValue(
+        undefined
+      );
+
+      const request = makeRequest(event, "valid_sig");
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.received).toBe(true);
+      expect(stripeConnectService.handleAccountUpdated).toHaveBeenCalledWith(
+        "acct_fallback",
+        expect.objectContaining({ chargesEnabled: true })
+      );
+    });
+
     it("should call handleAccountUpdated with false values when disabled", async () => {
       const event = {
         type: "account.updated",
@@ -288,6 +321,71 @@ describe("POST /api/webhooks/stripe-connect", () => {
       expect(data.received).toBe(true);
       expect(stripeConnectService.handleAccountUpdated).toHaveBeenCalledWith(
         "acct_test456",
+        {
+          chargesEnabled: false,
+          payoutsEnabled: false,
+          detailsSubmitted: false,
+        }
+      );
+    });
+  });
+
+  describe("nullable fields", () => {
+    it("should use fallback status 'succeeded' when status is undefined", async () => {
+      const event = {
+        type: "payment_intent.succeeded",
+        data: {
+          object: {
+            id: "pi_no_status",
+            status: undefined,
+            charges: { data: [] },
+          },
+        },
+      };
+
+      vi.mocked(stripeService.verifyConnectWebhookSignature).mockReturnValue(
+        event as never
+      );
+      vi.mocked(paymentService.handlePaymentSucceeded).mockResolvedValue(
+        undefined
+      );
+
+      const request = makeRequest(event, "valid_sig");
+      const response = await POST(request);
+
+      expect(response.status).toBe(200);
+      expect(paymentService.handlePaymentSucceeded).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "succeeded" })
+      );
+    });
+
+    it("should default account fields to false when undefined", async () => {
+      const event = {
+        type: "account.updated",
+        account: "acct_null",
+        data: {
+          object: {
+            id: "acct_null",
+            charges_enabled: undefined,
+            payouts_enabled: undefined,
+            details_submitted: undefined,
+          },
+        },
+      };
+
+      vi.mocked(stripeService.verifyConnectWebhookSignature).mockReturnValue(
+        event as never
+      );
+      vi.mocked(stripeConnectService.handleAccountUpdated).mockResolvedValue(
+        undefined
+      );
+
+      const request = makeRequest(event, "valid_sig");
+      const response = await POST(request);
+
+      expect(response.status).toBe(200);
+      expect(stripeConnectService.handleAccountUpdated).toHaveBeenCalledWith(
+        "acct_null",
         {
           chargesEnabled: false,
           payoutsEnabled: false,

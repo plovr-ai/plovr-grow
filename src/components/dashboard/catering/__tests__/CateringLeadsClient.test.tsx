@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CateringLeadsClient } from "../CateringLeadsClient";
 import type { CateringLeadWithMerchant } from "@/services/catering/catering.types";
 
@@ -534,6 +534,91 @@ describe("CateringLeadsClient", () => {
 
       expect(screen.queryByRole("button", { name: /Previous/i })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /Next/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Lead Detail Modal", () => {
+    it("should open modal when clicking a lead row", () => {
+      render(<CateringLeadsClient {...defaultProps} />);
+
+      const row = screen.getByText("John Doe").closest("tr") as HTMLElement;
+      fireEvent.click(row);
+
+      expect(screen.getByText("Lead Details")).toBeInTheDocument();
+      expect(screen.getByText("Contact Information")).toBeInTheDocument();
+    });
+
+    it("should display correct lead data in modal", () => {
+      render(<CateringLeadsClient {...defaultProps} />);
+
+      const row = screen.getByText("Jane Smith").closest("tr") as HTMLElement;
+      fireEvent.click(row);
+
+      expect(screen.getByText("Lead Details")).toBeInTheDocument();
+      // Westside Location appears in both the table and the modal header
+      const westsideElements = screen.getAllByText("Westside Location");
+      expect(westsideElements.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("should close modal when close is triggered", () => {
+      render(<CateringLeadsClient {...defaultProps} />);
+
+      // Open modal
+      const row = screen.getByText("John Doe").closest("tr") as HTMLElement;
+      fireEvent.click(row);
+
+      expect(screen.getByText("Lead Details")).toBeInTheDocument();
+
+      // Close via Escape
+      fireEvent.keyDown(document, { key: "Escape" });
+
+      expect(screen.queryByText("Lead Details")).not.toBeInTheDocument();
+    });
+
+    it("should update lead status optimistically", async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      });
+
+      render(<CateringLeadsClient {...defaultProps} />);
+
+      // Open modal for pending lead
+      const row = screen.getByText("John Doe").closest("tr") as HTMLElement;
+      fireEvent.click(row);
+
+      // Click Mark Contacted
+      const markContactedBtn = screen.getByText("Mark Contacted");
+      fireEvent.click(markContactedBtn);
+
+      // Optimistic update: the modal badge should now show "Contacted" (capitalized)
+      // The existing "contacted" text from the table for Jane's row will also be present
+      const contactedElements = screen.getAllByText(/contacted/i);
+      expect(contactedElements.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("should rollback status on fetch error", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error("Network error")
+      );
+
+      render(<CateringLeadsClient {...defaultProps} />);
+
+      // Open modal for pending lead
+      const row = screen.getByText("John Doe").closest("tr") as HTMLElement;
+      fireEvent.click(row);
+
+      // Click Cancel Lead
+      const cancelBtn = screen.getByText("Cancel Lead");
+      fireEvent.click(cancelBtn);
+
+      // Wait for the rollback
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalled();
+      });
+
+      consoleSpy.mockRestore();
     });
   });
 

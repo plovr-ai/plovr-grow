@@ -176,6 +176,84 @@ describe("MenuHeader", () => {
     });
   });
 
+  describe("slug prop variants", () => {
+    it("should use empty string when no slugs provided", () => {
+      render(
+        <MenuHeader companySlug="company" />,
+        { wrapper: createWrapper("USD", "en-US") }
+      );
+
+      // Should render with empty slug in cart link
+      const cartLink = screen.getByText("View Cart").closest("a");
+      expect(cartLink).toHaveAttribute("href", "/r//cart");
+    });
+
+    it("should use merchantSlug when provided", () => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: [
+          {
+            id: "1",
+            menuItemId: "item-1",
+            name: "Test Item",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [],
+            totalPrice: 10,
+          },
+        ],
+      });
+
+      render(
+        <MenuHeader merchantSlug="merchant-slug" companySlug="company-slug" />,
+        { wrapper: createWrapper("USD", "en-US") }
+      );
+
+      // Cart link should use merchantSlug
+      const cartLink = screen.getByText("View Cart").closest("a");
+      expect(cartLink).toHaveAttribute("href", "/r/merchant-slug/cart");
+    });
+  });
+
+  describe("merchant logo", () => {
+    it("should display logo when logoUrl is provided", () => {
+      render(
+        <MenuHeader tenantSlug="test" companySlug="test-company" />,
+        { wrapper: createWrapper("USD", "en-US", "Logo Restaurant", "https://example.com/logo.png") }
+      );
+
+      const logo = screen.getByAltText("Logo Restaurant");
+      expect(logo).toBeInTheDocument();
+      expect(logo).toHaveAttribute("src", "https://example.com/logo.png");
+    });
+  });
+
+  describe("item count display", () => {
+    it("should display 99+ when itemCount exceeds 99", () => {
+      useCartStore.setState({
+        tenantId: "test",
+        items: [
+          {
+            id: "1",
+            menuItemId: "item-1",
+            name: "Test Item",
+            price: 1,
+            quantity: 100,
+            selectedModifiers: [],
+            totalPrice: 100,
+          },
+        ],
+      });
+
+      render(
+        <MenuHeader tenantSlug="test" />,
+        { wrapper: createWrapper("USD", "en-US") }
+      );
+
+      expect(screen.getByText("99+")).toBeInTheDocument();
+    });
+  });
+
   describe("fly-to-cart animation target", () => {
     it("should always render cart-icon-target element for animation", () => {
       render(

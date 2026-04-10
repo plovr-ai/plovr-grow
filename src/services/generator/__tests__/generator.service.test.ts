@@ -122,6 +122,25 @@ describe("GeneratorService", () => {
       expect(generatorRepository.markCompleted).toHaveBeenCalledWith("gen1", "tenant-1", "joes-pizza");
     });
 
+    it("should return early when generation not found", async () => {
+      vi.mocked(generatorRepository.getById).mockResolvedValue(null);
+
+      await service.generate("non-existent");
+
+      expect(generatorRepository.updateStatus).not.toHaveBeenCalled();
+      expect(mockGetPlaceDetails).not.toHaveBeenCalled();
+    });
+
+    it("should handle non-Error thrown during generation", async () => {
+      vi.mocked(generatorRepository.getById).mockResolvedValue({
+        id: "gen1", placeId: "ChIJ_test", placeName: "Bad Place",
+      } as never);
+      mockGetPlaceDetails.mockRejectedValue("string error");
+
+      await service.generate("gen1");
+      expect(generatorRepository.markFailed).toHaveBeenCalledWith("gen1", "Unknown error");
+    });
+
     it("marks generation as failed when Google API throws", async () => {
       vi.mocked(generatorRepository.getById).mockResolvedValue({
         id: "gen1", placeId: "ChIJ_test", placeName: "Failing Place",
@@ -130,6 +149,19 @@ describe("GeneratorService", () => {
 
       await service.generate("gen1");
       expect(generatorRepository.markFailed).toHaveBeenCalledWith("gen1", "API timeout");
+    });
+  });
+
+  describe("create - edge case", () => {
+    it("creates new generation when findCompleted returns record without companySlug", async () => {
+      vi.mocked(generatorRepository.findCompletedByPlaceId).mockResolvedValue({
+        id: "gen1",
+        companySlug: null,
+      } as never);
+      vi.mocked(generatorRepository.create).mockResolvedValue({ id: "gen-new" } as never);
+
+      const result = await service.create({ placeId: "ChIJ_test", placeName: "Test" });
+      expect(result).toEqual({ generationId: "gen-new" });
     });
   });
 });

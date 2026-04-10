@@ -516,6 +516,300 @@ describe("SquareOrderService", () => {
     });
   });
 
+  describe("updateOrderStatus - edge cases", () => {
+    it("should skip update when Square order has no fulfillment UID", async () => {
+      mockGetIdMappingByInternalId.mockResolvedValue({
+        externalId: "sq-order-1",
+      });
+      mockGet.mockResolvedValue({
+        order: {
+          id: "sq-order-1",
+          locationId: "sq-loc-1",
+          version: 2,
+          fulfillments: [{ uid: null }],
+        },
+      });
+
+      await service.updateOrderStatus(
+        TENANT_ID,
+        MERCHANT_ID,
+        "order-1",
+        "preparing"
+      );
+
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should skip update when Square order has no fulfillments array", async () => {
+      mockGetIdMappingByInternalId.mockResolvedValue({
+        externalId: "sq-order-1",
+      });
+      mockGet.mockResolvedValue({
+        order: {
+          id: "sq-order-1",
+          locationId: "sq-loc-1",
+          version: 2,
+          fulfillments: [],
+        },
+      });
+
+      await service.updateOrderStatus(
+        TENANT_ID,
+        MERCHANT_ID,
+        "order-1",
+        "preparing"
+      );
+
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should re-throw AppError when Square API throws AppError", async () => {
+      mockGetIdMappingByInternalId.mockResolvedValue({
+        externalId: "sq-order-1",
+      });
+      mockGet.mockRejectedValue(
+        new AppError(ErrorCodes.SQUARE_ORDER_NOT_FOUND, undefined, 404)
+      );
+
+      await expect(
+        service.updateOrderStatus(
+          TENANT_ID,
+          MERCHANT_ID,
+          "order-1",
+          "preparing"
+        )
+      ).rejects.toMatchObject({
+        code: ErrorCodes.SQUARE_ORDER_NOT_FOUND,
+      });
+    });
+
+    it("should throw SQUARE_ORDER_NOT_FOUND when get returns no order", async () => {
+      mockGetIdMappingByInternalId.mockResolvedValue({
+        externalId: "sq-order-1",
+      });
+      mockGet.mockResolvedValue({ order: null });
+
+      await expect(
+        service.updateOrderStatus(
+          TENANT_ID,
+          MERCHANT_ID,
+          "order-1",
+          "preparing"
+        )
+      ).rejects.toMatchObject({
+        code: ErrorCodes.SQUARE_ORDER_NOT_FOUND,
+      });
+    });
+  });
+
+  describe("cancelOrder - edge cases", () => {
+    it("should skip cancel when Square order has no fulfillment UID", async () => {
+      mockGetIdMappingByInternalId.mockResolvedValue({
+        externalId: "sq-order-1",
+      });
+      mockGet.mockResolvedValue({
+        order: {
+          id: "sq-order-1",
+          locationId: "sq-loc-1",
+          version: 2,
+          fulfillments: [{ uid: null }],
+        },
+      });
+
+      await service.cancelOrder(TENANT_ID, MERCHANT_ID, "order-1", "No reason");
+
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should throw SQUARE_ORDER_NOT_FOUND when get returns no order", async () => {
+      mockGetIdMappingByInternalId.mockResolvedValue({
+        externalId: "sq-order-1",
+      });
+      mockGet.mockResolvedValue({ order: null });
+
+      await expect(
+        service.cancelOrder(TENANT_ID, MERCHANT_ID, "order-1")
+      ).rejects.toMatchObject({
+        code: ErrorCodes.SQUARE_ORDER_NOT_FOUND,
+      });
+    });
+
+    it("should re-throw AppError when cancel throws AppError", async () => {
+      mockGetIdMappingByInternalId.mockResolvedValue({
+        externalId: "sq-order-1",
+      });
+      mockGet.mockRejectedValue(
+        new AppError(ErrorCodes.SQUARE_ORDER_NOT_FOUND, undefined, 404)
+      );
+
+      await expect(
+        service.cancelOrder(TENANT_ID, MERCHANT_ID, "order-1")
+      ).rejects.toMatchObject({
+        code: ErrorCodes.SQUARE_ORDER_NOT_FOUND,
+      });
+    });
+
+    it("should not add pickupDetails for non-PICKUP fulfillment type", async () => {
+      mockGetIdMappingByInternalId.mockResolvedValue({
+        externalId: "sq-order-1",
+      });
+      mockGet.mockResolvedValue({
+        order: {
+          id: "sq-order-1",
+          locationId: "sq-loc-1",
+          version: 2,
+          fulfillments: [{ uid: "ff-uid-1", type: "DELIVERY" }],
+        },
+      });
+      mockUpdate.mockResolvedValue({ order: { id: "sq-order-1" } });
+
+      await service.cancelOrder(
+        TENANT_ID,
+        MERCHANT_ID,
+        "order-1",
+        "Customer requested"
+      );
+
+      const updateCall = mockUpdate.mock.calls[0][0];
+      expect(updateCall.order.fulfillments[0].state).toBe("CANCELED");
+      // pickupDetails should not be added for non-PICKUP types
+      expect(updateCall.order.fulfillments[0].pickupDetails).toBeUndefined();
+    });
+  });
+
+  describe("createOrder - edge cases", () => {
+    it("should handle Square API returning no order ID", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+      mockCreate.mockResolvedValue({ order: { id: null } });
+
+      await expect(
+        service.createOrder(TENANT_ID, MERCHANT_ID, sampleInput)
+      ).rejects.toMatchObject({
+        code: ErrorCodes.SQUARE_ORDER_PUSH_FAILED,
+      });
+
+      expect(mockUpdateSyncRecord).toHaveBeenCalledWith("sync-1", {
+        status: "failed",
+        errorMessage: "Square API returned no order ID",
+      });
+    });
+
+    it("should re-throw AppError during order creation", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+      mockCreate.mockRejectedValue(
+        new AppError(ErrorCodes.SQUARE_MISSING_LOCATION, undefined, 400)
+      );
+
+      await expect(
+        service.createOrder(TENANT_ID, MERCHANT_ID, sampleInput)
+      ).rejects.toMatchObject({
+        code: ErrorCodes.SQUARE_MISSING_LOCATION,
+      });
+    });
+
+    it("should handle order with no version from Square", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+      mockCreate.mockResolvedValue({
+        order: { id: "sq-order-3", version: undefined },
+      });
+
+      const result = await service.createOrder(
+        TENANT_ID,
+        MERCHANT_ID,
+        sampleInput
+      );
+
+      expect(result.squareOrderId).toBe("sq-order-3");
+      expect(result.squareVersion).toBe(1); // defaults to 1
+    });
+
+    it("should build fulfillment with trimmed displayName when only firstName", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+      mockCreate.mockResolvedValue({
+        order: { id: "sq-order-4", version: 1 },
+      });
+
+      const inputNoLastName: SquareOrderPushInput = {
+        ...sampleInput,
+        customerLastName: "",
+        customerEmail: undefined,
+        notes: undefined,
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, inputNoLastName);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      const fulfillment = createCall.order.fulfillments[0];
+      expect(fulfillment.pickupDetails.recipient.displayName).toBe("John");
+      expect(fulfillment.pickupDetails.recipient.emailAddress).toBeUndefined();
+      expect(fulfillment.pickupDetails.note).toBeUndefined();
+    });
+  });
+
+  describe("createOrder - production environment", () => {
+    it("should use production environment when configured", async () => {
+      const { squareConfig: configMock } = await import("../square.config");
+      const origEnv = configMock.environment;
+      (configMock as Record<string, unknown>).environment = "production";
+
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+      mockCreate.mockResolvedValue({
+        order: { id: "sq-order-prod", version: 1 },
+      });
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, sampleInput);
+
+      (configMock as Record<string, unknown>).environment = origEnv;
+    });
+  });
+
+  describe("createOrder - sync record non-Error thrown", () => {
+    it("should handle non-Error thrown during createOrder", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+      mockCreate.mockRejectedValue("string error");
+
+      await expect(
+        service.createOrder(TENANT_ID, MERCHANT_ID, sampleInput)
+      ).rejects.toMatchObject({
+        code: ErrorCodes.SQUARE_ORDER_PUSH_FAILED,
+      });
+
+      expect(mockUpdateSyncRecord).toHaveBeenCalledWith("sync-1", {
+        status: "failed",
+        errorMessage: "Unknown error",
+      });
+    });
+  });
+
+  describe("createOrder - resolveExternalIds branches", () => {
+    it("should skip modifier lookup when no modifiers in any item", async () => {
+      const inputNoModifiers: SquareOrderPushInput = {
+        ...sampleInput,
+        items: [
+          {
+            menuItemId: "item-1",
+            name: "Simple Item",
+            price: 5.00,
+            quantity: 1,
+            selectedModifiers: [],
+          },
+        ],
+      };
+
+      mockGetIdMappingsByInternalIds.mockResolvedValue([
+        { internalId: "item-1", externalId: "sq-var-1" },
+      ]);
+      mockCreate.mockResolvedValue({
+        order: { id: "sq-order-5", version: 1 },
+      });
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, inputNoModifiers);
+
+      // Should only be called once (for menu items), not twice (no modifiers to look up)
+      expect(mockGetIdMappingsByInternalIds).toHaveBeenCalledTimes(1);
+    });
+  });
+
   // ==================== generateIdempotencyKey ====================
 
   describe("generateIdempotencyKey", () => {

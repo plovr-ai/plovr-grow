@@ -202,6 +202,92 @@ describe("GiftcardOverviewClient", () => {
         expect.not.stringContaining("page=")
       );
     });
+
+    it("should clear search param when search is empty", () => {
+      mockSearchParams.set("search", "old");
+      render(
+        <GiftcardOverviewClient
+          {...defaultProps}
+          initialFilters={{ search: "old", dateFrom: "", dateTo: "" }}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      const searchInput = screen.getByPlaceholderText(
+        "Search by card number, name, or email..."
+      );
+      fireEvent.change(searchInput, { target: { value: "" } });
+      fireEvent.submit(searchInput.closest("form")!);
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.not.stringContaining("search=")
+      );
+    });
+  });
+
+  describe("Date Filters", () => {
+    it("should render date from and date to inputs", () => {
+      render(<GiftcardOverviewClient {...defaultProps} />, { wrapper: Wrapper });
+
+      expect(screen.getByLabelText("From")).toBeInTheDocument();
+      expect(screen.getByLabelText("To")).toBeInTheDocument();
+    });
+
+    it("should update URL when date from changes", () => {
+      render(<GiftcardOverviewClient {...defaultProps} />, { wrapper: Wrapper });
+
+      const dateFromInput = screen.getByLabelText("From");
+      fireEvent.change(dateFromInput, { target: { value: "2024-01-01" } });
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.stringContaining("dateFrom=2024-01-01")
+      );
+    });
+
+    it("should update URL when date to changes", () => {
+      render(<GiftcardOverviewClient {...defaultProps} />, { wrapper: Wrapper });
+
+      const dateToInput = screen.getByLabelText("To");
+      fireEvent.change(dateToInput, { target: { value: "2024-12-31" } });
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.stringContaining("dateTo=2024-12-31")
+      );
+    });
+
+    it("should clear date param when date is cleared", () => {
+      mockSearchParams.set("dateFrom", "2024-01-01");
+      render(
+        <GiftcardOverviewClient
+          {...defaultProps}
+          initialFilters={{ search: "", dateFrom: "2024-01-01", dateTo: "" }}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      const dateFromInput = screen.getByLabelText("From");
+      fireEvent.change(dateFromInput, { target: { value: "" } });
+
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.not.stringContaining("dateFrom=")
+      );
+    });
+
+    it("should show initial date values from props", () => {
+      render(
+        <GiftcardOverviewClient
+          {...defaultProps}
+          initialFilters={{ search: "", dateFrom: "2024-03-01", dateTo: "2024-03-31" }}
+        />,
+        { wrapper: Wrapper }
+      );
+
+      const dateFromInput = screen.getByLabelText("From") as HTMLInputElement;
+      const dateToInput = screen.getByLabelText("To") as HTMLInputElement;
+
+      expect(dateFromInput.value).toBe("2024-03-01");
+      expect(dateToInput.value).toBe("2024-03-31");
+    });
   });
 
   describe("Table", () => {
@@ -230,6 +316,14 @@ describe("GiftcardOverviewClient", () => {
       expect(screen.getByText("Jane Smith")).toBeInTheDocument();
       expect(screen.getByText("$50.00")).toBeInTheDocument();
       expect(screen.getByText("$0.00")).toBeInTheDocument();
+    });
+
+    it("should not render email when it is null", () => {
+      render(<GiftcardOverviewClient {...defaultProps} />, { wrapper: Wrapper });
+
+      // gc-2 has null email - Jane Smith should still appear but no email below
+      const janeRow = screen.getByText("Jane Smith").closest("td");
+      expect(janeRow?.querySelector(".text-xs.text-gray-500")).toBeNull();
     });
 
     it("should format dates correctly", () => {

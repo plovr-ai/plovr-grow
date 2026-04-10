@@ -262,6 +262,41 @@ describe("SquareOAuthService", () => {
       });
     });
 
+    it("should handle locations with partial address fields (null coalescing)", async () => {
+      mockLocationsApi.list.mockResolvedValue({
+        locations: [
+          {
+            id: "loc-3",
+            name: null,
+            address: {
+              addressLine1: null,
+              locality: null,
+              administrativeDistrictLevel1: null,
+              postalCode: null,
+              country: null,
+            },
+            status: null,
+          },
+        ],
+      });
+
+      const result = await service.listLocations("access-token-abc");
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        id: "loc-3",
+        name: "",
+        address: {
+          addressLine1: undefined,
+          locality: undefined,
+          administrativeDistrictLevel1: undefined,
+          postalCode: undefined,
+          country: undefined,
+        },
+        status: "UNKNOWN",
+      });
+    });
+
     it("should return empty array when no locations exist", async () => {
       mockLocationsApi.list.mockResolvedValue({
         locations: undefined,
@@ -270,6 +305,22 @@ describe("SquareOAuthService", () => {
       const result = await service.listLocations("access-token-abc");
 
       expect(result).toEqual([]);
+    });
+
+    it("should use Production environment when configured", async () => {
+      const { squareConfig: configMock } = await import("../square.config");
+      const origEnv = configMock.environment;
+      (configMock as Record<string, unknown>).environment = "production";
+
+      mockLocationsApi.list.mockResolvedValue({ locations: [] });
+
+      await service.listLocations("prod-token");
+
+      const ClientMock = squareModule.SquareClient as unknown as ReturnType<typeof vi.fn>;
+      const lastCallArgs = ClientMock.mock.calls[ClientMock.mock.calls.length - 1][0];
+      expect(lastCallArgs.environment).toBe("production");
+
+      (configMock as Record<string, unknown>).environment = origEnv;
     });
 
     it("should pass access token to the Square client", async () => {

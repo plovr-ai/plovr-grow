@@ -321,6 +321,70 @@ describe("MenuEntityRepository", () => {
     });
   });
 
+  describe("getMenuById", () => {
+    it("should find menu by ID", async () => {
+      vi.mocked(prisma.menu.findFirst).mockResolvedValue({
+        id: "menu-1",
+        name: "Lunch",
+      } as never);
+
+      const result = await repository.getMenuById("tenant-1", "menu-1");
+
+      expect(prisma.menu.findFirst).toHaveBeenCalledWith({
+        where: { id: "menu-1", tenantId: "tenant-1", deleted: false },
+      });
+      expect(result).toEqual({ id: "menu-1", name: "Lunch" });
+    });
+  });
+
+  describe("getMenuWithCategories", () => {
+    it("should find menu with categories", async () => {
+      vi.mocked(prisma.menu.findFirst).mockResolvedValue({
+        id: "menu-1",
+        categories: [{ id: "cat-1", name: "Appetizers" }],
+      } as never);
+
+      const result = await repository.getMenuWithCategories("tenant-1", "menu-1");
+
+      expect(prisma.menu.findFirst).toHaveBeenCalledWith({
+        where: { id: "menu-1", tenantId: "tenant-1", deleted: false },
+        include: {
+          categories: {
+            where: { deleted: false },
+            orderBy: { sortOrder: "asc" },
+          },
+        },
+      });
+      expect(result).toBeTruthy();
+    });
+  });
+
+  describe("updateMenu", () => {
+    it("should update menu by ID", async () => {
+      vi.mocked(prisma.menu.updateMany).mockResolvedValue({ count: 1 });
+
+      await repository.updateMenu("tenant-1", "menu-1", { name: "Updated Menu" });
+
+      expect(prisma.menu.updateMany).toHaveBeenCalledWith({
+        where: { id: "menu-1", tenantId: "tenant-1" },
+        data: { name: "Updated Menu" },
+      });
+    });
+  });
+
+  describe("hardDeleteMenu", () => {
+    it("should soft delete (set deleted flag) a menu", async () => {
+      vi.mocked(prisma.menu.updateMany).mockResolvedValue({ count: 1 });
+
+      await repository.hardDeleteMenu("tenant-1", "menu-1");
+
+      expect(prisma.menu.updateMany).toHaveBeenCalledWith({
+        where: { id: "menu-1", tenantId: "tenant-1" },
+        data: { deleted: true, updatedAt: expect.any(Date) },
+      });
+    });
+  });
+
   describe("deleteMenu", () => {
     it("should soft delete by setting status to inactive", async () => {
       vi.mocked(prisma.menu.updateMany).mockResolvedValue({ count: 1 });

@@ -344,6 +344,35 @@ describe("calculateOrderPricing", () => {
     });
   });
 
+  describe("fees calculation", () => {
+    it("should calculate percentage fee based on subtotal", () => {
+      const items: PricingItem[] = [
+        { itemId: "item-1", unitPrice: 100.0, quantity: 1, taxes: [] },
+      ];
+
+      const result = calculateOrderPricing(items, null, [
+        { id: "service-fee", type: "percentage", value: 0.05 },
+      ]);
+
+      expect(result.feesAmount).toBe(5.0);
+      expect(result.feesBreakdown).toEqual([{ id: "service-fee", amount: 5.0 }]);
+      expect(result.totalAmount).toBe(105.0);
+    });
+
+    it("should calculate fixed fee", () => {
+      const items: PricingItem[] = [
+        { itemId: "item-1", unitPrice: 50.0, quantity: 1, taxes: [] },
+      ];
+
+      const result = calculateOrderPricing(items, null, [
+        { id: "delivery-fee", type: "fixed", value: 3.99 },
+      ]);
+
+      expect(result.feesAmount).toBe(3.99);
+      expect(result.totalAmount).toBe(53.99);
+    });
+  });
+
   describe("real-world scenarios", () => {
     it("should calculate a typical restaurant order with fixed tip", () => {
       // Simulate a real order:
@@ -462,6 +491,19 @@ describe("calculateOrderPricing", () => {
       expect(result.taxAmount).toBe(3.69);
       expect(result.tipAmount).toBe(5.25);
       expect(result.totalAmount).toBe(43.93);
+    });
+  });
+
+  describe("edge cases", () => {
+    it("should handle item with undefined taxes gracefully", () => {
+      const items = [
+        { itemId: "item-1", unitPrice: 10.0, quantity: 1, taxes: undefined as unknown as never[] },
+      ];
+
+      const result = calculateOrderPricing(items);
+
+      expect(result.subtotal).toBe(10.0);
+      expect(result.taxAmount).toBe(0);
     });
   });
 });

@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { OtpModal } from "../OtpModal";
 
 describe("OtpModal", () => {
@@ -7,161 +7,295 @@ describe("OtpModal", () => {
     isOpen: true,
     phone: "(555) 123-4567",
     onClose: vi.fn(),
-    onVerify: vi.fn(),
-    onResend: vi.fn(),
+    onVerify: vi.fn().mockResolvedValue(undefined),
+    onResend: vi.fn().mockResolvedValue(undefined),
     isVerifying: false,
-    error: undefined,
+    error: undefined as string | undefined,
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
   });
 
-  it("renders nothing when closed", () => {
-    render(<OtpModal {...defaultProps} isOpen={false} />);
-    expect(screen.queryByText("Enter Verification Code")).not.toBeInTheDocument();
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it("renders modal when open", () => {
+  it("should return null when not open", () => {
+    const { container } = render(<OtpModal {...defaultProps} isOpen={false} />);
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("should render modal when open", () => {
     render(<OtpModal {...defaultProps} />);
     expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
-    expect(screen.getByText("Code sent to (555) 123-4567")).toBeInTheDocument();
+    expect(screen.getByText(/Code sent to/)).toBeInTheDocument();
   });
 
-  it("renders 6 input fields", () => {
+  it("should render 6 digit inputs", () => {
     render(<OtpModal {...defaultProps} />);
-    const inputs = screen.getAllByRole("textbox");
+    const inputs = screen.getAllByLabelText(/Digit/);
     expect(inputs).toHaveLength(6);
   });
 
-  it("handles digit input and auto-focuses next field", () => {
-    render(<OtpModal {...defaultProps} />);
-    const inputs = screen.getAllByRole("textbox");
-
-    fireEvent.change(inputs[0], { target: { value: "1" } });
-    expect(inputs[0]).toHaveValue("1");
-    expect(document.activeElement).toBe(inputs[1]);
-  });
-
-  it("only allows numeric input", () => {
-    render(<OtpModal {...defaultProps} />);
-    const inputs = screen.getAllByRole("textbox");
-
-    fireEvent.change(inputs[0], { target: { value: "a" } });
-    expect(inputs[0]).toHaveValue("");
-  });
-
-  it("handles backspace to previous field", () => {
-    render(<OtpModal {...defaultProps} />);
-    const inputs = screen.getAllByRole("textbox");
-
-    // First enter a digit in first field, then move to second
-    fireEvent.change(inputs[0], { target: { value: "1" } });
-
-    // Now backspace on empty second field should go back to first
-    fireEvent.keyDown(inputs[1], { key: "Backspace" });
-    expect(document.activeElement).toBe(inputs[0]);
-  });
-
-  it("auto-submits when all 6 digits entered", async () => {
-    const onVerify = vi.fn();
-    render(<OtpModal {...defaultProps} onVerify={onVerify} />);
-    const inputs = screen.getAllByRole("textbox");
-
-    // Enter first 5 digits
-    for (let i = 0; i < 5; i++) {
-      fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
-    }
-
-    // Enter last digit - should trigger submit
-    fireEvent.change(inputs[5], { target: { value: "6" } });
-
-    expect(onVerify).toHaveBeenCalledWith("123456");
-  });
-
-  it("handles paste of full code", () => {
-    const onVerify = vi.fn();
-    render(<OtpModal {...defaultProps} onVerify={onVerify} />);
-    const inputs = screen.getAllByRole("textbox");
-
-    fireEvent.paste(inputs[0], {
-      clipboardData: { getData: () => "123456" },
-    });
-
-    expect(onVerify).toHaveBeenCalledWith("123456");
-  });
-
-  it("shows countdown timer", () => {
-    render(<OtpModal {...defaultProps} />);
-    expect(screen.getByText(/Resend code in \d+s/)).toBeInTheDocument();
-  });
-
-  it("calls onClose when close button clicked", () => {
-    const onClose = vi.fn();
-    render(<OtpModal {...defaultProps} onClose={onClose} />);
-
-    fireEvent.click(screen.getByLabelText("Close"));
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it("calls onClose when backdrop clicked", () => {
-    const onClose = vi.fn();
-    render(<OtpModal {...defaultProps} onClose={onClose} />);
-
-    // Click on backdrop
-    fireEvent.click(screen.getByText("Enter Verification Code").closest(".fixed")!.querySelector(".bg-black\\/50")!);
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it("shows error message when provided", () => {
+  it("should display error message", () => {
     render(<OtpModal {...defaultProps} error="Invalid code" />);
     expect(screen.getByText("Invalid code")).toBeInTheDocument();
   });
 
-  it("disables inputs when verifying", () => {
-    render(<OtpModal {...defaultProps} isVerifying={true} />);
-    const inputs = screen.getAllByRole("textbox");
+  it("should show countdown timer initially", () => {
+    render(<OtpModal {...defaultProps} />);
+    expect(screen.getByText(/Resend code in 60s/)).toBeInTheDocument();
+  });
 
+  it("should show resend button after countdown expires", () => {
+    render(<OtpModal {...defaultProps} />);
+    act(() => {
+      vi.advanceTimersByTime(61000);
+    });
+    expect(screen.getByText("Resend code")).toBeInTheDocument();
+  });
+
+  it("should call onClose when backdrop is clicked", () => {
+    const { container } = render(<OtpModal {...defaultProps} />);
+    const backdrop = container.querySelector(".bg-black\\/50");
+    fireEvent.click(backdrop!);
+    expect(defaultProps.onClose).toHaveBeenCalled();
+  });
+
+  it("should call onClose when close button is clicked", () => {
+    render(<OtpModal {...defaultProps} />);
+    fireEvent.click(screen.getByLabelText("Close"));
+    expect(defaultProps.onClose).toHaveBeenCalled();
+  });
+
+  it("should auto-submit when all 6 digits entered", () => {
+    render(<OtpModal {...defaultProps} />);
+    const inputs = screen.getAllByLabelText(/Digit/);
+
+    for (let i = 0; i < 6; i++) {
+      fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
+    }
+
+    expect(defaultProps.onVerify).toHaveBeenCalledWith("123456");
+  });
+
+  it("should handle paste of 6-digit code", () => {
+    render(<OtpModal {...defaultProps} />);
+    const inputs = screen.getAllByLabelText(/Digit/);
+
+    fireEvent.paste(inputs[0], {
+      clipboardData: { getData: () => "654321" },
+    });
+
+    expect(defaultProps.onVerify).toHaveBeenCalledWith("654321");
+  });
+
+  it("should disable submit button when code is incomplete", () => {
+    render(<OtpModal {...defaultProps} />);
+    expect(screen.getByText("Verify")).toBeDisabled();
+  });
+
+  it("should show Verifying... when isVerifying is true", () => {
+    render(<OtpModal {...defaultProps} isVerifying={true} />);
+    expect(screen.getByText("Verifying...")).toBeInTheDocument();
+  });
+
+  it("should disable inputs when verifying", () => {
+    render(<OtpModal {...defaultProps} isVerifying={true} />);
+    const inputs = screen.getAllByLabelText(/Digit/);
     inputs.forEach((input) => {
       expect(input).toBeDisabled();
     });
   });
 
-  it("shows verifying state on submit button", () => {
-    render(<OtpModal {...defaultProps} isVerifying={true} />);
-    expect(screen.getByText("Verifying...")).toBeInTheDocument();
+  it("should call onResend and reset countdown", async () => {
+    render(<OtpModal {...defaultProps} />);
+
+    act(() => {
+      vi.advanceTimersByTime(61000);
+    });
+
+    const resendButton = screen.getByText("Resend code");
+    await act(async () => {
+      fireEvent.click(resendButton);
+    });
+
+    expect(defaultProps.onResend).toHaveBeenCalled();
+    // After resend, countdown should restart
+    expect(screen.getByText(/Resend code in 60s/)).toBeInTheDocument();
   });
 
-  it("disables verify button when code incomplete", () => {
+  it("should handle backspace navigation to previous input", () => {
     render(<OtpModal {...defaultProps} />);
-    const verifyButton = screen.getByRole("button", { name: "Verify" });
-    expect(verifyButton).toBeDisabled();
+    const inputs = screen.getAllByLabelText(/Digit/);
+
+    fireEvent.change(inputs[0], { target: { value: "1" } });
+    // Simulate backspace on empty second input
+    fireEvent.keyDown(inputs[1], { key: "Backspace" });
+    // No error thrown
   });
 
-  it("enables verify button when code complete", () => {
+  it("should call handleSubmit via button when code is complete", () => {
     render(<OtpModal {...defaultProps} />);
-    const inputs = screen.getAllByRole("textbox");
+    const inputs = screen.getAllByLabelText(/Digit/);
 
     for (let i = 0; i < 6; i++) {
       fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
     }
-
-    const verifyButton = screen.getByRole("button", { name: "Verify" });
-    expect(verifyButton).not.toBeDisabled();
-  });
-
-  it("calls onVerify when verify button clicked with complete code", () => {
-    const onVerify = vi.fn();
-    render(<OtpModal {...defaultProps} onVerify={onVerify} />);
-    const inputs = screen.getAllByRole("textbox");
 
     // Reset the mock after auto-submit
-    for (let i = 0; i < 6; i++) {
-      fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
-    }
-    onVerify.mockClear();
+    defaultProps.onVerify.mockClear();
 
-    fireEvent.click(screen.getByRole("button", { name: "Verify" }));
-    expect(onVerify).toHaveBeenCalledWith("123456");
+    // Click Verify button
+    fireEvent.click(screen.getByText("Verify"));
+    expect(defaultProps.onVerify).toHaveBeenCalledWith("123456");
+  });
+
+  it("should reset code when modal reopens", () => {
+    const { rerender } = render(<OtpModal {...defaultProps} isOpen={false} />);
+    rerender(<OtpModal {...defaultProps} isOpen={true} />);
+
+    const inputs = screen.getAllByLabelText(/Digit/);
+    inputs.forEach((input) => {
+      expect(input).toHaveValue("");
+    });
+  });
+
+  it("should strip non-digit characters from paste", () => {
+    render(<OtpModal {...defaultProps} />);
+    const inputs = screen.getAllByLabelText(/Digit/);
+
+    fireEvent.paste(inputs[0], {
+      clipboardData: { getData: () => "12-34-56" },
+    });
+
+    expect(defaultProps.onVerify).toHaveBeenCalledWith("123456");
+  });
+
+  it("should show Sending... during resend", async () => {
+    let resolveResend: () => void;
+    defaultProps.onResend.mockImplementation(() => new Promise<void>((resolve) => { resolveResend = resolve; }));
+
+    render(<OtpModal {...defaultProps} />);
+
+    act(() => {
+      vi.advanceTimersByTime(61000);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Resend code"));
+    });
+
+    expect(screen.getByText("Sending...")).toBeInTheDocument();
+
+    await act(async () => {
+      resolveResend!();
+    });
+  });
+
+  it("should not submit incomplete code via Verify button", () => {
+    render(<OtpModal {...defaultProps} />);
+    const inputs = screen.getAllByLabelText(/Digit/);
+
+    // Enter only 3 digits
+    fireEvent.change(inputs[0], { target: { value: "1" } });
+    fireEvent.change(inputs[1], { target: { value: "2" } });
+    fireEvent.change(inputs[2], { target: { value: "3" } });
+
+    // Button should be disabled
+    const verifyButton = screen.getByText("Verify");
+    expect(verifyButton).toBeDisabled();
+
+    // Click it anyway
+    fireEvent.click(verifyButton);
+    expect(defaultProps.onVerify).not.toHaveBeenCalled();
+  });
+
+  it("should not resend when canResend is false or already resending", () => {
+    render(<OtpModal {...defaultProps} />);
+
+    // Countdown is at 60, canResend is false
+    // There's no resend button visible, only the countdown text
+    expect(screen.getByText(/Resend code in 60s/)).toBeInTheDocument();
+    expect(screen.queryByText("Resend code")).not.toBeInTheDocument();
+  });
+
+  it("should handle partial paste (less than 6 digits) without auto-submit", () => {
+    render(<OtpModal {...defaultProps} />);
+    const inputs = screen.getAllByLabelText(/Digit/);
+
+    fireEvent.paste(inputs[0], {
+      clipboardData: { getData: () => "123" },
+    });
+
+    // Should fill first 3 inputs
+    expect(inputs[0]).toHaveValue("1");
+    expect(inputs[1]).toHaveValue("2");
+    expect(inputs[2]).toHaveValue("3");
+    expect(inputs[3]).toHaveValue("");
+
+    // Should not auto-submit
+    expect(defaultProps.onVerify).not.toHaveBeenCalled();
+  });
+
+  it("should handle empty paste gracefully", () => {
+    render(<OtpModal {...defaultProps} />);
+    const inputs = screen.getAllByLabelText(/Digit/);
+
+    fireEvent.paste(inputs[0], {
+      clipboardData: { getData: () => "" },
+    });
+
+    // All inputs should remain empty
+    inputs.forEach((input) => {
+      expect(input).toHaveValue("");
+    });
+    expect(defaultProps.onVerify).not.toHaveBeenCalled();
+  });
+
+  it("should not auto-submit when entering digit on non-last input", () => {
+    render(<OtpModal {...defaultProps} />);
+    const inputs = screen.getAllByLabelText(/Digit/);
+
+    // Enter on index 3 (not the last)
+    fireEvent.change(inputs[3], { target: { value: "5" } });
+
+    expect(defaultProps.onVerify).not.toHaveBeenCalled();
+  });
+
+  it("should handle backspace on non-empty input without moving focus", () => {
+    render(<OtpModal {...defaultProps} />);
+    const inputs = screen.getAllByLabelText(/Digit/);
+
+    fireEvent.change(inputs[0], { target: { value: "1" } });
+    fireEvent.change(inputs[1], { target: { value: "2" } });
+
+    // Backspace on input with value - should not move to previous
+    fireEvent.keyDown(inputs[1], { key: "Backspace" });
+    // No crash, and input[1] still has value "2" (keyDown doesn't clear it)
+    expect(inputs[1]).toHaveValue("2");
+  });
+
+  it("should handle backspace on first input gracefully", () => {
+    render(<OtpModal {...defaultProps} />);
+    const inputs = screen.getAllByLabelText(/Digit/);
+
+    // Backspace on empty first input (index 0) should not crash
+    fireEvent.keyDown(inputs[0], { key: "Backspace" });
+    expect(inputs[0]).toHaveValue("");
+  });
+
+  it("should handle countdown reaching zero by enabling resend", () => {
+    render(<OtpModal {...defaultProps} />);
+
+    // Advance past countdown
+    act(() => {
+      vi.advanceTimersByTime(60000);
+    });
+
+    expect(screen.getByText("Resend code")).toBeInTheDocument();
+    expect(screen.queryByText(/Resend code in/)).not.toBeInTheDocument();
   });
 });

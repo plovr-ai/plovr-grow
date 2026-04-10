@@ -203,6 +203,39 @@ describe("usePaymentIntent", () => {
     expect(result.current.error).toBeNull();
   });
 
+  it("should reset payment intent when amount changes", async () => {
+    mockFetch.mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: {
+            clientSecret: "pi_test_secret",
+            paymentIntentId: "pi_test_id",
+          },
+        }),
+    });
+
+    let amount = 100;
+    const { result, rerender } = renderHook(() =>
+      usePaymentIntent({
+        amount,
+        apiPath: "/api/payment-intent",
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.clientSecret).toBe("pi_test_secret");
+    });
+
+    // Change amount
+    amount = 200;
+    rerender();
+
+    await waitFor(() => {
+      expect(result.current.clientSecret).toBeNull();
+    });
+  });
+
   it("should set isCreatingPaymentIntent to true while fetching", async () => {
     let resolvePromise: (value: unknown) => void;
     const pendingPromise = new Promise((resolve) => {

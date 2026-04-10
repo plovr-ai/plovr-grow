@@ -52,4 +52,29 @@ describe("POST /api/generator/create", () => {
     const res = await POST(makeRequest({ placeId: "ChIJ_test" }));
     expect(res.status).toBe(400);
   });
+
+  it("returns 500 when service.create throws", async () => {
+    mockCreate.mockRejectedValue(new Error("DB failure"));
+    const res = await POST(makeRequest({ placeId: "ChIJ_err", placeName: "Error Place" }));
+    const data = await res.json();
+    expect(res.status).toBe(500);
+    expect(data.error).toBe("Internal server error");
+  });
+
+  it("returns 201 without calling generate when generationId is undefined", async () => {
+    mockCreate.mockResolvedValue({});
+    const res = await POST(makeRequest({ placeId: "ChIJ_empty", placeName: "Empty" }));
+    const data = await res.json();
+    expect(res.status).toBe(201);
+    expect(data.data.generationId).toBeUndefined();
+    expect(mockGenerate).not.toHaveBeenCalled();
+  });
+
+  it("handles generate failure silently in background", async () => {
+    mockCreate.mockResolvedValue({ generationId: "gen-bg-fail" });
+    mockGenerate.mockRejectedValue(new Error("Background fail"));
+    const res = await POST(makeRequest({ placeId: "ChIJ_bg", placeName: "BG Place" }));
+    expect(res.status).toBe(201);
+    expect(mockGenerate).toHaveBeenCalledWith("gen-bg-fail");
+  });
 });
