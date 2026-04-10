@@ -100,9 +100,7 @@ describe("POST /api/auth/stytch/callback", () => {
         email: "test@example.com",
         name: "Test User",
         role: "admin",
-        tenantId: "t-1",
-        companyId: "c-1",
-      },
+        tenantId: "t-1",      },
     } as never);
 
     const request = new Request("http://localhost/api/auth/stytch/callback", {

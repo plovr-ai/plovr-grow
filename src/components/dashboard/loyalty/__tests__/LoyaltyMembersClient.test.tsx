@@ -178,9 +178,7 @@ describe("LoyaltyMembersClient", () => {
       const membersWithLastNameOnly: LoyaltyMemberData[] = [
         {
           id: "member-ln",
-          tenantId: "tenant-1",
-          companyId: "company-1",
-          phone: "5555555555",
+          tenantId: "tenant-1",          phone: "5555555555",
           email: null,
           firstName: null,
           lastName: "Smith",

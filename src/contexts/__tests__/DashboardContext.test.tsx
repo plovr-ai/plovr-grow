@@ -4,7 +4,7 @@ import {
   DashboardProvider,
   useDashboard,
   useMerchants,
-  useCompany,
+  useTenantBrand,
   useDashboardCurrency,
   useDashboardLocale,
 } from "../DashboardContext";
@@ -13,9 +13,8 @@ import type { ReactNode } from "react";
 
 const mockValue: DashboardContextValue = {
   tenantId: "tenant-1",
-  companyId: "company-1",
-  company: {
-    id: "company-1",
+  tenant: {
+    id: "tenant-1",
     name: "Test Company",
     slug: "test-company",
     logoUrl: "https://example.com/logo.png",
@@ -33,6 +32,10 @@ const mockValue: DashboardContextValue = {
   currency: "USD",
   locale: "en-US",
   subscription: null,
+  onboarding: {
+    status: "not_started",
+    data: null,
+  },
 };
 
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -44,7 +47,6 @@ describe("DashboardContext", () => {
     const { result } = renderHook(() => useDashboard(), { wrapper });
 
     expect(result.current.tenantId).toBe("tenant-1");
-    expect(result.current.companyId).toBe("company-1");
     expect(result.current.currency).toBe("USD");
     expect(result.current.locale).toBe("en-US");
   });
@@ -62,8 +64,8 @@ describe("DashboardContext", () => {
     expect(result.current[0].name).toBe("Main Store");
   });
 
-  it("useCompany should return company info", () => {
-    const { result } = renderHook(() => useCompany(), { wrapper });
+  it("useTenantBrand should return tenant brand info", () => {
+    const { result } = renderHook(() => useTenantBrand(), { wrapper });
 
     expect(result.current.name).toBe("Test Company");
     expect(result.current.slug).toBe("test-company");

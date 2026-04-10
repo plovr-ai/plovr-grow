@@ -139,8 +139,8 @@ describe("LocationCard", () => {
       // Create a business hours map where today is closed
       const days = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
       const today = days[new Date().getDay()];
-      const closedHours: Record<string, { open?: string; close?: string; closed?: boolean }> = {};
-      closedHours[today] = { closed: true };
+      const closedHours: Record<string, { open: string; close: string; closed?: boolean }> = {};
+      closedHours[today] = { open: "09:00", close: "22:00", closed: true };
 
       render(<LocationCard {...defaultProps} businessHours={closedHours} />);
       expect(screen.getByText(/Closed today/)).toBeInTheDocument();

@@ -422,7 +422,7 @@ describe("SubscriptionService", () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(null);
       vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
         name: "Test Tenant",
-        company: { supportEmail: "support@test.com" },
+        supportEmail: "support@test.com",
       } as never);
       vi.mocked(stripeService.createCustomer).mockResolvedValue("cus_new_123");
       vi.mocked(subscriptionRepository.create).mockResolvedValue({} as never);

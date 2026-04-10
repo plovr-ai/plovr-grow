@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { companyService } from "@/services/company/company.service";
+import { tenantService } from "@/services/tenant/tenant.service";
 import { GooglePlacesClient } from "@/services/generator/google-places.client";
 import { z } from "zod";
 
@@ -9,13 +9,13 @@ const requestSchema = z.object({
 });
 
 /**
- * POST: Update Company + Merchant from Google Places data during onboarding.
+ * POST: Update Tenant + Merchant from Google Places data during onboarding.
  * Fetches place details, updates existing entities, and marks website step complete.
  */
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user?.tenantId || !session?.user?.companyId) {
+    if (!session?.user?.tenantId) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
@@ -38,10 +38,9 @@ export async function POST(request: NextRequest) {
     const placesClient = new GooglePlacesClient(apiKey);
     const details = await placesClient.getPlaceDetails(placeId);
 
-    // Update existing Company + Merchant with real data
-    const { companySlug } = await companyService.updateFromPlaceDetails(
+    // Update existing Tenant + Merchant with real data
+    const { tenantSlug } = await tenantService.updateFromPlaceDetails(
       session.user.tenantId,
-      session.user.companyId,
       {
         name: details.name,
         address: details.address,
@@ -60,16 +59,15 @@ export async function POST(request: NextRequest) {
     );
 
     // Mark website step as completed
-    await companyService.updateOnboardingStep(
+    await tenantService.updateOnboardingStep(
       session.user.tenantId,
-      session.user.companyId,
       "website",
       "completed"
     );
 
     return NextResponse.json({
       success: true,
-      data: { companySlug },
+      data: { companySlug: tenantSlug },
     });
   } catch (error) {
     console.error("[Onboarding Website] Error:", error);

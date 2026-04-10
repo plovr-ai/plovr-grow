@@ -28,9 +28,7 @@ describe("TaxConfigService", () => {
   const mockTaxConfigs = [
     {
       id: "tax-standard",
-      tenantId: "tenant-1",
-      companyId: "company-1",
-      name: "Standard Tax",
+      tenantId: "tenant-1",      name: "Standard Tax",
       description: "Standard sales tax",
       roundingMethod: "half_up",
       status: "active",
@@ -40,9 +38,7 @@ describe("TaxConfigService", () => {
     },
     {
       id: "tax-alcohol",
-      tenantId: "tenant-1",
-      companyId: "company-1",
-      name: "Alcohol Tax",
+      tenantId: "tenant-1",      name: "Alcohol Tax",
       description: "Additional alcohol tax",
       roundingMethod: "half_up",
       status: "active",
@@ -52,9 +48,7 @@ describe("TaxConfigService", () => {
     },
     {
       id: "tax-reduced",
-      tenantId: "tenant-1",
-      companyId: "company-1",
-      name: "Reduced Tax",
+      tenantId: "tenant-1",      name: "Reduced Tax",
       description: "Reduced rate for groceries",
       roundingMethod: "always_round_down",
       status: "active",
@@ -389,9 +383,7 @@ describe("TaxConfigService", () => {
     it("should create tax config without setting merchant rates", async () => {
       const newConfig = {
         id: "tax-new",
-        tenantId: "tenant-1",
-        companyId: "company-1",
-        name: "Simple Tax",
+        tenantId: "tenant-1",        name: "Simple Tax",
         description: null,
         roundingMethod: "half_even",
         status: "active",
@@ -402,15 +394,14 @@ describe("TaxConfigService", () => {
 
       vi.mocked(taxConfigRepository.createTaxConfig).mockResolvedValue(newConfig);
 
-      const result = await service.createTaxConfig("tenant-1", "company-1", {
+      const result = await service.createTaxConfig("tenant-1", {
         name: "Simple Tax",
         roundingMethod: "half_even",
       });
 
       expect(taxConfigRepository.createTaxConfig).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
-        {
+                {
           name: "Simple Tax",
           description: undefined,
           roundingMethod: "half_even",
@@ -425,9 +416,7 @@ describe("TaxConfigService", () => {
     it("should create tax config with empty merchantRates array", async () => {
       const newConfig = {
         id: "tax-new",
-        tenantId: "tenant-1",
-        companyId: "company-1",
-        name: "Empty Rates Tax",
+        tenantId: "tenant-1",        name: "Empty Rates Tax",
         description: "desc",
         roundingMethod: "always_round_down",
         status: "active",
@@ -438,7 +427,7 @@ describe("TaxConfigService", () => {
 
       vi.mocked(taxConfigRepository.createTaxConfig).mockResolvedValue(newConfig);
 
-      const result = await service.createTaxConfig("tenant-1", "company-1", {
+      const result = await service.createTaxConfig("tenant-1", {
         name: "Empty Rates Tax",
         description: "desc",
         roundingMethod: "always_round_down",
@@ -472,7 +461,7 @@ describe("TaxConfigService", () => {
         updatedAt: new Date(),
       });
 
-      await service.updateTaxConfig("tenant-1", "company-1", "tax-standard", {
+      await service.updateTaxConfig("tenant-1", "tax-standard", {
         name: "Updated Tax",
         merchantRates: [
           { merchantId: "merchant-1", rate: 0.085 },
@@ -508,7 +497,7 @@ describe("TaxConfigService", () => {
         []
       );
 
-      await service.updateTaxConfig("tenant-1", "company-1", "tax-standard", {
+      await service.updateTaxConfig("tenant-1", "tax-standard", {
         merchantRates: [],
       });
 
@@ -525,7 +514,7 @@ describe("TaxConfigService", () => {
         count: 1,
       });
 
-      await service.updateTaxConfig("tenant-1", "company-1", "tax-standard", {
+      await service.updateTaxConfig("tenant-1", "tax-standard", {
         status: "inactive",
       });
 
@@ -544,7 +533,7 @@ describe("TaxConfigService", () => {
         count: 1,
       });
 
-      await service.updateTaxConfig("tenant-1", "company-1", "tax-standard", {
+      await service.updateTaxConfig("tenant-1", "tax-standard", {
         description: "Updated description",
       });
 
@@ -558,14 +547,13 @@ describe("TaxConfigService", () => {
 
   describe("getTaxConfigsWithRates edge cases", () => {
     it("should handle empty merchants list", async () => {
-      vi.mocked(taxConfigRepository.getTaxConfigsByCompany).mockResolvedValue(
+      vi.mocked(taxConfigRepository.getTaxConfigsByTenant).mockResolvedValue(
         mockTaxConfigs
       );
 
       const result = await service.getTaxConfigsWithRates(
         "tenant-1",
-        "company-1",
-        []
+                []
       );
 
       expect(result).toHaveLength(3);
@@ -573,7 +561,7 @@ describe("TaxConfigService", () => {
     });
 
     it("should handle tax config with no rates for any merchant", async () => {
-      vi.mocked(taxConfigRepository.getTaxConfigsByCompany).mockResolvedValue([
+      vi.mocked(taxConfigRepository.getTaxConfigsByTenant).mockResolvedValue([
         mockTaxConfigs[2], // tax-reduced
       ]);
       vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
@@ -582,8 +570,7 @@ describe("TaxConfigService", () => {
 
       const result = await service.getTaxConfigsWithRates(
         "tenant-1",
-        "company-1",
-        [{ id: "merchant-1", name: "Store 1" }]
+                [{ id: "merchant-1", name: "Store 1" }]
       );
 
       expect(result).toHaveLength(1);

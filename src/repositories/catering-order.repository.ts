@@ -199,7 +199,7 @@ export class CateringOrderRepository {
   /**
    * Get catering orders for all merchants in a company (for dashboard)
    */
-  async getByCompany(
+  async getByTenant(
     tenantId: string,
     options: {
       page?: number;

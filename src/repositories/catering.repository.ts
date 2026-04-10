@@ -88,7 +88,7 @@ export class CateringRepository {
   /**
    * Get leads for all merchants in a company (for dashboard)
    */
-  async getByCompany(
+  async getByTenant(
     tenantId: string,
     options: {
       page?: number;

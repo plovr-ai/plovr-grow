@@ -18,9 +18,7 @@ function Wrapper({ children }: { children: ReactNode }) {
         currency: "USD",
         locale: "en-US",
         timezone: "America/New_York",
-        companySlug: "test-company",
-        companyId: "test-company-id",
-      }}
+        companySlug: "test-company",      }}
     >
       {children}
     </MerchantProvider>

@@ -171,7 +171,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
     });
 
     it("should return 400 when payment provider not configured", async () => {
-      vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue(
+      vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
       vi.mocked(stripeConnectService.getConnectAccount).mockResolvedValue(null);

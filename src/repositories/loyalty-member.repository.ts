@@ -137,7 +137,7 @@ export class LoyaltyMemberRepository {
   /**
    * Get members by company with pagination
    */
-  async getByCompany(
+  async getByTenant(
     tenantId: string,
     options: {
       page?: number;

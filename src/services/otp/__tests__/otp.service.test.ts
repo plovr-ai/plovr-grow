@@ -242,7 +242,7 @@ describe("OtpService", () => {
   describe("generateOtpCode - production mode", () => {
     it("should generate random 6-digit code in non-development mode", async () => {
       const origEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = "production";
+      (process.env as Record<string, string | undefined>).NODE_ENV = "production";
 
       vi.mocked(smsService.verifyPhoneFormat).mockReturnValue(true);
       vi.mocked(otpVerificationRepository.upsert).mockResolvedValue(mockOtpRecord);
@@ -254,7 +254,7 @@ describe("OtpService", () => {
       const code = upsertCall[3]; // 4th arg is the code
       expect(code).toMatch(/^\d{6}$/);
 
-      process.env.NODE_ENV = origEnv;
+      (process.env as Record<string, string | undefined>).NODE_ENV = origEnv;
     });
   });
 

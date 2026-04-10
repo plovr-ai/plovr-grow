@@ -161,7 +161,6 @@ describe("PaymentService", () => {
 
       await service.createPaymentIntent({
         tenantId: mockTenantId,
-        companyId: mockCompanyId,
         merchantId: mockMerchantId,
         orderId: "order-123",
         amount: 25.99,

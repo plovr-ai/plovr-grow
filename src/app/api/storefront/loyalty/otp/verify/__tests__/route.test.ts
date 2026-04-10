@@ -296,12 +296,12 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
   });
 
   it("should use login purpose for existing member", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockResolvedValue({
+    vi.mocked(merchantService.getTenantBySlug).mockResolvedValue({
       id: "company-1",
       tenantId: "tenant-1",
       slug: "test-company",
       name: "Test Company",
-    } as unknown as CompanyWithMerchants);
+    } as unknown as TenantWithMerchants);
 
     // Return existing member
     vi.mocked(loyaltyMemberService.getMemberByPhone).mockResolvedValue({
@@ -311,9 +311,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       lastName: "Doe",
       email: null,
       points: 100,
-      tenantId: "tenant-1",
-      companyId: "company-1",
-    } as never);
+      tenantId: "tenant-1",    } as never);
 
     vi.mocked(otpService.verifyOtp).mockResolvedValue({
       verified: true,
@@ -329,9 +327,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
         lastName: "Doe",
         email: null,
         points: 100,
-        tenantId: "tenant-1",
-        companyId: "company-1",
-        totalOrders: 5,
+        tenantId: "tenant-1",        totalOrders: 5,
         totalSpent: 200,
         lastOrderAt: null,
         enrolledAt: new Date(),
@@ -369,7 +365,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
   });
 
   it("should return 500 for unexpected errors", async () => {
-    vi.mocked(merchantService.getCompanyBySlug).mockRejectedValue(
+    vi.mocked(merchantService.getTenantBySlug).mockRejectedValue(
       new Error("DB error")
     );
 

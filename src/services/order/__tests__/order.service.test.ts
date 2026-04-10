@@ -434,9 +434,7 @@ describe("OrderService", () => {
       vi.mocked(orderRepository.create).mockResolvedValue({
         id: "order-gc-1",
         orderNumber: "GC-20260210-0001",
-        tenantId: "tenant-1",
-        companyId: "company-1",
-        merchantId: null,
+        tenantId: "tenant-1",        merchantId: null,
         status: "created",
         fulfillmentStatus: "pending",
         customerFirstName: "Jane",
@@ -549,9 +547,7 @@ describe("OrderService", () => {
       vi.mocked(orderRepository.create).mockResolvedValue({
         id: "order-gc-1",
         orderNumber: "GC-20260210-0001",
-        tenantId: "tenant-1",
-        companyId: "company-1",
-        merchantId: null,
+        tenantId: "tenant-1",        merchantId: null,
         loyaltyMemberId: "loyalty-member-456",
         status: "created",
         fulfillmentStatus: "pending",
@@ -595,9 +591,7 @@ describe("OrderService", () => {
       vi.mocked(orderRepository.create).mockResolvedValue({
         id: "order-gc-1",
         orderNumber: "GC-20260210-0001",
-        tenantId: "tenant-1",
-        companyId: "company-1",
-        merchantId: null,
+        tenantId: "tenant-1",        merchantId: null,
         giftCardPayment: 30,
         cashPayment: 20,
         totalAmount: 50,
@@ -668,9 +662,7 @@ describe("OrderService", () => {
         orderNumber: "GC-20260410-0001",
       } as never);
 
-      await orderService.createCompanyOrder("tenant-1", {
-        companyId: "company-1",
-        customerFirstName: "Jane",
+      await orderService.createCompanyOrder("tenant-1", {        customerFirstName: "Jane",
         customerLastName: "Smith",
         customerPhone: "555-0000",
         // no customerEmail
@@ -688,7 +680,7 @@ describe("OrderService", () => {
       });
 
       const createCall = vi.mocked(orderRepository.create).mock.calls[0];
-      const orderData = createCall[3] as Record<string, unknown>;
+      const orderData = createCall[2] as unknown as Record<string, unknown>;
       expect(orderData.customerEmail).toBeNull();
     });
   });
@@ -1044,9 +1036,7 @@ describe("OrderService", () => {
   });
 
   describe("createMerchantOrderAtomic()", () => {
-    const mockInput = {
-      companyId: "company-1",
-      merchantId: "merchant-1",
+    const mockInput = {      merchantId: "merchant-1",
       customerFirstName: "John",
       customerLastName: "Doe",
       customerPhone: "123-456-7890",
@@ -1467,9 +1457,7 @@ describe("OrderService", () => {
   });
 
   describe("createMerchantOrder() - branch coverage", () => {
-    const mockInput = {
-      companyId: "company-1",
-      merchantId: "merchant-1",
+    const mockInput = {      merchantId: "merchant-1",
       customerFirstName: "Jane",
       customerLastName: "Smith",
       customerPhone: "555-0000",
@@ -1533,7 +1521,7 @@ describe("OrderService", () => {
 
       const createCall = vi.mocked(orderRepository.create).mock.calls[0];
       // The 4th argument is the order data object
-      const orderData = createCall[3] as Record<string, unknown>;
+      const orderData = createCall[2] as unknown as Record<string, unknown>;
       expect(orderData.customerEmail).toBeNull();
     });
 

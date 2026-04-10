@@ -83,9 +83,7 @@ describe("MenuService", () => {
 
   // Mock data
   const mockMerchant = {
-    id: "merchant-1",
-    companyId: "company-1",
-    name: "Test Merchant",
+    id: "merchant-1",    name: "Test Merchant",
     slug: "test-merchant",
     logoUrl: "https://example.com/logo.png",
   };
@@ -94,9 +92,7 @@ describe("MenuService", () => {
   const mockMenus = [
     {
       id: "menu-1",
-      tenantId: "tenant-1",
-      companyId: "company-1",
-      name: "Main Menu",
+      tenantId: "tenant-1",      name: "Main Menu",
       description: null,
       sortOrder: 0,
       status: "active",
@@ -109,9 +105,7 @@ describe("MenuService", () => {
   const mockCategoriesWithJunction = [
     {
       id: "cat-pizza",
-      tenantId: "tenant-1",
-      companyId: "company-1",
-      menuId: "menu-1",
+      tenantId: "tenant-1",      menuId: "menu-1",
       name: "Pizza",
       description: "Our famous pizzas",
       imageUrl: null,
@@ -124,9 +118,7 @@ describe("MenuService", () => {
           sortOrder: 1,
           menuItem: {
             id: "item-cheese-pizza",
-            tenantId: "tenant-1",
-            companyId: "company-1",
-            name: "Classic Cheese Pizza",
+            tenantId: "tenant-1",            name: "Classic Cheese Pizza",
             description: "Fresh mozzarella and tomato sauce",
             price: new Prisma.Decimal(18.99),
             imageUrl: "https://example.com/pizza.jpg",
@@ -142,9 +134,7 @@ describe("MenuService", () => {
           sortOrder: 2,
           menuItem: {
             id: "item-pepperoni-pizza",
-            tenantId: "tenant-1",
-            companyId: "company-1",
-            name: "Pepperoni Pizza",
+            tenantId: "tenant-1",            name: "Pepperoni Pizza",
             description: "Classic pepperoni with mozzarella",
             price: new Prisma.Decimal(21.99),
             imageUrl: "https://example.com/pepperoni.jpg",
@@ -160,9 +150,7 @@ describe("MenuService", () => {
     },
     {
       id: "cat-sides",
-      tenantId: "tenant-1",
-      companyId: "company-1",
-      menuId: "menu-1",
+      tenantId: "tenant-1",      menuId: "menu-1",
       name: "Sides",
       description: "Perfect additions",
       imageUrl: null,
@@ -175,9 +163,7 @@ describe("MenuService", () => {
           sortOrder: 1,
           menuItem: {
             id: "item-garlic-knots",
-            tenantId: "tenant-1",
-            companyId: "company-1",
-            name: "Garlic Knots",
+            tenantId: "tenant-1",            name: "Garlic Knots",
             description: "Fresh baked knots with garlic butter",
             price: new Prisma.Decimal(5.99),
             imageUrl: null,
@@ -196,9 +182,7 @@ describe("MenuService", () => {
   const mockMenuItems = [
     {
       id: "item-cheese-pizza",
-      tenantId: "tenant-1",
-      companyId: "company-1",
-      categoryId: "cat-pizza",
+      tenantId: "tenant-1",      categoryId: "cat-pizza",
       name: "Classic Cheese Pizza",
       description: "Fresh mozzarella and tomato sauce",
       price: new Prisma.Decimal(18.99),
@@ -213,9 +197,7 @@ describe("MenuService", () => {
     },
     {
       id: "item-pepperoni-pizza",
-      tenantId: "tenant-1",
-      companyId: "company-1",
-      categoryId: "cat-pizza",
+      tenantId: "tenant-1",      categoryId: "cat-pizza",
       name: "Pepperoni Pizza",
       description: "Classic pepperoni with mozzarella",
       price: new Prisma.Decimal(21.99),
@@ -246,9 +228,7 @@ describe("MenuService", () => {
     const mockTaxConfigs = [
       {
         id: "tax-standard",
-        tenantId: "tenant-1",
-        companyId: "company-1",
-        name: "Standard Tax",
+        tenantId: "tenant-1",        name: "Standard Tax",
         description: null,
         roundingMethod: "half_up",
         isDefault: true,
@@ -258,9 +238,7 @@ describe("MenuService", () => {
       },
       {
         id: "tax-alcohol",
-        tenantId: "tenant-1",
-        companyId: "company-1",
-        name: "Alcohol Tax",
+        tenantId: "tenant-1",        name: "Alcohol Tax",
         description: null,
         roundingMethod: "half_up",
         isDefault: false,
@@ -503,7 +481,7 @@ describe("MenuService", () => {
       vi.mocked(menuRepository.getItemsByIdsByCompany).mockResolvedValue(mockMenuItems as never);
     });
 
-    it("should return menu items for given IDs by companyId", async () => {
+    it("should return menu items for given IDs by tenantId", async () => {
       const itemIds = ["item-cheese-pizza", "item-pepperoni-pizza"];
 
       const result = await menuService.getMenuItemsByTenantId("tenant-1", itemIds);
@@ -537,7 +515,7 @@ describe("MenuService", () => {
     it("should not require merchantId lookup", async () => {
       await menuService.getMenuItemsByTenantId("tenant-1", ["item-1"]);
 
-      // Should NOT call merchantRepository since we already have companyId
+      // Should NOT call merchantRepository since we already have tenantId
       expect(merchantRepository.getById).not.toHaveBeenCalled();
     });
   });
@@ -545,9 +523,7 @@ describe("MenuService", () => {
   describe("getMenuItem()", () => {
     const mockMenuItem = {
       id: "item-cheese-pizza",
-      tenantId: "tenant-1",
-      companyId: "company-1",
-      categoryId: "cat-pizza",
+      tenantId: "tenant-1",      categoryId: "cat-pizza",
       name: "Classic Cheese Pizza",
       description: "Fresh mozzarella and tomato sauce",
       price: new Prisma.Decimal(18.99),
@@ -605,9 +581,7 @@ describe("MenuService", () => {
     const mockTaxConfigs = [
       {
         id: "tax-standard",
-        tenantId: "tenant-1",
-        companyId: "company-1",
-        name: "Standard Tax",
+        tenantId: "tenant-1",        name: "Standard Tax",
         description: null,
         roundingMethod: "half_up",
         isDefault: true,
@@ -625,7 +599,7 @@ describe("MenuService", () => {
       vi.mocked(menuRepository.getCategoriesWithItemsByMenu).mockResolvedValue(
         mockCategoriesWithJunction as never
       );
-      vi.mocked(featuredItemRepository.getByCompanyId).mockResolvedValue([] as never);
+      vi.mocked(featuredItemRepository.getByTenantId).mockResolvedValue([] as never);
       vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(mockItemTaxMap);
       vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue(mockTaxConfigs as never);
       vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(mockMerchantTaxRateMap);
@@ -644,9 +618,7 @@ describe("MenuService", () => {
         { ...mockMenus[0] },
         {
           id: "menu-2",
-          tenantId: "tenant-1",
-          companyId: "company-1",
-          name: "Lunch Menu",
+          tenantId: "tenant-1",          name: "Lunch Menu",
           description: null,
           sortOrder: 1,
           status: "active",
@@ -698,7 +670,7 @@ describe("MenuService", () => {
       );
       // Should only have tax-standard, tax-unknown should be filtered out
       expect(cheesePizza?.taxes).toHaveLength(1);
-      expect(cheesePizza?.taxes[0].taxConfigId).toBe("tax-standard");
+      expect(cheesePizza?.taxes![0].taxConfigId).toBe("tax-standard");
     });
 
     it("should use rate 0 when merchant has no rate for a tax config", async () => {
@@ -710,7 +682,7 @@ describe("MenuService", () => {
       const cheesePizza = result.categories[0].menuItems.find(
         (item: { id: string }) => item.id === "item-cheese-pizza"
       );
-      expect(cheesePizza?.taxes[0].rate).toBe(0);
+      expect(cheesePizza?.taxes![0].rate).toBe(0);
     });
 
     it("should add Featured category when featured items exist on first menu", async () => {
@@ -733,7 +705,7 @@ describe("MenuService", () => {
         },
       ];
 
-      vi.mocked(featuredItemRepository.getByCompanyId).mockResolvedValue(
+      vi.mocked(featuredItemRepository.getByTenantId).mockResolvedValue(
         mockFeaturedItems as never
       );
       // For featured items tax lookup
@@ -770,7 +742,7 @@ describe("MenuService", () => {
         },
       ];
 
-      vi.mocked(featuredItemRepository.getByCompanyId).mockResolvedValue(
+      vi.mocked(featuredItemRepository.getByTenantId).mockResolvedValue(
         mockFeaturedItems as never
       );
 
@@ -785,9 +757,7 @@ describe("MenuService", () => {
         { ...mockMenus[0] },
         {
           id: "menu-2",
-          tenantId: "tenant-1",
-          companyId: "company-1",
-          name: "Lunch Menu",
+          tenantId: "tenant-1",          name: "Lunch Menu",
           description: null,
           sortOrder: 1,
           status: "active",
@@ -800,7 +770,7 @@ describe("MenuService", () => {
       const result = await menuService.getMenu("tenant-1", "merchant-1", "menu-2");
 
       // Should NOT call featuredItemRepository for non-first menu
-      expect(featuredItemRepository.getByCompanyId).not.toHaveBeenCalled();
+      expect(featuredItemRepository.getByTenantId).not.toHaveBeenCalled();
     });
 
     it("should fetch missing tax configs for featured items", async () => {
@@ -823,7 +793,7 @@ describe("MenuService", () => {
         },
       ];
 
-      vi.mocked(featuredItemRepository.getByCompanyId).mockResolvedValue(
+      vi.mocked(featuredItemRepository.getByTenantId).mockResolvedValue(
         mockFeaturedItems as never
       );
       // First call for regular items, second for featured items
@@ -836,9 +806,7 @@ describe("MenuService", () => {
         .mockResolvedValueOnce([
           {
             id: "tax-new",
-            tenantId: "tenant-1",
-            companyId: "company-1",
-            name: "New Tax",
+            tenantId: "tenant-1",            name: "New Tax",
             description: null,
             roundingMethod: "half_up",
             isDefault: false,
@@ -855,7 +823,7 @@ describe("MenuService", () => {
       // Featured item should have tax info
       const featuredCategory = result.categories.find((c: { id: string }) => c.id === "featured");
       expect(featuredCategory?.menuItems[0].taxes).toHaveLength(1);
-      expect(featuredCategory?.menuItems[0].taxes[0].name).toBe("New Tax");
+      expect(featuredCategory?.menuItems[0].taxes![0].name).toBe("New Tax");
     });
   });
 
@@ -863,9 +831,9 @@ describe("MenuService", () => {
     it("should return menus for a company", async () => {
       vi.mocked(menuEntityRepository.getMenusByCompany).mockResolvedValue(mockMenus as never);
 
-      const result = await menuService.getMenus("tenant-1", "company-1");
+      const result = await menuService.getMenus("tenant-1");
 
-      expect(menuEntityRepository.getMenusByCompany).toHaveBeenCalledWith("tenant-1", "company-1");
+      expect(menuEntityRepository.getMenusByCompany).toHaveBeenCalledWith("tenant-1");
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
         id: "menu-1",
@@ -879,7 +847,7 @@ describe("MenuService", () => {
     it("should return empty array when no menus exist", async () => {
       vi.mocked(menuEntityRepository.getMenusByCompany).mockResolvedValue([] as never);
 
-      const result = await menuService.getMenus("tenant-1", "company-1");
+      const result = await menuService.getMenus("tenant-1");
 
       expect(result).toHaveLength(0);
     });
@@ -890,12 +858,12 @@ describe("MenuService", () => {
       const mockResult = { id: "menu-new", name: "New Menu" };
       vi.mocked(menuEntityRepository.createMenu).mockResolvedValue(mockResult as never);
 
-      const result = await menuService.createMenu("tenant-1", "company-1", {
+      const result = await menuService.createMenu("tenant-1", {
         name: "New Menu",
         sortOrder: 0,
       });
 
-      expect(menuEntityRepository.createMenu).toHaveBeenCalledWith("tenant-1", "company-1", {
+      expect(menuEntityRepository.createMenu).toHaveBeenCalledWith("tenant-1", {
         name: "New Menu",
         sortOrder: 0,
       });
@@ -932,9 +900,9 @@ describe("MenuService", () => {
     it("should return menu count", async () => {
       vi.mocked(menuEntityRepository.countMenusByCompany).mockResolvedValue(3 as never);
 
-      const result = await menuService.countMenus("tenant-1", "company-1");
+      const result = await menuService.countMenus("tenant-1");
 
-      expect(menuEntityRepository.countMenusByCompany).toHaveBeenCalledWith("tenant-1", "company-1");
+      expect(menuEntityRepository.countMenusByCompany).toHaveBeenCalledWith("tenant-1");
       expect(result).toBe(3);
     });
   });
@@ -944,7 +912,7 @@ describe("MenuService", () => {
       const mockResult = { id: "cat-new", name: "New Category" };
       vi.mocked(menuRepository.createCategory).mockResolvedValue(mockResult as never);
 
-      const result = await menuService.createCategory("tenant-1", "company-1", {
+      const result = await menuService.createCategory("tenant-1", {
         menuId: "menu-1",
         name: "New Category",
         description: "A description",
@@ -952,7 +920,7 @@ describe("MenuService", () => {
         sortOrder: 5,
       });
 
-      expect(menuRepository.createCategory).toHaveBeenCalledWith("tenant-1", "company-1", "menu-1", {
+      expect(menuRepository.createCategory).toHaveBeenCalledWith("tenant-1", "menu-1", {
         name: "New Category",
         description: "A description",
         imageUrl: "https://example.com/img.jpg",
@@ -965,12 +933,12 @@ describe("MenuService", () => {
       const mockResult = { id: "cat-new", name: "New Category" };
       vi.mocked(menuRepository.createCategory).mockResolvedValue(mockResult as never);
 
-      await menuService.createCategory("tenant-1", "company-1", {
+      await menuService.createCategory("tenant-1", {
         menuId: "menu-1",
         name: "New Category",
       });
 
-      expect(menuRepository.createCategory).toHaveBeenCalledWith("tenant-1", "company-1", "menu-1", {
+      expect(menuRepository.createCategory).toHaveBeenCalledWith("tenant-1", "menu-1", {
         name: "New Category",
         description: undefined,
         imageUrl: undefined,
@@ -998,22 +966,22 @@ describe("MenuService", () => {
       vi.mocked(menuCategoryItemRepository.getNextSortOrder).mockResolvedValue(0 as never);
       vi.mocked(menuCategoryItemRepository.linkItemToCategory).mockResolvedValue(undefined as never);
 
-      const result = await menuService.createMenuItem("tenant-1", "company-1", {
+      const result = await menuService.createMenuItem("tenant-1", {
         categoryIds: ["cat-1", "cat-2"],
         name: "New Item",
         description: "Desc",
         price: 9.99,
         imageUrl: "https://example.com/img.jpg",
-        modifierGroups: [{ name: "Size", required: true, minSelections: 1, maxSelections: 1, options: [{ name: "Small", priceAdjustment: 0 }] }],
+        modifierGroups: [{ id: "mg-size", name: "Size", type: "single" as const, required: true, modifiers: [{ id: "mod-small", name: "Small", price: 0 }] }],
         tags: ["vegan"],
       });
 
-      expect(menuRepository.createItem).toHaveBeenCalledWith("tenant-1", "company-1", {
+      expect(menuRepository.createItem).toHaveBeenCalledWith("tenant-1", {
         name: "New Item",
         description: "Desc",
         price: 9.99,
         imageUrl: "https://example.com/img.jpg",
-        modifiers: [{ name: "Size", required: true, minSelections: 1, maxSelections: 1, options: [{ name: "Small", priceAdjustment: 0 }] }],
+        modifiers: [{ id: "mg-size", name: "Size", type: "single", required: true, modifiers: [{ id: "mod-small", name: "Small", price: 0 }] }],
         tags: ["vegan"],
       });
       expect(menuCategoryItemRepository.getNextSortOrder).toHaveBeenCalledTimes(2);
@@ -1027,13 +995,13 @@ describe("MenuService", () => {
       vi.mocked(menuCategoryItemRepository.getNextSortOrder).mockResolvedValue(0 as never);
       vi.mocked(menuCategoryItemRepository.linkItemToCategory).mockResolvedValue(undefined as never);
 
-      await menuService.createMenuItem("tenant-1", "company-1", {
+      await menuService.createMenuItem("tenant-1", {
         categoryIds: ["cat-1"],
         name: "Simple Item",
         price: 5.99,
       });
 
-      expect(menuRepository.createItem).toHaveBeenCalledWith("tenant-1", "company-1", {
+      expect(menuRepository.createItem).toHaveBeenCalledWith("tenant-1", {
         name: "Simple Item",
         description: undefined,
         price: 5.99,
@@ -1200,7 +1168,7 @@ describe("MenuService", () => {
     });
 
     it("should return dashboard menu response", async () => {
-      const result = await menuService.getMenuForDashboard("tenant-1", "company-1");
+      const result = await menuService.getMenuForDashboard("tenant-1");
 
       expect(result.menus).toHaveLength(1);
       expect(result.currentMenuId).toBe("menu-1");
@@ -1213,9 +1181,7 @@ describe("MenuService", () => {
     it("should create default menu when no menus exist", async () => {
       const defaultMenu = {
         id: "menu-default",
-        tenantId: "tenant-1",
-        companyId: "company-1",
-        name: "Main Menu",
+        tenantId: "tenant-1",        name: "Main Menu",
         description: null,
         sortOrder: 0,
         status: "active",
@@ -1228,9 +1194,9 @@ describe("MenuService", () => {
       vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(new Map());
       vi.mocked(menuCategoryItemRepository.getItemsCategoryIds).mockResolvedValue(new Map());
 
-      const result = await menuService.getMenuForDashboard("tenant-1", "company-1");
+      const result = await menuService.getMenuForDashboard("tenant-1");
 
-      expect(menuEntityRepository.createMenu).toHaveBeenCalledWith("tenant-1", "company-1", {
+      expect(menuEntityRepository.createMenu).toHaveBeenCalledWith("tenant-1", {
         name: "Main Menu",
         sortOrder: 0,
       });
@@ -1242,9 +1208,7 @@ describe("MenuService", () => {
         { ...mockMenus[0] },
         {
           id: "menu-2",
-          tenantId: "tenant-1",
-          companyId: "company-1",
-          name: "Lunch Menu",
+          tenantId: "tenant-1",          name: "Lunch Menu",
           description: null,
           sortOrder: 1,
           status: "active",
@@ -1254,13 +1218,13 @@ describe("MenuService", () => {
       ];
       vi.mocked(menuEntityRepository.getMenusByCompanyForDashboard).mockResolvedValue(multiMenus as never);
 
-      const result = await menuService.getMenuForDashboard("tenant-1", "company-1", "menu-2");
+      const result = await menuService.getMenuForDashboard("tenant-1", "menu-2");
 
       expect(result.currentMenuId).toBe("menu-2");
     });
 
     it("should fallback to first menu when menuId not found", async () => {
-      const result = await menuService.getMenuForDashboard("tenant-1", "company-1", "non-existent");
+      const result = await menuService.getMenuForDashboard("tenant-1", "non-existent");
 
       expect(result.currentMenuId).toBe("menu-1");
     });
@@ -1297,7 +1261,7 @@ describe("MenuService", () => {
       vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(new Map());
       vi.mocked(menuCategoryItemRepository.getItemsCategoryIds).mockResolvedValue(new Map());
 
-      const result = await menuService.getMenuForDashboard("tenant-1", "company-1");
+      const result = await menuService.getMenuForDashboard("tenant-1");
 
       expect(result.categories[0].menuItems[0].modifierGroups).toEqual([]);
       expect(result.categories[0].menuItems[0].tags).toEqual([]);
@@ -1306,7 +1270,7 @@ describe("MenuService", () => {
     });
 
     it("should pass showArchived flag to repository", async () => {
-      await menuService.getMenuForDashboard("tenant-1", "company-1", undefined, true);
+      await menuService.getMenuForDashboard("tenant-1", undefined, true);
 
       expect(menuRepository.getCategoriesWithItemsByMenuForDashboard).toHaveBeenCalledWith(
         "tenant-1",
@@ -1375,11 +1339,10 @@ describe("MenuService", () => {
         mockItems as never
       );
 
-      const result = await menuService.getAvailableItems("tenant-1", "company-1", "cat-1");
+      const result = await menuService.getAvailableItems("tenant-1", "cat-1");
 
       expect(menuCategoryItemRepository.getItemsNotInCategory).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "cat-1"
       );
       expect(result).toHaveLength(1);
@@ -1396,7 +1359,7 @@ describe("MenuService", () => {
     it("should return empty array when no items available", async () => {
       vi.mocked(menuCategoryItemRepository.getItemsNotInCategory).mockResolvedValue([] as never);
 
-      const result = await menuService.getAvailableItems("tenant-1", "company-1", "cat-1");
+      const result = await menuService.getAvailableItems("tenant-1", "cat-1");
 
       expect(result).toHaveLength(0);
     });
@@ -1430,13 +1393,13 @@ describe("MenuService", () => {
           },
         },
       ];
-      vi.mocked(featuredItemRepository.getByCompanyId).mockResolvedValue(
+      vi.mocked(featuredItemRepository.getByTenantId).mockResolvedValue(
         mockFeaturedItems as never
       );
 
-      const result = await menuService.getFeaturedItems("tenant-1", "company-1");
+      const result = await menuService.getFeaturedItems("tenant-1");
 
-      expect(featuredItemRepository.getByCompanyId).toHaveBeenCalledWith("tenant-1", "company-1");
+      expect(featuredItemRepository.getByTenantId).toHaveBeenCalledWith("tenant-1");
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
         id: "fi-1",
@@ -1454,9 +1417,9 @@ describe("MenuService", () => {
     });
 
     it("should return empty array when no featured items", async () => {
-      vi.mocked(featuredItemRepository.getByCompanyId).mockResolvedValue([] as never);
+      vi.mocked(featuredItemRepository.getByTenantId).mockResolvedValue([] as never);
 
-      const result = await menuService.getFeaturedItems("tenant-1", "company-1");
+      const result = await menuService.getFeaturedItems("tenant-1");
 
       expect(result).toHaveLength(0);
     });
@@ -1466,11 +1429,10 @@ describe("MenuService", () => {
     it("should set featured items", async () => {
       vi.mocked(featuredItemRepository.setFeaturedItems).mockResolvedValue(undefined as never);
 
-      await menuService.setFeaturedItems("tenant-1", "company-1", ["item-1", "item-2"]);
+      await menuService.setFeaturedItems("tenant-1", ["item-1", "item-2"]);
 
       expect(featuredItemRepository.setFeaturedItems).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         ["item-1", "item-2"]
       );
     });
@@ -1480,11 +1442,10 @@ describe("MenuService", () => {
     it("should add a featured item", async () => {
       vi.mocked(featuredItemRepository.addFeaturedItem).mockResolvedValue(undefined as never);
 
-      await menuService.addFeaturedItem("tenant-1", "company-1", "item-1");
+      await menuService.addFeaturedItem("tenant-1", "item-1");
 
       expect(featuredItemRepository.addFeaturedItem).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "item-1"
       );
     });
@@ -1494,11 +1455,10 @@ describe("MenuService", () => {
     it("should remove a featured item", async () => {
       vi.mocked(featuredItemRepository.removeFeaturedItem).mockResolvedValue(undefined as never);
 
-      await menuService.removeFeaturedItem("tenant-1", "company-1", "item-1");
+      await menuService.removeFeaturedItem("tenant-1", "item-1");
 
       expect(featuredItemRepository.removeFeaturedItem).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "item-1"
       );
     });
@@ -1508,11 +1468,10 @@ describe("MenuService", () => {
     it("should reorder featured items", async () => {
       vi.mocked(featuredItemRepository.reorderFeaturedItems).mockResolvedValue(undefined as never);
 
-      await menuService.reorderFeaturedItems("tenant-1", "company-1", ["item-2", "item-1"]);
+      await menuService.reorderFeaturedItems("tenant-1", ["item-2", "item-1"]);
 
       expect(featuredItemRepository.reorderFeaturedItems).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         ["item-2", "item-1"]
       );
     });

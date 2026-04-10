@@ -333,7 +333,7 @@ describe("parseModifierGroups", () => {
 });
 
 describe("convertToMenuDisplayData", () => {
-  const baseResponse: GetMenuResponseWithItemCount = {
+  const baseResponse = {
     currentMenuId: "menu-1",
     menus: [
       { id: "menu-1", name: "Lunch", itemCount: 2 },
@@ -367,7 +367,7 @@ describe("convertToMenuDisplayData", () => {
         menuItems: [],
       },
     ],
-  };
+  } as unknown as GetMenuResponseWithItemCount;
 
   it("should filter out empty categories", () => {
     const result = convertToMenuDisplayData(baseResponse, "test-co");
@@ -399,7 +399,7 @@ describe("convertToMenuDisplayData", () => {
   });
 
   it("should handle items with modifiers", () => {
-    const withModifiers: GetMenuResponseWithItemCount = {
+    const withModifiers = {
       ...baseResponse,
       categories: [
         {
@@ -426,7 +426,7 @@ describe("convertToMenuDisplayData", () => {
       ],
     };
 
-    const result = convertToMenuDisplayData(withModifiers, "test-co");
+    const result = convertToMenuDisplayData(withModifiers as unknown as GetMenuResponseWithItemCount, "test-co");
     const item = result.categories[0].items[0];
     expect(item.hasModifiers).toBe(true);
     expect(item.modifierGroups).toHaveLength(1);
@@ -435,7 +435,7 @@ describe("convertToMenuDisplayData", () => {
   });
 
   it("should mark inactive items as unavailable", () => {
-    const withInactive: GetMenuResponseWithItemCount = {
+    const withInactive= {
       ...baseResponse,
       categories: [
         {
@@ -460,12 +460,12 @@ describe("convertToMenuDisplayData", () => {
       ],
     };
 
-    const result = convertToMenuDisplayData(withInactive, "test-co");
+    const result = convertToMenuDisplayData(withInactive as unknown as GetMenuResponseWithItemCount, "test-co");
     expect(result.categories[0].items[0].isAvailable).toBe(false);
   });
 
   it("should handle item with undefined taxes", () => {
-    const withNoTaxes: GetMenuResponseWithItemCount = {
+    const withNoTaxes= {
       menus: [{ id: "m1", name: "Menu", itemCount: 1 }],
       categories: [
         {
@@ -490,7 +490,7 @@ describe("convertToMenuDisplayData", () => {
       ],
     };
 
-    const result = convertToMenuDisplayData(withNoTaxes, "co");
+    const result = convertToMenuDisplayData(withNoTaxes as unknown as GetMenuResponseWithItemCount, "co");
     expect(result.categories[0].items[0].taxes).toEqual([]);
   });
 });

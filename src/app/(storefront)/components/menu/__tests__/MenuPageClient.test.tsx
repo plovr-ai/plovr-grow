@@ -133,7 +133,7 @@ vi.mock("@storefront/lib/cartAnimation", () => ({
 const mockAddItem = vi.fn();
 
 describe("MenuPageClient", () => {
-  const mockData: MenuDisplayData = {
+  const mockData = {
     companySlug: "test-co",
     currentMenuId: "menu-1",
     menus: [
@@ -189,7 +189,7 @@ describe("MenuPageClient", () => {
   });
 
   it("should render header, nav and categories", () => {
-    render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
     expect(screen.getByTestId("menu-header")).toBeInTheDocument();
     expect(screen.getByTestId("menu-nav")).toBeInTheDocument();
@@ -198,14 +198,14 @@ describe("MenuPageClient", () => {
   });
 
   it("should render both horizontal and vertical category navs", () => {
-    render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
     expect(screen.getByTestId("category-nav-horizontal")).toBeInTheDocument();
     expect(screen.getByTestId("category-nav-vertical")).toBeInTheDocument();
   });
 
   it("should handle menu selection and navigate", () => {
-    render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
     fireEvent.click(screen.getByTestId("menu-menu-2"));
     expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("/r/test-merchant/menu"));
@@ -216,7 +216,7 @@ describe("MenuPageClient", () => {
     // Mock scrollIntoView
     Element.prototype.scrollIntoView = vi.fn();
 
-    render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
     const catButtons = screen.getAllByTestId("cat-cat-2");
     fireEvent.click(catButtons[0]);
@@ -227,7 +227,7 @@ describe("MenuPageClient", () => {
     vi.useFakeTimers();
     Element.prototype.scrollIntoView = vi.fn();
 
-    render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
     const catButtons = screen.getAllByTestId("cat-cat-2");
     fireEvent.click(catButtons[0]);
@@ -250,7 +250,7 @@ describe("MenuPageClient", () => {
   });
 
   it("should add item without modifiers directly to cart", () => {
-    render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
     fireEvent.click(screen.getByTestId("add-item-1"));
 
@@ -259,7 +259,7 @@ describe("MenuPageClient", () => {
   });
 
   it("should open modifier modal for items with modifiers", () => {
-    render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
     fireEvent.click(screen.getByTestId("add-item-2"));
 
@@ -268,7 +268,7 @@ describe("MenuPageClient", () => {
   });
 
   it("should close modifier modal on close", () => {
-    render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
     fireEvent.click(screen.getByTestId("add-item-2"));
     expect(screen.getByTestId("modifier-modal")).toBeInTheDocument();
@@ -278,7 +278,7 @@ describe("MenuPageClient", () => {
   });
 
   it("should add item via modal confirm", () => {
-    render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
     fireEvent.click(screen.getByTestId("add-item-2"));
     fireEvent.click(screen.getByText("Confirm"));
@@ -287,12 +287,12 @@ describe("MenuPageClient", () => {
   });
 
   it("should use tenantSlug as fallback when merchantSlug is not provided", () => {
-    render(<MenuPageClient data={mockData} tenantSlug="legacy-slug" />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} tenantSlug="legacy-slug" />);
     expect(screen.getByTestId("menu-header")).toHaveTextContent("legacy-slug");
   });
 
   it("should use empty string when neither slug is provided", () => {
-    render(<MenuPageClient data={mockData} />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} />);
     expect(screen.getByTestId("menu-header")).toBeInTheDocument();
   });
 
@@ -309,25 +309,25 @@ describe("MenuPageClient", () => {
 
       // The item-1 has no modifiers, so it should be added directly
       // This is hard to test with the current mock setup - checking that component renders without error
-      render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+      render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
       expect(screen.getByTestId("category-section-cat-1")).toBeInTheDocument();
     });
 
     it("should not crash when addItem param references non-existent item", () => {
-      render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+      render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
       // Component should render fine even if the item doesn't exist
       expect(screen.getByTestId("menu-header")).toBeInTheDocument();
     });
   });
 
   it("should pass companySlug to MenuHeader", () => {
-    render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
     expect(screen.getByTestId("menu-header")).toHaveTextContent("test-co");
   });
 
   it("should show showMenuNav based on number of menus", () => {
     // With 2 menus, showMenuNav should be true
-    render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
     const horizontalNav = screen.getByTestId("category-nav-horizontal");
     expect(horizontalNav).toBeInTheDocument();
   });
@@ -337,7 +337,7 @@ describe("MenuPageClient", () => {
       ...mockData,
       menus: [{ id: "menu-1", name: "Lunch" }],
     };
-    render(<MenuPageClient data={singleMenuData} merchantSlug="test-merchant" />);
+    render(<MenuPageClient data={singleMenuData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
     expect(screen.getByTestId("menu-nav")).toBeInTheDocument();
   });
 
@@ -348,7 +348,7 @@ describe("MenuPageClient", () => {
       // Temporarily remove the getState mock so the real addItem runs
       vi.mocked(useCartStore.getState).mockRestore();
 
-      render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+      render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
       // item-1 has no modifiers, should be added directly to cart
       // The real store's addItem should have been called, adding the item
@@ -361,7 +361,7 @@ describe("MenuPageClient", () => {
     it("should open modal for item with modifiers via addItem query param", async () => {
       mockSearchParams = new URLSearchParams("addItem=item-2");
 
-      render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+      render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
       // item-2 has modifiers, should open modal (via queueMicrotask)
       await waitFor(() => {
@@ -376,7 +376,7 @@ describe("MenuPageClient", () => {
       // Restore real addItem so store works
       vi.mocked(useCartStore.getState).mockRestore();
 
-      render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+      render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
       // Wait for modal to open
       await waitFor(() => {
@@ -394,7 +394,7 @@ describe("MenuPageClient", () => {
     it("should do nothing for non-existent addItem query param", () => {
       mockSearchParams = new URLSearchParams("addItem=non-existent");
 
-      render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+      render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
       // Should not add to cart or open modal
       expect(useCartStore.getState().addItem).not.toHaveBeenCalled();
@@ -404,7 +404,7 @@ describe("MenuPageClient", () => {
 
   describe("IntersectionObserver", () => {
     it("should update active category when entry is intersecting and not scrolling", () => {
-      render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+      render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
       // The IntersectionObserver callbacks were captured during render
       // Simulate an intersection event for cat-2
@@ -422,7 +422,7 @@ describe("MenuPageClient", () => {
     });
 
     it("should not update active category when not intersecting", () => {
-      render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+      render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
       const lastCallback = ioCallbacks[ioCallbacks.length - 1];
       if (lastCallback) {
@@ -451,7 +451,7 @@ describe("MenuPageClient", () => {
   });
 
   it("should handle handleAddItem for non-existent item gracefully", () => {
-    render(<MenuPageClient data={mockData} merchantSlug="test-merchant" />);
+    render(<MenuPageClient data={mockData as unknown as MenuDisplayData} merchantSlug="test-merchant" />);
 
     // Click the ghost button to trigger onAddItem with non-existent itemId
     fireEvent.click(screen.getByTestId("add-ghost-cat-1"));

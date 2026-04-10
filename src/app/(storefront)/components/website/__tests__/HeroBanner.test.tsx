@@ -141,7 +141,7 @@ describe("HeroBanner", () => {
     });
 
     it("should not show business hours when businessHours is null", () => {
-      const merchantNullHours = { ...mockMerchant, businessHours: null };
+      const merchantNullHours = { ...mockMerchant, businessHours: null } as never;
       render(<HeroBanner merchant={merchantNullHours} companySlug="joes-pizza" />);
 
       expect(screen.queryByText(/Today:/)).not.toBeInTheDocument();

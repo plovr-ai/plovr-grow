@@ -144,7 +144,7 @@ export class LoyaltyMemberService {
       search?: string;
     }
   ): Promise<PaginatedMembers> {
-    const result = await this.repository.getByCompany(
+    const result = await this.repository.getByTenant(
       tenantId,
       options
     );
