@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
+import { useTranslations } from "next-intl";
 import { StytchLogin, Products, OAuthProviders } from "@stytch/nextjs";
 import {
   Card,
@@ -19,15 +20,17 @@ export default function LoginPage() {
 }
 
 function LoginSkeleton() {
+  const t = useTranslations("auth.login");
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Sign in to Dashboard
+            {t("title")}
           </CardTitle>
           <CardDescription className="text-center">
-            Loading...
+            {t("loading")}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -36,6 +39,8 @@ function LoginSkeleton() {
 }
 
 function LoginContent() {
+  const t = useTranslations("auth.login");
+
   const stytchConfig =
     typeof window !== "undefined"
       ? {
@@ -57,10 +62,10 @@ function LoginContent() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Sign in to Dashboard
+            {t("title")}
           </CardTitle>
           <CardDescription className="text-center">
-            Use your email or Google account to sign in
+            {t("description")}
           </CardDescription>
         </CardHeader>
 

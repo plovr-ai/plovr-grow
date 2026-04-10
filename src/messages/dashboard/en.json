@@ -304,6 +304,25 @@
       "saving": "Saving..."
     }
   },
+  "auth": {
+    "login": {
+      "title": "Sign in to Dashboard",
+      "description": "Use your email or Google account to sign in",
+      "loading": "Loading..."
+    },
+    "authenticate": {
+      "title": "Authenticating...",
+      "description": "Please wait while we verify your identity.",
+      "errorTitle": "Authentication Error",
+      "backToLogin": "Back to login",
+      "errors": {
+        "noToken": "Authentication failed — no token in URL",
+        "noSession": "Authentication failed — no session token",
+        "sessionFailed": "Failed to create session",
+        "generic": "Authentication failed. Please try again."
+      }
+    }
+  },
   "common": {
     "save": "Save",
     "saveChanges": "Save Changes",
