@@ -103,7 +103,7 @@ describe("SquareWebhookService", () => {
       eventId: "evt-1",
     });
     mockUpdateWebhookEventStatus.mockResolvedValue({});
-    mockMerchantFindFirst.mockResolvedValue({ companyId: "company-1" });
+    mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
     mockSyncCatalog.mockResolvedValue({});
     mockGetIdMappingByExternalId.mockResolvedValue(null);
     mockOrderUpdate.mockResolvedValue({});
@@ -199,7 +199,7 @@ describe("SquareWebhookService", () => {
 
       // Use catalog event but merchant not found won't throw, so use a different scenario
       // Force syncCatalog to throw a non-ALREADY_RUNNING error
-      mockMerchantFindFirst.mockResolvedValue({ companyId: "company-1" });
+      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
       mockSyncCatalog.mockRejectedValue(new Error("sync failed"));
 
       const payload = buildPayload({
@@ -236,12 +236,11 @@ describe("SquareWebhookService", () => {
 
       expect(mockMerchantFindFirst).toHaveBeenCalledWith({
         where: { id: MERCHANT_ID },
-        select: { companyId: true },
+        select: { tenantId: true },
       });
       expect(mockSyncCatalog).toHaveBeenCalledWith(
         TENANT_ID,
-        MERCHANT_ID,
-        "company-1"
+        MERCHANT_ID
       );
     });
 

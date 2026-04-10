@@ -28,7 +28,7 @@ describe("POST /api/auth/claim", () => {
 
   it("claims a trial tenant and creates owner user", async () => {
     vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
-      id: "tenant1", subscriptionStatus: "trial", company: { id: "company1", slug: "test-slug" },
+      id: "tenant1", subscriptionStatus: "trial", slug: "test-slug",
     } as never);
     vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
     vi.mocked(prisma.user.create).mockResolvedValue({ id: "mock-user-id" } as never);

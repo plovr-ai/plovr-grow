@@ -91,7 +91,6 @@ describe("OrderService", () => {
 
   describe("createMerchantOrder()", () => {
     const mockInput = {
-      companyId: "company-1",
       merchantId: "merchant-1",
       customerFirstName: "John",
       customerLastName: "Doe",
@@ -179,7 +178,6 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "merchant-1",
         expect.objectContaining({
           orderNumber: expect.any(String),
@@ -234,7 +232,6 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "merchant-1",
         expect.objectContaining({
           orderNumber: expect.any(String),
@@ -313,7 +310,6 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "merchant-1",
         expect.objectContaining({
           orderMode: "delivery",
@@ -349,7 +345,6 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "merchant-1",
         expect.objectContaining({
           giftCardPayment: 20,
@@ -365,7 +360,6 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "merchant-1",
         expect.objectContaining({
           salesChannel: "online_order",
@@ -385,7 +379,6 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "merchant-1",
         expect.objectContaining({
           notes: "No onions please",
@@ -406,7 +399,6 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "merchant-1",
         expect.objectContaining({
           scheduledAt: scheduledTime,
@@ -419,7 +411,6 @@ describe("OrderService", () => {
 
   describe("createCompanyOrder()", () => {
     const mockInput = {
-      companyId: "company-1",
       customerFirstName: "Jane",
       customerLastName: "Smith",
       customerPhone: "555-123-4567",
@@ -473,7 +464,6 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         null, // merchantId should be null
         expect.objectContaining({
           orderNumber: expect.any(String),
@@ -507,7 +497,6 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         null,
         expect.objectContaining({
           subtotal: 75,
@@ -544,7 +533,6 @@ describe("OrderService", () => {
 
       expect(sequenceRepository.getNextCompanyOrderSequence).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         expect.any(String) // dateStr
       );
 
@@ -590,7 +578,6 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         null,
         expect.any(Object),
         "loyalty-member-456"
@@ -622,7 +609,6 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         null,
         expect.objectContaining({
           giftCardPayment: 30,
@@ -643,7 +629,6 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         null,
         expect.objectContaining({
           notes: "Happy Birthday!",
@@ -665,7 +650,6 @@ describe("OrderService", () => {
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         null,
         expect.objectContaining({
           subtotal: 49.99,

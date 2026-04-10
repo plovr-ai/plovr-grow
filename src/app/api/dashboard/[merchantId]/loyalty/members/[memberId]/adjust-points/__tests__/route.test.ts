@@ -134,11 +134,11 @@ describe("POST /api/dashboard/[merchantId]/loyalty/members/[memberId]/adjust-poi
       expect(data.error).toBe("Member not found");
     });
 
-    it("should return 403 if member belongs to different company", async () => {
+    it("should return 403 if member belongs to different tenant", async () => {
       mockMerchantService.getMerchantById.mockResolvedValue(mockMerchant as never);
       mockLoyaltyMemberService.getMember.mockResolvedValue({
         ...mockMember,
-        companyId: "different-company",
+        tenantId: "different-tenant",
       } as never);
 
       const request = createRequest({ points: 100, description: "Test" });
@@ -147,7 +147,7 @@ describe("POST /api/dashboard/[merchantId]/loyalty/members/[memberId]/adjust-poi
 
       expect(response.status).toBe(403);
       expect(data.success).toBe(false);
-      expect(data.error).toBe("Member does not belong to this company");
+      expect(data.error).toBe("Member does not belong to this tenant");
     });
   });
 

@@ -550,7 +550,6 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       });
 
       expect(orderService.createCompanyOrder).toHaveBeenCalledWith("tenant-1", {
-        companyId: "tenant-1",
         customerFirstName: "John",
         customerLastName: "Doe",
         customerPhone: "(555) 123-4567",
@@ -592,7 +591,6 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       });
 
       expect(giftCardService.createGiftCard).toHaveBeenCalledWith(
-        "tenant-1",
         "tenant-1",
         {
           purchaseOrderId: "order-1",

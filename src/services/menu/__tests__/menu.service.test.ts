@@ -461,7 +461,6 @@ describe("MenuService", () => {
 
       expect(menuRepository.getItemsByIdsByCompany).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         itemIds
       );
     });
@@ -521,7 +520,6 @@ describe("MenuService", () => {
 
       expect(menuRepository.getItemsByIdsByCompany).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         itemIds
       );
     });

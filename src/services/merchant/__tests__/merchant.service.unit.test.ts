@@ -43,7 +43,7 @@ describe("MerchantService (unit tests)", () => {
 
   // Mock data
   const mockCompanyWithMerchants = {
-    id: "company-1",
+    id: "tenant-1",
     tenantId: "tenant-1",
     slug: "joes-pizza",
     name: "Joe's Pizza",
@@ -235,8 +235,7 @@ describe("MerchantService (unit tests)", () => {
       const result = await merchantService.getCompanyWebsiteData("joes-pizza");
 
       expect(menuService.getFeaturedItems).toHaveBeenCalledWith(
-        "tenant-1",
-        "company-1"
+        "tenant-1"
       );
       expect(result?.featuredItems).toHaveLength(2);
     });
@@ -274,8 +273,7 @@ describe("MerchantService (unit tests)", () => {
       const result = await merchantService.getCompanyWebsiteData("joes-pizza");
 
       expect(menuService.getFeaturedItems).toHaveBeenCalledWith(
-        "tenant-1",
-        "company-1"
+        "tenant-1"
       );
       expect(result?.featuredItems).toEqual([]);
     });

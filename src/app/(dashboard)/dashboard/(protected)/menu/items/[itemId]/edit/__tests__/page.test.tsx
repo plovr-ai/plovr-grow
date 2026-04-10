@@ -165,7 +165,6 @@ describe("EditMenuItemPage", () => {
 
       expect(mockGetMenuForDashboard).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         "menu-2"
       );
       expect(result).toBeDefined();
@@ -179,7 +178,6 @@ describe("EditMenuItemPage", () => {
 
       expect(mockGetMenuForDashboard).toHaveBeenCalledWith(
         "tenant-1",
-        "company-1",
         undefined
       );
       expect(result).toBeDefined();
@@ -204,7 +202,7 @@ describe("EditMenuItemPage", () => {
         searchParams: Promise.resolve({ menuId: "menu-1" }),
       });
 
-      expect(mockGetTaxConfigs).toHaveBeenCalledWith("tenant-1", "company-1");
+      expect(mockGetTaxConfigs).toHaveBeenCalledWith("tenant-1");
     });
   });
 });
