@@ -1,58 +1,12 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { compare } from "bcryptjs";
-import { loginSchema } from "@/lib/validations/auth";
-import { mockUserStore } from "@/services/auth/mock-store";
-import { initTestData } from "@/services/auth/init-test-data";
 import { getStytchServerClient } from "@/lib/stytch";
 import { authService } from "@/services/auth";
-
-// Initialize test data on first load
-initTestData().catch(console.error);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
 
   providers: [
-    Credentials({
-      id: "credentials",
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        // Validate input
-        const parsed = loginSchema.safeParse(credentials);
-        if (!parsed.success) return null;
-
-        const { email, password } = parsed.data;
-
-        // Find user by email (using mock store)
-        const user = mockUserStore.findByEmail(email);
-
-        if (!user || user.status !== "active") return null;
-
-        // Verify password (passwordHash may be null for Stytch users)
-        if (!user.passwordHash) return null;
-        const isValid = await compare(password, user.passwordHash);
-        if (!isValid) return null;
-
-        // Update last login
-        mockUserStore.updateLastLogin(user.id);
-
-        // Return user data for JWT
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          tenantId: user.tenantId,
-          companyId: user.companyId,
-        };
-      },
-    }),
-
     // Stytch login provider — verifies session_token server-side
     Credentials({
       id: "stytch",
