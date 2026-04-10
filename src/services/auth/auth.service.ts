@@ -1,19 +1,13 @@
 import prisma from "@/lib/db";
 import { generateEntityId } from "@/lib/id";
-import { companyService } from "@/services/company/company.service";
+import { slugify } from "@/services/generator/slug.util";
 import type { User } from "@prisma/client";
 
 export class AuthService {
-  /**
-   * Find or create a user from a Stytch OAuth/magic-link callback.
-   * Uses Prisma (real database) so the user, tenant, and company persist
-   * across requests and are visible to the rest of the application.
-   */
   async findOrCreateStytchUser(
     email: string,
     stytchUserId: string
   ): Promise<{ user: User; isNewUser: boolean }> {
-    // 1. Look up by stytchUserId first (already linked user)
     const existingByStytch = await prisma.user.findUnique({
       where: { stytchUserId },
     });
@@ -25,7 +19,6 @@ export class AuthService {
       return { user: existingByStytch, isNewUser: false };
     }
 
-    // 2. Look up by email across all tenants (existing user, first Stytch login)
     const existingByEmail = await prisma.user.findFirst({
       where: { email, deleted: false },
     });
@@ -37,28 +30,41 @@ export class AuthService {
       return { user: updated, isNewUser: false };
     }
 
-    // 3. New user — create Tenant + Company + Merchant via unified service
     const emailPrefix = email.split("@")[0];
     const companyName = `${emailPrefix}'s Company`;
+    const baseSlug = slugify(companyName);
 
-    const { tenant, company } =
-      await companyService.createTenantWithCompanyAndMerchant({
-        companyName,
+    const existingTenant = await prisma.tenant.findUnique({
+      where: { slug: baseSlug },
+    });
+    const slug = existingTenant
+      ? `${baseSlug}-${Date.now()}`
+      : baseSlug;
+
+    const tenantId = generateEntityId();
+    const userId = generateEntityId();
+
+    const user = await prisma.$transaction(async (tx) => {
+      await tx.tenant.create({
+        data: {
+          id: tenantId,
+          name: companyName,
+          slug,
+        },
       });
 
-    // Create User in the newly created tenant
-    const user = await prisma.user.create({
-      data: {
-        id: generateEntityId(),
-        tenantId: tenant.id,
-        companyId: company.id,
-        email,
-        stytchUserId,
-        name: emailPrefix,
-        role: "owner",
-        status: "active",
-        lastLoginAt: new Date(),
-      },
+      return tx.user.create({
+        data: {
+          id: userId,
+          tenantId,
+          email,
+          stytchUserId,
+          name: emailPrefix,
+          role: "owner",
+          status: "active",
+          lastLoginAt: new Date(),
+        },
+      });
     });
 
     return { user, isNewUser: true };

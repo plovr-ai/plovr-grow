@@ -37,7 +37,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             name: user.name,
             role: user.role,
             tenantId: user.tenantId,
-            companyId: user.companyId,
           };
         } catch {
           return null;
@@ -52,7 +51,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
         token.role = user.role;
         token.tenantId = user.tenantId;
-        token.companyId = user.companyId;
       }
       return token;
     },
@@ -62,7 +60,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.tenantId = token.tenantId as string;
-        session.user.companyId = token.companyId as string | null;
       }
       return session;
     },
