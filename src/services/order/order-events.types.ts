@@ -54,7 +54,6 @@ export interface OrderCreatedEvent extends OrderEventPayload {
 
 // Order paid event (for loyalty points, etc.)
 export interface OrderPaidEvent extends PaymentStatusChangedEvent {
-  companyId?: string;
   customerPhone?: string;
   customerFirstName?: string;
   customerLastName?: string;

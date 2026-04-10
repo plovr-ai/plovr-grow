@@ -31,16 +31,14 @@ async function handleOrderPaid(event: OrderPaidEvent): Promise<void> {
       totalAmount: event.totalAmount,
     });
 
-    // Skip if no companyId provided
     // Skip if required fields are missing
-    if (!event.companyId || !event.customerPhone || event.totalAmount === undefined) {
-      console.log("[Loyalty] Skipping - missing required fields (companyId, customerPhone, or totalAmount)");
+    if (!event.customerPhone || event.totalAmount === undefined) {
+      console.log("[Loyalty] Skipping - missing required fields (customerPhone or totalAmount)");
       return;
     }
 
     const result = await loyaltyService.processOrderCompletion(
       event.tenantId,
-      event.companyId,
       event.orderId,
       {
         merchantId: event.merchantId,

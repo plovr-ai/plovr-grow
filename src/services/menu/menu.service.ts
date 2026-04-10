@@ -43,9 +43,9 @@ export class MenuService {
   /**
    * Get all menus for a company
    */
-  async getMenus(tenantId: string, companyId: string): Promise<MenuInfo[]> {
+  async getMenus(tenantId: string): Promise<MenuInfo[]> {
     const { menuEntityRepository } = await getRepositories();
-    const menus = await menuEntityRepository.getMenusByCompany(tenantId, companyId);
+    const menus = await menuEntityRepository.getMenusByCompany(tenantId);
     return menus.map((m) => ({
       id: m.id,
       name: m.name,
@@ -58,9 +58,9 @@ export class MenuService {
   /**
    * Create a new menu
    */
-  async createMenu(tenantId: string, companyId: string, input: CreateMenuInput) {
+  async createMenu(tenantId: string, input: CreateMenuInput) {
     const { menuEntityRepository } = await getRepositories();
-    return menuEntityRepository.createMenu(tenantId, companyId, input);
+    return menuEntityRepository.createMenu(tenantId, input);
   }
 
   /**
@@ -82,9 +82,9 @@ export class MenuService {
   /**
    * Count active menus for a company
    */
-  async countMenus(tenantId: string, companyId: string) {
+  async countMenus(tenantId: string) {
     const { menuEntityRepository } = await getRepositories();
-    return menuEntityRepository.countMenusByCompany(tenantId, companyId);
+    return menuEntityRepository.countMenusByCompany(tenantId);
   }
 
   // ==================== Menu Content ====================
@@ -97,7 +97,7 @@ export class MenuService {
    * 2. Merchant's specific tax rates for those configs
    *
    * @param tenantId - Tenant ID for isolation
-   * @param merchantId - Merchant ID (used to get companyId and merchant info)
+   * @param merchantId - Merchant ID (used to get merchant info)
    * @param menuId - Optional menu ID (defaults to first menu)
    */
   async getMenu(
@@ -108,14 +108,14 @@ export class MenuService {
     const { menuRepository, menuEntityRepository, merchantRepository, taxConfigRepository, featuredItemRepository } =
       await getRepositories();
 
-    // Get merchant to find companyId
+    // Get merchant info
     const merchant = await merchantRepository.getById(merchantId);
     if (!merchant) {
       throw new AppError(ErrorCodes.MERCHANT_NOT_FOUND, undefined, 404);
     }
 
-    // Get all active menus for the company
-    const menus = await menuEntityRepository.getMenusByCompany(tenantId, merchant.companyId);
+    // Get all active menus for the tenant
+    const menus = await menuEntityRepository.getMenusByCompany(tenantId);
     if (menus.length === 0) {
       throw new AppError(ErrorCodes.MENU_NOT_FOUND, undefined, 404);
     }
@@ -187,7 +187,7 @@ export class MenuService {
     let finalCategories = enrichedCategories;
 
     if (isFirstMenu) {
-      const featuredItems = await featuredItemRepository.getByCompanyId(tenantId, merchant.companyId);
+      const featuredItems = await featuredItemRepository.getByTenantId(tenantId);
 
       // Only add Featured category if there are active featured items
       const activeFeaturedItems = featuredItems.filter(
@@ -231,7 +231,6 @@ export class MenuService {
           return {
             id: fi.menuItem.id,
             tenantId,
-            companyId: merchant.companyId,
             name: fi.menuItem.name,
             description: fi.menuItem.description,
             price: fi.menuItem.price,
@@ -251,7 +250,6 @@ export class MenuService {
         const featuredCategory = {
           id: "featured",
           tenantId,
-          companyId: merchant.companyId,
           menuId: currentMenuId,
           name: "Featured",
           description: null,
@@ -295,7 +293,7 @@ export class MenuService {
    * Get menu items by IDs (for cart validation)
    *
    * @param tenantId - Tenant ID for isolation
-   * @param merchantId - Merchant ID (used to get companyId)
+   * @param merchantId - Merchant ID (used to validate merchant)
    * @param itemIds - Array of menu item IDs to fetch
    */
   async getMenuItemsByIds(tenantId: string, merchantId: string, itemIds: string[]) {
@@ -306,19 +304,18 @@ export class MenuService {
       throw new AppError(ErrorCodes.MERCHANT_NOT_FOUND, undefined, 404);
     }
 
-    return menuRepository.getItemsByIdsByCompany(tenantId, merchant.companyId, itemIds);
+    return menuRepository.getItemsByIdsByCompany(tenantId, itemIds);
   }
 
   /**
-   * Get menu items by IDs for a specific company (for featured items)
+   * Get menu items by IDs for a tenant (for featured items)
    *
    * @param tenantId - Tenant ID for isolation
-   * @param companyId - Company ID
    * @param itemIds - Array of menu item IDs to fetch
    */
-  async getMenuItemsByCompanyId(tenantId: string, companyId: string, itemIds: string[]) {
+  async getMenuItemsByTenantId(tenantId: string, itemIds: string[]) {
     const { menuRepository } = await getRepositories();
-    return menuRepository.getItemsByIdsByCompany(tenantId, companyId, itemIds);
+    return menuRepository.getItemsByIdsByCompany(tenantId, itemIds);
   }
 
   /**
@@ -326,11 +323,10 @@ export class MenuService {
    */
   async createCategory(
     tenantId: string,
-    companyId: string,
     input: CreateCategoryInput
   ) {
     const { menuRepository } = await getRepositories();
-    return menuRepository.createCategory(tenantId, companyId, input.menuId, {
+    return menuRepository.createCategory(tenantId, input.menuId, {
       name: input.name,
       description: input.description,
       imageUrl: input.imageUrl,
@@ -355,13 +351,12 @@ export class MenuService {
    */
   async createMenuItem(
     tenantId: string,
-    companyId: string,
     input: CreateMenuItemInput
   ) {
     const { menuRepository, menuCategoryItemRepository } = await getRepositories();
 
     // Create the menu item (without category association)
-    const item = await menuRepository.createItem(tenantId, companyId, {
+    const item = await menuRepository.createItem(tenantId, {
       name: input.name,
       description: input.description,
       price: input.price,
@@ -464,23 +459,21 @@ export class MenuService {
    * Returns all categories and items without status filtering
    *
    * @param tenantId - Tenant ID for isolation
-   * @param companyId - Company ID
    * @param menuId - Optional menu ID (defaults to first menu)
    */
   async getMenuForDashboard(
     tenantId: string,
-    companyId: string,
     menuId?: string,
     showArchived: boolean = false
   ): Promise<DashboardMenuResponse> {
     const { menuRepository, menuEntityRepository, taxConfigRepository, menuCategoryItemRepository } = await getRepositories();
 
     // Get all menus (including inactive) for dashboard
-    const menus = await menuEntityRepository.getMenusByCompanyForDashboard(tenantId, companyId);
+    const menus = await menuEntityRepository.getMenusByCompanyForDashboard(tenantId);
 
     // If no menus exist, create a default one
     if (menus.length === 0) {
-      const defaultMenu = await menuEntityRepository.createMenu(tenantId, companyId, {
+      const defaultMenu = await menuEntityRepository.createMenu(tenantId, {
         name: "Main Menu",
         sortOrder: 0,
       });
@@ -584,13 +577,11 @@ export class MenuService {
    */
   async getAvailableItems(
     tenantId: string,
-    companyId: string,
     excludeCategoryId: string
   ): Promise<AvailableItem[]> {
     const { menuCategoryItemRepository } = await getRepositories();
     const items = await menuCategoryItemRepository.getItemsNotInCategory(
       tenantId,
-      companyId,
       excludeCategoryId
     );
 
@@ -618,11 +609,10 @@ export class MenuService {
    * Get featured items for a company
    */
   async getFeaturedItems(
-    tenantId: string,
-    companyId: string
+    tenantId: string
   ): Promise<FeaturedItemData[]> {
     const { featuredItemRepository } = await getRepositories();
-    const items = await featuredItemRepository.getByCompanyId(tenantId, companyId);
+    const items = await featuredItemRepository.getByTenantId(tenantId);
     return items.map((item) => ({
       id: item.id,
       menuItemId: item.menuItemId,
@@ -643,11 +633,10 @@ export class MenuService {
    */
   async setFeaturedItems(
     tenantId: string,
-    companyId: string,
     menuItemIds: string[]
   ): Promise<void> {
     const { featuredItemRepository } = await getRepositories();
-    await featuredItemRepository.setFeaturedItems(tenantId, companyId, menuItemIds);
+    await featuredItemRepository.setFeaturedItems(tenantId, menuItemIds);
   }
 
   /**
@@ -655,11 +644,10 @@ export class MenuService {
    */
   async addFeaturedItem(
     tenantId: string,
-    companyId: string,
     menuItemId: string
   ): Promise<void> {
     const { featuredItemRepository } = await getRepositories();
-    await featuredItemRepository.addFeaturedItem(tenantId, companyId, menuItemId);
+    await featuredItemRepository.addFeaturedItem(tenantId, menuItemId);
   }
 
   /**
@@ -667,11 +655,10 @@ export class MenuService {
    */
   async removeFeaturedItem(
     tenantId: string,
-    companyId: string,
     menuItemId: string
   ): Promise<void> {
     const { featuredItemRepository } = await getRepositories();
-    await featuredItemRepository.removeFeaturedItem(tenantId, companyId, menuItemId);
+    await featuredItemRepository.removeFeaturedItem(tenantId, menuItemId);
   }
 
   /**
@@ -679,11 +666,10 @@ export class MenuService {
    */
   async reorderFeaturedItems(
     tenantId: string,
-    companyId: string,
     orderedMenuItemIds: string[]
   ): Promise<void> {
     const { featuredItemRepository } = await getRepositories();
-    await featuredItemRepository.reorderFeaturedItems(tenantId, companyId, orderedMenuItemIds);
+    await featuredItemRepository.reorderFeaturedItems(tenantId, orderedMenuItemIds);
   }
 }
 

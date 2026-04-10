@@ -22,10 +22,9 @@ export class LoyaltyConfigService {
    * Get loyalty config for a company
    */
   async getLoyaltyConfig(
-    tenantId: string,
-    companyId: string
+    tenantId: string
   ): Promise<LoyaltyConfigData | null> {
-    const config = await this.repository.getByCompanyId(tenantId, companyId);
+    const config = await this.repository.getByTenantId(tenantId);
     if (!config) return null;
     return toLoyaltyConfigData(config);
   }
@@ -33,16 +32,16 @@ export class LoyaltyConfigService {
   /**
    * Check if loyalty is enabled for a company
    */
-  async isLoyaltyEnabled(tenantId: string, companyId: string): Promise<boolean> {
-    const config = await this.repository.getByCompanyId(tenantId, companyId);
+  async isLoyaltyEnabled(tenantId: string): Promise<boolean> {
+    const config = await this.repository.getByTenantId(tenantId);
     return config?.status === "active";
   }
 
   /**
    * Get points per dollar configuration
    */
-  async getPointsPerDollar(tenantId: string, companyId: string): Promise<number> {
-    const config = await this.repository.getByCompanyId(tenantId, companyId);
+  async getPointsPerDollar(tenantId: string): Promise<number> {
+    const config = await this.repository.getByTenantId(tenantId);
     if (!config) return 1; // Default to 1 point per dollar
     return Number(config.pointsPerDollar);
   }
@@ -52,10 +51,9 @@ export class LoyaltyConfigService {
    */
   async upsertLoyaltyConfig(
     tenantId: string,
-    companyId: string,
     input: UpsertLoyaltyConfigInput
   ): Promise<LoyaltyConfigData> {
-    const config = await this.repository.upsert(tenantId, companyId, {
+    const config = await this.repository.upsert(tenantId, {
       pointsPerDollar: input.pointsPerDollar,
       status: input.status,
     });
@@ -65,20 +63,20 @@ export class LoyaltyConfigService {
   /**
    * Enable loyalty program
    */
-  async enableLoyalty(tenantId: string, companyId: string): Promise<void> {
-    const existing = await this.repository.getByCompanyId(tenantId, companyId);
+  async enableLoyalty(tenantId: string): Promise<void> {
+    const existing = await this.repository.getByTenantId(tenantId);
     if (existing) {
-      await this.repository.setStatus(tenantId, companyId, "active");
+      await this.repository.setStatus(tenantId, "active");
     } else {
-      await this.repository.create(tenantId, companyId, { status: "active" });
+      await this.repository.create(tenantId, { status: "active" });
     }
   }
 
   /**
    * Disable loyalty program
    */
-  async disableLoyalty(tenantId: string, companyId: string): Promise<void> {
-    await this.repository.setStatus(tenantId, companyId, "inactive");
+  async disableLoyalty(tenantId: string): Promise<void> {
+    await this.repository.setStatus(tenantId, "inactive");
   }
 
   /**
@@ -86,14 +84,13 @@ export class LoyaltyConfigService {
    */
   async setLoyaltyStatus(
     tenantId: string,
-    companyId: string,
     status: "active" | "inactive"
   ): Promise<void> {
-    const existing = await this.repository.getByCompanyId(tenantId, companyId);
+    const existing = await this.repository.getByTenantId(tenantId);
     if (existing) {
-      await this.repository.setStatus(tenantId, companyId, status);
+      await this.repository.setStatus(tenantId, status);
     } else if (status === "active") {
-      await this.repository.create(tenantId, companyId, { status: "active" });
+      await this.repository.create(tenantId, { status: "active" });
     }
   }
 }

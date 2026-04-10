@@ -122,12 +122,10 @@ export class CateringOrderService {
    */
   async getCompanyOrders(
     tenantId: string,
-    companyId: string,
     options: CateringOrderListOptions = {}
   ) {
     const result = await cateringOrderRepository.getByCompany(
       tenantId,
-      companyId,
       {
         page: options.page,
         pageSize: options.pageSize,

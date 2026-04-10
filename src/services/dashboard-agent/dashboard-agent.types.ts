@@ -155,7 +155,6 @@ export interface ToolDefinition {
 
 export interface ToolExecutionContext {
   tenantId: string;
-  companyId: string;
   merchantId: string;
   userId: string;
   conversationContext: ConversationContext;

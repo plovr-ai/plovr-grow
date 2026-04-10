@@ -32,7 +32,7 @@ export class OrderService {
    * Uses atomic sequence generation to prevent race conditions
    */
   async createMerchantOrder(tenantId: string, input: CreateMerchantOrderInput, tx?: DbClient) {
-    const { companyId, merchantId } = input;
+    const { merchantId } = input;
 
     // Validate menu items exist and are available
     const itemIds = input.items.map((item) => item.menuItemId);
@@ -67,7 +67,6 @@ export class OrderService {
     // Create the order in database
     const order = await orderRepository.create(
       tenantId,
-      companyId,
       merchantId,
       {
         orderNumber,
@@ -197,8 +196,6 @@ export class OrderService {
    * These orders are not associated with a specific merchant
    */
   async createCompanyOrder(tenantId: string, input: CreateCompanyOrderInput) {
-    const { companyId } = input;
-
     // Calculate order totals (simple sum, no tax/tip/delivery for company orders)
     const subtotal = input.items.reduce((sum, item) => sum + item.totalPrice, 0);
     const totalAmount = Math.round(subtotal * 100) / 100;
@@ -211,13 +208,12 @@ export class OrderService {
     const dateStr = new Date().toISOString().slice(0, 10);
 
     // Generate order number using atomic sequence
-    const sequence = await sequenceRepository.getNextCompanyOrderSequence(tenantId, companyId, dateStr);
+    const sequence = await sequenceRepository.getNextCompanyOrderSequence(tenantId, dateStr);
     const orderNumber = generateGiftcardOrderNumber(sequence);
 
     // Create the order in database
     const order = await orderRepository.create(
       tenantId,
-      companyId,
       null, // No merchant for company orders
       {
         orderNumber,
@@ -403,10 +399,9 @@ export class OrderService {
    */
   async getCompanyOrders(
     tenantId: string,
-    companyId: string,
     options: CompanyOrderListOptions = {}
   ) {
-    return orderRepository.getCompanyOrders(tenantId, companyId, options);
+    return orderRepository.getCompanyOrders(tenantId, options);
   }
 
   /**

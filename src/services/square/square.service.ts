@@ -93,8 +93,7 @@ export class SquareService {
 
   async syncCatalog(
     tenantId: string,
-    merchantId: string,
-    companyId: string
+    merchantId: string
   ): Promise<{ objectsSynced: number; objectsMapped: number }> {
     const connection = await integrationRepository.getConnection(
       tenantId,
@@ -136,14 +135,13 @@ export class SquareService {
       await prisma.$transaction(async (tx) => {
         // Ensure a default menu exists
         let menu = await tx.menu.findFirst({
-          where: { tenantId, companyId, deleted: false },
+          where: { tenantId, deleted: false },
         });
         if (!menu) {
           menu = await tx.menu.create({
             data: {
               id: generateEntityId(),
               tenantId,
-              companyId,
               name: "Main Menu",
               sortOrder: 0,
             },
@@ -166,7 +164,6 @@ export class SquareService {
             create: {
               id: internalId,
               tenantId,
-              companyId,
               menuId: menu.id,
               name: cat.name,
               sortOrder: cat.sortOrder,
@@ -208,7 +205,6 @@ export class SquareService {
             create: {
               id: internalId,
               tenantId,
-              companyId,
               name: item.name,
               description: item.description,
               price: item.price,
@@ -292,7 +288,6 @@ export class SquareService {
             create: {
               id: internalId,
               tenantId,
-              companyId,
               name: tax.name,
             },
             update: {

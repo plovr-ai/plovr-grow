@@ -37,7 +37,6 @@ export class DashboardAgentService {
    */
   async *processMessageStream(
     tenantId: string,
-    companyId: string,
     merchantId: string,
     userId: string,
     request: SendMessageRequest
@@ -63,7 +62,7 @@ export class DashboardAgentService {
           message.toLowerCase().includes("subscribe") ||
           message.toLowerCase().includes("订阅") ||
           message.toLowerCase().includes("试用")) {
-        yield* this.handleSubscriptionCheckout(tenantId, companyId, merchantId, userId, currentContext);
+        yield* this.handleSubscriptionCheckout(tenantId, merchantId, userId, currentContext);
       } else {
         // Guide non-subscribed users to subscribe first
         yield* this.handleSubscriptionGuidance(currentContext);
@@ -120,7 +119,6 @@ export class DashboardAgentService {
    */
   private async *handleSubscriptionCheckout(
     tenantId: string,
-    companyId: string,
     merchantId: string,
     userId: string,
     context: ConversationContext
@@ -144,7 +142,6 @@ export class DashboardAgentService {
     try {
       const result = await tool.execute({}, {
         tenantId,
-        companyId,
         merchantId,
         userId,
         conversationContext: context,

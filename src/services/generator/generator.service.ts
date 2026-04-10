@@ -1,5 +1,9 @@
 import { generatorRepository } from "@/repositories/generator.repository";
-import { companyService } from "@/services/company/company.service";
+import { tenantRepository } from "@/repositories/tenant.repository";
+import { merchantRepository } from "@/repositories/merchant.repository";
+import { generateEntityId } from "@/lib/id";
+import { generateUniqueSlug } from "./slug.util";
+import prisma from "@/lib/db";
 import type { GooglePlacesClient, PlaceDetails } from "./google-places.client";
 import type {
   CreateGenerationInput,
@@ -54,37 +58,47 @@ export class GeneratorService {
   }
 
   private async buildTenant(details: PlaceDetails) {
+    const tenantId = generateEntityId();
+    const merchantId = generateEntityId();
+
+    const tenantSlug = await generateUniqueSlug(
+      details.name,
+      async (slug) => (await tenantRepository.getBySlug(slug)) === null
+    );
+    const merchantSlug = await generateUniqueSlug(
+      details.name,
+      async (slug) => merchantRepository.isSlugAvailable(slug)
+    );
+
     const reviews = details.reviews.slice(0, 5).map((r) => ({
       author: r.author, rating: r.rating, text: r.text,
     }));
 
-    const companySettings = {
+    const tenantSettings = {
       themePreset: "blue",
       website: { tagline: "", heroImage: "", socialLinks: [], reviews },
     };
 
-    const result = await companyService.createTenantWithCompanyAndMerchant({
-      companyName: details.name,
-      companyWebsiteUrl: details.websiteUrl ?? undefined,
-      companySettings,
-      source: "generator",
-      subscriptionStatus: "trial",
-      merchantName: details.name,
-      merchantAddress: details.address,
-      merchantCity: details.city,
-      merchantState: details.state,
-      merchantZipCode: details.zipCode,
-      merchantPhone: details.phone ?? undefined,
-      merchantBusinessHours: details.businessHours,
+    await prisma.tenant.create({
+      data: {
+        id: tenantId,
+        name: details.name,
+        slug: tenantSlug,
+        websiteUrl: details.websiteUrl,
+        settings: tenantSettings,
+        source: "generator",
+        subscriptionStatus: "trial",
+      },
     });
 
-    return {
-      tenantId: result.tenant.id,
-      companyId: result.company.id,
-      merchantId: result.merchant.id,
-      companySlug: result.companySlug,
-      merchantSlug: result.merchantSlug,
-    };
+    await merchantRepository.create(tenantId, {
+      slug: merchantSlug, name: details.name,
+      address: details.address, city: details.city,
+      state: details.state, zipCode: details.zipCode,
+      phone: details.phone, businessHours: details.businessHours as never,
+    });
+
+    return { tenantId, merchantId, companySlug: tenantSlug, merchantSlug };
   }
 }
 
@@ -92,7 +106,6 @@ let _generatorService: GeneratorService | null = null;
 
 export function getGeneratorService(): GeneratorService {
   if (!_generatorService) {
-    // Dynamic import to avoid circular dependency at module load time
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { GooglePlacesClient } = require("./google-places.client");
     const apiKey = process.env.GOOGLE_PLACES_API_KEY ?? "";

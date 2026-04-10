@@ -68,7 +68,6 @@ export class CateringService {
    */
   async getLeadsByCompany(
     tenantId: string,
-    companyId: string,
     options?: {
       page?: number;
       pageSize?: number;
@@ -79,7 +78,6 @@ export class CateringService {
   ): Promise<PaginatedCateringLeadsWithMerchant> {
     const result = await this.repository.getByCompany(
       tenantId,
-      companyId,
       options
     );
     return {

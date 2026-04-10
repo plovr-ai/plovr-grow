@@ -34,7 +34,6 @@ export class GiftCardService {
    */
   async createGiftCard(
     tenantId: string,
-    companyId: string,
     input: CreateGiftCardInput
   ): Promise<GiftCardData> {
     // Generate a unique card number
@@ -52,7 +51,7 @@ export class GiftCardService {
     }
 
     // Create the gift card
-    const giftCard = await this.repository.create(tenantId, companyId, {
+    const giftCard = await this.repository.create(tenantId, {
       cardNumber,
       initialAmount: input.amount,
       purchaseOrderId: input.purchaseOrderId,
@@ -76,7 +75,6 @@ export class GiftCardService {
    */
   async validateGiftCard(
     tenantId: string,
-    companyId: string,
     cardNumber: string
   ): Promise<GiftCardValidationResult> {
     // Validate format first
@@ -94,7 +92,6 @@ export class GiftCardService {
     // Look up the gift card
     const giftCard = await this.repository.getByCardNumber(
       tenantId,
-      companyId,
       formattedNumber
     );
 
@@ -174,7 +171,6 @@ export class GiftCardService {
    */
   async getBalance(
     tenantId: string,
-    companyId: string,
     cardNumber: string
   ): Promise<number | null> {
     const normalizedNumber = normalizeGiftCardNumber(cardNumber);
@@ -182,7 +178,6 @@ export class GiftCardService {
 
     const giftCard = await this.repository.getByCardNumber(
       tenantId,
-      companyId,
       formattedNumber
     );
 
@@ -228,23 +223,21 @@ export class GiftCardService {
   /**
    * Get gift card statistics for Dashboard overview
    */
-  async getCompanyGiftCardStats(
+  async getTenantGiftCardStats(
     tenantId: string,
-    companyId: string,
     options: {
       dateFrom?: Date;
       dateTo?: Date;
     } = {}
   ): Promise<GiftCardStats> {
-    return this.repository.getStatsByCompany(tenantId, companyId, options);
+    return this.repository.getStatsByTenant(tenantId, options);
   }
 
   /**
    * Get gift cards for a company (for Dashboard)
    */
-  async getCompanyGiftCards(
+  async getTenantGiftCards(
     tenantId: string,
-    companyId: string,
     options: {
       page?: number;
       pageSize?: number;
@@ -253,7 +246,7 @@ export class GiftCardService {
       dateTo?: Date;
     } = {}
   ): Promise<PaginatedGiftCards> {
-    const result = await this.repository.getByCompany(tenantId, companyId, options);
+    const result = await this.repository.getByTenant(tenantId, options);
 
     return {
       ...result,

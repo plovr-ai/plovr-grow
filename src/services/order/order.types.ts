@@ -48,7 +48,6 @@ export interface OrderData {
 
 // Base order input fields shared by both merchant and company orders
 interface BaseOrderInput {
-  companyId: string;
   loyaltyMemberId?: string;
   customerFirstName: string;
   customerLastName: string;

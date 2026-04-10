@@ -37,10 +37,9 @@ export class LoyaltyMemberService {
    */
   async getMemberByPhone(
     tenantId: string,
-    companyId: string,
     phone: string
   ): Promise<LoyaltyMemberData | null> {
-    const member = await this.repository.getByPhone(tenantId, companyId, phone);
+    const member = await this.repository.getByPhone(tenantId, phone);
     if (!member) return null;
     return toLoyaltyMemberData(member);
   }
@@ -50,13 +49,11 @@ export class LoyaltyMemberService {
    */
   async findOrCreateByPhone(
     tenantId: string,
-    companyId: string,
     phone: string,
     data?: CreateMemberInput
   ): Promise<{ member: LoyaltyMemberData; isNew: boolean }> {
     const result = await this.repository.findOrCreate(
       tenantId,
-      companyId,
       phone,
       data ? { email: data.email, firstName: data.firstName, lastName: data.lastName } : undefined
     );
@@ -95,11 +92,10 @@ export class LoyaltyMemberService {
    */
   async getLoyaltyStatusByPhone(
     tenantId: string,
-    companyId: string,
     phone: string,
     pointsValue: number = 0.01
   ): Promise<LoyaltyStatus | null> {
-    const member = await this.repository.getByPhone(tenantId, companyId, phone);
+    const member = await this.repository.getByPhone(tenantId, phone);
     if (!member) return null;
 
     return {
@@ -140,9 +136,8 @@ export class LoyaltyMemberService {
   /**
    * Get members by company (paginated)
    */
-  async getMembersByCompany(
+  async getMembersByTenant(
     tenantId: string,
-    companyId: string,
     options?: {
       page?: number;
       pageSize?: number;
@@ -151,7 +146,6 @@ export class LoyaltyMemberService {
   ): Promise<PaginatedMembers> {
     const result = await this.repository.getByCompany(
       tenantId,
-      companyId,
       options
     );
     return {
@@ -163,8 +157,8 @@ export class LoyaltyMemberService {
   /**
    * Get member count for a company
    */
-  async getMemberCount(tenantId: string, companyId: string): Promise<number> {
-    return this.repository.countByCompany(tenantId, companyId);
+  async getMemberCount(tenantId: string): Promise<number> {
+    return this.repository.countByTenant(tenantId);
   }
 }
 
