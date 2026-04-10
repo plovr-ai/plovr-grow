@@ -2,7 +2,7 @@
 // 商户服务层 - 封装商户相关业务逻辑
 
 import { merchantRepository } from "@/repositories/merchant.repository";
-import { companyRepository } from "@/repositories/company.repository";
+import { tenantRepository } from "@/repositories/tenant.repository";
 import { menuService } from "@/services/menu";
 import { toMerchantWithCompany, toCompanyWithMerchants } from "./merchant.mapper";
 import { AppError, ErrorCodes } from "@/lib/errors";
@@ -16,7 +16,7 @@ import type {
   GetMerchantsFilter,
   WebsiteMerchantData,
 } from "./merchant.types";
-import type { SocialLink, CompanySettings } from "@/types/company";
+import type { SocialLink, TenantSettings } from "@/types/tenant";
 import type { MerchantSettings, BusinessHoursMap } from "@/types/merchant";
 
 export class MerchantService {
@@ -27,7 +27,7 @@ export class MerchantService {
    * 用于 Storefront 页面
    */
   async getMerchantBySlug(slug: string): Promise<MerchantWithCompany | null> {
-    const data = await merchantRepository.getBySlugWithCompany(slug);
+    const data = await merchantRepository.getBySlugWithTenant(slug);
     if (!data) return null;
     return toMerchantWithCompany(data);
   }
@@ -46,7 +46,7 @@ export class MerchantService {
    * 用于 API routes 中需要从 merchantId 反查 tenantId 的场景
    */
   async getMerchantById(merchantId: string): Promise<MerchantWithCompany | null> {
-    const data = await merchantRepository.getByIdWithCompany(merchantId);
+    const data = await merchantRepository.getByIdWithTenant(merchantId);
     if (!data) return null;
     return toMerchantWithCompany(data);
   }
@@ -56,7 +56,7 @@ export class MerchantService {
    * 用于品牌官网门店列表
    */
   async getCompanyBySlug(slug: string): Promise<CompanyWithMerchants | null> {
-    const data = await companyRepository.getBySlugWithMerchants(slug);
+    const data = await tenantRepository.getBySlugWithMerchants(slug);
     if (!data) return null;
     return toCompanyWithMerchants(data);
   }
@@ -70,7 +70,7 @@ export class MerchantService {
     const merchant = await this.getMerchantBySlug(merchantSlug);
     if (!merchant) return null;
 
-    const companySettings = merchant.company.settings as CompanySettings | undefined;
+    const companySettings = merchant.company.settings as TenantSettings | undefined;
     const merchantSettings = merchant.settings as MerchantSettings | undefined;
 
     // Merchant-level website config can override company-level
@@ -109,7 +109,7 @@ export class MerchantService {
     const company = await this.getCompanyBySlug(companySlug);
     if (!company) return null;
 
-    const companySettings = company.settings as CompanySettings | undefined;
+    const companySettings = company.settings as TenantSettings | undefined;
     const companyWebsite = companySettings?.website;
 
     // Fetch featured items from the dedicated featured_items table
@@ -172,11 +172,11 @@ export class MerchantService {
     tenantId: string,
     merchantId: string
   ): Promise<MerchantWithCompany | null> {
-    const data = await merchantRepository.getByIdWithCompany(merchantId);
+    const data = await merchantRepository.getByIdWithTenant(merchantId);
     if (!data) return null;
 
     // 验证 tenant 隔离
-    if (data.company.tenantId !== tenantId) {
+    if (data.tenantId !== tenantId) {
       return null;
     }
 
@@ -184,25 +184,17 @@ export class MerchantService {
   }
 
   /**
-   * 获取 Company 下所有 Merchants
+   * 获取 Tenant 下所有 Merchants
    * @param tenantId - 租户 ID
-   * @param companyId - 公司 ID
    * @param filter - 过滤条件
    */
   async getMerchantsByCompanyId(
     tenantId: string,
-    companyId: string,
     filter?: GetMerchantsFilter
   ): Promise<MerchantWithCompany[]> {
-    // 验证 company 属于 tenant
-    const company = await companyRepository.getById(companyId);
-    if (!company || company.tenantId !== tenantId) {
-      return [];
-    }
-
     const merchants = filter?.status === "active"
-      ? await merchantRepository.getActiveByCompanyIdWithCompany(companyId)
-      : await merchantRepository.getByCompanyIdWithCompany(companyId);
+      ? await merchantRepository.getActiveByTenantIdWithTenant(tenantId)
+      : await merchantRepository.getByTenantIdWithTenant(tenantId);
 
     return merchants.map(toMerchantWithCompany);
   }
@@ -212,18 +204,16 @@ export class MerchantService {
   /**
    * 创建 Merchant
    * @param tenantId - 租户 ID
-   * @param companyId - 公司 ID
    * @param input - 创建参数
    */
   async createMerchant(
     tenantId: string,
-    companyId: string,
     input: CreateMerchantInput
   ): Promise<MerchantWithCompany> {
-    // 验证 company 属于 tenant
-    const company = await companyRepository.getById(companyId);
-    if (!company || company.tenantId !== tenantId) {
-      throw new AppError(ErrorCodes.COMPANY_NOT_FOUND, undefined, 404);
+    // 验证 tenant 存在
+    const tenant = await tenantRepository.getById(tenantId);
+    if (!tenant) {
+      throw new AppError(ErrorCodes.TENANT_NOT_FOUND, undefined, 404);
     }
 
     // 验证 slug 可用
@@ -232,7 +222,7 @@ export class MerchantService {
       throw new AppError(ErrorCodes.MERCHANT_SLUG_TAKEN, { slug: input.slug }, 409);
     }
 
-    const merchant = await merchantRepository.create(companyId, tenantId, {
+    const merchant = await merchantRepository.create(tenantId, {
       slug: input.slug,
       name: input.name,
       description: input.description,
@@ -252,7 +242,7 @@ export class MerchantService {
       settings: input.settings as unknown as Prisma.InputJsonValue,
     });
 
-    const data = await merchantRepository.getByIdWithCompany(merchant.id);
+    const data = await merchantRepository.getByIdWithTenant(merchant.id);
     return toMerchantWithCompany(data!);
   }
 
@@ -319,7 +309,7 @@ export class MerchantService {
 
     await merchantRepository.update(merchantId, updateData);
 
-    const data = await merchantRepository.getByIdWithCompany(merchantId);
+    const data = await merchantRepository.getByIdWithTenant(merchantId);
     return toMerchantWithCompany(data!);
   }
 
