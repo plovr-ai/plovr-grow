@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { signIn } from "next-auth/react";
 import { useStytch } from "@stytch/nextjs";
 import Link from "next/link";
@@ -12,10 +13,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+type ErrorKey = "noToken" | "noSession" | "sessionFailed" | "generic";
+
 export default function StytchAuthenticatePage() {
   const router = useRouter();
   const stytchClient = useStytch();
-  const [error, setError] = useState<string | null>(null);
+  const t = useTranslations("auth.authenticate");
+  const [errorKey, setErrorKey] = useState<ErrorKey | null>(null);
 
   useEffect(() => {
     async function authenticate() {
@@ -25,7 +29,7 @@ export default function StytchAuthenticatePage() {
         const token = params.get("token");
 
         if (!token) {
-          setError("Authentication failed — no token in URL");
+          setErrorKey("noToken");
           return;
         }
 
@@ -44,7 +48,7 @@ export default function StytchAuthenticatePage() {
         }
 
         if (!response.session_token) {
-          setError("Authentication failed — no session token");
+          setErrorKey("noSession");
           return;
         }
 
@@ -55,7 +59,7 @@ export default function StytchAuthenticatePage() {
         });
 
         if (result?.error) {
-          setError("Failed to create session");
+          setErrorKey("sessionFailed");
           return;
         }
 
@@ -66,29 +70,29 @@ export default function StytchAuthenticatePage() {
         router.push("/dashboard");
         router.refresh();
       } catch {
-        setError("Authentication failed. Please try again.");
+        setErrorKey("generic");
       }
     }
 
     authenticate();
   }, [stytchClient, router]);
 
-  if (error) {
+  if (errorKey) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-center text-red-600">
-              Authentication Error
+              {t("errorTitle")}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="text-gray-600 mb-4">{error}</p>
+            <p className="text-gray-600 mb-4">{t(`errors.${errorKey}`)}</p>
             <Link
               href="/dashboard/login"
               className="text-blue-600 hover:underline"
             >
-              Back to login
+              {t("backToLogin")}
             </Link>
           </CardContent>
         </Card>
@@ -100,10 +104,10 @@ export default function StytchAuthenticatePage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-center">Authenticating...</CardTitle>
+          <CardTitle className="text-center">{t("title")}</CardTitle>
         </CardHeader>
         <CardContent className="text-center">
-          <p className="text-gray-600">Please wait while we verify your identity.</p>
+          <p className="text-gray-600">{t("description")}</p>
         </CardContent>
       </Card>
     </div>
