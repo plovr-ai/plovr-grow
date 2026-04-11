@@ -119,7 +119,7 @@ const navigation: NavItem[] = [
     label: "Company",
     href: "/dashboard/tenant",
     icon: Building2,
-    pattern: /^\/dashboard\/company/,
+    pattern: /^\/dashboard\/tenant/,
   },
   {
     label: "Subscription",
