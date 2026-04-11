@@ -9,58 +9,58 @@ datasource db {
 }
 
 model Tenant {
-  id                      String                 @id
-  name                    String
-  slug                    String?                @unique
-  description             String?                @db.Text
-  logoUrl                 String?                @map("logo_url")
-  websiteUrl              String?                @map("website_url")
-  supportEmail            String?                @map("support_email")
-  supportPhone            String?                @map("support_phone")
-  currency                String                 @default("USD")
-  locale                  String                 @default("en-US")
-  timezone                String                 @default("America/New_York")
-  settings                Json?
-  status                  String                 @default("active")
-  onboardingStatus        String                 @default("not_started") @map("onboarding_status")
-  onboardingData          Json?                  @map("onboarding_data")
-  onboardingCompletedAt   DateTime?              @map("onboarding_completed_at")
-  source                  String?
-  subscriptionPlan        String                 @default("free") @map("subscription_plan")
-  subscriptionStatus      String                 @default("active") @map("subscription_status")
-  stripeConnectStatus     String?                @map("stripe_connect_status")
-  deleted                 Boolean                @default(false)
-  createdAt               DateTime               @default(now()) @map("created_at")
-  updatedAt               DateTime               @updatedAt @map("updated_at")
-  stripeConnectAccount    StripeConnectAccount?
-  menus                   Menu[]
-  menuCategories          MenuCategory[]
-  menuItems               MenuItem[]
-  orders                  Order[]
-  users                   User[]
-  taxConfigs              TaxConfig[]
-  loyaltyConfig           LoyaltyConfig?
-  loyaltyMembers          LoyaltyMember[]
-  pointTransactions       PointTransaction[]
-  otpVerifications        OtpVerification[]
-  featuredItems           FeaturedItem[]
-  cateringLeads           CateringLead[]
-  cateringOrders          CateringOrder[]
-  invoices                Invoice[]
-  giftCards               GiftCard[]
-  giftCardTransactions    GiftCardTransaction[]
-  orderSequences          OrderSequence[]
-  giftCardOrderSequences  GiftCardOrderSequence[]
-  cateringOrderSequences  CateringOrderSequence[]
-  invoiceSequences        InvoiceSequence[]
-  payments                Payment[]
-  stripeCustomers         StripeCustomer[]
-  subscription            Subscription?
-  merchants               Merchant[]
+  id                     String                  @id
+  name                   String
+  slug                   String?                 @unique
+  description            String?                 @db.Text
+  logoUrl                String?                 @map("logo_url")
+  websiteUrl             String?                 @map("website_url")
+  supportEmail           String?                 @map("support_email")
+  supportPhone           String?                 @map("support_phone")
+  currency               String                  @default("USD")
+  locale                 String                  @default("en-US")
+  timezone               String                  @default("America/New_York")
+  settings               Json?
+  status                 String                  @default("active")
+  onboardingStatus       String                  @default("not_started") @map("onboarding_status")
+  onboardingData         Json?                   @map("onboarding_data")
+  onboardingCompletedAt  DateTime?               @map("onboarding_completed_at")
+  source                 String?
+  subscriptionPlan       String                  @default("free") @map("subscription_plan")
+  subscriptionStatus     String                  @default("active") @map("subscription_status")
+  stripeConnectStatus    String?                 @map("stripe_connect_status")
+  deleted                Boolean                 @default(false)
+  createdAt              DateTime                @default(now()) @map("created_at")
+  updatedAt              DateTime                @updatedAt @map("updated_at")
+  stripeConnectAccount   StripeConnectAccount?
+  menus                  Menu[]
+  menuCategories         MenuCategory[]
+  menuItems              MenuItem[]
+  orders                 Order[]
+  users                  User[]
+  taxConfigs             TaxConfig[]
+  loyaltyConfig          LoyaltyConfig?
+  loyaltyMembers         LoyaltyMember[]
+  pointTransactions      PointTransaction[]
+  otpVerifications       OtpVerification[]
+  featuredItems          FeaturedItem[]
+  cateringLeads          CateringLead[]
+  cateringOrders         CateringOrder[]
+  invoices               Invoice[]
+  giftCards              GiftCard[]
+  giftCardTransactions   GiftCardTransaction[]
+  orderSequences         OrderSequence[]
+  giftCardOrderSequences GiftCardOrderSequence[]
+  cateringOrderSequences CateringOrderSequence[]
+  invoiceSequences       InvoiceSequence[]
+  payments               Payment[]
+  stripeCustomers        StripeCustomer[]
+  subscription           Subscription?
+  merchants              Merchant[]
 
-  menuCategoryItems       MenuCategoryItem[]
-  menuItemTaxes           MenuItemTax[]
-  websiteGenerations      WebsiteGeneration[]
+  menuCategoryItems      MenuCategoryItem[]
+  menuItemTaxes          MenuItemTax[]
+  websiteGenerations     WebsiteGeneration[]
   integrationConnections IntegrationConnection[]
   externalIdMappings     ExternalIdMapping[]
   integrationSyncRecords IntegrationSyncRecord[]
@@ -155,35 +155,35 @@ model MenuCategoryItem {
 }
 
 model Merchant {
-  id                String             @id
-  tenantId          String             @map("tenant_id")
-  slug              String             @unique
-  name              String
-  description       String?            @db.Text
-  address           String?
-  city              String?
-  state             String?
-  zipCode           String?            @map("zip_code")
-  country           String             @default("US")
-  phone             String?
-  email             String?
-  logoUrl           String?            @map("logo_url")
-  bannerUrl         String?            @map("banner_url")
-  businessHours     Json?              @map("business_hours")
-  timezone          String             @default("America/New_York")
-  currency          String             @default("USD")
-  locale            String             @default("en-US")
-  status            String             @default("active")
-  settings          Json?
-  deleted           Boolean            @default(false)
-  createdAt         DateTime           @default(now()) @map("created_at")
-  updatedAt         DateTime           @updatedAt @map("updated_at")
-  tenant            Tenant             @relation(fields: [tenantId], references: [id])
-  orders            Order[]
-  merchantTaxRates  MerchantTaxRate[]
-  pointTransactions PointTransaction[]
-  cateringLeads     CateringLead[]
-  cateringOrders    CateringOrder[]
+  id                     String                  @id
+  tenantId               String                  @map("tenant_id")
+  slug                   String                  @unique
+  name                   String
+  description            String?                 @db.Text
+  address                String?
+  city                   String?
+  state                  String?
+  zipCode                String?                 @map("zip_code")
+  country                String                  @default("US")
+  phone                  String?
+  email                  String?
+  logoUrl                String?                 @map("logo_url")
+  bannerUrl              String?                 @map("banner_url")
+  businessHours          Json?                   @map("business_hours")
+  timezone               String                  @default("America/New_York")
+  currency               String                  @default("USD")
+  locale                 String                  @default("en-US")
+  status                 String                  @default("active")
+  settings               Json?
+  deleted                Boolean                 @default(false)
+  createdAt              DateTime                @default(now()) @map("created_at")
+  updatedAt              DateTime                @updatedAt @map("updated_at")
+  tenant                 Tenant                  @relation(fields: [tenantId], references: [id])
+  orders                 Order[]
+  merchantTaxRates       MerchantTaxRate[]
+  pointTransactions      PointTransaction[]
+  cateringLeads          CateringLead[]
+  cateringOrders         CateringOrder[]
   orderSequences         OrderSequence[]
   cateringOrderSequences CateringOrderSequence[]
   integrationConnections IntegrationConnection[]
@@ -196,48 +196,48 @@ model Merchant {
 }
 
 model Order {
-  id                    String                 @id
-  tenantId              String                 @map("tenant_id")
-  merchantId            String?                @map("merchant_id")
-  loyaltyMemberId       String?                @map("loyalty_member_id")
-  orderNumber           String                 @map("order_number")
-  customerFirstName     String                 @map("customer_first_name")
-  customerLastName      String                 @map("customer_last_name")
-  customerPhone         String                 @map("customer_phone")
-  customerEmail         String?                @map("customer_email")
-  orderMode             String                 @map("order_mode")
-  salesChannel          String                 @default("online_order") @map("sales_channel")
-  status                String                 @default("created")
-  fulfillmentStatus     String                 @default("pending") @map("fulfillment_status")
-  items                 Json
-  subtotal              Decimal                @db.Decimal(10, 2)
-  taxAmount             Decimal                @map("tax_amount") @db.Decimal(10, 2)
-  tipAmount             Decimal                @default(0.00) @map("tip_amount") @db.Decimal(10, 2)
-  deliveryFee           Decimal                @default(0.00) @map("delivery_fee") @db.Decimal(10, 2)
-  discount              Decimal                @default(0.00) @db.Decimal(10, 2)
-  giftCardPayment       Decimal                @default(0.00) @map("gift_card_payment") @db.Decimal(10, 2)
-  cashPayment           Decimal                @default(0.00) @map("cash_payment") @db.Decimal(10, 2)
-  totalAmount           Decimal                @map("total_amount") @db.Decimal(10, 2)
-  notes                 String?                @db.Text
-  deliveryAddress       Json?                  @map("delivery_address")
-  scheduledAt           DateTime?              @map("scheduled_at")
-  paidAt                DateTime?              @map("paid_at")
-  confirmedAt           DateTime?              @map("confirmed_at")
-  preparingAt           DateTime?              @map("preparing_at")
-  readyAt               DateTime?              @map("ready_at")
-  fulfilledAt           DateTime?              @map("fulfilled_at")
-  cancelledAt           DateTime?              @map("cancelled_at")
-  cancelReason          String?                @map("cancel_reason")
-  deleted               Boolean                @default(false)
-  createdAt             DateTime               @default(now()) @map("created_at")
-  updatedAt             DateTime               @updatedAt @map("updated_at")
-  merchant              Merchant?              @relation(fields: [merchantId], references: [id])
-  tenant                Tenant                 @relation(fields: [tenantId], references: [id])
-  loyaltyMember         LoyaltyMember?         @relation(fields: [loyaltyMemberId], references: [id])
-  pointTransactions     PointTransaction[]
-  giftCardPurchase      GiftCard?              @relation("GiftCardPurchase")
-  giftCardRedemptions   GiftCardTransaction[]  @relation("GiftCardRedemption")
-  payments              Payment[]
+  id                  String                @id
+  tenantId            String                @map("tenant_id")
+  merchantId          String?               @map("merchant_id")
+  loyaltyMemberId     String?               @map("loyalty_member_id")
+  orderNumber         String                @map("order_number")
+  customerFirstName   String                @map("customer_first_name")
+  customerLastName    String                @map("customer_last_name")
+  customerPhone       String                @map("customer_phone")
+  customerEmail       String?               @map("customer_email")
+  orderMode           String                @map("order_mode")
+  salesChannel        String                @default("online_order") @map("sales_channel")
+  status              String                @default("created")
+  fulfillmentStatus   String                @default("pending") @map("fulfillment_status")
+  items               Json
+  subtotal            Decimal               @db.Decimal(10, 2)
+  taxAmount           Decimal               @map("tax_amount") @db.Decimal(10, 2)
+  tipAmount           Decimal               @default(0.00) @map("tip_amount") @db.Decimal(10, 2)
+  deliveryFee         Decimal               @default(0.00) @map("delivery_fee") @db.Decimal(10, 2)
+  discount            Decimal               @default(0.00) @db.Decimal(10, 2)
+  giftCardPayment     Decimal               @default(0.00) @map("gift_card_payment") @db.Decimal(10, 2)
+  cashPayment         Decimal               @default(0.00) @map("cash_payment") @db.Decimal(10, 2)
+  totalAmount         Decimal               @map("total_amount") @db.Decimal(10, 2)
+  notes               String?               @db.Text
+  deliveryAddress     Json?                 @map("delivery_address")
+  scheduledAt         DateTime?             @map("scheduled_at")
+  paidAt              DateTime?             @map("paid_at")
+  confirmedAt         DateTime?             @map("confirmed_at")
+  preparingAt         DateTime?             @map("preparing_at")
+  readyAt             DateTime?             @map("ready_at")
+  fulfilledAt         DateTime?             @map("fulfilled_at")
+  cancelledAt         DateTime?             @map("cancelled_at")
+  cancelReason        String?               @map("cancel_reason")
+  deleted             Boolean               @default(false)
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  merchant            Merchant?             @relation(fields: [merchantId], references: [id])
+  tenant              Tenant                @relation(fields: [tenantId], references: [id])
+  loyaltyMember       LoyaltyMember?        @relation(fields: [loyaltyMemberId], references: [id])
+  pointTransactions   PointTransaction[]
+  giftCardPurchase    GiftCard?             @relation("GiftCardPurchase")
+  giftCardRedemptions GiftCardTransaction[] @relation("GiftCardRedemption")
+  payments            Payment[]
 
   @@unique([tenantId, orderNumber])
   @@index([merchantId])
@@ -254,9 +254,9 @@ model User {
   id           String    @id
   tenantId     String    @map("tenant_id")
   email        String
-  passwordHash  String?   @map("password_hash")
-  stytchUserId  String?   @unique @map("stytch_user_id")
-  name          String
+  passwordHash String?   @map("password_hash")
+  stytchUserId String?   @unique @map("stytch_user_id")
+  name         String
   role         String    @default("staff")
   status       String    @default("active")
   lastLoginAt  DateTime? @map("last_login_at")
@@ -338,7 +338,7 @@ model LoyaltyConfig {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("loyalty_configs")
 }
@@ -467,49 +467,49 @@ model CateringLead {
 }
 
 model CateringOrder {
-  id                String    @id
-  tenantId          String    @map("tenant_id")
-  merchantId        String    @map("merchant_id")
-  leadId            String?   @unique @map("lead_id")
+  id         String  @id
+  tenantId   String  @map("tenant_id")
+  merchantId String  @map("merchant_id")
+  leadId     String? @unique @map("lead_id")
 
   // Customer info
-  customerFirstName String    @map("customer_first_name")
-  customerLastName  String    @map("customer_last_name")
-  customerPhone     String    @map("customer_phone")
-  customerEmail     String    @map("customer_email")
+  customerFirstName String @map("customer_first_name")
+  customerLastName  String @map("customer_last_name")
+  customerPhone     String @map("customer_phone")
+  customerEmail     String @map("customer_email")
 
   // Event details
-  eventDate         DateTime  @map("event_date")
-  eventTime         String    @map("event_time")
-  guestCount        Int       @map("guest_count")
-  eventType         String?   @map("event_type")
-  eventAddress      String?   @map("event_address") @db.Text
-  specialRequests   String?   @map("special_requests") @db.Text
+  eventDate       DateTime @map("event_date")
+  eventTime       String   @map("event_time")
+  guestCount      Int      @map("guest_count")
+  eventType       String?  @map("event_type")
+  eventAddress    String?  @map("event_address") @db.Text
+  specialRequests String?  @map("special_requests") @db.Text
 
   // Order details
-  orderNumber       String    @unique @map("order_number")
-  items             Json
-  subtotal          Decimal   @db.Decimal(10, 2)
-  taxAmount         Decimal   @map("tax_amount") @db.Decimal(10, 2)
-  serviceCharge     Decimal   @default(0.00) @map("service_charge") @db.Decimal(10, 2)
-  totalAmount       Decimal   @map("total_amount") @db.Decimal(10, 2)
+  orderNumber   String  @unique @map("order_number")
+  items         Json
+  subtotal      Decimal @db.Decimal(10, 2)
+  taxAmount     Decimal @map("tax_amount") @db.Decimal(10, 2)
+  serviceCharge Decimal @default(0.00) @map("service_charge") @db.Decimal(10, 2)
+  totalAmount   Decimal @map("total_amount") @db.Decimal(10, 2)
 
   // Status
-  status            String    @default("draft")
-  notes             String?   @db.Text
+  status String  @default("draft")
+  notes  String? @db.Text
 
   // Timestamps
-  deleted           Boolean   @default(false)
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-  sentAt            DateTime? @map("sent_at")
-  paidAt            DateTime? @map("paid_at")
+  deleted   Boolean   @default(false)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  sentAt    DateTime? @map("sent_at")
+  paidAt    DateTime? @map("paid_at")
 
   // Relations
-  tenant            Tenant        @relation(fields: [tenantId], references: [id])
-  merchant          Merchant      @relation(fields: [merchantId], references: [id])
-  lead              CateringLead? @relation(fields: [leadId], references: [id])
-  invoice           Invoice?
+  tenant   Tenant        @relation(fields: [tenantId], references: [id])
+  merchant Merchant      @relation(fields: [merchantId], references: [id])
+  lead     CateringLead? @relation(fields: [leadId], references: [id])
+  invoice  Invoice?
 
   @@index([tenantId])
   @@index([merchantId])
@@ -521,28 +521,28 @@ model CateringOrder {
 }
 
 model Invoice {
-  id              String    @id
-  tenantId        String    @map("tenant_id")
-  cateringOrderId String    @unique @map("catering_order_id")
-  invoiceNumber   String    @unique @map("invoice_number")
+  id              String @id
+  tenantId        String @map("tenant_id")
+  cateringOrderId String @unique @map("catering_order_id")
+  invoiceNumber   String @unique @map("invoice_number")
 
   // Payment details
-  amount          Decimal   @db.Decimal(10, 2)
-  status          String    @default("unpaid")
-  dueDate         DateTime  @map("due_date")
-  paymentLink     String?   @map("payment_link")
+  amount      Decimal  @db.Decimal(10, 2)
+  status      String   @default("unpaid")
+  dueDate     DateTime @map("due_date")
+  paymentLink String?  @map("payment_link")
 
   // Email tracking
-  sentAt          DateTime? @map("sent_at")
-  openedAt        DateTime? @map("opened_at")
-  paidAt          DateTime? @map("paid_at")
+  sentAt   DateTime? @map("sent_at")
+  openedAt DateTime? @map("opened_at")
+  paidAt   DateTime? @map("paid_at")
 
-  deleted         Boolean   @default(false)
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deleted   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  tenant          Tenant        @relation(fields: [tenantId], references: [id])
-  cateringOrder   CateringOrder @relation(fields: [cateringOrderId], references: [id])
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  cateringOrder CateringOrder @relation(fields: [cateringOrderId], references: [id])
 
   @@index([tenantId])
   @@index([status])
@@ -552,18 +552,18 @@ model Invoice {
 // ==================== Gift Card System ====================
 
 model GiftCard {
-  id              String                @id
-  tenantId        String                @map("tenant_id")
-  cardNumber      String                @unique @map("card_number")
-  initialAmount   Decimal               @map("initial_amount") @db.Decimal(10, 2)
-  currentBalance  Decimal               @map("current_balance") @db.Decimal(10, 2)
-  purchaseOrderId String                @unique @map("purchase_order_id")
-  deleted         Boolean               @default(false)
-  createdAt       DateTime              @default(now()) @map("created_at")
-  updatedAt       DateTime              @updatedAt @map("updated_at")
+  id              String   @id
+  tenantId        String   @map("tenant_id")
+  cardNumber      String   @unique @map("card_number")
+  initialAmount   Decimal  @map("initial_amount") @db.Decimal(10, 2)
+  currentBalance  Decimal  @map("current_balance") @db.Decimal(10, 2)
+  purchaseOrderId String   @unique @map("purchase_order_id")
+  deleted         Boolean  @default(false)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  tenant        Tenant                  @relation(fields: [tenantId], references: [id])
-  purchaseOrder Order                   @relation("GiftCardPurchase", fields: [purchaseOrderId], references: [id])
+  tenant        Tenant                @relation(fields: [tenantId], references: [id])
+  purchaseOrder Order                 @relation("GiftCardPurchase", fields: [purchaseOrderId], references: [id])
   transactions  GiftCardTransaction[]
 
   @@index([tenantId])
@@ -576,7 +576,7 @@ model GiftCardTransaction {
   tenantId      String   @map("tenant_id")
   giftCardId    String   @map("gift_card_id")
   orderId       String?  @map("order_id")
-  type          String   // purchase, redemption, refund
+  type          String // purchase, redemption, refund
   amount        Decimal  @db.Decimal(10, 2)
   balanceBefore Decimal  @map("balance_before") @db.Decimal(10, 2)
   balanceAfter  Decimal  @map("balance_after") @db.Decimal(10, 2)
@@ -584,9 +584,9 @@ model GiftCardTransaction {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  tenant   Tenant    @relation(fields: [tenantId], references: [id])
-  giftCard GiftCard  @relation(fields: [giftCardId], references: [id])
-  order    Order?    @relation("GiftCardRedemption", fields: [orderId], references: [id])
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  giftCard GiftCard @relation(fields: [giftCardId], references: [id])
+  order    Order?   @relation("GiftCardRedemption", fields: [orderId], references: [id])
 
   @@index([tenantId])
   @@index([giftCardId])
@@ -601,7 +601,7 @@ model OrderSequence {
   id         String   @id
   tenantId   String   @map("tenant_id")
   merchantId String   @map("merchant_id")
-  date       String   // Format: "2026-01-27"
+  date       String // Format: "2026-01-27"
   sequence   Int      @default(0)
   deleted    Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
@@ -621,13 +621,13 @@ model OrderSequence {
 model GiftCardOrderSequence {
   id        String   @id
   tenantId  String   @map("tenant_id")
-  date      String   // Format: "2026-01-27"
+  date      String // Format: "2026-01-27"
   sequence  Int      @default(0)
   deleted   Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, date])
   @@index([tenantId])
@@ -640,7 +640,7 @@ model CateringOrderSequence {
   id         String   @id
   tenantId   String   @map("tenant_id")
   merchantId String   @map("merchant_id")
-  date       String   // Format: "2026-01-27"
+  date       String // Format: "2026-01-27"
   sequence   Int      @default(0)
   deleted    Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
@@ -675,38 +675,38 @@ model InvoiceSequence {
 
 /// Payment record for Stripe payments
 model Payment {
-  id                    String    @id
-  tenantId              String    @map("tenant_id")
-  orderId               String    @map("order_id")
+  id       String @id
+  tenantId String @map("tenant_id")
+  orderId  String @map("order_id")
 
   // Stripe fields
-  stripePaymentIntentId String    @unique @map("stripe_payment_intent_id")
-  stripeCustomerId      String?   @map("stripe_customer_id")
-  stripeAccountId       String?   @map("stripe_account_id")
+  stripePaymentIntentId String  @unique @map("stripe_payment_intent_id")
+  stripeCustomerId      String? @map("stripe_customer_id")
+  stripeAccountId       String? @map("stripe_account_id")
 
   // Payment info
-  amount                Decimal   @db.Decimal(10, 2)
-  currency              String    @default("USD")
-  status                String    @default("pending") // pending, processing, succeeded, failed, canceled
-  paymentMethod         String?   @map("payment_method") // card, apple_pay, google_pay
+  amount        Decimal @db.Decimal(10, 2)
+  currency      String  @default("USD")
+  status        String  @default("pending") // pending, processing, succeeded, failed, canceled
+  paymentMethod String? @map("payment_method") // card, apple_pay, google_pay
 
   // Card details (populated after successful payment)
-  cardBrand             String?   @map("card_brand") // visa, mastercard, amex
-  cardLast4             String?   @map("card_last4")
+  cardBrand String? @map("card_brand") // visa, mastercard, amex
+  cardLast4 String? @map("card_last4")
 
   // Failure info
-  failureCode           String?   @map("failure_code")
-  failureMessage        String?   @map("failure_message")
+  failureCode    String? @map("failure_code")
+  failureMessage String? @map("failure_message")
 
   // Timestamps
-  paidAt                DateTime? @map("paid_at")
-  deleted               Boolean   @default(false)
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  paidAt    DateTime? @map("paid_at")
+  deleted   Boolean   @default(false)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  tenant                Tenant    @relation(fields: [tenantId], references: [id])
-  order                 Order     @relation(fields: [orderId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  order  Order  @relation(fields: [orderId], references: [id])
 
   @@index([tenantId])
   @@index([orderId])
@@ -717,13 +717,13 @@ model Payment {
 
 /// Stripe customer mapping for saved cards
 model StripeCustomer {
-  id                String   @id
-  tenantId          String   @map("tenant_id")
-  loyaltyMemberId   String   @unique @map("loyalty_member_id")
-  stripeCustomerId  String   @unique @map("stripe_customer_id")
-  deleted           Boolean  @default(false)
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id               String   @id
+  tenantId         String   @map("tenant_id")
+  loyaltyMemberId  String   @unique @map("loyalty_member_id")
+  stripeCustomerId String   @unique @map("stripe_customer_id")
+  deleted          Boolean  @default(false)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   tenant        Tenant        @relation(fields: [tenantId], references: [id])
   loyaltyMember LoyaltyMember @relation(fields: [loyaltyMemberId], references: [id])
@@ -734,25 +734,25 @@ model StripeCustomer {
 }
 
 model StripeConnectAccount {
-  id                    String    @id
-  tenantId              String    @unique @map("tenant_id")
-  stripeAccountId       String    @unique @map("stripe_account_id")
+  id              String @id
+  tenantId        String @unique @map("tenant_id")
+  stripeAccountId String @unique @map("stripe_account_id")
 
-  accessToken           String?   @map("access_token")
-  refreshToken          String?   @map("refresh_token")
-  scope                 String?
+  accessToken  String? @map("access_token")
+  refreshToken String? @map("refresh_token")
+  scope        String?
 
-  chargesEnabled        Boolean   @default(false) @map("charges_enabled")
-  payoutsEnabled        Boolean   @default(false) @map("payouts_enabled")
-  detailsSubmitted      Boolean   @default(false) @map("details_submitted")
+  chargesEnabled   Boolean @default(false) @map("charges_enabled")
+  payoutsEnabled   Boolean @default(false) @map("payouts_enabled")
+  detailsSubmitted Boolean @default(false) @map("details_submitted")
 
-  connectedAt           DateTime? @map("connected_at")
-  disconnectedAt        DateTime? @map("disconnected_at")
-  deleted               Boolean   @default(false)
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  connectedAt    DateTime? @map("connected_at")
+  disconnectedAt DateTime? @map("disconnected_at")
+  deleted        Boolean   @default(false)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  tenant                Tenant    @relation(fields: [tenantId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@index([stripeAccountId])
   @@map("stripe_connect_accounts")
@@ -762,42 +762,42 @@ model StripeConnectAccount {
 
 /// Subscription record for tenant-level billing
 model Subscription {
-  id                      String    @id
-  tenantId                String    @unique @map("tenant_id")
+  id       String @id
+  tenantId String @unique @map("tenant_id")
 
   // Stripe references
-  stripeCustomerId        String    @unique @map("stripe_customer_id")
-  stripeSubscriptionId    String?   @unique @map("stripe_subscription_id")
-  stripePriceId           String?   @map("stripe_price_id")
+  stripeCustomerId     String  @unique @map("stripe_customer_id")
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id")
+  stripePriceId        String? @map("stripe_price_id")
 
   // Status: incomplete | trialing | active | past_due | canceled | unpaid | paused
-  status                  String    @default("incomplete")
+  status String @default("incomplete")
 
   // Plan: free | standard
-  plan                    String    @default("standard")
+  plan String @default("standard")
 
   // Billing cycle
-  currentPeriodStart      DateTime? @map("current_period_start")
-  currentPeriodEnd        DateTime? @map("current_period_end")
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
 
   // Trial
-  trialStart              DateTime? @map("trial_start")
-  trialEnd                DateTime? @map("trial_end")
+  trialStart DateTime? @map("trial_start")
+  trialEnd   DateTime? @map("trial_end")
 
   // Cancellation
-  cancelAtPeriodEnd       Boolean   @default(false) @map("cancel_at_period_end")
-  canceledAt              DateTime? @map("canceled_at")
+  cancelAtPeriodEnd Boolean   @default(false) @map("cancel_at_period_end")
+  canceledAt        DateTime? @map("canceled_at")
 
   // Grace period for past_due
-  gracePeriodEnd          DateTime? @map("grace_period_end")
+  gracePeriodEnd DateTime? @map("grace_period_end")
 
   // Timestamps
-  deleted                 Boolean   @default(false)
-  createdAt               DateTime  @default(now()) @map("created_at")
-  updatedAt               DateTime  @updatedAt @map("updated_at")
+  deleted   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  tenant                  Tenant    @relation(fields: [tenantId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@index([status])
   @@map("subscriptions")
@@ -817,7 +817,7 @@ model WebsiteGeneration {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
   @@index([placeId, status])
@@ -843,8 +843,8 @@ model IntegrationConnection {
   id                 String    @id
   tenantId           String    @map("tenant_id")
   merchantId         String    @map("merchant_id")
-  type               String    // "POS_SQUARE", "LISTING_GBP"
-  category           String    // "POS", "LISTING"
+  type               String // "POS_SQUARE", "LISTING_GBP"
+  category           String // "POS", "LISTING"
   status             String    @default("active")
   externalAccountId  String?   @map("external_account_id")
   externalLocationId String?   @map("external_location_id")
@@ -856,8 +856,8 @@ model IntegrationConnection {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  merchant    Merchant @relation(fields: [merchantId], references: [id])
+  tenant        Tenant                  @relation(fields: [tenantId], references: [id])
+  merchant      Merchant                @relation(fields: [merchantId], references: [id])
   syncRecords   IntegrationSyncRecord[]
   webhookEvents WebhookEvent[]
 
@@ -892,7 +892,7 @@ model IntegrationSyncRecord {
   tenantId      String    @map("tenant_id")
   connectionId  String    @map("connection_id")
   syncType      String    @map("sync_type")
-  status        String    // "running", "success", "failed"
+  status        String // "running", "success", "failed"
   objectsSynced Int       @default(0) @map("objects_synced")
   objectsMapped Int       @default(0) @map("objects_mapped")
   cursor        String?
