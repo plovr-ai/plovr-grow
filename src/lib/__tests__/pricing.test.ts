@@ -47,7 +47,7 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 18.99,
           quantity: 1,
-          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up", inclusionType: "additive" }],
         },
       ];
 
@@ -63,7 +63,7 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 10.99,
           quantity: 1,
-          taxes: [{ rate: 0.05, roundingMethod: "always_round_down" }],
+          taxes: [{ rate: 0.05, roundingMethod: "always_round_down", inclusionType: "additive" }],
         },
       ];
 
@@ -79,7 +79,7 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 10.01,
           quantity: 1,
-          taxes: [{ rate: 0.05, roundingMethod: "always_round_up" }],
+          taxes: [{ rate: 0.05, roundingMethod: "always_round_up", inclusionType: "additive" }],
         },
       ];
 
@@ -95,7 +95,7 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 100.0,
           quantity: 1,
-          taxes: [{ rate: 0.00125, roundingMethod: "half_even" }],
+          taxes: [{ rate: 0.00125, roundingMethod: "half_even", inclusionType: "additive" }],
         },
       ];
 
@@ -113,13 +113,13 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 18.99,
           quantity: 1,
-          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up", inclusionType: "additive" }],
         },
         {
           itemId: "item-2",
           unitPrice: 21.99,
           quantity: 2,
-          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up", inclusionType: "additive" }],
         },
       ];
 
@@ -137,13 +137,13 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 10.0,
           quantity: 1,
-          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up", inclusionType: "additive" }],
         },
         {
           itemId: "item-2",
           unitPrice: 10.0,
           quantity: 1,
-          taxes: [{ rate: 0.05, roundingMethod: "always_round_down" }],
+          taxes: [{ rate: 0.05, roundingMethod: "always_round_down", inclusionType: "additive" }],
         },
       ];
 
@@ -164,8 +164,8 @@ describe("calculateOrderPricing", () => {
           unitPrice: 100.0,
           quantity: 1,
           taxes: [
-            { rate: 0.08, roundingMethod: "half_up" }, // Standard tax
-            { rate: 0.02, roundingMethod: "half_up" }, // Additional tax
+            { rate: 0.08, roundingMethod: "half_up", inclusionType: "additive" }, // Standard tax
+            { rate: 0.02, roundingMethod: "half_up", inclusionType: "additive" }, // Additional tax
           ],
         },
       ];
@@ -186,8 +186,8 @@ describe("calculateOrderPricing", () => {
           unitPrice: 8.0,
           quantity: 2,
           taxes: [
-            { rate: 0.0825, roundingMethod: "half_up" }, // Standard tax
-            { rate: 0.05, roundingMethod: "half_up" }, // Alcohol tax
+            { rate: 0.0825, roundingMethod: "half_up", inclusionType: "additive" }, // Standard tax
+            { rate: 0.05, roundingMethod: "half_up", inclusionType: "additive" }, // Alcohol tax
           ],
         },
       ];
@@ -221,7 +221,7 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 10.0,
           quantity: 1,
-          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up", inclusionType: "additive" }],
         },
         { itemId: "item-2", unitPrice: 10.0, quantity: 1, taxes: [] },
       ];
@@ -281,7 +281,7 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 10.0,
           quantity: 1,
-          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up", inclusionType: "additive" }],
         },
       ];
 
@@ -384,13 +384,13 @@ describe("calculateOrderPricing", () => {
           itemId: "pizza",
           unitPrice: 18.99,
           quantity: 2,
-          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up", inclusionType: "additive" }],
         },
         {
           itemId: "drink",
           unitPrice: 2.99,
           quantity: 1,
-          taxes: [{ rate: 0.05, roundingMethod: "always_round_down" }],
+          taxes: [{ rate: 0.05, roundingMethod: "always_round_down", inclusionType: "additive" }],
         },
       ];
 
@@ -414,13 +414,13 @@ describe("calculateOrderPricing", () => {
           itemId: "pizza",
           unitPrice: 18.99,
           quantity: 2,
-          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up", inclusionType: "additive" }],
         },
         {
           itemId: "drink",
           unitPrice: 2.99,
           quantity: 1,
-          taxes: [{ rate: 0.05, roundingMethod: "always_round_down" }],
+          taxes: [{ rate: 0.05, roundingMethod: "always_round_down", inclusionType: "additive" }],
         },
       ];
 
@@ -445,7 +445,7 @@ describe("calculateOrderPricing", () => {
           itemId: "item-1",
           unitPrice: 18.99,
           quantity: 5,
-          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up", inclusionType: "additive" }],
         },
       ];
 
@@ -465,15 +465,15 @@ describe("calculateOrderPricing", () => {
           itemId: "pizza",
           unitPrice: 18.99,
           quantity: 1,
-          taxes: [{ rate: 0.0825, roundingMethod: "half_up" }],
+          taxes: [{ rate: 0.0825, roundingMethod: "half_up", inclusionType: "additive" }],
         },
         {
           itemId: "beer",
           unitPrice: 8.0,
           quantity: 2,
           taxes: [
-            { rate: 0.0825, roundingMethod: "half_up" }, // Standard tax
-            { rate: 0.05, roundingMethod: "half_up" }, // Alcohol tax
+            { rate: 0.0825, roundingMethod: "half_up", inclusionType: "additive" }, // Standard tax
+            { rate: 0.05, roundingMethod: "half_up", inclusionType: "additive" }, // Alcohol tax
           ],
         },
       ];
@@ -505,5 +505,128 @@ describe("calculateOrderPricing", () => {
       expect(result.subtotal).toBe(10.0);
       expect(result.taxAmount).toBe(0);
     });
+  });
+});
+
+describe("calculateOrderPricing - multi additive tax", () => {
+  it("sums multiple additive taxes with shared base", () => {
+    const result = calculateOrderPricing([
+      {
+        itemId: "a",
+        unitPrice: 100,
+        quantity: 1,
+        taxes: [
+          { rate: 0.06,  roundingMethod: "half_up", inclusionType: "additive" },
+          { rate: 0.01,  roundingMethod: "half_up", inclusionType: "additive" },
+          { rate: 0.005, roundingMethod: "half_up", inclusionType: "additive" },
+        ],
+      },
+    ]);
+    expect(result.subtotal).toBe(100);
+    expect(result.taxAmountAdditive).toBeCloseTo(7.5, 2); // 6 + 1 + 0.5
+    expect(result.taxAmountInclusive).toBe(0);
+    expect(result.totalAmount).toBeCloseTo(107.5, 2);
+  });
+});
+
+describe("calculateOrderPricing - inclusive tax", () => {
+  it("reverses lineTotal for single inclusive tax", () => {
+    // VAT 10%, listed price 110 → base 100, tax 10
+    const result = calculateOrderPricing([
+      {
+        itemId: "a",
+        unitPrice: 110,
+        quantity: 1,
+        taxes: [
+          { rate: 0.10, roundingMethod: "half_up", inclusionType: "inclusive" },
+        ],
+      },
+    ]);
+    expect(result.subtotal).toBe(110);
+    expect(result.taxAmountInclusive).toBeCloseTo(10, 2);
+    expect(result.taxAmountAdditive).toBe(0);
+    expect(result.totalAmount).toBeCloseTo(110, 2);
+  });
+
+  it("handles multiple inclusive taxes with shared base", () => {
+    // VAT 10% + eco 2%, listed 112 → base 100, vat 10, eco 2
+    const result = calculateOrderPricing([
+      {
+        itemId: "a",
+        unitPrice: 112,
+        quantity: 1,
+        taxes: [
+          { rate: 0.10, roundingMethod: "half_up", inclusionType: "inclusive" },
+          { rate: 0.02, roundingMethod: "half_up", inclusionType: "inclusive" },
+        ],
+      },
+    ]);
+    expect(result.taxAmountInclusive).toBeCloseTo(12, 2);
+    expect(result.totalAmount).toBeCloseTo(112, 2);
+  });
+});
+
+describe("calculateOrderPricing - mixed additive + inclusive same item", () => {
+  it("inclusive reverses lineTotal, additive applies to derived base", () => {
+    // Listed 110, VAT 10% inclusive (base 100), service tax 5% additive
+    // Expected: subtotal 110, inclusive tax 10, additive tax 5, total = 110 + 5 = 115
+    const result = calculateOrderPricing([
+      {
+        itemId: "a",
+        unitPrice: 110,
+        quantity: 1,
+        taxes: [
+          { rate: 0.10, roundingMethod: "half_up", inclusionType: "inclusive" },
+          { rate: 0.05, roundingMethod: "half_up", inclusionType: "additive" },
+        ],
+      },
+    ]);
+    expect(result.subtotal).toBe(110);
+    expect(result.taxAmountInclusive).toBeCloseTo(10, 2);
+    expect(result.taxAmountAdditive).toBeCloseTo(5, 2);
+    expect(result.taxAmount).toBeCloseTo(15, 2);
+    expect(result.totalAmount).toBeCloseTo(115, 2);
+  });
+});
+
+describe("calculateOrderPricing - cross-item mix", () => {
+  it("handles one additive item and one inclusive item", () => {
+    const result = calculateOrderPricing([
+      {
+        itemId: "a",
+        unitPrice: 100,
+        quantity: 1,
+        taxes: [
+          { rate: 0.07, roundingMethod: "half_up", inclusionType: "additive" },
+        ],
+      },
+      {
+        itemId: "b",
+        unitPrice: 110,
+        quantity: 1,
+        taxes: [
+          { rate: 0.10, roundingMethod: "half_up", inclusionType: "inclusive" },
+        ],
+      },
+    ]);
+    expect(result.subtotal).toBe(210);
+    expect(result.taxAmountAdditive).toBeCloseTo(7, 2);
+    expect(result.taxAmountInclusive).toBeCloseTo(10, 2);
+    expect(result.totalAmount).toBeCloseTo(217, 2); // 210 + 7
+  });
+
+  it("skips taxes with rate <= 0", () => {
+    const result = calculateOrderPricing([
+      {
+        itemId: "a",
+        unitPrice: 50,
+        quantity: 2,
+        taxes: [
+          { rate: 0,   roundingMethod: "half_up", inclusionType: "additive" },
+          { rate: 0.1, roundingMethod: "half_up", inclusionType: "additive" },
+        ],
+      },
+    ]);
+    expect(result.taxAmountAdditive).toBeCloseTo(10, 2);
   });
 });
