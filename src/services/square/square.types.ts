@@ -140,7 +140,12 @@ export const WEBHOOK_EVENT_STATUS = {
  */
 export const REVERSE_FULFILLMENT_STATUS_MAP: Record<string, string> = {
   PROPOSED: "pending",
-  RESERVED: "preparing",
+  // Square `RESERVED` covers both `confirmed` and `preparing` internally
+  // because the forward map collapses them. Reverse to the narrower
+  // (`confirmed`) state — the monotonic guard in handleOrderUpdate keeps a
+  // real `preparing` order from being walked back, and a `confirmed` order
+  // won't be spuriously advanced to `preparing` by Square's own echo.
+  RESERVED: "confirmed",
   PREPARED: "ready",
   COMPLETED: "fulfilled",
 } as const;

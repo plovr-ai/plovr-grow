@@ -408,7 +408,11 @@ describe("SquareWebhookService", () => {
       expect(mockOrderUpdate).not.toHaveBeenCalled();
     });
 
-    it("should advance confirmed → preparing on RESERVED webhook", async () => {
+    it("should not re-advance confirmed order when Square echoes RESERVED", async () => {
+      // After plovr sets confirmed and pushes RESERVED to Square, Square will
+      // echo the state back via order.updated. Reverse-mapping to confirmed
+      // + equal-rank guard ensures we don't spuriously promote the order to
+      // preparing or rewrite confirmedAt.
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
@@ -432,11 +436,65 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(reservedPayload));
 
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should not regress preparing to confirmed when Square echoes RESERVED", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "preparing",
+      });
+
+      const reservedPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              fulfillments: [{ state: "RESERVED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(reservedPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should advance pending → confirmed when Square accepts order", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "pending",
+      });
+
+      const reservedPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              fulfillments: [{ state: "RESERVED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(reservedPayload));
+
       expect(mockOrderUpdate).toHaveBeenCalledWith({
         where: { id: "internal-order-1" },
         data: expect.objectContaining({
-          fulfillmentStatus: "preparing",
-          preparingAt: expect.any(Date),
+          fulfillmentStatus: "confirmed",
+          confirmedAt: expect.any(Date),
         }),
       });
     });
