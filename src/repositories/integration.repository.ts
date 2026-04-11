@@ -1,6 +1,8 @@
+import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/db";
 import type { DbClient } from "@/lib/db";
 import { generateEntityId } from "@/lib/id";
+import type { CatalogSyncStats } from "./integration.types";
 
 export interface UpsertConnectionInput {
   type: string;
@@ -124,14 +126,25 @@ export class IntegrationRepository {
       objectsMapped?: number;
       errorMessage?: string;
       cursor?: string;
-    }
+    },
+    stats?: CatalogSyncStats
   ) {
+    const prismaData: Prisma.IntegrationSyncRecordUpdateInput = {
+      ...data,
+      finishedAt: data.status !== "running" ? new Date() : undefined,
+    };
+
+    if (stats) {
+      const truncated: CatalogSyncStats = {
+        ...stats,
+        warnings: stats.warnings.slice(0, 100),
+      };
+      prismaData.stats = truncated as unknown as Prisma.InputJsonValue;
+    }
+
     return prisma.integrationSyncRecord.update({
       where: { id: recordId },
-      data: {
-        ...data,
-        finishedAt: data.status !== "running" ? new Date() : undefined,
-      },
+      data: prismaData,
     });
   }
 
