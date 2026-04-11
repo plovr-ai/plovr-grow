@@ -521,6 +521,7 @@ describe("cart.store", () => {
         name: "Standard Tax",
         rate: 0.0825,
         roundingMethod: "half_up" as const,
+        inclusionType: "additive" as const,
       },
     ];
 
@@ -530,12 +531,14 @@ describe("cart.store", () => {
         name: "Standard Tax",
         rate: 0.0825,
         roundingMethod: "half_up" as const,
+        inclusionType: "additive" as const,
       },
       {
         taxConfigId: "tax-alcohol",
         name: "Alcohol Tax",
         rate: 0.05,
         roundingMethod: "half_up" as const,
+        inclusionType: "additive" as const,
       },
     ];
 

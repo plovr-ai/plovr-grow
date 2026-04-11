@@ -419,7 +419,7 @@ describe("convertToMenuDisplayData", () => {
               ],
               tags: [{ label: "Spicy", color: "red" }],
               status: "active",
-              taxes: [{ taxConfigId: "t1", name: "Tax", rate: 0.08, roundingMethod: "half_up" }],
+              taxes: [{ taxConfigId: "t1", name: "Tax", rate: 0.08, roundingMethod: "half_up", inclusionType: "additive" as const }],
             },
           ],
         },

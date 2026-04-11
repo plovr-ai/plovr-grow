@@ -1,6 +1,15 @@
 import prisma from "@/lib/db";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, TaxConfig } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
+import type { TaxInclusionType } from "@/services/menu/tax-config.types";
+
+// Normalize a raw DB row so that null inclusionType defaults to "additive"
+function normalizeTaxConfig<T extends TaxConfig>(row: T): T & { inclusionType: TaxInclusionType } {
+  return {
+    ...row,
+    inclusionType: (row.inclusionType ?? "additive") as TaxInclusionType,
+  };
+}
 
 export class TaxConfigRepository {
   // ==================== Query methods ====================
@@ -25,13 +34,14 @@ export class TaxConfigRepository {
    * Get a single tax config by ID
    */
   async getTaxConfigById(tenantId: string, id: string) {
-    return prisma.taxConfig.findFirst({
+    const row = await prisma.taxConfig.findFirst({
       where: {
         id,
         tenantId,
         deleted: false,
       },
     });
+    return row ? normalizeTaxConfig(row) : null;
   }
 
   /**
@@ -231,17 +241,20 @@ export class TaxConfigRepository {
       name: string;
       description?: string | null;
       roundingMethod?: string;
+      inclusionType?: TaxInclusionType;
     }
   ) {
-    return prisma.taxConfig.create({
+    const row = await prisma.taxConfig.create({
       data: {
         id: generateEntityId(),
         tenantId,
         name: data.name,
         description: data.description,
         roundingMethod: data.roundingMethod ?? "half_up",
+        inclusionType: data.inclusionType ?? "additive",
       },
     });
+    return normalizeTaxConfig(row);
   }
 
   /**

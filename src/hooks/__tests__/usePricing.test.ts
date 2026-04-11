@@ -28,6 +28,7 @@ function createTaxInfo(
     name: "Standard Tax",
     rate: 0.0825,
     roundingMethod: "half_up",
+    inclusionType: "additive",
     ...overrides,
   };
 }
