@@ -186,30 +186,33 @@ export class SquareCatalogService {
         // Modifier lists → additional modifier groups
         const modifierListInfo = data.modifierListInfo ?? [];
         for (const mlInfo of modifierListInfo) {
-          if (!mlInfo.enabled) continue;
+          if (mlInfo.enabled === false) continue;
           const ml = modifierListMap.get(mlInfo.modifierListId!);
           if (!ml || ml.type !== "MODIFIER_LIST") continue;
           const mlData = ml.modifierListData;
           if (!mlData) continue;
+
           const isSingle = mlData.selectionType === "SINGLE";
-          const allModifiers = mlData.modifiers ?? [];
-          const modifiers = allModifiers.filter(
+          const min = mlData.minSelectedModifiers ?? 0;
+          const rawModifiers = (mlData.modifiers ?? []).filter(
             (mod): mod is CatalogObject & { type: "MODIFIER" } => mod.type === "MODIFIER"
+          );
+          const max = mlData.maxSelectedModifiers ?? (isSingle ? 1 : rawModifiers.length);
+          const sortedMods = [...rawModifiers].sort(
+            (a, b) => (a.modifierData?.ordinal ?? 0) - (b.modifierData?.ordinal ?? 0)
           );
 
           groups.push({
             name: mlData.name ?? "Options",
-            required: false,
-            minSelect: 0,
-            maxSelect: isSingle ? 1 : (modifiers.length || 10),
-            options: modifiers.map((mod, idx) => ({
+            required: min > 0,
+            minSelect: min,
+            maxSelect: max,
+            options: sortedMods.map((mod, idx) => ({
               name: mod.modifierData?.name ?? "Option",
-              price: this.moneyToNumber(
-                mod.modifierData?.priceMoney?.amount
-              ),
+              price: this.moneyToNumber(mod.modifierData?.priceMoney?.amount),
               externalId: mod.id,
               isDefault: false,
-              ordinal: idx,
+              ordinal: mod.modifierData?.ordinal ?? idx,
             })),
           });
         }
