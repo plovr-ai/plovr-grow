@@ -136,19 +136,32 @@ export function calculateOrderPricing(
   );
   const roundedSubtotal = roundPrice(subtotal);
 
-  // 2. 计算 per-item 税费（支持多税种）
-  let totalTaxAmount = 0;
+  // 2. 计算 per-item 税费（支持 additive + inclusive 混合）
+  let taxAmountAdditive = 0;
+  let taxAmountInclusive = 0;
   for (const item of items) {
-    const taxableAmount = item.unitPrice * item.quantity;
-    const taxes = item.taxes || [];
+    const lineTotal = item.unitPrice * item.quantity;
+    const taxes = (item.taxes || []).filter((t) => t.rate > 0);
+
+    const sumInclusiveRate = taxes
+      .filter((t) => t.inclusionType === "inclusive")
+      .reduce((acc, t) => acc + t.rate, 0);
+    const taxableBase =
+      sumInclusiveRate > 0 ? lineTotal / (1 + sumInclusiveRate) : lineTotal;
+
     for (const tax of taxes) {
-      if (tax.rate > 0) {
-        const rawTax = taxableAmount * tax.rate;
-        totalTaxAmount += applyRounding(rawTax, tax.roundingMethod);
+      const rawTax = taxableBase * tax.rate;
+      const rounded = applyRounding(rawTax, tax.roundingMethod);
+      if (tax.inclusionType === "inclusive") {
+        taxAmountInclusive += rounded;
+      } else {
+        taxAmountAdditive += rounded;
       }
     }
   }
-  totalTaxAmount = roundPrice(totalTaxAmount);
+  taxAmountAdditive = roundPrice(taxAmountAdditive);
+  taxAmountInclusive = roundPrice(taxAmountInclusive);
+  const totalTaxAmount = roundPrice(taxAmountAdditive + taxAmountInclusive);
 
   // 3. 计算 fees（基于 subtotal，fees 不计税）
   const { feesAmount, feesBreakdown } = calculateFeesAmount(
@@ -159,16 +172,16 @@ export function calculateOrderPricing(
   // 4. 计算 tip（基于 subtotal）
   const tipAmount = calculateTipAmount(roundedSubtotal, tip);
 
-  // 5. 计算总额: Subtotal + Tax + Fees + Tip
+  // 5. 计算总额: Subtotal + AdditiveTax + Fees + Tip（inclusive tax 已含在 subtotal 中）
   const totalAmount = roundPrice(
-    roundedSubtotal + totalTaxAmount + feesAmount + tipAmount
+    roundedSubtotal + taxAmountAdditive + feesAmount + tipAmount
   );
 
   return {
     subtotal: roundedSubtotal,
     taxAmount: totalTaxAmount,
-    taxAmountAdditive: totalTaxAmount,
-    taxAmountInclusive: 0,
+    taxAmountAdditive,
+    taxAmountInclusive,
     feesAmount,
     feesBreakdown,
     tipAmount,
