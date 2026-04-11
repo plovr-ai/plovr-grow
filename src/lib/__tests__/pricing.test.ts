@@ -103,6 +103,8 @@ describe("calculateOrderPricing", () => {
 
       // 100 * 0.00125 = 0.125 -> 0.12 (half_even rounds to even)
       expect(result.taxAmount).toBe(0.12);
+      expect(result.taxAmountAdditive).toBe(result.taxAmount);
+      expect(result.taxAmountInclusive).toBe(0);
     });
   });
 
@@ -129,6 +131,8 @@ describe("calculateOrderPricing", () => {
       // item-2: 21.99 * 2 * 0.0825 = 3.628350 -> 3.63
       // total: 1.57 + 3.63 = 5.20
       expect(result.taxAmount).toBe(5.2);
+      expect(result.taxAmountAdditive).toBe(result.taxAmount);
+      expect(result.taxAmountInclusive).toBe(0);
     });
 
     it("should handle mixed tax rates", () => {
@@ -177,6 +181,8 @@ describe("calculateOrderPricing", () => {
       // Total: 8.00 + 2.00 = 10.00
       expect(result.taxAmount).toBe(10.0);
       expect(result.totalAmount).toBe(110.0);
+      expect(result.taxAmountAdditive).toBe(result.taxAmount);
+      expect(result.taxAmountInclusive).toBe(0);
     });
 
     it("should handle alcohol tax scenario", () => {
@@ -405,6 +411,8 @@ describe("calculateOrderPricing", () => {
       expect(result.taxAmount).toBe(3.27);
       expect(result.tipAmount).toBe(5.0);
       expect(result.totalAmount).toBe(49.24);
+      expect(result.taxAmountAdditive).toBe(result.taxAmount);
+      expect(result.taxAmountInclusive).toBe(0);
     });
 
     it("should calculate a typical restaurant order with percentage tip", () => {
@@ -491,6 +499,8 @@ describe("calculateOrderPricing", () => {
       expect(result.taxAmount).toBe(3.69);
       expect(result.tipAmount).toBe(5.25);
       expect(result.totalAmount).toBe(43.93);
+      expect(result.taxAmountAdditive).toBe(result.taxAmount);
+      expect(result.taxAmountInclusive).toBe(0);
     });
   });
 
@@ -523,9 +533,9 @@ describe("calculateOrderPricing - multi additive tax", () => {
       },
     ]);
     expect(result.subtotal).toBe(100);
-    expect(result.taxAmountAdditive).toBeCloseTo(7.5, 2); // 6 + 1 + 0.5
+    expect(result.taxAmountAdditive).toBe(7.5); // 6 + 1 + 0.5
     expect(result.taxAmountInclusive).toBe(0);
-    expect(result.totalAmount).toBeCloseTo(107.5, 2);
+    expect(result.totalAmount).toBe(107.5);
   });
 });
 
@@ -545,7 +555,7 @@ describe("calculateOrderPricing - inclusive tax", () => {
     expect(result.subtotal).toBe(110);
     expect(result.taxAmountInclusive).toBeCloseTo(10, 2);
     expect(result.taxAmountAdditive).toBe(0);
-    expect(result.totalAmount).toBeCloseTo(110, 2);
+    expect(result.totalAmount).toBe(110);
   });
 
   it("handles multiple inclusive taxes with shared base", () => {
@@ -562,7 +572,7 @@ describe("calculateOrderPricing - inclusive tax", () => {
       },
     ]);
     expect(result.taxAmountInclusive).toBeCloseTo(12, 2);
-    expect(result.totalAmount).toBeCloseTo(112, 2);
+    expect(result.totalAmount).toBe(112);
   });
 });
 
@@ -585,7 +595,7 @@ describe("calculateOrderPricing - mixed additive + inclusive same item", () => {
     expect(result.taxAmountInclusive).toBeCloseTo(10, 2);
     expect(result.taxAmountAdditive).toBeCloseTo(5, 2);
     expect(result.taxAmount).toBeCloseTo(15, 2);
-    expect(result.totalAmount).toBeCloseTo(115, 2);
+    expect(result.totalAmount).toBe(115);
   });
 });
 
@@ -610,9 +620,9 @@ describe("calculateOrderPricing - cross-item mix", () => {
       },
     ]);
     expect(result.subtotal).toBe(210);
-    expect(result.taxAmountAdditive).toBeCloseTo(7, 2);
+    expect(result.taxAmountAdditive).toBe(7);
     expect(result.taxAmountInclusive).toBeCloseTo(10, 2);
-    expect(result.totalAmount).toBeCloseTo(217, 2); // 210 + 7
+    expect(result.totalAmount).toBe(217); // 210 + 7
   });
 
   it("skips taxes with rate <= 0", () => {
@@ -627,6 +637,6 @@ describe("calculateOrderPricing - cross-item mix", () => {
         ],
       },
     ]);
-    expect(result.taxAmountAdditive).toBeCloseTo(10, 2);
+    expect(result.taxAmountAdditive).toBe(10);
   });
 });
