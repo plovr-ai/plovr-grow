@@ -65,7 +65,6 @@ export interface TaxConfigInfo {
   status: "active" | "inactive";
 }
 
-
 /**
  * Merchant tax rate info
  */

@@ -67,7 +67,7 @@ export class TaxConfigRepository {
    * Get all tax rates for a merchant (with tax config details)
    */
   async getMerchantTaxRates(merchantId: string) {
-    return prisma.merchantTaxRate.findMany({
+    const rows = await prisma.merchantTaxRate.findMany({
       where: {
         merchantId,
         deleted: false,
@@ -76,6 +76,10 @@ export class TaxConfigRepository {
         taxConfig: true,
       },
     });
+    return rows.map((r) => ({
+      ...r,
+      taxConfig: normalizeTaxConfig(r.taxConfig),
+    }));
   }
 
   /**
