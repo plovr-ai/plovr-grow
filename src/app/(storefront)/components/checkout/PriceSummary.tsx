@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useFormatPrice } from "@/hooks";
 
 export interface FeeDisplayItem {
@@ -33,6 +34,7 @@ export function PriceSummary({
   giftCardPayment = 0,
   orderMode,
 }: PriceSummaryProps) {
+  const t = useTranslations("priceSummary");
   const formatPrice = useFormatPrice();
 
   // Backwards-compat: if new fields not provided, treat all tax as additive
@@ -55,7 +57,7 @@ export function PriceSummary({
       )}
       {resolvedInclusive > 0 && (
         <div className="flex justify-between text-gray-400">
-          <span>Tax (included)</span>
+          <span>{t("taxIncluded")}</span>
           <span>{formatPrice(resolvedInclusive)}</span>
         </div>
       )}
