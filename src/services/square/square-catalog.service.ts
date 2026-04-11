@@ -260,11 +260,13 @@ export class SquareCatalogService {
         enabledModifierListCount++;
 
         const isSingle = mlData.selectionType === "SINGLE";
-        const min = mlData.minSelectedModifiers ?? 0;
+        const min = Number(mlData.minSelectedModifiers ?? 0);
         const rawModifiers = (mlData.modifiers ?? []).filter(
           (mod): mod is CatalogObject & { type: "MODIFIER" } => mod.type === "MODIFIER"
         );
-        const max = mlData.maxSelectedModifiers ?? (isSingle ? 1 : rawModifiers.length);
+        const max = Number(
+          mlData.maxSelectedModifiers ?? (isSingle ? 1 : rawModifiers.length)
+        );
         const sortedMods = [...rawModifiers].sort(
           (a, b) => (a.modifierData?.ordinal ?? 0) - (b.modifierData?.ordinal ?? 0)
         );
