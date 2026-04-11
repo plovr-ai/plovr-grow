@@ -810,6 +810,149 @@ describe("SquareOrderService", () => {
     });
   });
 
+  // ==================== orderMode → fulfillment type ====================
+
+  describe("createOrder - fulfillment type by orderMode", () => {
+    beforeEach(() => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+      mockCreate.mockResolvedValue({
+        order: { id: "sq-order-mode", version: 1 },
+      });
+    });
+
+    it("should map pickup to PICKUP with pickupDetails", async () => {
+      await service.createOrder(TENANT_ID, MERCHANT_ID, {
+        ...sampleInput,
+        orderMode: "pickup",
+      });
+
+      const fulfillment = mockCreate.mock.calls[0][0].order.fulfillments[0];
+      expect(fulfillment.type).toBe("PICKUP");
+      expect(fulfillment.pickupDetails).toBeDefined();
+      expect(fulfillment.deliveryDetails).toBeUndefined();
+      expect(fulfillment.pickupDetails.note).toBe("Ring doorbell");
+    });
+
+    it("should map delivery to DELIVERY with recipient address", async () => {
+      await service.createOrder(TENANT_ID, MERCHANT_ID, {
+        ...sampleInput,
+        orderMode: "delivery",
+        deliveryAddress: {
+          street: "123 Main St",
+          apt: "Apt 4B",
+          city: "San Francisco",
+          state: "CA",
+          zipCode: "94103",
+        },
+      });
+
+      const fulfillment = mockCreate.mock.calls[0][0].order.fulfillments[0];
+      expect(fulfillment.type).toBe("DELIVERY");
+      expect(fulfillment.deliveryDetails).toBeDefined();
+      expect(fulfillment.pickupDetails).toBeUndefined();
+
+      const recipient = fulfillment.deliveryDetails.recipient;
+      expect(recipient.displayName).toBe("John Doe");
+      expect(recipient.phoneNumber).toBe("(555) 123-4567");
+      expect(recipient.emailAddress).toBe("john@example.com");
+      expect(recipient.address.addressLine1).toBe("123 Main St");
+      expect(recipient.address.addressLine2).toBe("Apt 4B");
+      expect(recipient.address.locality).toBe("San Francisco");
+      expect(recipient.address.administrativeDistrictLevel1).toBe("CA");
+      expect(recipient.address.postalCode).toBe("94103");
+      expect(recipient.address.country).toBe("US");
+      expect(fulfillment.deliveryDetails.note).toBe("Ring doorbell");
+    });
+
+    it("should throw SQUARE_MISSING_DELIVERY_ADDRESS for delivery without address", async () => {
+      await expect(
+        service.createOrder(TENANT_ID, MERCHANT_ID, {
+          ...sampleInput,
+          orderMode: "delivery",
+          deliveryAddress: null,
+        })
+      ).rejects.toMatchObject({
+        code: ErrorCodes.SQUARE_MISSING_DELIVERY_ADDRESS,
+      });
+
+      // The Square API should not be called on validation failure
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it("should map dine_in to PICKUP with 'Dine-in' note prefix", async () => {
+      await service.createOrder(TENANT_ID, MERCHANT_ID, {
+        ...sampleInput,
+        orderMode: "dine_in",
+      });
+
+      const fulfillment = mockCreate.mock.calls[0][0].order.fulfillments[0];
+      expect(fulfillment.type).toBe("PICKUP");
+      expect(fulfillment.pickupDetails.note).toBe("Dine-in: Ring doorbell");
+    });
+
+    it("should set 'Dine-in' note when dine_in order has no notes", async () => {
+      await service.createOrder(TENANT_ID, MERCHANT_ID, {
+        ...sampleInput,
+        orderMode: "dine_in",
+        notes: undefined,
+      });
+
+      const fulfillment = mockCreate.mock.calls[0][0].order.fulfillments[0];
+      expect(fulfillment.pickupDetails.note).toBe("Dine-in");
+    });
+
+    it("should handle delivery without optional apt field", async () => {
+      await service.createOrder(TENANT_ID, MERCHANT_ID, {
+        ...sampleInput,
+        orderMode: "delivery",
+        deliveryAddress: {
+          street: "456 Market St",
+          city: "San Francisco",
+          state: "CA",
+          zipCode: "94103",
+        },
+      });
+
+      const fulfillment = mockCreate.mock.calls[0][0].order.fulfillments[0];
+      expect(
+        fulfillment.deliveryDetails.recipient.address.addressLine2
+      ).toBeUndefined();
+    });
+  });
+
+  // ==================== cancel for DELIVERY ====================
+
+  describe("cancelOrder - delivery fulfillment", () => {
+    it("should attach cancelReason to deliveryDetails for DELIVERY fulfillment", async () => {
+      mockGetIdMappingByInternalId.mockResolvedValue({
+        externalId: "sq-order-1",
+      });
+      mockGet.mockResolvedValue({
+        order: {
+          id: "sq-order-1",
+          locationId: "sq-loc-1",
+          version: 2,
+          fulfillments: [{ uid: "ff-uid-1", type: "DELIVERY" }],
+        },
+      });
+      mockUpdate.mockResolvedValue({ order: { id: "sq-order-1" } });
+
+      await service.cancelOrder(
+        TENANT_ID,
+        MERCHANT_ID,
+        "order-1",
+        "Driver unavailable"
+      );
+
+      const updateCall = mockUpdate.mock.calls[0][0];
+      expect(updateCall.order.fulfillments[0].state).toBe("CANCELED");
+      expect(updateCall.order.fulfillments[0].deliveryDetails.cancelReason).toBe(
+        "Driver unavailable"
+      );
+      expect(updateCall.order.fulfillments[0].pickupDetails).toBeUndefined();
+    });
+  });
+
   // ==================== generateIdempotencyKey ====================
 
   describe("generateIdempotencyKey", () => {
