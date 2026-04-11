@@ -11,6 +11,8 @@ export interface FeeDisplayItem {
 interface PriceSummaryProps {
   subtotal: number;
   taxAmount: number;
+  taxAmountAdditive?: number;  // NEW — shown as normal additive tax row
+  taxAmountInclusive?: number; // NEW — shown as "(included)" muted row, not added to total
   fees?: FeeDisplayItem[];
   deliveryFee: number;
   tipAmount: number;
@@ -22,6 +24,8 @@ interface PriceSummaryProps {
 export function PriceSummary({
   subtotal,
   taxAmount,
+  taxAmountAdditive,
+  taxAmountInclusive,
   fees,
   deliveryFee,
   tipAmount,
@@ -31,6 +35,10 @@ export function PriceSummary({
 }: PriceSummaryProps) {
   const formatPrice = useFormatPrice();
 
+  // Backwards-compat: if new fields not provided, treat all tax as additive
+  const resolvedAdditive = taxAmountAdditive ?? taxAmount;
+  const resolvedInclusive = taxAmountInclusive ?? 0;
+
   const cashPayment = Math.max(0, totalAmount - giftCardPayment);
 
   return (
@@ -39,10 +47,18 @@ export function PriceSummary({
         <span>Subtotal</span>
         <span>{formatPrice(subtotal)}</span>
       </div>
-      <div className="flex justify-between text-gray-600">
-        <span>Tax</span>
-        <span>{formatPrice(taxAmount)}</span>
-      </div>
+      {resolvedAdditive > 0 && (
+        <div className="flex justify-between text-gray-600">
+          <span>Tax</span>
+          <span>{formatPrice(resolvedAdditive)}</span>
+        </div>
+      )}
+      {resolvedInclusive > 0 && (
+        <div className="flex justify-between text-gray-400">
+          <span>Tax (included)</span>
+          <span>{formatPrice(resolvedInclusive)}</span>
+        </div>
+      )}
       {fees?.map((fee) => (
         <div key={fee.id} className="flex justify-between text-gray-600">
           <span>{fee.displayName}</span>
