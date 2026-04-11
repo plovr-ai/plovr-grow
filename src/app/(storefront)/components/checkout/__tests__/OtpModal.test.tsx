@@ -278,6 +278,25 @@ describe("OtpModal", () => {
     expect(inputs[1]).toHaveValue("2");
   });
 
+  it("regression: should retain all 6 digits and auto-submit without re-rendering between events (#87)", () => {
+    // Guards against a stale-closure regression where handleInputChange
+    // read `code` from its closure. If the callback is not recreated
+    // between synchronous change events, every write collapses onto the
+    // initial ["","","","","",""] and only the last digit survives.
+    render(<OtpModal {...defaultProps} />);
+    const inputs = screen.getAllByLabelText(/Digit/) as HTMLInputElement[];
+
+    for (let i = 0; i < 6; i++) {
+      fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
+    }
+
+    inputs.forEach((input, i) => {
+      expect(input.value).toBe(String(i + 1));
+    });
+    expect(defaultProps.onVerify).toHaveBeenCalledTimes(1);
+    expect(defaultProps.onVerify).toHaveBeenCalledWith("123456");
+  });
+
   it("should handle backspace on first input gracefully", () => {
     render(<OtpModal {...defaultProps} />);
     const inputs = screen.getAllByLabelText(/Digit/);
