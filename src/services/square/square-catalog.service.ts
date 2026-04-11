@@ -102,6 +102,14 @@ export class SquareCatalogService {
       catalog.modifierLists.map((ml) => [ml.id, ml])
     );
 
+    // Build image URL map from IMAGE catalog objects
+    const imageUrlMap = new Map<string, string>();
+    for (const img of catalog.images) {
+      if (img.type === "IMAGE" && img.imageData?.url) {
+        imageUrlMap.set(img.id, img.imageData.url);
+      }
+    }
+
     const categories: MappedCategory[] = catalog.categories
       .filter((cat): cat is CatalogObject & { type: "CATEGORY" } => cat.type === "CATEGORY" && !!cat.id)
       .map((cat, index) => ({
@@ -217,14 +225,20 @@ export class SquareCatalogService {
           });
         }
 
+        // Resolve imageUrl from first imageId
+        const imageIds = data.imageIds ?? [];
+        const imageUrl = imageIds.length > 0
+          ? imageUrlMap.get(imageIds[0]) ?? null
+          : null;
+
         return {
           externalId: item.id,
           name: data.name ?? "Unnamed",
           description: data.description ?? null,
           price: basePrice,
-          imageUrl: null,
+          imageUrl,
           categoryExternalIds,
-          taxExternalIds: [],
+          taxExternalIds: data.taxIds ?? [],
           modifiers: groups.length > 0 ? { groups } : null,
           variationMappings,
         };
@@ -236,7 +250,7 @@ export class SquareCatalogService {
         externalId: t.id,
         name: t.taxData?.name ?? "Tax",
         percentage: parseFloat(t.taxData?.percentage ?? "0"),
-        inclusionType: "additive" as TaxInclusionType,
+        inclusionType: (t.taxData?.inclusionType === "INCLUSIVE" ? "inclusive" : "additive") as TaxInclusionType,
       }));
 
     return { categories, items, taxes };
