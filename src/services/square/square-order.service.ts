@@ -119,10 +119,10 @@ export class SquareOrderService {
 
       // Persist the initial Square order version so subsequent webhook
       // handlers can detect out-of-order updates (#109).
-      await prisma.order.update({
-        where: { id: input.orderId },
-        data: { squareOrderVersion: Number(squareOrder.version ?? 1) },
-      });
+      await this.persistSquareOrderVersion(
+        input.orderId,
+        squareOrder.version ?? 1
+      );
 
       // Update sync record as successful
       await integrationRepository.updateSyncRecord(syncRecord.id, {
@@ -202,7 +202,7 @@ export class SquareOrderService {
         return; // No fulfillment to update
       }
 
-      await client.orders.update({
+      const updateResponse = await client.orders.update({
         orderId: orderMapping.externalId,
         order: {
           locationId: squareOrder.locationId,
@@ -215,6 +215,11 @@ export class SquareOrderService {
           ],
         },
       });
+
+      // Persist the new Square version (#109) so that a subsequent
+      // webhook echo from this very change isn't treated as fresh
+      // against a stale local version.
+      await this.persistSquareOrderVersion(orderId, updateResponse.order?.version);
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -291,7 +296,7 @@ export class SquareOrderService {
         }
       }
 
-      await client.orders.update({
+      const updateResponse = await client.orders.update({
         orderId: orderMapping.externalId,
         order: {
           locationId: squareOrder.locationId,
@@ -299,6 +304,8 @@ export class SquareOrderService {
           fulfillments: [fulfillmentUpdate],
         },
       });
+
+      await this.persistSquareOrderVersion(orderId, updateResponse.order?.version);
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -312,6 +319,34 @@ export class SquareOrderService {
   }
 
   // ==================== Private Helpers ====================
+
+  /**
+   * Persist the latest Square order version against the local order so
+   * the webhook stale-guard (#109) can reject any echo that predates it.
+   * Only advances forward; never writes a lower (or missing) version.
+   */
+  private async persistSquareOrderVersion(
+    orderId: string,
+    version: number | bigint | undefined | null
+  ): Promise<void> {
+    if (version === undefined || version === null) return;
+    const numericVersion = Number(version);
+    if (!Number.isFinite(numericVersion)) return;
+    const current = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { squareOrderVersion: true },
+    });
+    if (
+      current &&
+      (current.squareOrderVersion === null ||
+        numericVersion > current.squareOrderVersion)
+    ) {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { squareOrderVersion: numericVersion },
+      });
+    }
+  }
 
   /**
    * Build Square line items from internal order items.

@@ -53,10 +53,14 @@ vi.mock("../square.config", () => ({
 }));
 
 const mockOrderUpdate = vi.fn().mockResolvedValue({});
+const mockOrderFindUnique = vi
+  .fn()
+  .mockResolvedValue({ squareOrderVersion: null });
 vi.mock("@/lib/db", () => ({
   default: {
     order: {
       update: (...args: unknown[]) => mockOrderUpdate(...args),
+      findUnique: (...args: unknown[]) => mockOrderFindUnique(...args),
     },
   },
 }));
@@ -422,6 +426,37 @@ describe("SquareOrderService", () => {
         code: ErrorCodes.SQUARE_ORDER_UPDATE_FAILED,
       });
     });
+
+    it("should persist new Square version after successful update (#109)", async () => {
+      mockGetIdMappingByInternalId.mockResolvedValue({
+        externalId: "sq-order-1",
+      });
+      mockGet.mockResolvedValue({
+        order: {
+          id: "sq-order-1",
+          locationId: "sq-loc-1",
+          version: 5,
+          fulfillments: [{ uid: "ff-uid-1" }],
+        },
+      });
+      mockUpdate.mockResolvedValue({
+        order: { id: "sq-order-1", version: 6 },
+      });
+      mockOrderFindUnique.mockResolvedValue({ squareOrderVersion: 5 });
+      mockOrderUpdate.mockClear();
+
+      await service.updateOrderStatus(
+        TENANT_ID,
+        MERCHANT_ID,
+        "order-1",
+        "ready"
+      );
+
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "order-1" },
+        data: { squareOrderVersion: 6 },
+      });
+    });
   });
 
   // ==================== cancelOrder ====================
@@ -493,6 +528,32 @@ describe("SquareOrderService", () => {
         service.cancelOrder(TENANT_ID, MERCHANT_ID, "order-1")
       ).rejects.toMatchObject({
         code: ErrorCodes.SQUARE_ORDER_CANCEL_FAILED,
+      });
+    });
+
+    it("should persist new Square version after successful cancel (#109)", async () => {
+      mockGetIdMappingByInternalId.mockResolvedValue({
+        externalId: "sq-order-1",
+      });
+      mockGet.mockResolvedValue({
+        order: {
+          id: "sq-order-1",
+          locationId: "sq-loc-1",
+          version: 7,
+          fulfillments: [{ uid: "ff-uid-1", type: "PICKUP" }],
+        },
+      });
+      mockUpdate.mockResolvedValue({
+        order: { id: "sq-order-1", version: 8 },
+      });
+      mockOrderFindUnique.mockResolvedValue({ squareOrderVersion: 7 });
+      mockOrderUpdate.mockClear();
+
+      await service.cancelOrder(TENANT_ID, MERCHANT_ID, "order-1", "nope");
+
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "order-1" },
+        data: { squareOrderVersion: 8 },
       });
     });
 
