@@ -132,6 +132,7 @@ describe("SquareWebhookService", () => {
     mockOrderFindUnique.mockResolvedValue({
       fulfillmentStatus: "pending",
       status: "completed",
+      squareOrderVersion: null,
     });
   });
 
@@ -735,10 +736,264 @@ describe("SquareWebhookService", () => {
       mockOrderFindUnique.mockResolvedValue({
         fulfillmentStatus: "pending",
         status: "canceled",
+        squareOrderVersion: null,
       });
 
       // PREPARED → ready would advance rank — but order is canceled.
       await service.handleWebhook(JSON.stringify(orderPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    // ==================== Out-of-order / version guard (#109) ====================
+
+    it("should drop a webhook whose version is <= stored version", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "preparing",
+        status: "completed",
+        squareOrderVersion: 5,
+      });
+
+      const staleVersionPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              version: 3,
+              fulfillments: [{ state: "PREPARED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(staleVersionPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should drop a webhook whose version equals stored version", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "pending",
+        status: "completed",
+        squareOrderVersion: 5,
+      });
+
+      const samePayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              version: 5,
+              fulfillments: [{ state: "PREPARED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(samePayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should apply webhook when incoming version > stored version and bump the stored version", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "preparing",
+        status: "completed",
+        squareOrderVersion: 5,
+      });
+
+      const freshPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              version: 8,
+              fulfillments: [{ state: "PREPARED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(freshPayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: expect.objectContaining({
+          fulfillmentStatus: "ready",
+          squareOrderVersion: 8,
+        }),
+      });
+    });
+
+    it("should bump stored version even on equal-rank no-op when incoming version is newer", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "ready",
+        status: "completed",
+        squareOrderVersion: 5,
+      });
+
+      const samePayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              version: 7,
+              fulfillments: [{ state: "PREPARED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(samePayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: { squareOrderVersion: 7 },
+      });
+    });
+
+    it("should fall back to legacy behavior when payload omits version", async () => {
+      // Older Square API payloads or synthetic tests without `version` must
+      // still work so we don't wedge existing flows.
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "preparing",
+        status: "completed",
+        squareOrderVersion: 5,
+      });
+
+      await service.handleWebhook(JSON.stringify(orderPayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: expect.objectContaining({ fulfillmentStatus: "ready" }),
+      });
+    });
+
+    it("should accept any valid version when stored version is null", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "preparing",
+        status: "completed",
+        squareOrderVersion: null,
+      });
+
+      const payloadWithVersion = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              version: 2,
+              fulfillments: [{ state: "PREPARED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(payloadWithVersion));
+
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: expect.objectContaining({
+          fulfillmentStatus: "ready",
+          squareOrderVersion: 2,
+        }),
+      });
+    });
+
+    it("should apply CANCELED with version bump", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "confirmed",
+        status: "completed",
+        squareOrderVersion: 3,
+      });
+
+      const cancelPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              version: 4,
+              fulfillments: [{ state: "CANCELED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(cancelPayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: expect.objectContaining({
+          status: "canceled",
+          squareOrderVersion: 4,
+        }),
+      });
+    });
+
+    it("should drop stale CANCELED webhook", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "ready",
+        status: "completed",
+        squareOrderVersion: 10,
+      });
+
+      const staleCancelPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              version: 4,
+              fulfillments: [{ state: "CANCELED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(staleCancelPayload));
 
       expect(mockOrderUpdate).not.toHaveBeenCalled();
     });

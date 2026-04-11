@@ -52,6 +52,15 @@ vi.mock("../square.config", () => ({
   },
 }));
 
+const mockOrderUpdate = vi.fn().mockResolvedValue({});
+vi.mock("@/lib/db", () => ({
+  default: {
+    order: {
+      update: (...args: unknown[]) => mockOrderUpdate(...args),
+    },
+  },
+}));
+
 const TENANT_ID = "tenant-1";
 const MERCHANT_ID = "merchant-1";
 
