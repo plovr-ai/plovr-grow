@@ -292,6 +292,7 @@ describe("SquareService", () => {
         objectsMapped: 0,
         errorMessage: null,
         cursor: null,
+        stats: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -611,6 +612,7 @@ describe("SquareService", () => {
         externalSource: "SQUARE",
         externalType: "CATEGORY",
         externalId: "sq-cat-1",
+        externalVersion: null,
         deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),

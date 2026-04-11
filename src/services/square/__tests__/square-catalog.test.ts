@@ -33,7 +33,7 @@ function buildModifierList(
       maxSelectedModifiers: maxSelected,
       modifiers,
     },
-  } as CatalogObject;
+  } as unknown as CatalogObject;
 }
 
 function buildVariation(id: string, name: string, amountCents: number, ordinal: number): CatalogObject {

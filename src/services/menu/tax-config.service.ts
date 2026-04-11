@@ -11,7 +11,6 @@ import type {
   CreateTaxConfigInput,
   UpdateTaxConfigInput,
   RoundingMethod,
-  TaxInclusionType,
 } from "./tax-config.types";
 
 // Lazy load repository to avoid Prisma initialization at module load time
