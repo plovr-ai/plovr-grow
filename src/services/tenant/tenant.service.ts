@@ -2,6 +2,7 @@ import { tenantRepository } from "@/repositories/tenant.repository";
 import { merchantRepository } from "@/repositories/merchant.repository";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import prisma from "@/lib/db";
+import { generateEntityId } from "@/lib/id";
 import type { Prisma } from "@prisma/client";
 import type { CreateTenantInput, UpdateTenantInput } from "./tenant.types";
 import { generateUniqueSlug } from "@/services/generator/slug.util";
@@ -35,6 +36,82 @@ export class TenantService {
       timezone: input.timezone ?? "America/New_York",
       settings: input.settings as unknown as Prisma.InputJsonValue,
     });
+  }
+
+  /**
+   * Create a new tenant together with its default merchant in a single
+   * transaction. Used by both direct Stytch signup and the /generator flow
+   * to guarantee that every tenant has at least one merchant from creation.
+   *
+   * Pass `tx` to participate in an outer transaction (e.g. when the caller
+   * also creates a User in the same atomic unit).
+   */
+  async createTenantWithMerchant(input: {
+    name: string;
+    source?: "signup" | "generator";
+    websiteUrl?: string | null;
+    settings?: Record<string, unknown>;
+    subscriptionStatus?: "trial" | "active" | "past_due" | "canceled";
+    merchant?: {
+      name?: string;
+      address?: string | null;
+      city?: string | null;
+      state?: string | null;
+      zipCode?: string | null;
+      phone?: string | null;
+      businessHours?: unknown;
+    };
+    tx?: Prisma.TransactionClient;
+  }) {
+    const tenantSlug = await generateUniqueSlug(
+      input.name,
+      async (slug) => (await tenantRepository.getBySlug(slug)) === null
+    );
+    const merchantSlug = await generateUniqueSlug(
+      input.name,
+      async (slug) => merchantRepository.isSlugAvailable(slug)
+    );
+
+    const tenantId = generateEntityId();
+    const merchantId = generateEntityId();
+    const merchantName = input.merchant?.name ?? input.name;
+
+    const run = async (client: Prisma.TransactionClient) => {
+      const tenant = await client.tenant.create({
+        data: {
+          id: tenantId,
+          name: input.name,
+          slug: tenantSlug,
+          websiteUrl: input.websiteUrl ?? undefined,
+          settings: input.settings as Prisma.InputJsonValue | undefined,
+          source: input.source,
+          subscriptionStatus: input.subscriptionStatus,
+        },
+      });
+
+      const merchant = await client.merchant.create({
+        data: {
+          id: merchantId,
+          tenantId,
+          slug: merchantSlug,
+          name: merchantName,
+          status: "pending",
+          address: input.merchant?.address ?? null,
+          city: input.merchant?.city ?? null,
+          state: input.merchant?.state ?? null,
+          zipCode: input.merchant?.zipCode ?? null,
+          phone: input.merchant?.phone ?? null,
+          businessHours: input.merchant?.businessHours as
+            | Prisma.InputJsonValue
+            | undefined,
+        },
+      });
+
+      return { tenant, merchant };
+    };
+
+    if (input.tx) return run(input.tx);
+    return prisma.$transaction(run);
   }
 
   /**
