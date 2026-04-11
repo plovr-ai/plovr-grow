@@ -997,6 +997,113 @@ describe("SquareWebhookService", () => {
 
       expect(mockOrderUpdate).not.toHaveBeenCalled();
     });
+
+    // ==================== Version bump on no-op branches ====================
+
+    it("should bump squareOrderVersion on regressive-rank skip", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "ready",
+        status: "completed",
+        squareOrderVersion: 5,
+      });
+
+      // PROPOSED → pending is a rank regression (0 < 3), but the payload
+      // version (10) is newer than the stored version (5), so we must
+      // record it to prevent a later stale webhook from slipping past.
+      const regressivePayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              version: 10,
+              fulfillments: [{ state: "PROPOSED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(regressivePayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalledTimes(1);
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: { squareOrderVersion: 10 },
+      });
+    });
+
+    it("should bump squareOrderVersion when dropping a CANCELED on already-canceled order", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "ready",
+        status: "canceled",
+        squareOrderVersion: 5,
+      });
+
+      const cancelPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              version: 9,
+              fulfillments: [{ state: "CANCELED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(cancelPayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalledTimes(1);
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: { squareOrderVersion: 9 },
+      });
+    });
+
+    it("should bump squareOrderVersion when dropping forward-progress webhook for canceled order", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "pending",
+        status: "canceled",
+        squareOrderVersion: 5,
+      });
+
+      const forwardPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              version: 11,
+              fulfillments: [{ state: "PREPARED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(forwardPayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalledTimes(1);
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: { squareOrderVersion: 11 },
+      });
+    });
   });
 
   // ==================== handlePaymentEvent ====================

@@ -318,6 +318,23 @@ export class SquareWebhookService {
       return;
     }
 
+    // Persist a newer Square version even when this particular webhook's
+    // action is a no-op (idempotent skip, regressive rank, canceled-order
+    // resurrection guard). Otherwise a later *older* webhook could slip
+    // past the stale guard above and apply stale data.
+    const bumpVersionIfNewer = async (): Promise<void> => {
+      if (
+        incomingVersion !== null &&
+        (current.squareOrderVersion === null ||
+          incomingVersion > current.squareOrderVersion)
+      ) {
+        await prisma.order.update({
+          where: { id: mapping.internalId },
+          data: { squareOrderVersion: incomingVersion },
+        });
+      }
+    };
+
     // Terminal cancellation states from Square — map straight to Order.status
     // = "canceled" regardless of fulfillment progress. Cancellation is
     // orthogonal to the forward rank and must be honored from any prior state.
@@ -326,7 +343,9 @@ export class SquareWebhookService {
       squareFulfillmentState === "FAILED"
     ) {
       if (current.status === "canceled") {
-        // Idempotent: already canceled, nothing to do.
+        // Idempotent: already canceled, nothing to do — but still record
+        // that we've seen this version so older webhooks can't slip back in.
+        await bumpVersionIfNewer();
         return;
       }
       const cancelReason =
@@ -361,6 +380,7 @@ export class SquareWebhookService {
     // only be trusted when it advances the order.
     // Do not resurrect a canceled order via a stale forward-progress webhook.
     if (current.status === "canceled") {
+      await bumpVersionIfNewer();
       return;
     }
     const currentRank = FULFILLMENT_STATUS_RANK[current.fulfillmentStatus] ?? -1;
@@ -369,21 +389,13 @@ export class SquareWebhookService {
       console.log(
         `[Square Webhook] Ignoring regressive fulfillment state for ${mapping.internalId}: ${current.fulfillmentStatus} → ${internalStatus}`
       );
+      await bumpVersionIfNewer();
       return;
     }
     if (incomingRank === currentRank) {
       // Same status — nothing to write; avoid clobbering timestamps. Still
       // bump the persisted Square version so future stale events are dropped.
-      if (
-        incomingVersion !== null &&
-        (current.squareOrderVersion === null ||
-          incomingVersion > current.squareOrderVersion)
-      ) {
-        await prisma.order.update({
-          where: { id: mapping.internalId },
-          data: { squareOrderVersion: incomingVersion },
-        });
-      }
+      await bumpVersionIfNewer();
       return;
     }
 
