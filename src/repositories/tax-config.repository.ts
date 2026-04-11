@@ -18,7 +18,7 @@ export class TaxConfigRepository {
    * Get all tax configs for a company
    */
   async getTaxConfigsByTenant(tenantId: string) {
-    return prisma.taxConfig.findMany({
+    const rows = await prisma.taxConfig.findMany({
       where: {
         tenantId,
         status: "active",
@@ -28,6 +28,7 @@ export class TaxConfigRepository {
         createdAt: "asc",
       },
     });
+    return rows.map(normalizeTaxConfig);
   }
 
   /**
@@ -49,7 +50,7 @@ export class TaxConfigRepository {
    */
   async getTaxConfigsByIds(tenantId: string, ids: string[]) {
     if (ids.length === 0) return [];
-    return prisma.taxConfig.findMany({
+    const rows = await prisma.taxConfig.findMany({
       where: {
         id: { in: ids },
         tenantId,
@@ -57,6 +58,7 @@ export class TaxConfigRepository {
         deleted: false,
       },
     });
+    return rows.map(normalizeTaxConfig);
   }
 
   // ==================== Merchant Tax Rates ====================

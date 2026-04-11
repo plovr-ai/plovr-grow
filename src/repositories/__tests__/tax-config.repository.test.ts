@@ -184,6 +184,34 @@ describe("TaxConfigRepository", () => {
       expect(prisma.taxConfig.findMany).not.toHaveBeenCalled();
       expect(result).toHaveLength(0);
     });
+
+    it("defaults to 'additive' when inclusionType is null in DB row (batch path)", async () => {
+      const rowWithNullInclusion = {
+        id: "tax-legacy",
+        tenantId: "tenant-1",
+        name: "Legacy Tax",
+        description: null,
+        roundingMethod: "half_up",
+        inclusionType: null,
+        status: "active",
+        deleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.mocked(prisma.taxConfig.findMany).mockResolvedValue(
+        [rowWithNullInclusion] as unknown as ReturnType<
+          typeof prisma.taxConfig.findMany
+        > extends Promise<infer T>
+          ? T
+          : never
+      );
+
+      const result = await repository.getTaxConfigsByIds("tenant-1", ["tax-legacy"]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].inclusionType).toBe("additive");
+    });
   });
 
   describe("getMerchantTaxRates", () => {
