@@ -23,6 +23,8 @@ vi.mock("@/lib/db", () => {
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
+      findMany: vi.fn(),
     },
   };
   return { default: mockPrisma };
@@ -40,7 +42,13 @@ type MockedPrisma = {
   integrationConnection: { findUnique: MockedFn; findFirst: MockedFn; upsert: MockedFn; update: MockedFn };
   externalIdMapping: { upsert: MockedFn; findMany: MockedFn; findFirst: MockedFn };
   integrationSyncRecord: { create: MockedFn; update: MockedFn; findFirst: MockedFn };
-  webhookEvent: { findUnique: MockedFn; create: MockedFn; update: MockedFn };
+  webhookEvent: {
+    findUnique: MockedFn;
+    create: MockedFn;
+    update: MockedFn;
+    updateMany: MockedFn;
+    findMany: MockedFn;
+  };
 };
 const mockPrisma = prisma as unknown as MockedPrisma;
 
@@ -507,6 +515,119 @@ describe("IntegrationRepository", () => {
           processedAt: undefined,
         },
       });
+    });
+  });
+
+  describe("scheduleWebhookEventRetry", () => {
+    it("should update row for retry with retryCount and nextRetryAt", async () => {
+      mockPrisma.webhookEvent.update.mockResolvedValue({} as never);
+      const next = new Date("2026-04-12T00:05:00Z");
+
+      await repo.scheduleWebhookEventRetry("wh-1", 2, next, "boom");
+
+      expect(mockPrisma.webhookEvent.update).toHaveBeenCalledWith({
+        where: { id: "wh-1" },
+        data: {
+          status: "failed",
+          retryCount: 2,
+          nextRetryAt: next,
+          errorMessage: "boom",
+          processedAt: expect.any(Date),
+        },
+      });
+    });
+  });
+
+  describe("markWebhookEventDeadLetter", () => {
+    it("should update row to dead_letter status and clear nextRetryAt", async () => {
+      mockPrisma.webhookEvent.update.mockResolvedValue({} as never);
+
+      await repo.markWebhookEventDeadLetter("wh-1", "gave up");
+
+      expect(mockPrisma.webhookEvent.update).toHaveBeenCalledWith({
+        where: { id: "wh-1" },
+        data: {
+          status: "dead_letter",
+          errorMessage: "gave up",
+          nextRetryAt: null,
+          processedAt: expect.any(Date),
+        },
+      });
+    });
+  });
+
+  describe("markWebhookEventProcessed", () => {
+    it("should update row to processed and clear retry fields", async () => {
+      mockPrisma.webhookEvent.update.mockResolvedValue({} as never);
+
+      await repo.markWebhookEventProcessed("wh-1");
+
+      expect(mockPrisma.webhookEvent.update).toHaveBeenCalledWith({
+        where: { id: "wh-1" },
+        data: {
+          status: "processed",
+          errorMessage: null,
+          nextRetryAt: null,
+          processedAt: expect.any(Date),
+        },
+      });
+    });
+  });
+
+  describe("findRetryableWebhookEvents", () => {
+    it("should query failed + processing rows whose nextRetryAt is due", async () => {
+      mockPrisma.webhookEvent.findMany.mockResolvedValue([] as never);
+      const now = new Date("2026-04-12T00:00:00Z");
+
+      await repo.findRetryableWebhookEvents(10, now);
+
+      expect(mockPrisma.webhookEvent.findMany).toHaveBeenCalledWith({
+        where: {
+          status: { in: ["failed", "processing"] },
+          nextRetryAt: { lte: now },
+        },
+        orderBy: { nextRetryAt: "asc" },
+        take: 10,
+      });
+    });
+  });
+
+  describe("claimWebhookEventForRetry", () => {
+    it("should return true when a row is claimed", async () => {
+      mockPrisma.webhookEvent.updateMany.mockResolvedValue({
+        count: 1,
+      } as never);
+      const lease = new Date("2026-04-12T00:10:00Z");
+      const now = new Date("2026-04-12T00:00:00Z");
+
+      const result = await repo.claimWebhookEventForRetry("wh-1", lease, now);
+
+      expect(result).toBe(true);
+      expect(mockPrisma.webhookEvent.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: "wh-1",
+          status: { in: ["failed", "processing"] },
+          nextRetryAt: { lte: now },
+        },
+        data: {
+          status: "processing",
+          nextRetryAt: lease,
+        },
+      });
+    });
+
+    it("should return false when no row was claimed (lost race)", async () => {
+      mockPrisma.webhookEvent.updateMany.mockResolvedValue({
+        count: 0,
+      } as never);
+
+      const result = await repo.claimWebhookEventForRetry(
+        "wh-1",
+        new Date(),
+        new Date()
+      );
+
+      expect(result).toBe(false);
     });
   });
 });
