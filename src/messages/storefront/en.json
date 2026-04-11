@@ -175,6 +175,7 @@
   "priceSummary": {
     "subtotal": "Subtotal",
     "tax": "Tax",
+    "taxIncluded": "Tax (included)",
     "deliveryFee": "Delivery Fee",
     "tip": "Tip",
     "total": "Total",

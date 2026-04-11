@@ -192,6 +192,8 @@ export default function CheckoutPage() {
     return {
       subtotal: pricing.subtotal,
       taxAmount: pricing.taxAmount,
+      taxAmountAdditive: pricing.taxAmountAdditive,
+      taxAmountInclusive: pricing.taxAmountInclusive,
       fees: displayFees,
       deliveryFee,
       tipAmount: pricing.tipAmount,
@@ -720,6 +722,8 @@ export default function CheckoutPage() {
                 <PriceSummary
                   subtotal={calculations.subtotal}
                   taxAmount={calculations.taxAmount}
+                  taxAmountAdditive={calculations.taxAmountAdditive}
+                  taxAmountInclusive={calculations.taxAmountInclusive}
                   fees={calculations.fees}
                   deliveryFee={calculations.deliveryFee}
                   tipAmount={calculations.tipAmount}
@@ -773,6 +777,8 @@ export default function CheckoutPage() {
           <PriceSummary
             subtotal={calculations.subtotal}
             taxAmount={calculations.taxAmount}
+            taxAmountAdditive={calculations.taxAmountAdditive}
+            taxAmountInclusive={calculations.taxAmountInclusive}
             fees={calculations.fees}
             deliveryFee={calculations.deliveryFee}
             tipAmount={calculations.tipAmount}
