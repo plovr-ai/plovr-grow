@@ -541,7 +541,7 @@ describe("SquareCatalogService", () => {
       });
     });
 
-    it("should handle item with no variations → price 0 and no modifiers", () => {
+    it("should skip item with no variations (Task 13 skip rule)", () => {
       const catalog: SquareCatalogResult = {
         categories: [],
         items: [
@@ -562,10 +562,9 @@ describe("SquareCatalogService", () => {
 
       const result = service.mapToMenuModels(catalog);
 
-      const item = result.items[0];
-      expect(item.price).toBe(0);
-      expect(item.modifiers).toBeNull();
-      expect(item.variationMappings).toEqual([]);
+      // Item with no variations is now skipped
+      expect(result.items).toHaveLength(0);
+      expect(result.stats.itemsSkipped).toBe(1);
     });
 
     it("should skip disabled modifier list info entries", () => {
@@ -821,7 +820,7 @@ describe("SquareCatalogService", () => {
       expect(optionsGroup.options[1].name).toBe("Large");
     });
 
-    it("should handle item with undefined variations", () => {
+    it("should skip item with undefined variations (Task 13 skip rule)", () => {
       const catalog: SquareCatalogResult = {
         categories: [],
         items: [
@@ -842,8 +841,9 @@ describe("SquareCatalogService", () => {
 
       const result = service.mapToMenuModels(catalog);
 
-      expect(result.items[0].price).toBe(0);
-      expect(result.items[0].variationMappings).toEqual([]);
+      // Item with no variations (undefined → []) is now skipped
+      expect(result.items).toHaveLength(0);
+      expect(result.stats.itemsSkipped).toBe(1);
     });
 
     it("should handle modifier list with undefined modifiers", () => {
@@ -1333,5 +1333,157 @@ describe("SquareCatalogService", () => {
         expect(result.items[0].imageUrl).toBeNull();
       });
     });
+
+    describe("skip rules + stats (TDD Task 13)", () => {
+      function buildTax(
+        id: string,
+        name: string,
+        percentage: string,
+        inclusion: "ADDITIVE" | "INCLUSIVE"
+      ): CatalogObject {
+        return {
+          type: "TAX",
+          id,
+          taxData: { name, percentage, inclusionType: inclusion, enabled: true },
+        } as CatalogObject;
+      }
+
+      function buildImage(id: string, url: string): CatalogObject {
+        return {
+          type: "IMAGE",
+          id,
+          imageData: { url, caption: "" },
+        } as CatalogObject;
+      }
+
+      it("skips items with non-REGULAR/FOOD_AND_BEV product_type and increments stats", () => {
+        const gc = buildItem("item-gc", "Gift Card", [buildVariation("v-1", "$10", 1000, 0)], {
+          productType: "GIFT_CARD",
+        });
+        const reg = buildItem("item-b", "Burger", [buildVariation("v-2", "R", 500, 0)]);
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], taxes: [], images: [], items: [gc, reg],
+        });
+        expect(result.items).toHaveLength(1);
+        expect(result.items[0].externalId).toBe("item-b");
+        expect(result.stats.itemsSkipped).toBe(1);
+        expect(result.stats.itemsMapped).toBe(1);
+      });
+
+      it("skips items with no variations", () => {
+        const item = buildItem("item-1", "Ghost", []);
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], taxes: [], images: [], items: [item],
+        });
+        expect(result.items).toHaveLength(0);
+        expect(result.stats.itemsSkipped).toBe(1);
+      });
+
+      it("skips VARIABLE_PRICING variations and drops item if no valid variation remains", () => {
+        const variable = {
+          type: "ITEM_VARIATION",
+          id: "v-1",
+          itemVariationData: {
+            name: "By Weight",
+            ordinal: 0,
+            pricingType: "VARIABLE_PRICING",
+          },
+        } as CatalogObject;
+        const item = buildItem("item-1", "Bulk Rice", [variable]);
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], taxes: [], images: [], items: [item],
+        });
+        expect(result.items).toHaveLength(0);
+        expect(result.stats.itemsSkipped).toBe(1);
+      });
+
+      it("skips VARIABLE_PRICING variation but maps item if another FIXED variation exists", () => {
+        const variable = {
+          type: "ITEM_VARIATION",
+          id: "v-var",
+          itemVariationData: { name: "Weighted", ordinal: 0, pricingType: "VARIABLE_PRICING" },
+        } as CatalogObject;
+        const fixed = buildVariation("v-fix", "Fixed", 500, 1);
+        const item = buildItem("item-1", "Mixed", [variable, fixed]);
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], taxes: [], images: [], items: [item],
+        });
+        expect(result.items).toHaveLength(1);
+        expect(result.items[0].variationMappings).toHaveLength(1); // only fixed
+      });
+
+      it("counts variation with location_overrides as locationOverridesDropped", () => {
+        const v: CatalogObject = {
+          type: "ITEM_VARIATION",
+          id: "v-1",
+          itemVariationData: {
+            name: "R",
+            ordinal: 0,
+            pricingType: "FIXED_PRICING",
+            priceMoney: { amount: BigInt(500), currency: "USD" },
+            locationOverrides: [
+              { locationId: "loc-1", priceMoney: { amount: BigInt(600), currency: "USD" } },
+            ],
+          },
+        } as CatalogObject;
+        const item = buildItem("item-1", "Burger", [v]);
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], taxes: [], images: [], items: [item],
+        });
+        expect(result.stats.locationOverridesDropped).toBe(1);
+        expect(result.items[0].price).toBe(5); // global price retained
+      });
+
+      it("counts variationsAsOptions and tax type counts", () => {
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], images: [],
+          taxes: [
+            buildTax("t1", "VAT",   "10",   "INCLUSIVE"),
+            buildTax("t2", "Sales", "5",    "ADDITIVE"),
+            buildTax("t3", "Env",   "0.5",  "ADDITIVE"),
+          ],
+          items: [buildItem("i1", "Coffee", [
+            buildVariation("v1", "S", 300, 0),
+            buildVariation("v2", "L", 500, 1),
+          ])],
+        });
+        expect(result.stats.variationsAsOptions).toBe(1);
+        expect(result.stats.taxesInclusive).toBe(1);
+        expect(result.stats.taxesAdditive).toBe(2);
+      });
+
+      it("counts modifierListsFlattened (enabled lists only)", () => {
+        const ml1 = buildModifierList("ml-1", "Sauce", "SINGLE", 0, 1, [
+          buildModifier("m1", "Ketchup", 0, 0),
+        ]);
+        const ml2 = buildModifierList("ml-2", "Toppings", "MULTIPLE", 0, 3, [
+          buildModifier("m2", "Cheese", 100, 0),
+        ]);
+        const item = buildItem("item-1", "Burger", [buildVariation("v-1", "R", 500, 0)], {
+          modifierListInfo: [
+            { modifierListId: "ml-1", enabled: true },
+            { modifierListId: "ml-2", enabled: false },
+          ],
+        });
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [ml1, ml2], taxes: [], images: [], items: [item],
+        });
+        expect(result.stats.modifierListsFlattened).toBe(1);
+      });
+
+      it("counts imagesDropped when imageIds has more than one", () => {
+        const img1 = buildImage("img-1", "https://a.com/1.jpg");
+        const img2 = buildImage("img-2", "https://a.com/2.jpg");
+        const img3 = buildImage("img-3", "https://a.com/3.jpg");
+        const item = buildItem("item-1", "Burger", [buildVariation("v-1", "R", 500, 0)], {
+          imageIds: ["img-1", "img-2", "img-3"],
+        });
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], taxes: [], images: [img1, img2, img3], items: [item],
+        });
+        expect(result.stats.imagesDropped).toBe(2);
+      });
+    });
   });
 });
+

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SquareService } from "../square.service";
 import { AppError } from "@/lib/errors";
+import { createEmptyCatalogSyncStats } from "@/repositories/integration.types";
 
 vi.mock("../square-oauth.service", () => ({
   squareOAuthService: {
@@ -554,6 +555,7 @@ describe("SquareService", () => {
         taxes: [
           { externalId: "sq-tax-1", name: "Sales Tax", percentage: 8.875, inclusionType: "additive" as const },
         ],
+        stats: createEmptyCatalogSyncStats(),
       });
 
       const result = await service.syncCatalog("t1", "m1");
@@ -590,6 +592,7 @@ describe("SquareService", () => {
         categories: [{ externalId: "sq-cat-1", name: "Drinks", sortOrder: 0 }],
         items: [],
         taxes: [],
+        stats: createEmptyCatalogSyncStats(),
       });
 
       const result = await service.syncCatalog("t1", "m1");
@@ -617,6 +620,7 @@ describe("SquareService", () => {
         categories: [{ externalId: "sq-cat-1", name: "Existing Cat", sortOrder: 0 }],
         items: [],
         taxes: [],
+        stats: createEmptyCatalogSyncStats(),
       });
 
       const result = await service.syncCatalog("t1", "m1");

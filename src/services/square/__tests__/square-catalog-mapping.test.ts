@@ -239,7 +239,7 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
   });
 
   describe("item with no variations", () => {
-    it("should gracefully handle with price 0 and no modifiers", () => {
+    it("should skip item and increment itemsSkipped (Task 13 skip rule)", () => {
       const catalog: SquareCatalogResult = {
         categories: [],
         items: [
@@ -260,13 +260,9 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
 
       const result = service.mapToMenuModels(catalog);
 
-      expect(result.items).toHaveLength(1);
-      const item = result.items[0];
-      expect(item.externalId).toBe("item-special");
-      expect(item.name).toBe("Chef's Special");
-      expect(item.price).toBe(0);
-      expect(item.modifiers).toBeNull();
-      expect(item.variationMappings).toEqual([]);
+      // Items with no valid variations are now skipped
+      expect(result.items).toHaveLength(0);
+      expect(result.stats.itemsSkipped).toBe(1);
     });
   });
 
