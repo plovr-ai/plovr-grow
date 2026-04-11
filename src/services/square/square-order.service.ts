@@ -415,17 +415,30 @@ export class SquareOrderService {
   }
 
   /**
-   * Build the fulfillment note, prefixing dine-in orders so that Square POS
-   * operators can distinguish them from normal pickup orders.
+   * Build the fulfillment note combining the order's customer notes with
+   * any mode-specific context. For `dine_in` the result is prefixed with
+   * `"Dine-in"` so Square POS operators can still recognize the intent;
+   * for `delivery` any `deliveryAddress.instructions` (gate codes, drop-off
+   * directions, etc.) are appended so drivers receive them on Square.
    */
   private buildFulfillmentNote(
     input: SquareOrderPushInput
   ): string | undefined {
+    const parts: string[] = [];
     const base = input.notes?.trim();
-    if (input.orderMode === "dine_in") {
-      return base ? `Dine-in: ${base}` : "Dine-in";
+    if (base) parts.push(base);
+
+    if (input.orderMode === "delivery") {
+      const instructions = input.deliveryAddress?.instructions?.trim();
+      if (instructions) parts.push(instructions);
+      return parts.length > 0 ? parts.join(" | ") : undefined;
     }
-    return base && base.length > 0 ? base : undefined;
+
+    if (input.orderMode === "dine_in") {
+      return parts.length > 0 ? `Dine-in: ${parts.join(" | ")}` : "Dine-in";
+    }
+
+    return parts.length > 0 ? parts.join(" | ") : undefined;
   }
 
   /**
