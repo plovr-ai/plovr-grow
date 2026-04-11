@@ -7,6 +7,11 @@ const mockFindWebhookEventByEventId = vi.fn();
 const mockCreateWebhookEvent = vi.fn();
 const mockUpdateWebhookEventStatus = vi.fn();
 const mockGetIdMappingByExternalId = vi.fn();
+const mockScheduleWebhookEventRetry = vi.fn();
+const mockMarkWebhookEventDeadLetter = vi.fn();
+const mockMarkWebhookEventProcessed = vi.fn();
+const mockFindRetryableWebhookEvents = vi.fn();
+const mockClaimWebhookEventForRetry = vi.fn();
 
 vi.mock("@/repositories/integration.repository", () => ({
   integrationRepository: {
@@ -20,6 +25,16 @@ vi.mock("@/repositories/integration.repository", () => ({
       mockUpdateWebhookEventStatus(...args),
     getIdMappingByExternalId: (...args: unknown[]) =>
       mockGetIdMappingByExternalId(...args),
+    scheduleWebhookEventRetry: (...args: unknown[]) =>
+      mockScheduleWebhookEventRetry(...args),
+    markWebhookEventDeadLetter: (...args: unknown[]) =>
+      mockMarkWebhookEventDeadLetter(...args),
+    markWebhookEventProcessed: (...args: unknown[]) =>
+      mockMarkWebhookEventProcessed(...args),
+    findRetryableWebhookEvents: (...args: unknown[]) =>
+      mockFindRetryableWebhookEvents(...args),
+    claimWebhookEventForRetry: (...args: unknown[]) =>
+      mockClaimWebhookEventForRetry(...args),
   },
 }));
 
@@ -105,6 +120,11 @@ describe("SquareWebhookService", () => {
       eventId: "evt-1",
     });
     mockUpdateWebhookEventStatus.mockResolvedValue({});
+    mockScheduleWebhookEventRetry.mockResolvedValue({});
+    mockMarkWebhookEventDeadLetter.mockResolvedValue({});
+    mockMarkWebhookEventProcessed.mockResolvedValue({});
+    mockFindRetryableWebhookEvents.mockResolvedValue([]);
+    mockClaimWebhookEventForRetry.mockResolvedValue(true);
     mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
     mockSyncCatalog.mockResolvedValue({});
     mockGetIdMappingByExternalId.mockResolvedValue(null);
@@ -199,12 +219,7 @@ describe("SquareWebhookService", () => {
       );
     });
 
-    it("should mark event as failed when handler throws", async () => {
-      mockMerchantFindFirst.mockResolvedValue(null);
-      mockSyncCatalog.mockRejectedValue(new Error("sync failed"));
-
-      // Use catalog event but merchant not found won't throw, so use a different scenario
-      // Force syncCatalog to throw a non-ALREADY_RUNNING error
+    it("should schedule first retry when handler throws", async () => {
       mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
       mockSyncCatalog.mockRejectedValue(new Error("sync failed"));
 
@@ -214,10 +229,16 @@ describe("SquareWebhookService", () => {
       const result = await service.handleWebhook(JSON.stringify(payload));
 
       expect(result).toEqual({ deduplicated: false });
-      expect(mockUpdateWebhookEventStatus).toHaveBeenCalledWith(
+      expect(mockScheduleWebhookEventRetry).toHaveBeenCalledWith(
+        "we-1",
+        1,
+        expect.any(Date),
+        "sync failed"
+      );
+      expect(mockUpdateWebhookEventStatus).not.toHaveBeenCalledWith(
         "we-1",
         "failed",
-        "sync failed"
+        expect.anything()
       );
     });
 
@@ -849,35 +870,32 @@ describe("SquareWebhookService", () => {
   });
 
   describe("handler error branch coverage", () => {
-    it("should handle non-Error thrown by handler (Unknown error)", async () => {
+    it("should schedule retry with 'Unknown error' when handler throws a non-Error", async () => {
       mockMerchantFindFirst.mockResolvedValue({ tenantId: "tenant-1" });
       mockSyncCatalog.mockRejectedValue("string-error");
 
       const payload = buildPayload({ type: "catalog.version.updated" });
       await service.handleWebhook(JSON.stringify(payload));
 
-      expect(mockUpdateWebhookEventStatus).toHaveBeenCalledWith(
+      expect(mockScheduleWebhookEventRetry).toHaveBeenCalledWith(
         "we-1",
-        "failed",
+        1,
+        expect.any(Date),
         "Unknown error"
       );
     });
 
-    it("should re-throw non-Error from syncCatalog if not ALREADY_RUNNING", async () => {
+    it("should schedule retry when syncCatalog throws a non-Error non-ALREADY_RUNNING", async () => {
       mockMerchantFindFirst.mockResolvedValue({ tenantId: "tenant-1" });
       mockSyncCatalog.mockRejectedValue("some non-Error");
 
       const payload = buildPayload({ type: "catalog.version.updated" });
-
-      // The non-Error thrown from handleCatalogChange gets caught by handleWebhook's outer catch
-      // Since "some non-Error" is a string (not instanceof Error), message becomes ""
-      // "" does not include "ALREADY_RUNNING", so it re-throws
-      // Then the outer catch in handleWebhook catches it with "Unknown error"
       await service.handleWebhook(JSON.stringify(payload));
 
-      expect(mockUpdateWebhookEventStatus).toHaveBeenCalledWith(
+      expect(mockScheduleWebhookEventRetry).toHaveBeenCalledWith(
         "we-1",
-        "failed",
+        1,
+        expect.any(Date),
         "Unknown error"
       );
     });
@@ -913,6 +931,212 @@ describe("SquareWebhookService", () => {
         where: { id: "internal-order-1" },
         data: { fulfillmentStatus: "pending" },
       });
+    });
+  });
+
+  // ==================== retryFailedEvents ====================
+
+  describe("retryFailedEvents()", () => {
+    const FAILED_CATALOG_EVENT = {
+      id: "we-failed-1",
+      tenantId: TENANT_ID,
+      merchantId: MERCHANT_ID,
+      connectionId: CONNECTION_ID,
+      eventId: "evt-failed-1",
+      eventType: "catalog.version.updated",
+      payload: {
+        merchant_id: "sq-merchant-1",
+        type: "catalog.version.updated",
+        event_id: "evt-failed-1",
+        created_at: "2026-04-11T00:00:00Z",
+        data: { type: "catalog", id: "cat-1" },
+      },
+      status: "failed",
+      retryCount: 0,
+      nextRetryAt: new Date("2026-04-11T00:01:00Z"),
+      errorMessage: "boom",
+    };
+
+    it("should return zeros when there are no retryable events", async () => {
+      mockFindRetryableWebhookEvents.mockResolvedValue([]);
+
+      const result = await service.retryFailedEvents();
+
+      expect(result).toEqual({ processed: 0, retried: 0, deadLettered: 0 });
+      expect(mockClaimWebhookEventForRetry).not.toHaveBeenCalled();
+    });
+
+    it("should mark event as processed on successful retry", async () => {
+      mockFindRetryableWebhookEvents.mockResolvedValue([FAILED_CATALOG_EVENT]);
+      mockClaimWebhookEventForRetry.mockResolvedValue(true);
+      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockSyncCatalog.mockResolvedValue({});
+
+      const result = await service.retryFailedEvents();
+
+      expect(mockClaimWebhookEventForRetry).toHaveBeenCalledWith(
+        "we-failed-1",
+        expect.any(Date)
+      );
+      expect(mockSyncCatalog).toHaveBeenCalledWith(TENANT_ID, MERCHANT_ID);
+      expect(mockMarkWebhookEventProcessed).toHaveBeenCalledWith("we-failed-1");
+      expect(result).toEqual({ processed: 1, retried: 0, deadLettered: 0 });
+    });
+
+    it("should skip events that cannot be claimed (concurrent worker)", async () => {
+      mockFindRetryableWebhookEvents.mockResolvedValue([FAILED_CATALOG_EVENT]);
+      mockClaimWebhookEventForRetry.mockResolvedValue(false);
+
+      const result = await service.retryFailedEvents();
+
+      expect(mockSyncCatalog).not.toHaveBeenCalled();
+      expect(mockMarkWebhookEventProcessed).not.toHaveBeenCalled();
+      expect(mockScheduleWebhookEventRetry).not.toHaveBeenCalled();
+      expect(result).toEqual({ processed: 0, retried: 0, deadLettered: 0 });
+    });
+
+    it("should reschedule retry with incremented retryCount when handler still fails", async () => {
+      mockFindRetryableWebhookEvents.mockResolvedValue([
+        { ...FAILED_CATALOG_EVENT, retryCount: 2 },
+      ]);
+      mockClaimWebhookEventForRetry.mockResolvedValue(true);
+      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockSyncCatalog.mockRejectedValue(new Error("still broken"));
+
+      const result = await service.retryFailedEvents();
+
+      expect(mockScheduleWebhookEventRetry).toHaveBeenCalledWith(
+        "we-failed-1",
+        3,
+        expect.any(Date),
+        "still broken"
+      );
+      expect(mockMarkWebhookEventDeadLetter).not.toHaveBeenCalled();
+      expect(result).toEqual({ processed: 0, retried: 1, deadLettered: 0 });
+    });
+
+    it("should move to dead_letter after reaching MAX_RETRIES", async () => {
+      mockFindRetryableWebhookEvents.mockResolvedValue([
+        { ...FAILED_CATALOG_EVENT, retryCount: 4 },
+      ]);
+      mockClaimWebhookEventForRetry.mockResolvedValue(true);
+      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockSyncCatalog.mockRejectedValue(new Error("still broken"));
+
+      const result = await service.retryFailedEvents();
+
+      expect(mockMarkWebhookEventDeadLetter).toHaveBeenCalledWith(
+        "we-failed-1",
+        "still broken"
+      );
+      expect(mockScheduleWebhookEventRetry).not.toHaveBeenCalled();
+      expect(result).toEqual({ processed: 0, retried: 0, deadLettered: 1 });
+    });
+
+    it("should pass a future lease expiry to claimWebhookEventForRetry", async () => {
+      mockFindRetryableWebhookEvents.mockResolvedValue([FAILED_CATALOG_EVENT]);
+      mockClaimWebhookEventForRetry.mockResolvedValue(true);
+      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockSyncCatalog.mockResolvedValue({});
+
+      const before = Date.now();
+      await service.retryFailedEvents();
+      const after = Date.now();
+
+      expect(mockClaimWebhookEventForRetry).toHaveBeenCalledTimes(1);
+      const call = mockClaimWebhookEventForRetry.mock.calls[0];
+      expect(call[0]).toBe("we-failed-1");
+      const leaseExpiresAt = call[1] as Date;
+      // Lease must be scheduled at least ~10 minutes in the future
+      // (WEBHOOK_RETRY_POLICY.LEASE_MS).
+      expect(leaseExpiresAt.getTime()).toBeGreaterThanOrEqual(
+        before + 10 * 60 * 1000
+      );
+      expect(leaseExpiresAt.getTime()).toBeLessThanOrEqual(
+        after + 10 * 60 * 1000 + 1000
+      );
+    });
+
+    it("should retry a stuck 'processing' event surfaced by findRetryableWebhookEvents", async () => {
+      // findRetryableWebhookEvents now returns both failed rows and
+      // processing rows whose lease has expired — the service treats them
+      // identically (claim-then-route).
+      const staleEvent = {
+        ...FAILED_CATALOG_EVENT,
+        id: "we-stuck",
+        status: "processing",
+        retryCount: 1,
+      };
+      mockFindRetryableWebhookEvents.mockResolvedValue([staleEvent]);
+      mockClaimWebhookEventForRetry.mockResolvedValue(true);
+      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockSyncCatalog.mockResolvedValue({});
+
+      const result = await service.retryFailedEvents();
+
+      expect(mockClaimWebhookEventForRetry).toHaveBeenCalledWith(
+        "we-stuck",
+        expect.any(Date)
+      );
+      expect(mockMarkWebhookEventProcessed).toHaveBeenCalledWith("we-stuck");
+      expect(result).toEqual({ processed: 1, retried: 0, deadLettered: 0 });
+    });
+
+    it("should handle a mixed batch (success + retry + dead_letter)", async () => {
+      const successEvent = { ...FAILED_CATALOG_EVENT, id: "we-a", retryCount: 0 };
+      const retryEvent = { ...FAILED_CATALOG_EVENT, id: "we-b", retryCount: 1 };
+      const deadEvent = { ...FAILED_CATALOG_EVENT, id: "we-c", retryCount: 4 };
+      mockFindRetryableWebhookEvents.mockResolvedValue([
+        successEvent,
+        retryEvent,
+        deadEvent,
+      ]);
+      mockClaimWebhookEventForRetry.mockResolvedValue(true);
+      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockSyncCatalog
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error("fail 2"))
+        .mockRejectedValueOnce(new Error("fail 3"));
+
+      const result = await service.retryFailedEvents();
+
+      expect(result).toEqual({ processed: 1, retried: 1, deadLettered: 1 });
+      expect(mockMarkWebhookEventProcessed).toHaveBeenCalledWith("we-a");
+      expect(mockScheduleWebhookEventRetry).toHaveBeenCalledWith(
+        "we-b",
+        2,
+        expect.any(Date),
+        "fail 2"
+      );
+      expect(mockMarkWebhookEventDeadLetter).toHaveBeenCalledWith(
+        "we-c",
+        "fail 3"
+      );
+    });
+  });
+
+  // ==================== computeNextRetryAt ====================
+
+  describe("computeNextRetryAt", () => {
+    it("should use exponential backoff capped at MAX_DELAY_MS", async () => {
+      const { computeNextRetryAt, WEBHOOK_RETRY_POLICY } = await import(
+        "../square.types"
+      );
+      const now = new Date("2026-04-11T12:00:00Z");
+
+      expect(
+        computeNextRetryAt(0, now).getTime() - now.getTime()
+      ).toBe(WEBHOOK_RETRY_POLICY.BASE_DELAY_MS);
+      expect(
+        computeNextRetryAt(1, now).getTime() - now.getTime()
+      ).toBe(WEBHOOK_RETRY_POLICY.BASE_DELAY_MS * 2);
+      expect(
+        computeNextRetryAt(4, now).getTime() - now.getTime()
+      ).toBe(WEBHOOK_RETRY_POLICY.BASE_DELAY_MS * 16);
+      // Very high retry count should cap at MAX_DELAY_MS.
+      expect(
+        computeNextRetryAt(20, now).getTime() - now.getTime()
+      ).toBe(WEBHOOK_RETRY_POLICY.MAX_DELAY_MS);
     });
   });
 });

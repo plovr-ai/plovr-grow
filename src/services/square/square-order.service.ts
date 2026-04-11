@@ -14,7 +14,11 @@ import type {
   SquareOrderPushItem,
   SquareOrderPushResult,
 } from "./square.types";
-import { FULFILLMENT_STATUS_MAP, SQUARE_ORDER_SYNC_TYPE } from "./square.types";
+import {
+  FULFILLMENT_STATUS_MAP,
+  SQUARE_FULFILLMENT_TYPE_BY_ORDER_MODE,
+  SQUARE_ORDER_SYNC_TYPE,
+} from "./square.types";
 
 const INTEGRATION_TYPE = "POS_SQUARE";
 
@@ -270,11 +274,16 @@ export class SquareOrderService {
         state: "CANCELED",
       };
 
-      // Add cancel reason to pickup details if available
-      if (reason && squareOrder.fulfillments?.[0]?.type === "PICKUP") {
-        fulfillmentUpdate.pickupDetails = {
-          cancelReason: reason.slice(0, 100), // Square max 100 chars
-        };
+      // Attach the cancel reason to the correct details field based on
+      // the Square fulfillment type. Square caps cancelReason at 100 chars.
+      if (reason) {
+        const truncated = reason.slice(0, 100);
+        const fulfillmentType = squareOrder.fulfillments?.[0]?.type;
+        if (fulfillmentType === "PICKUP") {
+          fulfillmentUpdate.pickupDetails = { cancelReason: truncated };
+        } else if (fulfillmentType === "DELIVERY") {
+          fulfillmentUpdate.deliveryDetails = { cancelReason: truncated };
+        }
       }
 
       await client.orders.update({
@@ -347,14 +356,54 @@ export class SquareOrderService {
 
   /**
    * Build a Square fulfillment from the order input.
-   * Currently supports PICKUP type fulfillment.
+   *
+   * Maps our internal `OrderMode` to Square's fulfillment type:
+   * - `pickup` → PICKUP with pickup details
+   * - `delivery` → DELIVERY with recipient address (throws if address missing)
+   * - `dine_in` → PICKUP (Square has no dine-in type); the note is prefixed
+   *   with "Dine-in" so POS operators can still recognize the intent.
    */
   private buildFulfillment(input: SquareOrderPushInput): Fulfillment {
     const displayName =
       `${input.customerFirstName} ${input.customerLastName}`.trim();
+    const squareType = SQUARE_FULFILLMENT_TYPE_BY_ORDER_MODE[input.orderMode];
+
+    if (input.orderMode === "delivery") {
+      if (!input.deliveryAddress) {
+        throw new AppError(
+          ErrorCodes.SQUARE_MISSING_DELIVERY_ADDRESS,
+          undefined,
+          400
+        );
+      }
+      const addr = input.deliveryAddress;
+      return {
+        type: squareType,
+        state: "PROPOSED",
+        deliveryDetails: {
+          scheduleType: "ASAP",
+          recipient: {
+            displayName,
+            phoneNumber: input.customerPhone,
+            emailAddress: input.customerEmail ?? undefined,
+            address: {
+              addressLine1: addr.street,
+              addressLine2: addr.apt ?? undefined,
+              locality: addr.city,
+              administrativeDistrictLevel1: addr.state,
+              postalCode: addr.zipCode,
+              country: "US",
+              firstName: input.customerFirstName || undefined,
+              lastName: input.customerLastName || undefined,
+            },
+          },
+          note: this.buildFulfillmentNote(input),
+        },
+      };
+    }
 
     return {
-      type: "PICKUP",
+      type: squareType,
       state: "PROPOSED",
       pickupDetails: {
         scheduleType: "ASAP",
@@ -363,9 +412,36 @@ export class SquareOrderService {
           phoneNumber: input.customerPhone,
           emailAddress: input.customerEmail ?? undefined,
         },
-        note: input.notes ?? undefined,
+        note: this.buildFulfillmentNote(input),
       },
     };
+  }
+
+  /**
+   * Build the fulfillment note combining the order's customer notes with
+   * any mode-specific context. For `dine_in` the result is prefixed with
+   * `"Dine-in"` so Square POS operators can still recognize the intent;
+   * for `delivery` any `deliveryAddress.instructions` (gate codes, drop-off
+   * directions, etc.) are appended so drivers receive them on Square.
+   */
+  private buildFulfillmentNote(
+    input: SquareOrderPushInput
+  ): string | undefined {
+    const parts: string[] = [];
+    const base = input.notes?.trim();
+    if (base) parts.push(base);
+
+    if (input.orderMode === "delivery") {
+      const instructions = input.deliveryAddress?.instructions?.trim();
+      if (instructions) parts.push(instructions);
+      return parts.length > 0 ? parts.join(" | ") : undefined;
+    }
+
+    if (input.orderMode === "dine_in") {
+      return parts.length > 0 ? `Dine-in: ${parts.join(" | ")}` : "Dine-in";
+    }
+
+    return parts.length > 0 ? parts.join(" | ") : undefined;
   }
 
   /**

@@ -3,7 +3,12 @@ import { integrationRepository } from "@/repositories/integration.repository";
 import { squareOrderService } from "./square-order.service";
 import type { OrderPaidEvent, FulfillmentStatusChangedEvent, OrderCancelledEvent } from "@/services/order/order-events.types";
 import type { SquareOrderPushItem } from "./square.types";
-import type { OrderItemData, SalesChannel } from "@/types";
+import type {
+  DeliveryAddress,
+  OrderItemData,
+  OrderMode,
+  SalesChannel,
+} from "@/types";
 
 const INTEGRATION_TYPE = "POS_SQUARE";
 
@@ -95,9 +100,11 @@ async function handleOrderPaid(event: OrderPaidEvent): Promise<void> {
         customerLastName: event.customerLastName ?? "",
         customerPhone: event.customerPhone ?? "",
         customerEmail: event.customerEmail,
-        orderMode: "pickup",
+        orderMode: orderForPush.orderMode,
+        deliveryAddress: orderForPush.deliveryAddress,
         items: pushItems,
         totalAmount: event.totalAmount ?? 0,
+        notes: orderForPush.notes ?? undefined,
       }
     );
 
@@ -209,7 +216,13 @@ async function checkSquareConnection(
 async function getOrderForPush(
   tenantId: string,
   orderId: string
-): Promise<{ items: OrderItemData[]; salesChannel: SalesChannel } | null> {
+): Promise<{
+  items: OrderItemData[];
+  salesChannel: SalesChannel;
+  orderMode: OrderMode;
+  deliveryAddress: DeliveryAddress | null;
+  notes: string | null;
+} | null> {
   try {
     const { orderService } = await import("@/services/order/order.service");
     const order = await orderService.getOrder(tenantId, orderId);
@@ -217,6 +230,10 @@ async function getOrderForPush(
     return {
       items: order.items as unknown as OrderItemData[],
       salesChannel: order.salesChannel as SalesChannel,
+      orderMode: order.orderMode as OrderMode,
+      deliveryAddress:
+        (order.deliveryAddress as unknown as DeliveryAddress | null) ?? null,
+      notes: order.notes ?? null,
     };
   } catch {
     return null;

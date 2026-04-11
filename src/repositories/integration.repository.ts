@@ -323,6 +323,83 @@ export class IntegrationRepository {
       },
     });
   }
+
+  async scheduleWebhookEventRetry(
+    id: string,
+    retryCount: number,
+    nextRetryAt: Date,
+    errorMessage: string
+  ) {
+    return prisma.webhookEvent.update({
+      where: { id },
+      data: {
+        status: "failed",
+        retryCount,
+        nextRetryAt,
+        errorMessage,
+        processedAt: new Date(),
+      },
+    });
+  }
+
+  async markWebhookEventDeadLetter(id: string, errorMessage: string) {
+    return prisma.webhookEvent.update({
+      where: { id },
+      data: {
+        status: "dead_letter",
+        errorMessage,
+        nextRetryAt: null,
+        processedAt: new Date(),
+      },
+    });
+  }
+
+  async markWebhookEventProcessed(id: string) {
+    return prisma.webhookEvent.update({
+      where: { id },
+      data: {
+        status: "processed",
+        errorMessage: null,
+        nextRetryAt: null,
+        processedAt: new Date(),
+      },
+    });
+  }
+
+  async findRetryableWebhookEvents(limit: number, now: Date = new Date()) {
+    // Pick up events that are either failed-and-due or stuck in processing
+    // because a previous cron invocation crashed mid-retry (lease expired).
+    return prisma.webhookEvent.findMany({
+      where: {
+        status: { in: ["failed", "processing"] },
+        nextRetryAt: { lte: now },
+      },
+      orderBy: { nextRetryAt: "asc" },
+      take: limit,
+    });
+  }
+
+  async claimWebhookEventForRetry(
+    id: string,
+    leaseExpiresAt: Date,
+    now: Date = new Date()
+  ): Promise<boolean> {
+    // Atomic claim via updateMany: only succeeds when the row is still in a
+    // claimable state AND its previous lease (nextRetryAt) has expired. This
+    // prevents two concurrent workers from both picking up the same event.
+    const result = await prisma.webhookEvent.updateMany({
+      where: {
+        id,
+        status: { in: ["failed", "processing"] },
+        nextRetryAt: { lte: now },
+      },
+      data: {
+        status: "processing",
+        nextRetryAt: leaseExpiresAt,
+      },
+    });
+    return result.count > 0;
+  }
 }
 
 export const integrationRepository = new IntegrationRepository();
