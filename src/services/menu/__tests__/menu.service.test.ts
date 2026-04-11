@@ -64,6 +64,7 @@ vi.mock("@/repositories/menu-category-item.repository", () => ({
 vi.mock("@/repositories/featured-item.repository", () => ({
   featuredItemRepository: {
     getByTenantId: vi.fn(),
+    countActiveByTenantId: vi.fn(),
     setFeaturedItems: vi.fn(),
     addFeaturedItem: vi.fn(),
     removeFeaturedItem: vi.fn(),
@@ -888,6 +889,19 @@ describe("MenuService", () => {
         ["menu-1", "menu-2"]
       );
       expect(result).toBe(countMap);
+    });
+  });
+
+  describe("countActiveFeaturedItems()", () => {
+    it("should delegate to featuredItemRepository.countActiveByTenantId", async () => {
+      vi.mocked(featuredItemRepository.countActiveByTenantId).mockResolvedValue(7);
+
+      const result = await menuService.countActiveFeaturedItems("tenant-1");
+
+      expect(featuredItemRepository.countActiveByTenantId).toHaveBeenCalledWith(
+        "tenant-1"
+      );
+      expect(result).toBe(7);
     });
   });
 

@@ -3,6 +3,28 @@ import { generateEntityId } from "@/lib/id";
 
 export class FeaturedItemRepository {
   /**
+   * Count featured items whose underlying menu item is currently active.
+   * Matches the filter MenuService.getMenu applies when injecting the
+   * synthetic "Featured" category (status === "active"). Used by the
+   * storefront menu page to include featured items in the first menu's
+   * switcher count without loading full menu data.
+   */
+  async countActiveByTenantId(tenantId: string): Promise<number> {
+    return prisma.featuredItem.count({
+      where: {
+        tenantId,
+        deleted: false,
+        menuItem: {
+          is: {
+            status: "active",
+            deleted: false,
+          },
+        },
+      },
+    });
+  }
+
+  /**
    * Get all featured items for a tenant with their menu item details
    */
   async getByTenantId(tenantId: string) {
