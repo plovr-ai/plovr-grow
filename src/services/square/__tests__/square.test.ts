@@ -30,14 +30,131 @@ vi.mock("../square-catalog.service", () => ({
       items: [],
       modifierLists: [],
       taxes: [],
+      itemOptions: [],
+      measurementUnits: [],
+      images: [],
     })),
     mapToMenuModels: vi.fn(() => ({
       categories: [],
       items: [],
       taxes: [],
+      measurementUnits: [],
     })),
   },
 }));
+
+// Test factories to satisfy expanded Mapped* types without repeating every field.
+function makeCategory(
+  overrides: Partial<{ externalId: string; name: string; sortOrder: number }>,
+) {
+  return {
+    externalId: "sq-cat",
+    name: "Cat",
+    sortOrder: 0,
+    imageUrl: null,
+    sourceMetadata: {},
+    ...overrides,
+  };
+}
+function makeOption(
+  overrides: Partial<{ name: string; price: number; externalId: string }>,
+) {
+  return {
+    name: "Option",
+    price: 0,
+    externalId: "opt",
+    isDefault: false,
+    ordinal: null,
+    kitchenName: null,
+    imageUrl: null,
+    hiddenOnline: false,
+    ...overrides,
+  };
+}
+function makeGroup(
+  overrides: Partial<{
+    name: string;
+    required: boolean;
+    minSelect: number;
+    maxSelect: number;
+    options: ReturnType<typeof makeOption>[];
+  }>,
+) {
+  return {
+    name: "Group",
+    type: "single" as const,
+    required: false,
+    minSelect: 0,
+    maxSelect: 1,
+    ordinal: null,
+    allowQuantity: false,
+    hiddenFromCustomer: false,
+    internalName: null,
+    sourceKind: "MODIFIER_LIST" as const,
+    sourceExternalId: null,
+    options: [],
+    ...overrides,
+  };
+}
+function makeVariation(
+  overrides: Partial<{ externalId: string; name: string }>,
+) {
+  return {
+    externalId: "var",
+    name: "Regular",
+    sku: null,
+    upc: null,
+    pricingType: "FIXED" as const,
+    priceAmount: 0,
+    measurementUnitId: null,
+    ordinal: 0,
+    sellable: true,
+    stockable: true,
+    itemOptionValues: [],
+    ...overrides,
+  };
+}
+function makeItem(
+  overrides: Partial<{
+    externalId: string;
+    name: string;
+    description: string | null;
+    price: number;
+    modifiers: { groups: ReturnType<typeof makeGroup>[] } | null;
+    categoryExternalIds: string[];
+    variationMappings: ReturnType<typeof makeVariation>[];
+  }>,
+) {
+  return {
+    externalId: "item",
+    name: "Item",
+    description: null,
+    price: 0,
+    pricingType: "FIXED" as const,
+    kitchenName: null,
+    imageUrl: null,
+    categoryExternalIds: [],
+    tags: [],
+    taxExternalIds: [],
+    modifiers: null,
+    variationMappings: [],
+    sourceMetadata: {},
+    ...overrides,
+  };
+}
+function makeTax(
+  overrides: Partial<{ externalId: string; name: string; percentage: number }>,
+) {
+  return {
+    externalId: "tax",
+    name: "Tax",
+    percentage: 0,
+    inclusionType: "ADDITIVE" as const,
+    calculationPhase: "SUBTOTAL" as const,
+    appliesToCustomAmounts: false,
+    ...overrides,
+  };
+}
 
 vi.mock("../square-order.service", () => ({
   squareOrderService: {
@@ -524,20 +641,27 @@ describe("SquareService", () => {
       vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(makeConnection());
       vi.mocked(squareCatalogService.mapToMenuModels).mockReturnValueOnce({
         categories: [
-          { externalId: "sq-cat-1", name: "Appetizers", sortOrder: 0 },
-          { externalId: "sq-cat-2", name: "Mains", sortOrder: 1 },
+          makeCategory({ externalId: "sq-cat-1", name: "Appetizers", sortOrder: 0 }),
+          makeCategory({ externalId: "sq-cat-2", name: "Mains", sortOrder: 1 }),
         ],
         items: [
-          {
+          makeItem({
             externalId: "sq-item-1",
             name: "Spring Rolls",
             description: "Crispy rolls",
             price: 8.99,
-            modifiers: { groups: [{ name: "Extra sauce", required: false, minSelect: 0, maxSelect: 1, options: [{ name: "Extra sauce", price: 0.5, externalId: "sq-mod-1" }] }] },
+            modifiers: {
+              groups: [
+                makeGroup({
+                  name: "Extra sauce",
+                  options: [makeOption({ name: "Extra sauce", price: 0.5, externalId: "sq-mod-1" })],
+                }),
+              ],
+            },
             categoryExternalIds: ["sq-cat-1"],
-            variationMappings: [{ externalId: "sq-var-1", name: "Regular" }],
-          },
-          {
+            variationMappings: [makeVariation({ externalId: "sq-var-1", name: "Regular" })],
+          }),
+          makeItem({
             externalId: "sq-item-2",
             name: "Steak",
             description: null,
@@ -545,11 +669,10 @@ describe("SquareService", () => {
             modifiers: null,
             categoryExternalIds: ["sq-cat-2", "sq-cat-nonexistent"],
             variationMappings: [],
-          },
+          }),
         ],
-        taxes: [
-          { externalId: "sq-tax-1", name: "Sales Tax", percentage: 8.875 },
-        ],
+        taxes: [makeTax({ externalId: "sq-tax-1", name: "Sales Tax", percentage: 8.875 })],
+        measurementUnits: [],
       });
 
       const result = await service.syncCatalog("t1", "m1");
@@ -583,9 +706,10 @@ describe("SquareService", () => {
       );
 
       vi.mocked(squareCatalogService.mapToMenuModels).mockReturnValueOnce({
-        categories: [{ externalId: "sq-cat-1", name: "Drinks", sortOrder: 0 }],
+        categories: [makeCategory({ externalId: "sq-cat-1", name: "Drinks", sortOrder: 0 })],
         items: [],
         taxes: [],
+        measurementUnits: [],
       });
 
       const result = await service.syncCatalog("t1", "m1");
@@ -610,9 +734,10 @@ describe("SquareService", () => {
       });
 
       vi.mocked(squareCatalogService.mapToMenuModels).mockReturnValueOnce({
-        categories: [{ externalId: "sq-cat-1", name: "Existing Cat", sortOrder: 0 }],
+        categories: [makeCategory({ externalId: "sq-cat-1", name: "Existing Cat", sortOrder: 0 })],
         items: [],
         taxes: [],
+        measurementUnits: [],
       });
 
       const result = await service.syncCatalog("t1", "m1");

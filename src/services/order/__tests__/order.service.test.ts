@@ -117,7 +117,7 @@ describe("OrderService", () => {
       ] as never);
 
       vi.mocked(taxConfigService.getTaxConfigsMap).mockResolvedValue(
-        new Map([["tax-1", { id: "tax-1", name: "Sales Tax", description: null, roundingMethod: "half_up", status: "active" as const }]])
+        new Map([["tax-1", { id: "tax-1", name: "Sales Tax", description: null, roundingMethod: "half_up", inclusionType: "ADDITIVE" as const, calculationPhase: "SUBTOTAL" as const, appliesToCustomAmounts: false, status: "active" as const }]])
       );
 
       // Mock tax config repository (server-side tax lookup)

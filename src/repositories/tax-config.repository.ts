@@ -231,6 +231,9 @@ export class TaxConfigRepository {
       name: string;
       description?: string | null;
       roundingMethod?: string;
+      inclusionType?: string;
+      calculationPhase?: string;
+      appliesToCustomAmounts?: boolean;
     }
   ) {
     return prisma.taxConfig.create({
@@ -240,6 +243,9 @@ export class TaxConfigRepository {
         name: data.name,
         description: data.description,
         roundingMethod: data.roundingMethod ?? "half_up",
+        inclusionType: data.inclusionType ?? "ADDITIVE",
+        calculationPhase: data.calculationPhase ?? "SUBTOTAL",
+        appliesToCustomAmounts: data.appliesToCustomAmounts ?? false,
       },
     });
   }

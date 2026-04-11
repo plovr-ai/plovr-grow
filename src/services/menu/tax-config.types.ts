@@ -22,6 +22,9 @@ export interface TaxConfigData {
   name: string;
   description: string | null;
   roundingMethod: RoundingMethod;
+  inclusionType: "ADDITIVE" | "INCLUSIVE";
+  calculationPhase: "SUBTOTAL" | "TOTAL";
+  appliesToCustomAmounts: boolean;
   status: "active" | "inactive";
 }
 
@@ -34,6 +37,9 @@ export interface MerchantTaxConfig {
   name: string;
   rate: number; // 该门店的具体税率
   roundingMethod: RoundingMethod;
+  inclusionType: "ADDITIVE" | "INCLUSIVE";
+  calculationPhase: "SUBTOTAL" | "TOTAL";
+  appliesToCustomAmounts: boolean;
 }
 
 /**
@@ -55,6 +61,9 @@ export interface TaxConfigInfo {
   name: string;
   description: string | null;
   roundingMethod: RoundingMethod;
+  inclusionType: "ADDITIVE" | "INCLUSIVE";
+  calculationPhase: "SUBTOTAL" | "TOTAL";
+  appliesToCustomAmounts: boolean;
   status: "active" | "inactive";
 }
 
@@ -81,6 +90,9 @@ export interface CreateTaxConfigInput {
   name: string;
   description?: string;
   roundingMethod: RoundingMethod;
+  inclusionType?: "ADDITIVE" | "INCLUSIVE";
+  calculationPhase?: "SUBTOTAL" | "TOTAL";
+  appliesToCustomAmounts?: boolean;
   merchantRates?: Array<{ merchantId: string; rate: number }>;
 }
 
@@ -91,6 +103,9 @@ export interface UpdateTaxConfigInput {
   name?: string;
   description?: string;
   roundingMethod?: RoundingMethod;
+  inclusionType?: "ADDITIVE" | "INCLUSIVE";
+  calculationPhase?: "SUBTOTAL" | "TOTAL";
+  appliesToCustomAmounts?: boolean;
   status?: "active" | "inactive";
   merchantRates?: Array<{ merchantId: string; rate: number }>;
 }

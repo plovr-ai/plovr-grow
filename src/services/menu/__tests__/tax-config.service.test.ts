@@ -31,6 +31,9 @@ describe("TaxConfigService", () => {
       tenantId: "tenant-1",      name: "Standard Tax",
       description: "Standard sales tax",
       roundingMethod: "half_up",
+      inclusionType: "ADDITIVE",
+      calculationPhase: "SUBTOTAL",
+      appliesToCustomAmounts: false,
       status: "active",
       deleted: false,
       createdAt: new Date(),
@@ -41,6 +44,9 @@ describe("TaxConfigService", () => {
       tenantId: "tenant-1",      name: "Alcohol Tax",
       description: "Additional alcohol tax",
       roundingMethod: "half_up",
+      inclusionType: "ADDITIVE",
+      calculationPhase: "SUBTOTAL",
+      appliesToCustomAmounts: false,
       status: "active",
       deleted: false,
       createdAt: new Date(),
@@ -51,6 +57,9 @@ describe("TaxConfigService", () => {
       tenantId: "tenant-1",      name: "Reduced Tax",
       description: "Reduced rate for groceries",
       roundingMethod: "always_round_down",
+      inclusionType: "ADDITIVE",
+      calculationPhase: "SUBTOTAL",
+      appliesToCustomAmounts: false,
       status: "active",
       deleted: false,
       createdAt: new Date(),
@@ -80,6 +89,9 @@ describe("TaxConfigService", () => {
         name: "Standard Tax",
         description: "Standard sales tax",
         roundingMethod: "half_up",
+        inclusionType: "ADDITIVE",
+        calculationPhase: "SUBTOTAL",
+        appliesToCustomAmounts: false,
         status: "active",
       });
     });
@@ -112,6 +124,9 @@ describe("TaxConfigService", () => {
         name: "Standard Tax",
         description: "Standard sales tax",
         roundingMethod: "half_up",
+        inclusionType: "ADDITIVE",
+        calculationPhase: "SUBTOTAL",
+        appliesToCustomAmounts: false,
         status: "active",
       });
     });
@@ -157,6 +172,9 @@ describe("TaxConfigService", () => {
           taxConfig: {
             name: "Standard Tax",
             roundingMethod: "half_up",
+            inclusionType: "ADDITIVE",
+            calculationPhase: "SUBTOTAL",
+            appliesToCustomAmounts: false,
           },
         },
         {
@@ -165,6 +183,9 @@ describe("TaxConfigService", () => {
           taxConfig: {
             name: "Alcohol Tax",
             roundingMethod: "half_up",
+            inclusionType: "ADDITIVE",
+            calculationPhase: "SUBTOTAL",
+            appliesToCustomAmounts: false,
           },
         },
       ];
@@ -184,6 +205,9 @@ describe("TaxConfigService", () => {
         name: "Standard Tax",
         rate: 0.0825,
         roundingMethod: "half_up",
+        inclusionType: "ADDITIVE",
+        calculationPhase: "SUBTOTAL",
+        appliesToCustomAmounts: false,
       });
     });
   });
@@ -227,6 +251,9 @@ describe("TaxConfigService", () => {
         name: "New Tax",
         description: "A new tax",
         roundingMethod: "half_up",
+        inclusionType: "ADDITIVE",
+        calculationPhase: "SUBTOTAL",
+        appliesToCustomAmounts: false,
         status: "active",
         deleted: false,
         createdAt: new Date(),
@@ -248,6 +275,9 @@ describe("TaxConfigService", () => {
         name: "New Tax",
         description: "A new tax",
         roundingMethod: "half_up",
+        inclusionType: "ADDITIVE",
+        calculationPhase: "SUBTOTAL",
+        appliesToCustomAmounts: false,
         merchantRates: [{ merchantId: "merchant-1", rate: 0.09 }],
       });
 
@@ -257,6 +287,9 @@ describe("TaxConfigService", () => {
           name: "New Tax",
           description: "A new tax",
           roundingMethod: "half_up",
+          inclusionType: "ADDITIVE",
+          calculationPhase: "SUBTOTAL",
+          appliesToCustomAmounts: false,
         }
       );
       expect(taxConfigRepository.setMerchantTaxRate).toHaveBeenCalledWith(
@@ -366,6 +399,9 @@ describe("TaxConfigService", () => {
         name: "Standard Tax",
         description: "Standard sales tax",
         roundingMethod: "half_up",
+        inclusionType: "ADDITIVE",
+        calculationPhase: "SUBTOTAL",
+        appliesToCustomAmounts: false,
         status: "active",
       });
     });
@@ -386,6 +422,9 @@ describe("TaxConfigService", () => {
         tenantId: "tenant-1",        name: "Simple Tax",
         description: null,
         roundingMethod: "half_even",
+        inclusionType: "ADDITIVE",
+        calculationPhase: "SUBTOTAL",
+        appliesToCustomAmounts: false,
         status: "active",
         deleted: false,
         createdAt: new Date(),
@@ -419,6 +458,9 @@ describe("TaxConfigService", () => {
         tenantId: "tenant-1",        name: "Empty Rates Tax",
         description: "desc",
         roundingMethod: "always_round_down",
+        inclusionType: "ADDITIVE",
+        calculationPhase: "SUBTOTAL",
+        appliesToCustomAmounts: false,
         status: "active",
         deleted: false,
         createdAt: new Date(),

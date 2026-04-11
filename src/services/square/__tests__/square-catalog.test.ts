@@ -113,17 +113,20 @@ describe("SquareCatalogService", () => {
         items: [],
         modifierLists: [],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
 
       expect(result.categories).toHaveLength(2);
-      expect(result.categories[0]).toEqual({
+      expect(result.categories[0]).toMatchObject({
         externalId: "cat-1",
         name: "Burgers",
         sortOrder: 0,
       });
-      expect(result.categories[1]).toEqual({
+      expect(result.categories[1]).toMatchObject({
         externalId: "cat-2",
         name: "Drinks",
         sortOrder: 1,
@@ -156,6 +159,9 @@ describe("SquareCatalogService", () => {
         ],
         modifierLists: [],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -168,9 +174,11 @@ describe("SquareCatalogService", () => {
       expect(item.price).toBe(12.99);
       expect(item.categoryExternalIds).toEqual(["cat-1"]);
       expect(item.modifiers).toBeNull();
-      expect(item.variationMappings).toEqual([
-        { externalId: "var-1", name: "Regular" },
-      ]);
+      expect(item.variationMappings).toHaveLength(1);
+      expect(item.variationMappings[0]).toMatchObject({
+        externalId: "var-1",
+        name: "Regular",
+      });
     });
 
     it("should map a multi-variation item with first variation price as base and Size modifier group with price deltas", () => {
@@ -215,6 +223,9 @@ describe("SquareCatalogService", () => {
         ],
         modifierLists: [],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -233,19 +244,19 @@ describe("SquareCatalogService", () => {
       expect(sizeGroup.options).toHaveLength(3);
 
       // First variation: delta = 0
-      expect(sizeGroup.options[0]).toEqual({
+      expect(sizeGroup.options[0]).toMatchObject({
         name: "Small",
         price: 0,
         externalId: "var-small",
       });
       // Medium: delta = 4.99 - 3.99 = 1.00
-      expect(sizeGroup.options[1]).toEqual({
+      expect(sizeGroup.options[1]).toMatchObject({
         name: "Medium",
         price: 1,
         externalId: "var-medium",
       });
       // Large: delta = 5.99 - 3.99 = 2.00
-      expect(sizeGroup.options[2]).toEqual({
+      expect(sizeGroup.options[2]).toMatchObject({
         name: "Large",
         price: 2,
         externalId: "var-large",
@@ -310,6 +321,9 @@ describe("SquareCatalogService", () => {
           },
         ],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -324,12 +338,12 @@ describe("SquareCatalogService", () => {
       expect(sauceGroup.minSelect).toBe(0);
       expect(sauceGroup.maxSelect).toBe(1); // SINGLE → maxSelect 1
       expect(sauceGroup.options).toHaveLength(2);
-      expect(sauceGroup.options[0]).toEqual({
+      expect(sauceGroup.options[0]).toMatchObject({
         name: "Ketchup",
         price: 0,
         externalId: "mod-1",
       });
-      expect(sauceGroup.options[1]).toEqual({
+      expect(sauceGroup.options[1]).toMatchObject({
         name: "BBQ",
         price: 0.5,
         externalId: "mod-2",
@@ -402,6 +416,9 @@ describe("SquareCatalogService", () => {
           },
         ],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -446,17 +463,20 @@ describe("SquareCatalogService", () => {
             },
           },
         ],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
 
       expect(result.taxes).toHaveLength(2);
-      expect(result.taxes[0]).toEqual({
+      expect(result.taxes[0]).toMatchObject({
         externalId: "tax-1",
         name: "Sales Tax",
         percentage: 8.5,
       });
-      expect(result.taxes[1]).toEqual({
+      expect(result.taxes[1]).toMatchObject({
         externalId: "tax-3",
         name: "Liquor Tax",
         percentage: 10.25,
@@ -479,6 +499,9 @@ describe("SquareCatalogService", () => {
         ],
         modifierLists: [],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -530,6 +553,9 @@ describe("SquareCatalogService", () => {
           },
         ],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -574,12 +600,15 @@ describe("SquareCatalogService", () => {
             },
           },
         ],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
 
       expect(result.taxes).toHaveLength(1);
-      expect(result.taxes[0]).toEqual({
+      expect(result.taxes[0]).toMatchObject({
         externalId: "tax-1",
         name: "Tax",
         percentage: 0,
@@ -594,6 +623,9 @@ describe("SquareCatalogService", () => {
         items: [],
         modifierLists: [],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -626,6 +658,9 @@ describe("SquareCatalogService", () => {
         ],
         modifierLists: [],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -681,6 +716,9 @@ describe("SquareCatalogService", () => {
           },
         ],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -726,6 +764,9 @@ describe("SquareCatalogService", () => {
         ],
         modifierLists: [],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -751,6 +792,9 @@ describe("SquareCatalogService", () => {
         ],
         modifierLists: [],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -797,6 +841,9 @@ describe("SquareCatalogService", () => {
           },
         ],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -832,6 +879,9 @@ describe("SquareCatalogService", () => {
         ],
         modifierLists: [],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -873,6 +923,9 @@ describe("SquareCatalogService", () => {
           },
         ],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -918,6 +971,9 @@ describe("SquareCatalogService", () => {
           },
         ],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -953,6 +1009,9 @@ describe("SquareCatalogService", () => {
         ],
         modifierLists: [],
         taxes: [],
+        itemOptions: [],
+        measurementUnits: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);

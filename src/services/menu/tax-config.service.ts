@@ -38,6 +38,9 @@ export class TaxConfigService {
       name: c.name,
       description: c.description,
       roundingMethod: c.roundingMethod as RoundingMethod,
+      inclusionType: c.inclusionType as "ADDITIVE" | "INCLUSIVE",
+      calculationPhase: c.calculationPhase as "SUBTOTAL" | "TOTAL",
+      appliesToCustomAmounts: c.appliesToCustomAmounts,
       status: c.status as "active" | "inactive",
     }));
   }
@@ -59,6 +62,9 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
+      inclusionType: config.inclusionType as "ADDITIVE" | "INCLUSIVE",
+      calculationPhase: config.calculationPhase as "SUBTOTAL" | "TOTAL",
+      appliesToCustomAmounts: config.appliesToCustomAmounts,
       status: config.status as "active" | "inactive",
     };
   }
@@ -80,6 +86,9 @@ export class TaxConfigService {
         name: c.name,
         description: c.description,
         roundingMethod: c.roundingMethod as RoundingMethod,
+        inclusionType: c.inclusionType as "ADDITIVE" | "INCLUSIVE",
+        calculationPhase: c.calculationPhase as "SUBTOTAL" | "TOTAL",
+        appliesToCustomAmounts: c.appliesToCustomAmounts,
         status: c.status as "active" | "inactive",
       });
     }
@@ -98,6 +107,9 @@ export class TaxConfigService {
       name: r.taxConfig.name,
       rate: Number(r.rate),
       roundingMethod: r.taxConfig.roundingMethod as RoundingMethod,
+      inclusionType: r.taxConfig.inclusionType as "ADDITIVE" | "INCLUSIVE",
+      calculationPhase: r.taxConfig.calculationPhase as "SUBTOTAL" | "TOTAL",
+      appliesToCustomAmounts: r.taxConfig.appliesToCustomAmounts,
     }));
   }
 
@@ -124,6 +136,9 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
+      inclusionType: config.inclusionType as "ADDITIVE" | "INCLUSIVE",
+      calculationPhase: config.calculationPhase as "SUBTOTAL" | "TOTAL",
+      appliesToCustomAmounts: config.appliesToCustomAmounts,
       status: config.status as "active" | "inactive",
       merchantRates: merchants
         .map((merchant, index) => {
@@ -156,6 +171,9 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
+      inclusionType: config.inclusionType as "ADDITIVE" | "INCLUSIVE",
+      calculationPhase: config.calculationPhase as "SUBTOTAL" | "TOTAL",
+      appliesToCustomAmounts: config.appliesToCustomAmounts,
       status: config.status as "active" | "inactive",
     };
   }
@@ -175,6 +193,9 @@ export class TaxConfigService {
       name: input.name,
       description: input.description,
       roundingMethod: input.roundingMethod,
+      inclusionType: input.inclusionType,
+      calculationPhase: input.calculationPhase,
+      appliesToCustomAmounts: input.appliesToCustomAmounts,
     });
 
     // Set merchant rates if provided
@@ -191,6 +212,9 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
+      inclusionType: config.inclusionType as "ADDITIVE" | "INCLUSIVE",
+      calculationPhase: config.calculationPhase as "SUBTOTAL" | "TOTAL",
+      appliesToCustomAmounts: config.appliesToCustomAmounts,
       status: config.status as "active" | "inactive",
     };
   }
