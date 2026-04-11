@@ -1,6 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SquareCatalogService } from "../square-catalog.service";
 import type { SquareCatalogResult } from "../square-catalog.service";
+import type { CatalogObject } from "square";
+
+function buildVariation(id: string, name: string, amountCents: number, ordinal: number): CatalogObject {
+  return {
+    type: "ITEM_VARIATION",
+    id,
+    itemVariationData: {
+      name,
+      ordinal,
+      pricingType: "FIXED_PRICING",
+      priceMoney: { amount: BigInt(amountCents), currency: "USD" },
+    },
+  } as CatalogObject;
+}
+
+function buildItem(id: string, name: string, variations: CatalogObject[], extra: Partial<Record<string, unknown>> = {}): CatalogObject {
+  return {
+    type: "ITEM",
+    id,
+    itemData: {
+      name,
+      productType: "REGULAR",
+      variations,
+      ...extra,
+    },
+  } as CatalogObject;
+}
 
 let mockCatalogObjects: object[] = [];
 
@@ -175,7 +202,7 @@ describe("SquareCatalogService", () => {
       ]);
     });
 
-    it("should map a multi-variation item with first variation price as base and Size modifier group with price deltas", () => {
+    it("should map a multi-variation item with min variation price as base and Options modifier group with price deltas", () => {
       const catalog: SquareCatalogResult = {
         categories: [],
         items: [
@@ -224,23 +251,23 @@ describe("SquareCatalogService", () => {
 
       expect(result.items).toHaveLength(1);
       const item = result.items[0];
-      expect(item.price).toBe(3.99); // base price from first variation
+      expect(item.price).toBe(3.99); // base price = min variation price (Small)
       expect(item.modifiers).not.toBeNull();
       expect(item.modifiers!.groups).toHaveLength(1);
 
       const sizeGroup = item.modifiers!.groups[0];
-      expect(sizeGroup.name).toBe("Size");
+      expect(sizeGroup.name).toBe("Options");
       expect(sizeGroup.required).toBe(true);
       expect(sizeGroup.minSelect).toBe(1);
       expect(sizeGroup.maxSelect).toBe(1);
       expect(sizeGroup.options).toHaveLength(3);
 
-      // First variation: delta = 0
+      // First variation (min price): delta = 0, isDefault = true
       expect(sizeGroup.options[0]).toEqual({
         name: "Small",
         price: 0,
         externalId: "var-small",
-        isDefault: false,
+        isDefault: true,
         ordinal: 0,
       });
       // Medium: delta = 4.99 - 3.99 = 1.00
@@ -756,9 +783,9 @@ describe("SquareCatalogService", () => {
 
       const result = service.mapToMenuModels(catalog);
 
-      const sizeGroup = result.items[0].modifiers!.groups[0];
-      expect(sizeGroup.options[0].name).toBe("Default");
-      expect(sizeGroup.options[1].name).toBe("Large");
+      const optionsGroup = result.items[0].modifiers!.groups[0];
+      expect(optionsGroup.options[0].name).toBe("Default");
+      expect(optionsGroup.options[1].name).toBe("Large");
     });
 
     it("should handle item with undefined variations", () => {
@@ -990,6 +1017,91 @@ describe("SquareCatalogService", () => {
       const result = service.mapToMenuModels(catalog);
 
       expect(result.items[0].categoryExternalIds).toEqual([]);
+    });
+
+    describe("variation → modifier group mapping (TDD Task 10)", () => {
+      it("single variation maps 1:1 without injecting a modifier group", () => {
+        const catalog: SquareCatalogResult = {
+          categories: [], modifierLists: [], taxes: [], images: [],
+          items: [buildItem("item-1", "Latte", [buildVariation("var-1", "Regular", 500, 0)])],
+        };
+        const result = service.mapToMenuModels(catalog);
+        expect(result.items).toHaveLength(1);
+        expect(result.items[0].price).toBe(5.0);
+        expect(result.items[0].modifiers).toBeNull();
+        expect(result.items[0].variationMappings).toEqual([
+          { externalId: "var-1", name: "Regular" },
+        ]);
+      });
+
+      it("multi-variation injects single-select required group with base=min", () => {
+        const catalog: SquareCatalogResult = {
+          categories: [], modifierLists: [], taxes: [], images: [],
+          items: [buildItem("item-1", "Coffee", [
+            buildVariation("v-s", "Small",  300, 0),
+            buildVariation("v-m", "Medium", 400, 1),
+            buildVariation("v-l", "Large",  500, 2),
+          ])],
+        };
+        const result = service.mapToMenuModels(catalog);
+        expect(result.items[0].price).toBe(3.0); // base = min price
+        expect(result.items[0].modifiers?.groups).toHaveLength(1);
+        const group = result.items[0].modifiers!.groups[0];
+        expect(group.name).toBe("Options");
+        expect(group.required).toBe(true);
+        expect(group.minSelect).toBe(1);
+        expect(group.maxSelect).toBe(1);
+        expect(group.options).toHaveLength(3);
+        expect(group.options.map((o) => [o.name, o.price, o.isDefault])).toEqual([
+          ["Small",  0, true],
+          ["Medium", 1, false],
+          ["Large",  2, false],
+        ]);
+      });
+
+      it("sorts variations by ordinal regardless of array order", () => {
+        const catalog: SquareCatalogResult = {
+          categories: [], modifierLists: [], taxes: [], images: [],
+          items: [buildItem("item-1", "Coffee", [
+            buildVariation("v-l", "Large",  500, 2),
+            buildVariation("v-s", "Small",  300, 0),
+            buildVariation("v-m", "Medium", 400, 1),
+          ])],
+        };
+        const result = service.mapToMenuModels(catalog);
+        const names = result.items[0].modifiers!.groups[0].options.map((o) => o.name);
+        expect(names).toEqual(["Small", "Medium", "Large"]);
+        expect(result.items[0].price).toBe(3.0);
+      });
+
+      it("stores groupId/optionId on variationMappings for multi-variation item", () => {
+        const catalog: SquareCatalogResult = {
+          categories: [], modifierLists: [], taxes: [], images: [],
+          items: [buildItem("item-1", "Coffee", [
+            buildVariation("v-s", "Small", 300, 0),
+            buildVariation("v-l", "Large", 500, 1),
+          ])],
+        };
+        const result = service.mapToMenuModels(catalog);
+        expect(result.items[0].variationMappings).toHaveLength(2);
+        for (const m of result.items[0].variationMappings) {
+          expect(m.groupId).toBeDefined();
+          expect(m.optionId).toBeDefined();
+        }
+        // groupId should be consistent across all variations of the same item
+        const gids = result.items[0].variationMappings.map((m) => m.groupId);
+        expect(new Set(gids).size).toBe(1);
+      });
+
+      it("does not populate groupId/optionId on single-variation item", () => {
+        const catalog: SquareCatalogResult = {
+          categories: [], modifierLists: [], taxes: [], images: [],
+          items: [buildItem("item-1", "Latte", [buildVariation("var-1", "Regular", 500, 0)])],
+        };
+        const result = service.mapToMenuModels(catalog);
+        expect(result.items[0].variationMappings[0].groupId).toBeUndefined();
+        expect(result.items[0].variationMappings[0].optionId).toBeUndefined();
+      });
     });
   });
 });
