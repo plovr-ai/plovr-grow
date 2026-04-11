@@ -4,7 +4,10 @@
  */
 
 import { applyRounding } from "./tax";
-import type { RoundingMethod } from "@/services/menu/tax-config.types";
+import type {
+  RoundingMethod,
+  TaxInclusionType,
+} from "@/services/menu/tax-config.types";
 
 /**
  * 商品税率配置（直接传值）
@@ -12,6 +15,7 @@ import type { RoundingMethod } from "@/services/menu/tax-config.types";
 export interface ItemTaxConfig {
   rate: number;
   roundingMethod: RoundingMethod;
+  inclusionType: TaxInclusionType;
 }
 
 /**
@@ -53,7 +57,9 @@ export interface FeeBreakdownItem {
  */
 export interface PricingResult {
   subtotal: number;
-  taxAmount: number;
+  taxAmount: number;           // total = additive + inclusive (for audit)
+  taxAmountAdditive: number;   // new: added to total
+  taxAmountInclusive: number;  // new: already in subtotal, UI "(included)"
   feesAmount: number;
   feesBreakdown: FeeBreakdownItem[];
   tipAmount: number;
@@ -161,6 +167,8 @@ export function calculateOrderPricing(
   return {
     subtotal: roundedSubtotal,
     taxAmount: totalTaxAmount,
+    taxAmountAdditive: totalTaxAmount,
+    taxAmountInclusive: 0,
     feesAmount,
     feesBreakdown,
     tipAmount,
