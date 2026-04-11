@@ -13,7 +13,6 @@ import type {
   AwardPointsInput,
   AwardCustomPointsInput,
   PointsEarnResult,
-  PointTransactionData,
   PaginatedTransactions,
 } from "./loyalty.types";
 

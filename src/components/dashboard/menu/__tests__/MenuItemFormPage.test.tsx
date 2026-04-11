@@ -530,7 +530,7 @@ describe("MenuItemFormPage", () => {
         item: mockMenuItem,
       };
 
-      const { container } = render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
+      render(<MenuItemFormPage {...editProps} />, { wrapper: Wrapper });
 
       const categoryBadge = screen.getByText("Appetizers");
       expect(categoryBadge).toHaveClass("rounded-full", "bg-gray-100", "px-3", "py-1", "text-sm", "text-gray-700");

@@ -17,14 +17,14 @@ vi.mock("@stripe/stripe-js", () => ({
 }));
 
 // Track the onReady callback so we can trigger it
-let capturedOnReady: (() => void) | undefined;
-let capturedRef: { current: { confirmPayment: () => Promise<{ success: boolean; error?: string }> } | null };
+let _capturedOnReady: (() => void) | undefined;
+let _capturedRef: { current: { confirmPayment: () => Promise<{ success: boolean; error?: string }> } | null };
 const mockConfirmPayment = vi.fn<() => Promise<{ success: boolean; error?: string }>>().mockResolvedValue({ success: true });
 
 vi.mock("@stripe/react-stripe-js", () => ({
   Elements: ({ children }: { children: React.ReactNode }) => <div data-testid="stripe-elements">{children}</div>,
   PaymentElement: ({ onReady }: { onReady?: () => void }) => {
-    capturedOnReady = onReady;
+    _capturedOnReady = onReady;
     return <div data-testid="payment-element">Payment Element</div>;
   },
   useStripe: () => ({ fake: true }),
@@ -32,7 +32,7 @@ vi.mock("@stripe/react-stripe-js", () => ({
 }));
 
 // Capture CardPaymentForm props for testing
-let cardFormOnReady: (() => void) | undefined;
+let _cardFormOnReady: (() => void) | undefined;
 let cardFormOnError: ((error: string) => void) | undefined;
 
 vi.mock("@storefront/components/checkout/CardPaymentForm", async () => {
@@ -43,16 +43,17 @@ vi.mock("@storefront/components/checkout/CardPaymentForm", async () => {
       ref: React.ForwardedRef<{ confirmPayment: () => Promise<{ success: boolean; error?: string }> }>
     ) {
       // eslint-disable-next-line react-hooks/globals
-      cardFormOnReady = props.onReady;
+      _cardFormOnReady = props.onReady;
       // eslint-disable-next-line react-hooks/globals
       cardFormOnError = props.onError;
       React.useImperativeHandle(ref, () => ({
         confirmPayment: mockConfirmPayment,
       }));
       // Simulate calling onReady after mount
+      const onReady = props.onReady;
       React.useEffect(() => {
-        props.onReady?.();
-      }, [props.onReady]);
+        onReady?.();
+      }, [onReady]);
       return <div data-testid="card-payment-form">Card Payment Form</div>;
     }),
   };

@@ -4,7 +4,6 @@ import type {
   ToolExecutionContext,
   ToolResultContent,
   ToolValidationResult,
-  QuickAction,
 } from "../dashboard-agent.types";
 import { subscriptionService } from "@/services/subscription";
 
@@ -59,17 +58,6 @@ class SubscriptionTool extends BaseTool {
         successUrl: `${APP_URL}/dashboard?subscription=success`,
         cancelUrl: `${APP_URL}/dashboard?subscription=canceled`,
       });
-
-      const quickActions: QuickAction[] = [
-        {
-          id: "go_to_checkout",
-          label: "Continue to Checkout",
-          action: {
-            type: "navigate",
-            payload: result.url,
-          },
-        },
-      ];
 
       return {
         toolId: this.definition.id,

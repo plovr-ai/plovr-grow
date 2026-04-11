@@ -7,6 +7,21 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
 
+  // Global unused-vars: allow underscore-prefix convention
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
+
   // Project-specific rules
   {
     files: ["src/**/*.{ts,tsx}"],
@@ -24,6 +39,20 @@ const eslintConfig = defineConfig([
           selector: "TSEnumDeclaration",
           message:
             "Enums are not allowed. Use `const obj = { ... } as const` or union types instead.",
+        },
+      ],
+
+      // 允许使用原生 <img> 标签 (CLAUDE.md 要求)
+      "@next/next/no-img-element": "off",
+
+      // 允许下划线前缀的未使用变量
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
         },
       ],
 

@@ -213,7 +213,6 @@ describe("MenuForm", () => {
 
       // Click Cancel inside the confirm dialog (not the main form's Cancel)
       const dialog = screen.getByRole("dialog");
-      const cancelButton = dialog.querySelector('button');
       const dialogButtons = dialog.querySelectorAll('button');
       // The Cancel button in the dialog footer (second to last button, after X close)
       const dialogCancelButton = Array.from(dialogButtons).find(

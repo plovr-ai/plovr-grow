@@ -12,7 +12,6 @@ import type {
   UpdateCateringOrderInput,
   CateringOrderListOptions,
   CateringOrderWithRelations,
-  CateringOrderData,
   CateringOrderInvoice,
 } from "./catering-order.types";
 import {
@@ -225,13 +224,7 @@ export class CateringOrderService {
       customerEmail?: string;
     }
   ): Promise<CateringOrderWithRelations> {
-    // Get the lead to pre-fill customer info
-    const leadsResult = await cateringRepository.getByMerchant(tenantId, merchantId, {
-      page: 1,
-      pageSize: 1,
-    });
-
-    // Find the specific lead - we need to query for it specifically
+    // TODO: lookup specific lead to pre-fill customer info
     // For now, we'll require all customer info to be passed
     const orderInput: CreateCateringOrderInput = {
       customerFirstName: input.customerFirstName ?? "",

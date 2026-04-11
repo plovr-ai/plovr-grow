@@ -24,7 +24,7 @@ interface CardPaymentFormProps {
 export const CardPaymentForm = forwardRef<
   CardPaymentFormRef,
   CardPaymentFormProps
->(function CardPaymentForm({ onReady, onError, disabled, defaultCountry }, ref) {
+>(function CardPaymentForm({ onReady, onError, disabled: _disabled, defaultCountry }, ref) {
   const stripe = useStripe();
   const elements = useElements();
   const [isReady, setIsReady] = useState(false);

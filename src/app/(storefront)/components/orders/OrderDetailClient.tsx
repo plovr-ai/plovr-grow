@@ -119,6 +119,8 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
     return () => {
       eventSource?.close();
     };
+    // fulfillmentStatus is intentionally omitted: SSE stream is established once per order
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [merchantSlug, order.id, order.status]);
 
   // Parse items from JSON if needed

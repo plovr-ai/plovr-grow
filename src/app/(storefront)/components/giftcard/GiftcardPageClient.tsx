@@ -7,7 +7,6 @@ import { useLoyalty } from "@/contexts/LoyaltyContext";
 import {
   StripeProvider,
   CardPaymentForm,
-  CheckoutPageLayout,
   SubmitButton,
   ErrorAlert,
   PaymentLoadingState,
@@ -46,7 +45,7 @@ interface FormErrors {
 
 export function GiftcardPageClient({
   companySlug,
-  companyName,
+  companyName: _companyName,
   config,
 }: GiftcardPageClientProps) {
   const router = useRouter();
@@ -107,6 +106,8 @@ export function GiftcardPageClient({
         buyerEmail: member.email || prev.buyerEmail,
       }));
     }
+    // Only re-run when member identity or loading state changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [member?.id, isLoyaltyLoading, formatPhoneInput]);
 
   // Get effective amount (only from selected denomination)

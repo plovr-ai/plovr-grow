@@ -1,4 +1,4 @@
-import type { LoyaltyConfig, LoyaltyMember, PointTransaction } from "@prisma/client";
+import type { LoyaltyConfig, LoyaltyMember } from "@prisma/client";
 
 // ==================== Loyalty Config Types ====================
 

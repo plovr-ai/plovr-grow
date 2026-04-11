@@ -116,7 +116,7 @@ describe("MerchantService (unit tests)", () => {
     ],
   };
 
-  const mockMenuItems = [
+  const _mockMenuItems = [
     {
       id: "item-cheese-pizza",
       tenantId: "tenant-1",
