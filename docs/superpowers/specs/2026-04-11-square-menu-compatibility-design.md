@@ -186,31 +186,47 @@ export interface ItemTaxConfig {
 }
 ```
 
-`calculateOrderPricing` 的税费计算分支:
+`calculateOrderPricing` 的税费计算分支——**支持同 item 任意数量的 additive + inclusive tax 任意组合**:
 
 ```typescript
 for (const item of items) {
-  const lineTotal = item.unitPrice * item.quantity;  // 商品行原始金额
-  for (const tax of item.taxes || []) {
-    if (tax.rate <= 0) continue;
-    let rawTax: number;
+  const lineTotal = item.unitPrice * item.quantity;  // 商品行列出金额(若含 inclusive tax 则为含税价)
+  const taxes = (item.taxes || []).filter((t) => t.rate > 0);
+
+  // 1. 汇总所有 inclusive tax 的费率总和, 反推 pre-tax base
+  //    taxableBase = lineTotal / (1 + Σ rate_inclusive)
+  //    若无 inclusive tax, taxableBase = lineTotal
+  const sumInclusiveRate = taxes
+    .filter((t) => t.inclusionType === "inclusive")
+    .reduce((acc, t) => acc + t.rate, 0);
+  const taxableBase = sumInclusiveRate > 0
+    ? lineTotal / (1 + sumInclusiveRate)
+    : lineTotal;
+
+  // 2. 对每一条 tax 基于同一个 taxableBase 独立计算 (Square 标准语义)
+  for (const tax of taxes) {
+    const rawTax = taxableBase * tax.rate;
+    const rounded = applyRounding(rawTax, tax.roundingMethod);
     if (tax.inclusionType === "inclusive") {
-      // 价内税: unitPrice 已含税, 反推税额
-      // taxableBase = lineTotal / (1 + rate); tax = lineTotal - taxableBase
-      const taxableBase = lineTotal / (1 + tax.rate);
-      rawTax = lineTotal - taxableBase;
+      taxAmountInclusive += rounded;
     } else {
-      // 价外税(当前行为)
-      rawTax = lineTotal * tax.rate;
+      taxAmountAdditive += rounded;
     }
-    totalTaxAmount += applyRounding(rawTax, tax.roundingMethod);
   }
 }
 ```
 
+**关键语义**(对齐 Square):
+- **所有 tax 共享同一个 `taxableBase`**——多个 additive 税、多个 inclusive 税、additive + inclusive 混挂都基于这一个 base 计算,避免"税上税"或 base 漂移
+- **`taxableBase` 是 pre-tax 金额**: 当存在 inclusive tax 时,`lineTotal` 反推到 pre-tax base;当只有 additive tax 时,`lineTotal` 本身即 pre-tax base
+- **多 inclusive tax**(例 VAT 10% + eco-tax 2%): `taxableBase = lineTotal / 1.12`,然后分别按 `base × 0.10` 和 `base × 0.02` 计算,两税之和 = `lineTotal - base`(在舍入误差内)
+- **多 additive tax**(例 state 6% + county 1% + city 0.5%): 行为与现状一致,`lineTotal` 就是 base,三税分别累加
+- **混合**(例 VAT 10% + service charge tax 5% additive): `taxableBase = lineTotal / 1.10`,VAT = `base × 0.10`,service tax = `base × 0.05`
+
 **Total 的计算分支**:
-- **additive only**: `total = subtotal + tax + fees + tip`(既有行为)
-- **含任一 inclusive tax**: inclusive 税已经包含在 subtotal 中,**不再累加**到 total。实现策略: pricing 返回新字段 `taxIncludedInSubtotal: number`, `calculateOrderPricing` 在累加 total 时只加 additive 部分的 tax。
+- `subtotal` 字段的语义: `subtotal = Σ item.unitPrice × qty`——保持"用户看到的商品列出价之和",无论是否含 inclusive tax
+- `totalAmount = subtotal + taxAmountAdditive + fees + tip`——inclusive 部分**不重复加**到 total(因为已经在 `subtotal` 里了)
+- `taxAmountInclusive` 仅用于 UI 展示 `"Tax (included): $X.XX"` 和订单落库审计,不参与 total 累加
 
 `PricingResult` 扩展:
 
@@ -227,9 +243,13 @@ export interface PricingResult {
 }
 ```
 
-**混合场景范围说明**:
-- **跨 item 混合**(订单中 item A 挂 additive、item B 挂 inclusive): **支持**,两种税分别累加,`taxAmountAdditive` / `taxAmountInclusive` 分别记录,`totalAmount` 只加 additive 部分
-- **同 item 混挂**(同一 item 同时挂 additive 和 inclusive 税): Phase 1 **不支持**——同步时若检测到 Square item 的 `tax_ids[]` 同时包含两种类型的 tax,写 warning 并仅保留**第一条**(按 `tax_ids` 数组顺序),计数记录。理论上按 Square 标准行为应分别独立计算,Phase 1 主动收窄以简化实现
+**混合场景——全部支持**:
+- **多 additive tax**(例 state + county + city sales tax,美国常态): 支持,与现状一致
+- **多 inclusive tax**(例 VAT + eco-tax): 支持,费率求和后从 `lineTotal` 反推共享 base
+- **跨 item 混合**(订单中 item A 挂 additive、item B 挂 inclusive): 支持
+- **同 item 混挂**(同一 item 同时挂 additive 和 inclusive): 支持,基于从 inclusive 反推的 `taxableBase` 共同计算
+
+单元测试必须覆盖以上四种组合 + 0% 税率 + 舍入边界。
 
 #### 下游消费方改造
 
@@ -326,10 +346,15 @@ interface CatalogSyncStats {
 ### 单元测试
 
 1. **`src/lib/__tests__/pricing.test.ts`** 新增用例:
-   - 纯 additive tax(回归)
-   - 纯 inclusive tax(单税率 / 0% / 舍入边界)
-   - 多 item 混合 additive / inclusive
-   - `taxAmountAdditive` / `taxAmountInclusive` / `totalAmount` 分项正确性
+   - 单 additive tax(回归)
+   - 多 additive tax(state + county + city,美国常态——回归 + 新断言分项)
+   - 单 inclusive tax(VAT 场景,含 0% 与舍入边界)
+   - 多 inclusive tax(VAT + eco-tax,验证共享 base 语义)
+   - 同 item 混挂 additive + inclusive(验证 base 反推 + 两种税分别累加)
+   - 跨 item 混合(item A 多 additive、item B 多 inclusive、item C 混挂)
+   - `taxAmountAdditive` / `taxAmountInclusive` / `taxAmount`(总和) / `totalAmount` 分项正确性
+   - 混合场景下 `subtotal + taxAmountAdditive + fees + tip = totalAmount` 等式成立
+   - inclusive 部分等式: `Σ(inclusive tax) ≈ lineTotal - taxableBase`(舍入容差 ±0.01)
 
 2. **`src/services/square/__tests__/square-catalog.test.ts`** 新增用例(针对映射函数):
    - 单 variation → 1:1 MenuItem
