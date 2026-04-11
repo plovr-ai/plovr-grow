@@ -323,6 +323,67 @@ export class IntegrationRepository {
       },
     });
   }
+
+  async scheduleWebhookEventRetry(
+    id: string,
+    retryCount: number,
+    nextRetryAt: Date,
+    errorMessage: string
+  ) {
+    return prisma.webhookEvent.update({
+      where: { id },
+      data: {
+        status: "failed",
+        retryCount,
+        nextRetryAt,
+        errorMessage,
+        processedAt: new Date(),
+      },
+    });
+  }
+
+  async markWebhookEventDeadLetter(id: string, errorMessage: string) {
+    return prisma.webhookEvent.update({
+      where: { id },
+      data: {
+        status: "dead_letter",
+        errorMessage,
+        nextRetryAt: null,
+        processedAt: new Date(),
+      },
+    });
+  }
+
+  async markWebhookEventProcessed(id: string) {
+    return prisma.webhookEvent.update({
+      where: { id },
+      data: {
+        status: "processed",
+        errorMessage: null,
+        nextRetryAt: null,
+        processedAt: new Date(),
+      },
+    });
+  }
+
+  async findRetryableWebhookEvents(limit: number, now: Date = new Date()) {
+    return prisma.webhookEvent.findMany({
+      where: {
+        status: "failed",
+        nextRetryAt: { lte: now },
+      },
+      orderBy: { nextRetryAt: "asc" },
+      take: limit,
+    });
+  }
+
+  async claimWebhookEventForRetry(id: string): Promise<boolean> {
+    const result = await prisma.webhookEvent.updateMany({
+      where: { id, status: "failed" },
+      data: { status: "processing" },
+    });
+    return result.count > 0;
+  }
 }
 
 export const integrationRepository = new IntegrationRepository();

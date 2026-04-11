@@ -923,6 +923,8 @@ model WebhookEvent {
   payload      Json
   status       String    @default("received")
   errorMessage String?   @map("error_message") @db.Text
+  retryCount   Int       @default(0) @map("retry_count")
+  nextRetryAt  DateTime? @map("next_retry_at")
   processedAt  DateTime? @map("processed_at")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
@@ -935,5 +937,6 @@ model WebhookEvent {
   @@index([tenantId, merchantId, eventType])
   @@index([connectionId])
   @@index([status])
+  @@index([status, nextRetryAt])
   @@map("webhook_events")
 }

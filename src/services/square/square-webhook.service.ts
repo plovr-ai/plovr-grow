@@ -8,6 +8,8 @@ import {
   REVERSE_FULFILLMENT_STATUS_MAP,
   FULFILLMENT_STATUS_RANK,
   WEBHOOK_EVENT_STATUS,
+  WEBHOOK_RETRY_POLICY,
+  computeNextRetryAt,
 } from "./square.types";
 
 const INTEGRATION_TYPE = "POS_SQUARE";
@@ -89,14 +91,86 @@ export class SquareWebhookService {
         `[Square Webhook] Handler failed for ${eventType}:`,
         errorMessage
       );
-      await integrationRepository.updateWebhookEventStatus(
+      // First failure: schedule first retry. retryCount tracks how many
+      // attempts have already been made (1 after this initial failure).
+      const nextRetryAt = computeNextRetryAt(0);
+      await integrationRepository.scheduleWebhookEventRetry(
         webhookEvent.id,
-        WEBHOOK_EVENT_STATUS.FAILED,
+        1,
+        nextRetryAt,
         errorMessage
       );
     }
 
     return { deduplicated: false };
+  }
+
+  /**
+   * Retry failed webhook events whose next_retry_at has elapsed.
+   * Uses exponential backoff; after WEBHOOK_RETRY_POLICY.MAX_RETRIES the
+   * event is moved to dead_letter.
+   *
+   * Intended to be invoked from a scheduled cron endpoint.
+   */
+  async retryFailedEvents(
+    batchSize: number = 20
+  ): Promise<{ processed: number; retried: number; deadLettered: number }> {
+    const events = await integrationRepository.findRetryableWebhookEvents(
+      batchSize
+    );
+
+    let processed = 0;
+    let retried = 0;
+    let deadLettered = 0;
+
+    for (const event of events) {
+      const claimed = await integrationRepository.claimWebhookEventForRetry(
+        event.id
+      );
+      if (!claimed) {
+        continue;
+      }
+
+      const payload = event.payload as unknown as SquareWebhookPayload;
+      const connection = {
+        id: event.connectionId,
+        tenantId: event.tenantId,
+        merchantId: event.merchantId,
+      };
+
+      try {
+        await this.routeEvent(event.eventType, payload, connection);
+        await integrationRepository.markWebhookEventProcessed(event.id);
+        processed += 1;
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        const nextCount = event.retryCount + 1;
+        console.error(
+          `[Square Webhook] Retry ${nextCount}/${WEBHOOK_RETRY_POLICY.MAX_RETRIES} failed for ${event.eventType} (${event.id}):`,
+          errorMessage
+        );
+
+        if (nextCount >= WEBHOOK_RETRY_POLICY.MAX_RETRIES) {
+          await integrationRepository.markWebhookEventDeadLetter(
+            event.id,
+            errorMessage
+          );
+          deadLettered += 1;
+        } else {
+          const nextRetryAt = computeNextRetryAt(nextCount);
+          await integrationRepository.scheduleWebhookEventRetry(
+            event.id,
+            nextCount,
+            nextRetryAt,
+            errorMessage
+          );
+          retried += 1;
+        }
+      }
+    }
+
+    return { processed, retried, deadLettered };
   }
 
   private async routeEvent(
