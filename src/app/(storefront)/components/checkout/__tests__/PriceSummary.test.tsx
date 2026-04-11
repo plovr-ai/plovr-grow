@@ -1,8 +1,19 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { PriceSummary } from "../PriceSummary";
 import { MerchantProvider } from "@/contexts";
 import type { ReactNode } from "react";
+
+// Mock next-intl: resolve keys against the storefront en.json message map
+const priceSummaryMessages: Record<string, string> = {
+  taxIncluded: "Tax (included)",
+};
+vi.mock("next-intl", () => ({
+  useTranslations: (namespace: string) => (key: string) => {
+    if (namespace === "priceSummary") return priceSummaryMessages[key] ?? key;
+    return key;
+  },
+}));
 
 function Wrapper({ children }: { children: ReactNode }) {
   return (
