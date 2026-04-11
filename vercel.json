@@ -1,3 +1,9 @@
 {
-  "regions": ["iad1"]
+  "regions": ["iad1"],
+  "crons": [
+    {
+      "path": "/api/cron/square-webhook-retry",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }
