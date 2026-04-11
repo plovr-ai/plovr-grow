@@ -37,7 +37,7 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
 
   // Loading state
   const [isCheckingPhone, setIsCheckingPhone] = useState(false);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isSendingOtp, _setIsSendingOtp] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
   // Error state
@@ -188,6 +188,8 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
         setIsVerifying(false);
       }
     },
+    // handleClose is defined below and stable within this component
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       companySlug,
       phone,

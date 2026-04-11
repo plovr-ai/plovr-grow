@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, act } from "@testing-library/react";
 import { PlaceSearch } from "../PlaceSearch";
 
 // --- Google Maps mock infrastructure ---
 
 let placeSelectHandler: ((event: unknown) => void) | null = null;
-let appendedElement: unknown = null;
 
 function createMockPlaceAutocompleteElement() {
   // Use a real DOM element so appendChild works in jsdom
@@ -65,7 +64,6 @@ describe("PlaceSearch", () => {
   beforeEach(() => {
     originalGoogle = window.google;
     placeSelectHandler = null;
-    appendedElement = null;
     vi.stubEnv(ENV_KEY, "test-api-key");
   });
 
@@ -124,7 +122,7 @@ describe("PlaceSearch", () => {
     });
 
     it("should skip script loading when Google Maps is already loaded", async () => {
-      const { googleMaps } = setupGoogleMapsGlobal({ preloaded: true });
+      setupGoogleMapsGlobal({ preloaded: true });
 
       const createElementSpy = vi.spyOn(document, "createElement");
       const onSelect = vi.fn();
@@ -159,9 +157,7 @@ describe("PlaceSearch", () => {
     });
 
     it("should call onSelect with place data when a place is selected", async () => {
-      const { PlaceAutocompleteElement } = setupGoogleMapsGlobal({
-        preloaded: true,
-      });
+      setupGoogleMapsGlobal({ preloaded: true });
 
       const onSelect = vi.fn();
       await act(async () => {

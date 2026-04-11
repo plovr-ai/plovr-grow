@@ -35,7 +35,7 @@ vi.mock("@storefront/components/menu", () => ({
   ),
   MenuNav: ({
     menus,
-    currentMenuId,
+    currentMenuId: _currentMenuId,
     onMenuSelect,
   }: {
     menus: Array<{ id: string; name: string }>;
@@ -300,7 +300,6 @@ describe("MenuPageClient", () => {
     it("should add item without modifiers from addItem param", () => {
       // Create a mock searchParams with addItem
       const mockSearchParamsWithAdd = new URLSearchParams("addItem=item-1");
-      vi.mocked(vi.importActual("next/navigation")).then;
       // We need to re-mock useSearchParams for this test
       vi.doMock("next/navigation", () => ({
         useRouter: () => ({ push: mockPush }),

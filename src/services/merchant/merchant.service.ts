@@ -17,7 +17,7 @@ import type {
   WebsiteMerchantData,
 } from "./merchant.types";
 import type { SocialLink, TenantSettings } from "@/types/tenant";
-import type { MerchantSettings, BusinessHoursMap } from "@/types/merchant";
+import type { MerchantSettings } from "@/types/merchant";
 
 export class MerchantService {
   // ==================== 公开查询方法 (Storefront) ====================

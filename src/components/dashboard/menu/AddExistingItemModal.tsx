@@ -3,7 +3,6 @@
 import { useState, useTransition, useEffect } from "react";
 import { X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useDashboardFormatPrice } from "@/hooks";
 import {
   getAvailableItemsAction,
   linkItemToCategoryAction,
@@ -23,7 +22,6 @@ export function AddExistingItemModal({
   categoryName,
   onClose,
 }: AddExistingItemModalProps) {
-  const formatPrice = useDashboardFormatPrice();
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
   const [items, setItems] = useState<AvailableItem[]>([]);

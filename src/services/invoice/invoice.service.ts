@@ -7,7 +7,6 @@ import { emailService } from "@/services/email";
 import type {
   InvoiceWithCateringOrder,
   CreateInvoiceInput,
-  InvoiceStatus,
 } from "./invoice.types";
 import { toInvoiceWithCateringOrder } from "./invoice.types";
 

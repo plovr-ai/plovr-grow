@@ -39,7 +39,6 @@ export class TwilioSmsProvider implements SmsProvider {
 
     try {
       // Dynamic import to avoid requiring twilio as a dependency
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error - twilio is an optional peer dependency
       const twilio = await import("twilio");
       const client = twilio.default(this.accountSid, this.authToken);

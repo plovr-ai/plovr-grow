@@ -34,7 +34,6 @@ export function ModifierGroupEditor({
   disabled,
 }: ModifierGroupEditorProps) {
   const formatPrice = useDashboardFormatPrice();
-  const currencySymbol = useDashboardCurrencySymbol();
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [editingGroup, setEditingGroup] = useState<{
     index: number;

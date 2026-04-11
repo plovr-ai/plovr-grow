@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCartStore, useCartHydration } from "@/stores";
-import { useFormatPrice, usePricing } from "@/hooks";
+import { usePricing } from "@/hooks";
 import { useFeeConfig, useLoyalty, useCountry, useTrial } from "@/contexts";
 import { TrialCheckoutBlock } from "@storefront/components/trial/TrialCheckoutBlock";
 import type { FeeInput } from "@/lib/pricing";
@@ -93,7 +93,6 @@ export default function CheckoutPage() {
   const merchantSlug = params.merchantSlug;
 
   const hydrated = useCartHydration();
-  const formatPrice = useFormatPrice();
   const country = useCountry();
   const { isTrial, tenantId } = useTrial();
   const items = useCartStore((state) => state.items);
@@ -237,7 +236,7 @@ export default function CheckoutPage() {
           setSubmitError(errMsg);
         }
       }
-    } catch (error) {
+    } catch {
       setSubmitError("Failed to initialize payment");
     } finally {
       setIsCreatingPaymentIntent(false);

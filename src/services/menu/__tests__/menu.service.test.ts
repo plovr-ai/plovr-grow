@@ -767,7 +767,7 @@ describe("MenuService", () => {
       ];
       vi.mocked(menuEntityRepository.getMenusByCompany).mockResolvedValue(multiMenus as never);
 
-      const result = await menuService.getMenu("tenant-1", "merchant-1", "menu-2");
+      await menuService.getMenu("tenant-1", "merchant-1", "menu-2");
 
       // Should NOT call featuredItemRepository for non-first menu
       expect(featuredItemRepository.getByTenantId).not.toHaveBeenCalled();

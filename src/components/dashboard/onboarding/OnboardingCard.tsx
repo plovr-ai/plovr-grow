@@ -16,7 +16,7 @@ interface OnboardingCardProps {
 
 export function OnboardingCard({
   stepId,
-  stepNumber,
+  stepNumber: _stepNumber,
   status,
   icon,
   isExpanded,

@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SignInModal } from "../SignInModal";
-import type { ReactNode } from "react";
 
 // Mock contexts
 const mockLogin = vi.fn();
@@ -348,10 +347,8 @@ describe("SignInModal", () => {
 
   describe("registration OTP verification", () => {
     it("should verify OTP with registration data for new member", async () => {
-      let otpSendCount = 0;
       mockFetch.mockImplementation((url: string) => {
         if (url.includes("/otp/send")) {
-          otpSendCount++;
           return Promise.resolve({
             ok: true,
             json: async () => ({

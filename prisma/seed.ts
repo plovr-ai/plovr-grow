@@ -826,7 +826,7 @@ async function main() {
   ];
 
   for (const item of bellaMenuItems) {
-    const { id, tenantId, ...updateData } = item;
+    const { id: _id, tenantId: _tenantId, ...updateData } = item;
     await prisma.menuItem.upsert({
       where: { id: item.id },
       update: updateData,
@@ -1306,7 +1306,7 @@ async function main() {
   ];
 
   for (const item of menuItems) {
-    const { id, tenantId, ...updateData } = item;
+    const { id: _id, tenantId: _tenantId, ...updateData } = item;
     await prisma.menuItem.upsert({
       where: { id: item.id },
       update: updateData,
