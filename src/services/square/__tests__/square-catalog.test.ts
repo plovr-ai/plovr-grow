@@ -3,6 +3,39 @@ import { SquareCatalogService } from "../square-catalog.service";
 import type { SquareCatalogResult } from "../square-catalog.service";
 import type { CatalogObject } from "square";
 
+function buildModifier(id: string, name: string, amountCents: number, ordinal: number): CatalogObject {
+  return {
+    type: "MODIFIER",
+    id,
+    modifierData: {
+      name,
+      ordinal,
+      priceMoney: { amount: BigInt(amountCents), currency: "USD" },
+    },
+  } as CatalogObject;
+}
+
+function buildModifierList(
+  id: string,
+  name: string,
+  selectionType: "SINGLE" | "MULTIPLE",
+  minSelected: number,
+  maxSelected: number | null,
+  modifiers: CatalogObject[]
+): CatalogObject {
+  return {
+    type: "MODIFIER_LIST",
+    id,
+    modifierListData: {
+      name,
+      selectionType,
+      minSelectedModifiers: minSelected,
+      maxSelectedModifiers: maxSelected,
+      modifiers,
+    },
+  } as CatalogObject;
+}
+
 function buildVariation(id: string, name: string, amountCents: number, ordinal: number): CatalogObject {
   return {
     type: "ITEM_VARIATION",
@@ -857,7 +890,7 @@ describe("SquareCatalogService", () => {
       const result = service.mapToMenuModels(catalog);
 
       const group = result.items[0].modifiers!.groups[0];
-      expect(group.maxSelect).toBe(10);
+      expect(group.maxSelect).toBe(0);
       expect(group.options).toEqual([]);
     });
 
@@ -980,9 +1013,9 @@ describe("SquareCatalogService", () => {
 
       const result = service.mapToMenuModels(catalog);
 
-      // Even with 0 modifiers, the group is added (maxSelect fallback to 10)
+      // Even with 0 modifiers, the group is added (maxSelect = 0 under new semantics)
       expect(result.items[0].modifiers).not.toBeNull();
-      expect(result.items[0].modifiers!.groups[0].maxSelect).toBe(10);
+      expect(result.items[0].modifiers!.groups[0].maxSelect).toBe(0);
     });
 
     it("should set categoryExternalIds to empty array when item has no categoryId", () => {
@@ -1101,6 +1134,83 @@ describe("SquareCatalogService", () => {
         const result = service.mapToMenuModels(catalog);
         expect(result.items[0].variationMappings[0].groupId).toBeUndefined();
         expect(result.items[0].variationMappings[0].optionId).toBeUndefined();
+      });
+    });
+
+    describe("ModifierList → group mapping (TDD Task 11)", () => {
+      it("maps SINGLE + min=1 to required single-select group", () => {
+        const ml = buildModifierList("ml-1", "Sauce", "SINGLE", 1, 1, [
+          buildModifier("mod-1", "Ketchup",  0,   0),
+          buildModifier("mod-2", "Mustard", 50,   1),
+        ]);
+        const item = buildItem("item-1", "Burger", [buildVariation("v-1", "Regular", 500, 0)], {
+          modifierListInfo: [{ modifierListId: "ml-1", enabled: true }],
+        });
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [ml], taxes: [], images: [], items: [item],
+        });
+        const groups = result.items[0].modifiers!.groups;
+        expect(groups).toHaveLength(1);
+        expect(groups[0]).toMatchObject({
+          name: "Sauce",
+          required: true,
+          minSelect: 1,
+          maxSelect: 1,
+        });
+        expect(groups[0].options.map((o) => [o.name, o.price])).toEqual([
+          ["Ketchup", 0],
+          ["Mustard", 0.5],
+        ]);
+      });
+
+      it("maps MULTIPLE + min=0 to optional multi-select group", () => {
+        const ml = buildModifierList("ml-1", "Toppings", "MULTIPLE", 0, 3, [
+          buildModifier("mod-1", "Cheese",  100, 0),
+          buildModifier("mod-2", "Bacon",   150, 1),
+          buildModifier("mod-3", "Avocado", 200, 2),
+        ]);
+        const item = buildItem("item-1", "Burger", [buildVariation("v-1", "R", 500, 0)], {
+          modifierListInfo: [{ modifierListId: "ml-1", enabled: true }],
+        });
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [ml], taxes: [], images: [], items: [item],
+        });
+        const group = result.items[0].modifiers!.groups[0];
+        expect(group).toMatchObject({
+          name: "Toppings",
+          required: false,
+          minSelect: 0,
+          maxSelect: 3,
+        });
+      });
+
+      it("skips modifier list info when enabled is false", () => {
+        const ml = buildModifierList("ml-1", "Sauce", "SINGLE", 1, 1, [
+          buildModifier("mod-1", "Ketchup", 0, 0),
+        ]);
+        const item = buildItem("item-1", "Burger", [buildVariation("v-1", "R", 500, 0)], {
+          modifierListInfo: [{ modifierListId: "ml-1", enabled: false }],
+        });
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [ml], taxes: [], images: [], items: [item],
+        });
+        // Item is single-variation, no variation group, and modifier list is disabled → no groups at all
+        expect(result.items[0].modifiers).toBeNull();
+      });
+
+      it("sorts modifiers by ordinal regardless of array order", () => {
+        const ml = buildModifierList("ml-1", "Sauce", "SINGLE", 1, 1, [
+          buildModifier("mod-b", "Mustard", 50, 1),
+          buildModifier("mod-a", "Ketchup", 0,  0),
+        ]);
+        const item = buildItem("item-1", "Burger", [buildVariation("v-1", "R", 500, 0)], {
+          modifierListInfo: [{ modifierListId: "ml-1", enabled: true }],
+        });
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [ml], taxes: [], images: [], items: [item],
+        });
+        const names = result.items[0].modifiers!.groups[0].options.map((o) => o.name);
+        expect(names).toEqual(["Ketchup", "Mustard"]);
       });
     });
   });
