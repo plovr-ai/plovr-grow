@@ -278,6 +278,7 @@ model TaxConfig {
   name             String
   description      String?           @db.Text
   roundingMethod   String            @default("half_up") @map("rounding_method")
+  inclusionType    String            @default("additive") @map("inclusion_type")
   status           String            @default("active")
   deleted          Boolean           @default(false)
   createdAt        DateTime          @default(now()) @map("created_at")
@@ -874,8 +875,9 @@ model ExternalIdMapping {
   internalId     String   @map("internal_id")
   externalSource String   @map("external_source")
   externalType   String   @map("external_type")
-  externalId     String   @map("external_id")
-  deleted        Boolean  @default(false)
+  externalId      String   @map("external_id")
+  externalVersion BigInt?  @map("external_version")
+  deleted         Boolean  @default(false)
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -897,6 +899,7 @@ model IntegrationSyncRecord {
   objectsMapped Int       @default(0) @map("objects_mapped")
   cursor        String?
   errorMessage  String?   @map("error_message") @db.Text
+  stats         Json?     @map("stats")
   startedAt     DateTime  @map("started_at")
   finishedAt    DateTime? @map("finished_at")
   createdAt     DateTime  @default(now()) @map("created_at")
