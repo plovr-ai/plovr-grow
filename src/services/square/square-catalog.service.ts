@@ -1,12 +1,22 @@
 import { SquareClient, SquareEnvironment } from "square";
 import type { CatalogObject } from "square";
 import { squareConfig } from "./square.config";
+import type { TaxInclusionType } from "@/services/menu/tax-config.types";
 
 export interface SquareCatalogResult {
   categories: CatalogObject[];
   items: CatalogObject[];
   modifierLists: CatalogObject[];
   taxes: CatalogObject[];
+  images: CatalogObject[];
+}
+
+export interface MappedModifierOption {
+  name: string;
+  price: number;
+  externalId: string;
+  isDefault: boolean;
+  ordinal: number;
 }
 
 export interface MappedModifierGroup {
@@ -14,11 +24,7 @@ export interface MappedModifierGroup {
   required: boolean;
   minSelect: number;
   maxSelect: number;
-  options: {
-    name: string;
-    price: number;
-    externalId: string;
-  }[];
+  options: MappedModifierOption[];
 }
 
 export interface MappedModifiers {
@@ -30,9 +36,16 @@ export interface MappedMenuItem {
   name: string;
   description: string | null;
   price: number;
+  imageUrl: string | null;
   categoryExternalIds: string[];
+  taxExternalIds: string[];
   modifiers: MappedModifiers | null;
-  variationMappings: { externalId: string; name: string }[];
+  variationMappings: {
+    externalId: string;
+    name: string;
+    groupId?: string;
+    optionId?: string;
+  }[];
 }
 
 export interface MappedCategory {
@@ -45,6 +58,7 @@ export interface MappedTax {
   externalId: string;
   name: string;
   percentage: number;
+  inclusionType: TaxInclusionType;
 }
 
 export interface MappedCatalog {
@@ -78,6 +92,7 @@ export class SquareCatalogService {
       items: allObjects.filter((o) => o.type === "ITEM"),
       modifierLists: allObjects.filter((o) => o.type === "MODIFIER_LIST"),
       taxes: allObjects.filter((o) => o.type === "TAX"),
+      images: allObjects.filter((o) => o.type === "IMAGE"),
     };
   }
 
@@ -122,7 +137,7 @@ export class SquareCatalogService {
             required: true,
             minSelect: 1,
             maxSelect: 1,
-            options: variations.map((v) => {
+            options: variations.map((v, idx) => {
               const varPrice = this.moneyToNumber(
                 v.itemVariationData?.priceMoney?.amount
               );
@@ -130,6 +145,8 @@ export class SquareCatalogService {
                 name: v.itemVariationData?.name ?? "Default",
                 price: Math.round((varPrice - basePrice) * 100) / 100,
                 externalId: v.id,
+                isDefault: false,
+                ordinal: idx,
               };
             }),
           });
@@ -154,12 +171,14 @@ export class SquareCatalogService {
             required: false,
             minSelect: 0,
             maxSelect: isSingle ? 1 : (modifiers.length || 10),
-            options: modifiers.map((mod) => ({
+            options: modifiers.map((mod, idx) => ({
               name: mod.modifierData?.name ?? "Option",
               price: this.moneyToNumber(
                 mod.modifierData?.priceMoney?.amount
               ),
               externalId: mod.id,
+              isDefault: false,
+              ordinal: idx,
             })),
           });
         }
@@ -169,7 +188,9 @@ export class SquareCatalogService {
           name: data.name ?? "Unnamed",
           description: data.description ?? null,
           price: basePrice,
+          imageUrl: null,
           categoryExternalIds,
+          taxExternalIds: [],
           modifiers: groups.length > 0 ? { groups } : null,
           variationMappings: variations.map((v) => ({
             externalId: v.id,
@@ -184,6 +205,7 @@ export class SquareCatalogService {
         externalId: t.id,
         name: t.taxData?.name ?? "Tax",
         percentage: parseFloat(t.taxData?.percentage ?? "0"),
+        inclusionType: "additive" as TaxInclusionType,
       }));
 
     return { categories, items, taxes };

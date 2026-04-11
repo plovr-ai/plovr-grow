@@ -136,6 +136,7 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
             },
           },
         ],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -177,12 +178,16 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
         name: "6pc",
         price: 0,
         externalId: "var-wings-6pc",
+        isDefault: false,
+        ordinal: 0,
       });
       // Second option: delta = 18.99 - 10.99 = 8.00
       expect(sizeGroup.options[1]).toEqual({
         name: "12pc",
         price: 8,
         externalId: "var-wings-12pc",
+        isDefault: false,
+        ordinal: 1,
       });
 
       // Sauce group (MULTIPLE selection)
@@ -196,16 +201,22 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
         name: "BBQ",
         price: 0,
         externalId: "mod-bbq",
+        isDefault: false,
+        ordinal: 0,
       });
       expect(sauceGroup.options[1]).toEqual({
         name: "Buffalo",
         price: 0,
         externalId: "mod-buffalo",
+        isDefault: false,
+        ordinal: 1,
       });
       expect(sauceGroup.options[2]).toEqual({
         name: "Truffle Aioli",
         price: 1.5,
         externalId: "mod-truffle",
+        isDefault: false,
+        ordinal: 2,
       });
 
       // Steak: price=34.99, no modifiers
@@ -222,6 +233,7 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
         externalId: "tax-sales",
         name: "Sales Tax",
         percentage: 8.875,
+        inclusionType: "additive",
       });
     });
   });
@@ -243,6 +255,7 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
         ],
         modifierLists: [],
         taxes: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
@@ -324,6 +337,7 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
           },
         ],
         taxes: [],
+        images: [],
       };
 
       const result = service.mapToMenuModels(catalog);
