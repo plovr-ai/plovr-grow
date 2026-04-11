@@ -228,11 +228,15 @@ export class SquareService {
             const catInternalId = categoryIdMap.get(catExtId);
             if (!catInternalId) continue;
 
-            const linkId = generateEntityId();
             await tx.menuCategoryItem.upsert({
-              where: { id: linkId },
+              where: {
+                categoryId_menuItemId: {
+                  categoryId: catInternalId,
+                  menuItemId: internalId,
+                },
+              },
               create: {
-                id: linkId,
+                id: generateEntityId(),
                 tenantId,
                 categoryId: catInternalId,
                 menuItemId: internalId,
@@ -299,11 +303,12 @@ export class SquareService {
           });
 
           // Create merchant tax rate
-          const rateId = generateEntityId();
           await tx.merchantTaxRate.upsert({
-            where: { id: rateId },
+            where: {
+              merchantId_taxConfigId: { merchantId, taxConfigId: internalId },
+            },
             create: {
-              id: rateId,
+              id: generateEntityId(),
               merchantId,
               taxConfigId: internalId,
               rate: tax.percentage / 100,
@@ -349,7 +354,8 @@ export class SquareService {
         errorMessage:
           error instanceof Error ? error.message : "Unknown error",
       });
-      throw new AppError(ErrorCodes.SQUARE_CATALOG_SYNC_FAILED, undefined, 500);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      throw new AppError(ErrorCodes.SQUARE_CATALOG_SYNC_FAILED, { message: errorMessage }, 500);
     }
   }
 
