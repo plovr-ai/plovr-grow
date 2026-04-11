@@ -24,7 +24,7 @@ export default async function LocationConfigPage({
   const merchantData = await merchantService.getMerchant(tenantId, merchantId);
 
   if (!merchantData) {
-    redirect("/dashboard/company");
+    redirect("/dashboard/tenant");
   }
 
   // Serialize to plain object (converts Decimal to number, Date to string)
@@ -34,7 +34,7 @@ export default async function LocationConfigPage({
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link
-          href="/dashboard/company"
+          href="/dashboard/tenant"
           className="flex items-center text-gray-500 hover:text-gray-700"
         >
           <ChevronLeft className="h-5 w-5" />

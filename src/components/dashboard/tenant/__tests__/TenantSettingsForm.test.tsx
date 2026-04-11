@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { CompanySettingsForm } from "../CompanySettingsForm";
+import { TenantSettingsForm } from "../TenantSettingsForm";
 
 // Mock next/navigation
 const mockRefresh = vi.fn();
@@ -14,12 +14,12 @@ vi.mock("next/navigation", () => ({
 // Mock server action
 const mockUpdateCompanySettingsAction = vi.fn();
 
-vi.mock("@/app/(dashboard)/dashboard/(protected)/company/actions", () => ({
-  updateCompanySettingsAction: (input: unknown) =>
+vi.mock("@/app/(dashboard)/dashboard/(protected)/tenant/actions", () => ({
+  updateTenantSettingsAction: (input: unknown) =>
     mockUpdateCompanySettingsAction(input),
 }));
 
-describe("CompanySettingsForm", () => {
+describe("TenantSettingsForm", () => {
   const defaultProps = {
     currency: "USD",
     locale: "en-US",
@@ -33,27 +33,27 @@ describe("CompanySettingsForm", () => {
 
   describe("Rendering", () => {
     it("should render the modal title", () => {
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       expect(screen.getByText("Edit Regional Settings")).toBeInTheDocument();
     });
 
     it("should render currency select with current value", () => {
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       const currencySelect = screen.getByLabelText("Currency") as HTMLSelectElement;
       expect(currencySelect.value).toBe("USD");
     });
 
     it("should render locale select with current value", () => {
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       const localeSelect = screen.getByLabelText("Locale") as HTMLSelectElement;
       expect(localeSelect.value).toBe("en-US");
     });
 
     it("should render helper text for currency and locale", () => {
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       expect(
         screen.getByText("Currency used for menu prices and orders")
@@ -64,7 +64,7 @@ describe("CompanySettingsForm", () => {
     });
 
     it("should render Cancel and Save buttons", () => {
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       expect(
         screen.getByRole("button", { name: /cancel/i })
@@ -77,7 +77,7 @@ describe("CompanySettingsForm", () => {
 
   describe("Close Behavior", () => {
     it("should call onClose when Cancel is clicked", () => {
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
 
@@ -85,7 +85,7 @@ describe("CompanySettingsForm", () => {
     });
 
     it("should call onClose when X button is clicked", () => {
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       // Find the X close button in the header
       const buttons = screen.getAllByRole("button");
@@ -98,7 +98,7 @@ describe("CompanySettingsForm", () => {
     });
 
     it("should call onClose when clicking overlay", () => {
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       // The overlay has aria-hidden="true"
       const overlay = document.querySelector('[aria-hidden="true"]') as HTMLElement;
@@ -109,8 +109,8 @@ describe("CompanySettingsForm", () => {
   });
 
   describe("Form Submission - Success", () => {
-    it("should call updateCompanySettingsAction with selected values on submit", async () => {
-      render(<CompanySettingsForm {...defaultProps} />);
+    it("should call updateTenantSettingsAction with selected values on submit", async () => {
+      render(<TenantSettingsForm {...defaultProps} />);
 
       // Change currency
       const currencySelect = screen.getByLabelText("Currency");
@@ -132,7 +132,7 @@ describe("CompanySettingsForm", () => {
     });
 
     it("should call router.refresh and onClose on success", async () => {
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
@@ -150,7 +150,7 @@ describe("CompanySettingsForm", () => {
         })
       );
 
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
@@ -171,7 +171,7 @@ describe("CompanySettingsForm", () => {
         error: "Permission denied",
       });
 
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
@@ -189,7 +189,7 @@ describe("CompanySettingsForm", () => {
         success: false,
       });
 
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
@@ -205,7 +205,7 @@ describe("CompanySettingsForm", () => {
         .mockResolvedValueOnce({ success: false, error: "Error occurred" })
         .mockResolvedValueOnce({ success: true });
 
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       // First submission - error
       fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
@@ -225,7 +225,7 @@ describe("CompanySettingsForm", () => {
 
   describe("Form State", () => {
     it("should allow changing currency", () => {
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       const currencySelect = screen.getByLabelText("Currency") as HTMLSelectElement;
       fireEvent.change(currencySelect, { target: { value: "GBP" } });
@@ -234,7 +234,7 @@ describe("CompanySettingsForm", () => {
     });
 
     it("should allow changing locale", () => {
-      render(<CompanySettingsForm {...defaultProps} />);
+      render(<TenantSettingsForm {...defaultProps} />);
 
       const localeSelect = screen.getByLabelText("Locale") as HTMLSelectElement;
       fireEvent.change(localeSelect, { target: { value: "zh-CN" } });

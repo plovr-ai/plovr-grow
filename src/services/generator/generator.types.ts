@@ -23,14 +23,14 @@ export interface CreateGenerationResult {
 export interface GenerationStatusResult {
   status: GenerationStatus;
   stepDetail: string | null;
-  companySlug: string | null;
+  tenantSlug: string | null;
   errorMessage: string | null;
 }
 
 export interface GeneratedTenantData {
   tenantId: string;
   merchantId: string;
-  companySlug: string;
+  tenantSlug: string;
   merchantSlug: string;
 }
 

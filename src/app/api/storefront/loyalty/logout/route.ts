@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     const { tenantId } = validation.data;
 
-    // Clear the session cookie (tenantId === companyId)
+    // Clear the session cookie
     await clearLoyaltySession(tenantId);
 
     return NextResponse.json({

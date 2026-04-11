@@ -83,13 +83,13 @@ npm run lint             # 代码检查
 
 ### 数据模型规范
 - **所有业务表必须保留 `tenantId` 字段**（租户隔离）
-- 菜单相关表（`MenuCategory`, `MenuItem`）使用 `companyId` 关联品牌，所有门店共享同一份菜单
+- 菜单相关表（`MenuCategory`, `MenuItem`）通过 `tenantId` 关联品牌，同一租户下所有门店共享同一份菜单
 - 菜单数据不再使用 `merchantId` 关联（后续如需门店级覆盖，通过单独的覆盖表实现）
 - 数据模型层次：
   ```
-  Tenant (1:1) → Company (1:N) → Merchant
-                    ↓
-              MenuCategory (1:N) → MenuItem
+  Tenant (1:N) → Merchant
+      ↓
+  MenuCategory (1:N) → MenuItem
   ```
 
 ### TypeScript 规范 (ESLint 自动拦截)

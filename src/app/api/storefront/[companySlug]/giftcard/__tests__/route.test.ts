@@ -11,7 +11,7 @@ vi.mock("@/services/merchant", () => ({
 
 vi.mock("@/services/order", () => ({
   orderService: {
-    createCompanyOrder: vi.fn(),
+    createGiftCardOrder: vi.fn(),
   },
 }));
 
@@ -77,7 +77,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
-      vi.mocked(orderService.createCompanyOrder).mockResolvedValue(mockOrder as never);
+      vi.mocked(orderService.createGiftCardOrder).mockResolvedValue(mockOrder as never);
       vi.mocked(giftCardService.createGiftCard).mockResolvedValue(
         mockGiftCard as never
       );
@@ -126,7 +126,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
         cardBrand: "visa",
         cardLast4: "4242",
       });
-      vi.mocked(orderService.createCompanyOrder).mockResolvedValue(mockOrder as never);
+      vi.mocked(orderService.createGiftCardOrder).mockResolvedValue(mockOrder as never);
       vi.mocked(paymentService.createPaymentRecord).mockResolvedValue(
         undefined as never
       );
@@ -236,7 +236,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       expect(data.error).toBe("Payment not completed");
 
       // Should NOT create order or giftcard
-      expect(orderService.createCompanyOrder).not.toHaveBeenCalled();
+      expect(orderService.createGiftCardOrder).not.toHaveBeenCalled();
       expect(giftCardService.createGiftCard).not.toHaveBeenCalled();
     });
 
@@ -412,7 +412,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
-      vi.mocked(orderService.createCompanyOrder).mockResolvedValue(mockOrder as never);
+      vi.mocked(orderService.createGiftCardOrder).mockResolvedValue(mockOrder as never);
       vi.mocked(giftCardService.createGiftCard).mockResolvedValue(
         mockGiftCard as never
       );
@@ -439,7 +439,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       expect(data.success).toBe(true);
 
       // Verify order was created with message as notes
-      expect(orderService.createCompanyOrder).toHaveBeenCalledWith(
+      expect(orderService.createGiftCardOrder).toHaveBeenCalledWith(
         "tenant-1",
         expect.objectContaining({
           notes: "Happy Birthday!",
@@ -476,7 +476,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
-      vi.mocked(orderService.createCompanyOrder).mockResolvedValue(mockOrder as never);
+      vi.mocked(orderService.createGiftCardOrder).mockResolvedValue(mockOrder as never);
       vi.mocked(giftCardService.createGiftCard).mockResolvedValue(
         mockGiftCard as never
       );
@@ -532,7 +532,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
-      vi.mocked(orderService.createCompanyOrder).mockResolvedValue(mockOrder as never);
+      vi.mocked(orderService.createGiftCardOrder).mockResolvedValue(mockOrder as never);
       vi.mocked(giftCardService.createGiftCard).mockResolvedValue(
         mockGiftCard as never
       );
@@ -549,7 +549,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
         params: Promise.resolve({ companySlug: "test-company" }),
       });
 
-      expect(orderService.createCompanyOrder).toHaveBeenCalledWith("tenant-1", {
+      expect(orderService.createGiftCardOrder).toHaveBeenCalledWith("tenant-1", {
         customerFirstName: "John",
         customerLastName: "Doe",
         customerPhone: "(555) 123-4567",
@@ -573,7 +573,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
-      vi.mocked(orderService.createCompanyOrder).mockResolvedValue(mockOrder as never);
+      vi.mocked(orderService.createGiftCardOrder).mockResolvedValue(mockOrder as never);
       vi.mocked(giftCardService.createGiftCard).mockResolvedValue(
         mockGiftCard as never
       );
@@ -605,7 +605,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
-      vi.mocked(orderService.createCompanyOrder).mockRejectedValue(
+      vi.mocked(orderService.createGiftCardOrder).mockRejectedValue(
         new Error("Database error")
       );
 
@@ -631,7 +631,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
-      vi.mocked(orderService.createCompanyOrder).mockResolvedValue(mockOrder as never);
+      vi.mocked(orderService.createGiftCardOrder).mockResolvedValue(mockOrder as never);
       vi.mocked(giftCardService.createGiftCard).mockRejectedValue(
         new Error("Card generation failed")
       );
@@ -658,7 +658,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       vi.mocked(merchantService.getTenantBySlug).mockResolvedValue(
         mockCompany as never
       );
-      vi.mocked(orderService.createCompanyOrder).mockRejectedValue("Unknown error");
+      vi.mocked(orderService.createGiftCardOrder).mockRejectedValue("Unknown error");
 
       const request = new NextRequest(
         "http://localhost:3000/api/storefront/test-company/giftcard",

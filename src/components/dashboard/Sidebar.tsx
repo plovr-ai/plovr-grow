@@ -117,7 +117,7 @@ const navigation: NavItem[] = [
   },
   {
     label: "Company",
-    href: "/dashboard/company",
+    href: "/dashboard/tenant",
     icon: Building2,
     pattern: /^\/dashboard\/company/,
   },
