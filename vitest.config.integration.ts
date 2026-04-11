@@ -7,7 +7,9 @@ export default defineConfig({
     globals: true,
     include: [
       "src/**/*.integration.test.ts",
+      "src/**/*.integration.test.tsx",
       "__tests__/**/*.integration.test.ts",
+      "__tests__/**/*.integration.test.tsx",
     ],
     testTimeout: 30000,
     hookTimeout: 30000,
