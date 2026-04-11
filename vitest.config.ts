@@ -6,7 +6,13 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
-    exclude: ["**/node_modules/**", "**/dist/**", "**/*.integration.test.ts", ".worktrees/**"],
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/*.integration.test.ts",
+      "**/*.integration.test.tsx",
+      ".worktrees/**",
+    ],
     coverage: {
       provider: "v8",
       thresholds: {
