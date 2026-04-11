@@ -15,6 +15,10 @@ const paymentStatusConfig: Record<OrderStatus, { label: string; className: strin
     label: "Paid",
     className: "bg-green-100 text-green-800 border-green-300",
   },
+  payment_failed: {
+    label: "Payment Failed",
+    className: "bg-rose-100 text-rose-800 border-rose-300",
+  },
   canceled: {
     label: "Cancelled",
     className: "bg-red-100 text-red-800 border-red-300",

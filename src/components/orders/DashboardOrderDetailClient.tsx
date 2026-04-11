@@ -512,6 +512,11 @@ const TIMELINE_STATUS_CONFIG: Record<
     color: "text-green-600",
     bgColor: "bg-green-100",
   },
+  payment_failed: {
+    label: "Payment Failed",
+    color: "text-rose-600",
+    bgColor: "bg-rose-100",
+  },
   canceled: {
     label: "Cancelled",
     color: "text-red-600",

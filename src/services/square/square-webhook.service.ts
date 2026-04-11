@@ -459,17 +459,36 @@ export class SquareWebhookService {
       console.log(
         `[Square Webhook] Order ${mapping.internalId} payment completed`
       );
-    } else if (paymentStatus === "FAILED") {
+      return;
+    }
+
+    if (paymentStatus === "FAILED") {
+      // Semantically a failed payment is NOT the same as a canceled order
+      // (#111): the customer or merchant may still retry payment, and
+      // writing `cancelledAt` / `cancelReason` pollutes operational
+      // reporting. We only mark the payment side and leave fulfillment
+      // + cancellation untouched.
+      //
+      // Also guard against clobbering a terminal state — never walk a
+      // completed or user-canceled order into `payment_failed`.
+      const current = await prisma.order.findUnique({
+        where: { id: mapping.internalId },
+        select: { status: true },
+      });
+      if (
+        !current ||
+        current.status === "completed" ||
+        current.status === "canceled" ||
+        current.status === "payment_failed"
+      ) {
+        return;
+      }
       await prisma.order.update({
         where: { id: mapping.internalId },
-        data: {
-          status: "canceled",
-          cancelledAt: new Date(),
-          cancelReason: "Payment failed on Square",
-        },
+        data: { status: "payment_failed" },
       });
       console.log(
-        `[Square Webhook] Order ${mapping.internalId} payment failed`
+        `[Square Webhook] Order ${mapping.internalId} payment_failed via Square`
       );
     }
   }
