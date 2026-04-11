@@ -163,6 +163,10 @@ export const WEBHOOK_RETRY_POLICY = {
   MAX_RETRIES: 5,
   BASE_DELAY_MS: 60_000,
   MAX_DELAY_MS: 60 * 60 * 1000,
+  // A claimed retry job must complete within this window or it becomes
+  // reclaimable by a subsequent cron run. Needs to exceed the cron execution
+  // timeout; 10 minutes is comfortably above Vercel's default function limit.
+  LEASE_MS: 10 * 60 * 1000,
 } as const;
 
 export function computeNextRetryAt(

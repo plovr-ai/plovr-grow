@@ -974,7 +974,10 @@ describe("SquareWebhookService", () => {
 
       const result = await service.retryFailedEvents();
 
-      expect(mockClaimWebhookEventForRetry).toHaveBeenCalledWith("we-failed-1");
+      expect(mockClaimWebhookEventForRetry).toHaveBeenCalledWith(
+        "we-failed-1",
+        expect.any(Date)
+      );
       expect(mockSyncCatalog).toHaveBeenCalledWith(TENANT_ID, MERCHANT_ID);
       expect(mockMarkWebhookEventProcessed).toHaveBeenCalledWith("we-failed-1");
       expect(result).toEqual({ processed: 1, retried: 0, deadLettered: 0 });
@@ -1028,6 +1031,55 @@ describe("SquareWebhookService", () => {
       );
       expect(mockScheduleWebhookEventRetry).not.toHaveBeenCalled();
       expect(result).toEqual({ processed: 0, retried: 0, deadLettered: 1 });
+    });
+
+    it("should pass a future lease expiry to claimWebhookEventForRetry", async () => {
+      mockFindRetryableWebhookEvents.mockResolvedValue([FAILED_CATALOG_EVENT]);
+      mockClaimWebhookEventForRetry.mockResolvedValue(true);
+      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockSyncCatalog.mockResolvedValue({});
+
+      const before = Date.now();
+      await service.retryFailedEvents();
+      const after = Date.now();
+
+      expect(mockClaimWebhookEventForRetry).toHaveBeenCalledTimes(1);
+      const call = mockClaimWebhookEventForRetry.mock.calls[0];
+      expect(call[0]).toBe("we-failed-1");
+      const leaseExpiresAt = call[1] as Date;
+      // Lease must be scheduled at least ~10 minutes in the future
+      // (WEBHOOK_RETRY_POLICY.LEASE_MS).
+      expect(leaseExpiresAt.getTime()).toBeGreaterThanOrEqual(
+        before + 10 * 60 * 1000
+      );
+      expect(leaseExpiresAt.getTime()).toBeLessThanOrEqual(
+        after + 10 * 60 * 1000 + 1000
+      );
+    });
+
+    it("should retry a stuck 'processing' event surfaced by findRetryableWebhookEvents", async () => {
+      // findRetryableWebhookEvents now returns both failed rows and
+      // processing rows whose lease has expired — the service treats them
+      // identically (claim-then-route).
+      const staleEvent = {
+        ...FAILED_CATALOG_EVENT,
+        id: "we-stuck",
+        status: "processing",
+        retryCount: 1,
+      };
+      mockFindRetryableWebhookEvents.mockResolvedValue([staleEvent]);
+      mockClaimWebhookEventForRetry.mockResolvedValue(true);
+      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockSyncCatalog.mockResolvedValue({});
+
+      const result = await service.retryFailedEvents();
+
+      expect(mockClaimWebhookEventForRetry).toHaveBeenCalledWith(
+        "we-stuck",
+        expect.any(Date)
+      );
+      expect(mockMarkWebhookEventProcessed).toHaveBeenCalledWith("we-stuck");
+      expect(result).toEqual({ processed: 1, retried: 0, deadLettered: 0 });
     });
 
     it("should handle a mixed batch (success + retry + dead_letter)", async () => {

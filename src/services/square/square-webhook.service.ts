@@ -124,8 +124,12 @@ export class SquareWebhookService {
     let deadLettered = 0;
 
     for (const event of events) {
+      const leaseExpiresAt = new Date(
+        Date.now() + WEBHOOK_RETRY_POLICY.LEASE_MS
+      );
       const claimed = await integrationRepository.claimWebhookEventForRetry(
-        event.id
+        event.id,
+        leaseExpiresAt
       );
       if (!claimed) {
         continue;

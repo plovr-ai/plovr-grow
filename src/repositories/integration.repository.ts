@@ -367,9 +367,11 @@ export class IntegrationRepository {
   }
 
   async findRetryableWebhookEvents(limit: number, now: Date = new Date()) {
+    // Pick up events that are either failed-and-due or stuck in processing
+    // because a previous cron invocation crashed mid-retry (lease expired).
     return prisma.webhookEvent.findMany({
       where: {
-        status: "failed",
+        status: { in: ["failed", "processing"] },
         nextRetryAt: { lte: now },
       },
       orderBy: { nextRetryAt: "asc" },
@@ -377,10 +379,24 @@ export class IntegrationRepository {
     });
   }
 
-  async claimWebhookEventForRetry(id: string): Promise<boolean> {
+  async claimWebhookEventForRetry(
+    id: string,
+    leaseExpiresAt: Date,
+    now: Date = new Date()
+  ): Promise<boolean> {
+    // Atomic claim via updateMany: only succeeds when the row is still in a
+    // claimable state AND its previous lease (nextRetryAt) has expired. This
+    // prevents two concurrent workers from both picking up the same event.
     const result = await prisma.webhookEvent.updateMany({
-      where: { id, status: "failed" },
-      data: { status: "processing" },
+      where: {
+        id,
+        status: { in: ["failed", "processing"] },
+        nextRetryAt: { lte: now },
+      },
+      data: {
+        status: "processing",
+        nextRetryAt: leaseExpiresAt,
+      },
     });
     return result.count > 0;
   }
