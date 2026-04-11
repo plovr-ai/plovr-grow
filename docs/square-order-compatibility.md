@@ -78,7 +78,7 @@
 | `Order.customerFirstName` + `lastName` | `string` | `Fulfillment.pickup_details.recipient.display_name` | ⚠️ | 代码把两者拼接（`square-order.service.ts:350-351`），Square recipient 没有拆分姓名字段 |
 | `Order.customerPhone` | `string` | `Fulfillment.pickup_details.recipient.phone_number` | ✅ | 直接写入（`square-order.service.ts:360`） |
 | `Order.customerEmail` | `string?` | `Fulfillment.pickup_details.recipient.email_address` | ✅ | 直接写入（`square-order.service.ts:361`） |
-| `Order.orderMode` | `"pickup"\|"delivery"\|"dine_in"` | `Fulfillment.type` | ❌ | 代码硬编码 `type: "PICKUP"`（`square-order.service.ts:354`）。`delivery` / `dine_in` 完全没实现，会被当 pickup push。Square 支持 `PICKUP` / `SHIPMENT` / `DELIVERY`，`dine_in` 在 Square 模型中无直接等价 |
+| `Order.orderMode` | `"pickup"\|"delivery"\|"dine_in"` | `Fulfillment.type` | ✅ | 已通过 `SQUARE_FULFILLMENT_TYPE_BY_ORDER_MODE` 映射：`pickup` → `PICKUP`、`delivery` → `DELIVERY`（携带 `Order.deliveryAddress` 到 `deliveryDetails.recipient.address`）、`dine_in` → `PICKUP` + note 加 `"Dine-in"` 前缀。修复于 #102 |
 | `Order.salesChannel` | `"online_order"\|"catering"\|"giftcard"` | `Order.source.name` | ❓ | 当前没传 `source`，Square 侧无感知；`giftcard` 根本不该 push（缺校验） |
 | `Order.status` (支付) | enum | `Order.state` / `Payment.tender` | ⚠️ | 详见 §4.2 |
 | `Order.fulfillmentStatus` | enum | `Order.fulfillments[].state` | ⚠️ | 详见 §4.3 |
@@ -135,7 +135,7 @@
 
 | 我方字段 | 类型 | Square 对应字段 | 兼容性 | 说明 |
 |---|---|---|---|---|
-| `Order.orderMode` | `OrderMode` | `Fulfillment.type` | ❌ | 固定 PICKUP，见 §3.1 |
+| `Order.orderMode` | `OrderMode` | `Fulfillment.type` | ✅ | 已映射（详见 §3.1），delivery 写入 `deliveryDetails.recipient.address`，dine_in 回退 `PICKUP` + note 前缀 |
 | `Order.fulfillmentStatus` | `FulfillmentStatus` | `Fulfillment.state` | ⚠️ | 见 §4.3 |
 | `Order.scheduledAt` | `DateTime?` | `Fulfillment.pickup_details.pickup_at` | ❌ | 丢失，固定 ASAP |
 | `Order.confirmedAt` | `DateTime?` | `Fulfillment.pickup_details.accepted_at` | ⚠️ | 当前仅单向（Square → 我方），push 时不 set |
@@ -279,10 +279,8 @@ Square webhook handler（`square-webhook.service.ts:213-265`）**仅更新 `Orde
    - 影响：Square 报表税额=0，美国合规风险。
    - 建议：复用 `ExternalIdMapping(internalType="TaxConfig", externalType="TAX")`，生成 `OrderLineItem.applied_taxes[]`。
 
-3. **OrderMode 硬编码 PICKUP**
-   - 问题：`square-order.service.ts:354` 写死 `type: "PICKUP"`，`delivery` / `dine_in` 订单会被错误地作为 pickup 推送。
-   - 影响：delivery 订单在 Square 侧没有收货地址，`dine_in` 没有桌号，门店操作混乱。
-   - 建议：新增 orderMode → Square Fulfillment.type 映射；delivery 用 `SHIPMENT`/`DELIVERY` + `shipment_details.recipient.address` 来自 `Order.deliveryAddress`。
+3. ~~**OrderMode 硬编码 PICKUP**~~ ✅ 已修复（#102）
+   - 修复：新增 `SQUARE_FULFILLMENT_TYPE_BY_ORDER_MODE` 映射，`buildFulfillment` 按 `orderMode` 分支构造 `pickupDetails` / `deliveryDetails`；delivery 订单强制要求 `Order.deliveryAddress`（缺失抛 `SQUARE_MISSING_DELIVERY_ADDRESS`）；dine_in 回退 `PICKUP` 并在 note 前加 `"Dine-in"` 前缀。cancel 流程也会按 fulfillment 类型把 `cancelReason` 写到 `pickupDetails` 或 `deliveryDetails`。
 
 4. **履约 CANCELED / FAILED 状态无反向映射**
    - 问题：`REVERSE_FULFILLMENT_STATUS_MAP` 缺 `CANCELED` / `FAILED`（`square.types.ts:124-129`）。

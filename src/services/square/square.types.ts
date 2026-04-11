@@ -1,3 +1,5 @@
+import type { OrderMode, DeliveryAddress } from "@/types";
+
 export interface SquareTokenResponse {
   accessToken: string;
   refreshToken: string;
@@ -44,11 +46,28 @@ export interface SquareOrderPushInput {
   customerLastName: string;
   customerPhone: string;
   customerEmail?: string;
-  orderMode: string;
+  orderMode: OrderMode;
+  deliveryAddress?: DeliveryAddress | null;
   items: SquareOrderPushItem[];
   totalAmount: number;
   notes?: string;
 }
+
+/**
+ * Maps our internal OrderMode to a Square fulfillment type.
+ *
+ * Square supports `PICKUP`, `SHIPMENT`, and `DELIVERY`. Dine-in has no
+ * native equivalent in Square, so we model it as `PICKUP` and flag it via
+ * the fulfillment note so the operator can still recognize it on the POS.
+ */
+export const SQUARE_FULFILLMENT_TYPE_BY_ORDER_MODE: Record<
+  OrderMode,
+  "PICKUP" | "DELIVERY"
+> = {
+  pickup: "PICKUP",
+  delivery: "DELIVERY",
+  dine_in: "PICKUP",
+} as const;
 
 export interface SquareOrderPushItem {
   menuItemId: string;
