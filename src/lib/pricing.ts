@@ -57,9 +57,19 @@ export interface FeeBreakdownItem {
  */
 export interface PricingResult {
   subtotal: number;
-  taxAmount: number;           // total = additive + inclusive (for audit)
-  taxAmountAdditive: number;   // new: added to total
-  taxAmountInclusive: number;  // new: already in subtotal, UI "(included)"
+  /**
+   * Total tax for display and audit. Includes both additive and inclusive tax.
+   * DO NOT use this to compute total — inclusive portion is already inside
+   * `subtotal`. For total calculation, use `taxAmountAdditive`.
+   */
+  taxAmount: number;
+  /** Additive tax (e.g. US sales tax). Added to `totalAmount`. */
+  taxAmountAdditive: number;
+  /**
+   * Inclusive tax (e.g. VAT). Already inside `subtotal` via listed price.
+   * UI should render as `Tax (included): $X.XX`. NOT added to `totalAmount`.
+   */
+  taxAmountInclusive: number;
   feesAmount: number;
   feesBreakdown: FeeBreakdownItem[];
   tipAmount: number;
@@ -149,6 +159,9 @@ export function calculateOrderPricing(
     const taxableBase =
       sumInclusiveRate > 0 ? lineTotal / (1 + sumInclusiveRate) : lineTotal;
 
+    // Each tax line rounded independently before accumulation.
+    // For multi-inclusive scenarios, sum may differ from (lineTotal - taxableBase)
+    // by ±0.01 per line — intentional, preserves per-line breakdown for receipts.
     for (const tax of taxes) {
       const rawTax = taxableBase * tax.rate;
       const rounded = applyRounding(rawTax, tax.roundingMethod);
