@@ -19,20 +19,11 @@ export default async function DashboardOverviewPage() {
   if (!tenant) redirect("/dashboard/login");
 
   const merchantId = tenant.merchants?.[0]?.id;
-
   if (!merchantId) {
-    return (
-      <div className="py-8">
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6 text-center">
-          <h2 className="text-lg font-medium text-yellow-800">
-            No Store Found
-          </h2>
-          <p className="mt-2 text-yellow-700">
-            Please create a store first before using the AI assistant.
-          </p>
-        </div>
-      </div>
-    );
+    // Invariant: every tenant has a default merchant from creation.
+    // Reaching here means the session points at a tenant whose merchants
+    // were deleted out from under it — treat as corrupted and re-auth.
+    redirect("/dashboard/signout");
   }
 
   const menuCount = await menuService.countMenus(tenantId);

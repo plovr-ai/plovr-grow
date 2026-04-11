@@ -84,7 +84,8 @@ export class GeneratorService {
     return {
       tenantId: tenant.id,
       merchantId: merchant.id,
-      companySlug: tenant.slug,
+      // Slug is non-null by construction: createTenantWithMerchant always sets one.
+      companySlug: tenant.slug as string,
       merchantSlug: merchant.slug,
     };
   }
