@@ -53,6 +53,7 @@ const baseOrder = {
   notes: null,
   loyaltyMemberId: null,
   cancelReason: null,
+  squareOrderVersion: null,
   confirmedAt: null,
   preparingAt: null,
   readyAt: null,

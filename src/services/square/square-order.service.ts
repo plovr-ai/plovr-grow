@@ -8,6 +8,7 @@ import type {
 } from "square";
 import { squareConfig } from "./square.config";
 import { integrationRepository } from "@/repositories/integration.repository";
+import prisma from "@/lib/db";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import type {
   SquareOrderPushInput,
@@ -114,6 +115,13 @@ export class SquareOrderService {
         externalSource: "SQUARE",
         externalType: "ORDER",
         externalId: squareOrder.id,
+      });
+
+      // Persist the initial Square order version so subsequent webhook
+      // handlers can detect out-of-order updates (#109).
+      await prisma.order.update({
+        where: { id: input.orderId },
+        data: { squareOrderVersion: Number(squareOrder.version ?? 1) },
       });
 
       // Update sync record as successful

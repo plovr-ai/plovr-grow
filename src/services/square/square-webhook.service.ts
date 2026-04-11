@@ -163,6 +163,7 @@ export class SquareWebhookService {
     )?.order as
       | {
           id: string;
+          version?: number;
           fulfillments?: Array<{
             state: string;
             pickup_details?: { cancel_reason?: string };
@@ -170,6 +171,8 @@ export class SquareWebhookService {
         }
       | undefined;
 
+    const incomingVersion =
+      typeof orderObj?.version === "number" ? orderObj.version : null;
     const fulfillment = orderObj?.fulfillments?.[0];
     const squareFulfillmentState = fulfillment?.state;
     if (!squareFulfillmentState) {
@@ -204,6 +207,39 @@ export class SquareWebhookService {
       return;
     }
 
+    // Load the full set of fields we need up-front so that each branch
+    // (cancellation / forward progress) can consult both fulfillment status,
+    // cancellation status, and the Square version we've stored locally.
+    const current = await prisma.order.findUnique({
+      where: { id: mapping.internalId },
+      select: {
+        fulfillmentStatus: true,
+        status: true,
+        squareOrderVersion: true,
+      },
+    });
+    if (!current) {
+      console.log(
+        `[Square Webhook] Order not found for mapping: ${mapping.internalId}, skipping`
+      );
+      return;
+    }
+
+    // Optimistic-concurrency guard (#109): Square stamps an incrementing
+    // `version` on every order edit. If we've already applied a newer
+    // version, ignore this webhook — it's either a replay or an event that
+    // lost a race with a later one.
+    if (
+      incomingVersion !== null &&
+      current.squareOrderVersion !== null &&
+      incomingVersion <= current.squareOrderVersion
+    ) {
+      console.log(
+        `[Square Webhook] Ignoring stale webhook for ${mapping.internalId}: incoming v${incomingVersion} <= current v${current.squareOrderVersion}`
+      );
+      return;
+    }
+
     // Terminal cancellation states from Square — map straight to Order.status
     // = "canceled" regardless of fulfillment progress. Cancellation is
     // orthogonal to the forward rank and must be honored from any prior state.
@@ -211,16 +247,6 @@ export class SquareWebhookService {
       squareFulfillmentState === "CANCELED" ||
       squareFulfillmentState === "FAILED"
     ) {
-      const current = await prisma.order.findUnique({
-        where: { id: mapping.internalId },
-        select: { status: true },
-      });
-      if (!current) {
-        console.log(
-          `[Square Webhook] Order not found for mapping: ${mapping.internalId}, skipping`
-        );
-        return;
-      }
       if (current.status === "canceled") {
         // Idempotent: already canceled, nothing to do.
         return;
@@ -236,6 +262,9 @@ export class SquareWebhookService {
           status: "canceled",
           cancelledAt: new Date(),
           cancelReason,
+          ...(incomingVersion !== null
+            ? { squareOrderVersion: incomingVersion }
+            : {}),
         },
       });
       console.log(
@@ -252,16 +281,6 @@ export class SquareWebhookService {
     // internal states onto the same Square state (e.g. confirmed + preparing
     // both become RESERVED), so the reverse map is inherently lossy and can
     // only be trusted when it advances the order.
-    const current = await prisma.order.findUnique({
-      where: { id: mapping.internalId },
-      select: { fulfillmentStatus: true, status: true },
-    });
-    if (!current) {
-      console.log(
-        `[Square Webhook] Order not found for mapping: ${mapping.internalId}, skipping`
-      );
-      return;
-    }
     // Do not resurrect a canceled order via a stale forward-progress webhook.
     if (current.status === "canceled") {
       return;
@@ -275,7 +294,18 @@ export class SquareWebhookService {
       return;
     }
     if (incomingRank === currentRank) {
-      // Same status — nothing to write; avoid clobbering timestamps.
+      // Same status — nothing to write; avoid clobbering timestamps. Still
+      // bump the persisted Square version so future stale events are dropped.
+      if (
+        incomingVersion !== null &&
+        (current.squareOrderVersion === null ||
+          incomingVersion > current.squareOrderVersion)
+      ) {
+        await prisma.order.update({
+          where: { id: mapping.internalId },
+          data: { squareOrderVersion: incomingVersion },
+        });
+      }
       return;
     }
 
@@ -285,6 +315,9 @@ export class SquareWebhookService {
     };
     if (timestampField) {
       updateData[timestampField] = new Date();
+    }
+    if (incomingVersion !== null) {
+      updateData.squareOrderVersion = incomingVersion;
     }
 
     await prisma.order.update({
