@@ -556,11 +556,12 @@ describe("LoyaltyRegistrationCTA", () => {
         expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
       });
 
-      // Enter OTP code - use aria-label to select only OTP digit inputs
+      // Enter OTP code via paste (avoids stale-closure flakiness from looping
+      // fireEvent.change on each digit input)
       const otpInputs = screen.getAllByLabelText(/Digit \d/);
-      for (let i = 0; i < 6; i++) {
-        fireEvent.change(otpInputs[i], { target: { value: String(i + 1) } });
-      }
+      fireEvent.paste(otpInputs[0], {
+        clipboardData: { getData: () => "123456" },
+      });
 
       // Check API call includes edited data
       await waitFor(() => {
@@ -617,9 +618,9 @@ describe("LoyaltyRegistrationCTA", () => {
       });
 
       const otpInputs = screen.getAllByLabelText(/Digit \d/);
-      for (let i = 0; i < 6; i++) {
-        fireEvent.change(otpInputs[i], { target: { value: String(i + 1) } });
-      }
+      fireEvent.paste(otpInputs[0], {
+        clipboardData: { getData: () => "123456" },
+      });
 
       // Should show success message
       await waitFor(() => {
@@ -710,9 +711,9 @@ describe("LoyaltyRegistrationCTA", () => {
 
       // Enter OTP code - use aria-label to select only OTP digit inputs
       const otpInputs = screen.getAllByLabelText(/Digit \d/);
-      for (let i = 0; i < 6; i++) {
-        fireEvent.change(otpInputs[i], { target: { value: String(i + 1) } });
-      }
+      fireEvent.paste(otpInputs[0], {
+        clipboardData: { getData: () => "123456" },
+      });
 
       // Wait for success
       await waitFor(() => {
@@ -761,9 +762,9 @@ describe("LoyaltyRegistrationCTA", () => {
       });
 
       const otpInputs = screen.getAllByLabelText(/Digit \d/);
-      for (let i = 0; i < 6; i++) {
-        fireEvent.change(otpInputs[i], { target: { value: String(i + 1) } });
-      }
+      fireEvent.paste(otpInputs[0], {
+        clipboardData: { getData: () => "123456" },
+      });
 
       // Should show gift card specific success message
       await waitFor(() => {
