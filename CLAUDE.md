@@ -92,6 +92,11 @@ npm run lint             # 代码检查
   MenuCategory (1:N) → MenuItem
   ```
 
+### 数据库迁移规范
+- **禁止手写 Prisma migration SQL 文件** — 只修改 `prisma/schema.prisma`，migration 文件必须通过 `npx prisma migrate dev --name <name>` 生成
+- 若本地 DB 不可达或无法跑 `migrate dev`，停下来让用户执行，不要手写或伪造 migration SQL
+- 提交 schema 改动时不提交手写的 migration 目录
+
 ### TypeScript 规范 (ESLint 自动拦截)
 - **禁止使用 `any`**: 使用 `unknown` 或具体类型代替 (`@typescript-eslint/no-explicit-any`)
 - **禁止使用 `enum`**: 使用 `const` 对象 + `as const` 或联合类型代替 (`no-restricted-syntax`)
