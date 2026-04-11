@@ -39,7 +39,7 @@ export class TaxConfigService {
       name: c.name,
       description: c.description,
       roundingMethod: c.roundingMethod as RoundingMethod,
-      inclusionType: (c.inclusionType ?? "additive") as TaxInclusionType,
+      inclusionType: c.inclusionType,
       status: c.status as "active" | "inactive",
     }));
   }
@@ -61,7 +61,7 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
-      inclusionType: (config.inclusionType ?? "additive") as TaxInclusionType,
+      inclusionType: config.inclusionType,
       status: config.status as "active" | "inactive",
     };
   }
@@ -83,7 +83,7 @@ export class TaxConfigService {
         name: c.name,
         description: c.description,
         roundingMethod: c.roundingMethod as RoundingMethod,
-        inclusionType: (c.inclusionType ?? "additive") as TaxInclusionType,
+        inclusionType: c.inclusionType,
         status: c.status as "active" | "inactive",
       });
     }
@@ -102,7 +102,7 @@ export class TaxConfigService {
       name: r.taxConfig.name,
       rate: Number(r.rate),
       roundingMethod: r.taxConfig.roundingMethod as RoundingMethod,
-      inclusionType: ((r.taxConfig.inclusionType as string | null) ?? "additive") as TaxInclusionType,
+      inclusionType: r.taxConfig.inclusionType,
     }));
   }
 
@@ -129,7 +129,7 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
-      inclusionType: (config.inclusionType ?? "additive") as TaxInclusionType,
+      inclusionType: config.inclusionType,
       status: config.status as "active" | "inactive",
       merchantRates: merchants
         .map((merchant, index) => {
@@ -162,7 +162,7 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
-      inclusionType: (config.inclusionType ?? "additive") as TaxInclusionType,
+      inclusionType: config.inclusionType,
       status: config.status as "active" | "inactive",
     };
   }
@@ -199,7 +199,7 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
-      inclusionType: (config.inclusionType ?? "additive") as TaxInclusionType,
+      inclusionType: config.inclusionType,
       status: config.status as "active" | "inactive",
     };
   }
