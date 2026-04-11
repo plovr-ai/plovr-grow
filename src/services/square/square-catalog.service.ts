@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { SquareClient, SquareEnvironment } from "square";
 import type { CatalogObject } from "square";
 import { squareConfig } from "./square.config";
@@ -122,33 +123,63 @@ export class SquareCatalogService {
           ? [data.categoryId]
           : [];
 
-        // Base price from first variation
-        const basePrice = this.moneyToNumber(
-          variations[0]?.itemVariationData?.priceMoney?.amount
+        // Sort variations by ordinal (stable fallback to array order)
+        const sortedVariations = [...variations].sort((a, b) => {
+          const ao = a.itemVariationData?.ordinal ?? 0;
+          const bo = b.itemVariationData?.ordinal ?? 0;
+          return ao - bo;
+        });
+
+        // Base price = min of all variation prices
+        const variationPrices = sortedVariations.map((v) =>
+          this.moneyToNumber(v.itemVariationData?.priceMoney?.amount)
         );
+        const basePrice = variationPrices.length > 0 ? Math.min(...variationPrices) : 0;
 
         // Build modifier groups
         const groups: MappedModifierGroup[] = [];
+        const variationMappings: MappedMenuItem["variationMappings"] = [];
 
-        // Multi-variation → size/variation modifier group
-        if (variations.length > 1) {
+        if (sortedVariations.length > 1) {
+          const groupId = randomUUID();
+
+          let firstDefaultAssigned = false;
+          const options: MappedModifierOption[] = sortedVariations.map((v, i) => {
+            const price = variationPrices[i];
+            const optionId = randomUUID();
+            const name = v.itemVariationData?.name ?? "Default";
+            const isDefault = !firstDefaultAssigned && price === basePrice;
+            if (isDefault) firstDefaultAssigned = true;
+
+            variationMappings.push({
+              externalId: v.id,
+              name,
+              groupId,
+              optionId,
+            });
+
+            return {
+              name,
+              price: Math.round((price - basePrice) * 100) / 100,
+              externalId: v.id,
+              isDefault,
+              ordinal: v.itemVariationData?.ordinal ?? i,
+            };
+          });
+
           groups.push({
-            name: "Size",
+            name: "Options",
             required: true,
             minSelect: 1,
             maxSelect: 1,
-            options: variations.map((v, idx) => {
-              const varPrice = this.moneyToNumber(
-                v.itemVariationData?.priceMoney?.amount
-              );
-              return {
-                name: v.itemVariationData?.name ?? "Default",
-                price: Math.round((varPrice - basePrice) * 100) / 100,
-                externalId: v.id,
-                isDefault: false,
-                ordinal: idx,
-              };
-            }),
+            options,
+          });
+        } else if (sortedVariations.length === 1) {
+          const v = sortedVariations[0];
+          variationMappings.push({
+            externalId: v.id,
+            name: v.itemVariationData?.name ?? "Default",
+            // no groupId/optionId on single-variation path
           });
         }
 
@@ -192,10 +223,7 @@ export class SquareCatalogService {
           categoryExternalIds,
           taxExternalIds: [],
           modifiers: groups.length > 0 ? { groups } : null,
-          variationMappings: variations.map((v) => ({
-            externalId: v.id,
-            name: v.itemVariationData?.name ?? "Default",
-          })),
+          variationMappings,
         };
       });
 

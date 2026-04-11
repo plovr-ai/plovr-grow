@@ -157,7 +157,7 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
       // 2 items mapped
       expect(result.items).toHaveLength(2);
 
-      // Wings: price=10.99, 2 modifier groups (Size + Sauce)
+      // Wings: price=10.99 (min variation price), 2 modifier groups (Options + Sauce)
       const wings = result.items[0];
       expect(wings.externalId).toBe("item-wings");
       expect(wings.name).toBe("Chicken Wings");
@@ -166,23 +166,23 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
       expect(wings.modifiers).not.toBeNull();
       expect(wings.modifiers!.groups).toHaveLength(2);
 
-      // Size group (from multi-variation)
-      const sizeGroup = wings.modifiers!.groups[0];
-      expect(sizeGroup.name).toBe("Size");
-      expect(sizeGroup.required).toBe(true);
-      expect(sizeGroup.minSelect).toBe(1);
-      expect(sizeGroup.maxSelect).toBe(1);
-      expect(sizeGroup.options).toHaveLength(2);
-      // First option: delta = 0 (base price)
-      expect(sizeGroup.options[0]).toEqual({
+      // Options group (from multi-variation)
+      const optionsGroup = wings.modifiers!.groups[0];
+      expect(optionsGroup.name).toBe("Options");
+      expect(optionsGroup.required).toBe(true);
+      expect(optionsGroup.minSelect).toBe(1);
+      expect(optionsGroup.maxSelect).toBe(1);
+      expect(optionsGroup.options).toHaveLength(2);
+      // First option: delta = 0 (base/min price), isDefault = true
+      expect(optionsGroup.options[0]).toEqual({
         name: "6pc",
         price: 0,
         externalId: "var-wings-6pc",
-        isDefault: false,
+        isDefault: true,
         ordinal: 0,
       });
       // Second option: delta = 18.99 - 10.99 = 8.00
-      expect(sizeGroup.options[1]).toEqual({
+      expect(optionsGroup.options[1]).toEqual({
         name: "12pc",
         price: 8,
         externalId: "var-wings-12pc",
