@@ -214,8 +214,19 @@ describe("TenantSettingsForm", () => {
         expect(screen.getByText("Error occurred")).toBeInTheDocument();
       });
 
+      // Wait for the submit button to return to its idle, enabled state.
+      // Without this the next click can land while isPending is still true
+      // (button labelled "Saving..." and disabled), which jsdom silently
+      // drops — causing an intermittent flake where the error never clears.
+      const submitButton = await screen.findByRole("button", {
+        name: /save changes/i,
+      });
+      await waitFor(() => {
+        expect(submitButton).toBeEnabled();
+      });
+
       // Second submission - the error should be cleared during submit
-      fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+      fireEvent.click(submitButton);
 
       await waitFor(() => {
         expect(screen.queryByText("Error occurred")).not.toBeInTheDocument();
