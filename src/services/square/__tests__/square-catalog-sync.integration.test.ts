@@ -340,6 +340,46 @@ describe("Square Catalog Sync (Integration)", () => {
     }
   });
 
+  it("re-sync is idempotent — no duplicate rows", async () => {
+    const fetchSpy = vi
+      .spyOn(squareCatalogService, "fetchFullCatalog")
+      .mockResolvedValue(buildSyntheticCatalog());
+
+    try {
+      // First sync
+      await squareService.syncCatalog(TENANT_ID, MERCHANT_ID);
+
+      // Second sync with identical catalog data
+      await squareService.syncCatalog(TENANT_ID, MERCHANT_ID);
+
+      // Exactly one MerchantTaxRate per taxConfig
+      const rates = await prisma.merchantTaxRate.findMany({
+        where: { merchantId: MERCHANT_ID },
+      });
+      expect(rates).toHaveLength(1);
+
+      // Exactly one MenuCategoryItem per (category, item) link
+      const links = await prisma.menuCategoryItem.findMany({
+        where: { tenantId: TENANT_ID },
+      });
+      expect(links).toHaveLength(1); // one link for the Latte → Drinks category
+
+      // TaxConfig should still be one row (not duplicated)
+      const taxConfigs = await prisma.taxConfig.findMany({
+        where: { tenantId: TENANT_ID },
+      });
+      expect(taxConfigs).toHaveLength(1);
+
+      // MenuItem should still be one row (Gift Card skipped)
+      const items = await prisma.menuItem.findMany({
+        where: { tenantId: TENANT_ID },
+      });
+      expect(items).toHaveLength(1);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it("pricing computed from DB-loaded inclusive TaxConfig produces correct totals", async () => {
     const { taxConfigRepository } = await import(
       "@/repositories/tax-config.repository"
