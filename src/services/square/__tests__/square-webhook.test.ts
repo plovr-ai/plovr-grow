@@ -109,7 +109,10 @@ describe("SquareWebhookService", () => {
     mockSyncCatalog.mockResolvedValue({});
     mockGetIdMappingByExternalId.mockResolvedValue(null);
     mockOrderUpdate.mockResolvedValue({});
-    mockOrderFindUnique.mockResolvedValue({ fulfillmentStatus: "pending" });
+    mockOrderFindUnique.mockResolvedValue({
+      fulfillmentStatus: "pending",
+      status: "completed",
+    });
   });
 
   // ==================== verifySignature ====================
@@ -516,11 +519,207 @@ describe("SquareWebhookService", () => {
       });
       mockOrderFindUnique.mockResolvedValue({
         fulfillmentStatus: "weird-legacy-value",
+        status: "completed",
       });
 
       await service.handleWebhook(JSON.stringify(orderPayload));
 
       expect(mockOrderUpdate).toHaveBeenCalled();
+    });
+
+    it("should mark order canceled on CANCELED fulfillment state", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({ status: "completed" });
+
+      const canceledPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              fulfillments: [
+                {
+                  state: "CANCELED",
+                  pickup_details: { cancel_reason: "Customer no-show" },
+                },
+              ],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(canceledPayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: {
+          status: "canceled",
+          cancelledAt: expect.any(Date),
+          cancelReason: "Customer no-show",
+        },
+      });
+    });
+
+    it("should default cancel reason when pickup_details.cancel_reason missing", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({ status: "completed" });
+
+      const canceledPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              fulfillments: [{ state: "CANCELED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(canceledPayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: expect.objectContaining({
+          status: "canceled",
+          cancelReason: "Canceled on Square POS",
+        }),
+      });
+    });
+
+    it("should mark order canceled on FAILED fulfillment state", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({ status: "completed" });
+
+      const failedPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              fulfillments: [{ state: "FAILED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(failedPayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: expect.objectContaining({
+          status: "canceled",
+          cancelReason: "Fulfillment failed on Square",
+        }),
+      });
+    });
+
+    it("should honor cancellation even when order was already ready (overrides rank)", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "ready",
+        status: "completed",
+      });
+
+      const canceledPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              fulfillments: [{ state: "CANCELED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(canceledPayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: expect.objectContaining({ status: "canceled" }),
+      });
+    });
+
+    it("should be idempotent: no write when order already canceled", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({ status: "canceled" });
+
+      const canceledPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              fulfillments: [{ state: "CANCELED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(canceledPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should skip CANCELED when internal order row is missing", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue(null);
+
+      const canceledPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              fulfillments: [{ state: "CANCELED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(canceledPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should not resurrect a canceled order via forward-progress webhook", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "pending",
+        status: "canceled",
+      });
+
+      // PREPARED → ready would advance rank — but order is canceled.
+      await service.handleWebhook(JSON.stringify(orderPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
     });
   });
 

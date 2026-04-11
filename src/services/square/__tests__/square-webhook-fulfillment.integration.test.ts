@@ -32,7 +32,15 @@ const MAPPING_ID = generateEntityId();
 const SQUARE_MERCHANT_ID = "sq-merchant-integration";
 const SQUARE_ORDER_ID = "sq-order-integration";
 
-function buildOrderUpdatedPayload(state: string, eventId: string) {
+function buildOrderUpdatedPayload(
+  state: string,
+  eventId: string,
+  options: { cancelReason?: string } = {}
+) {
+  const fulfillment: Record<string, unknown> = { state };
+  if (options.cancelReason) {
+    fulfillment.pickup_details = { cancel_reason: options.cancelReason };
+  }
   return JSON.stringify({
     merchant_id: SQUARE_MERCHANT_ID,
     type: "order.updated",
@@ -44,7 +52,7 @@ function buildOrderUpdatedPayload(state: string, eventId: string) {
       object: {
         order: {
           id: SQUARE_ORDER_ID,
-          fulfillments: [{ state }],
+          fulfillments: [fulfillment],
         },
       },
     },
@@ -129,10 +137,13 @@ async function upsertOrder(
     },
     update: {
       fulfillmentStatus,
+      status: "completed",
       confirmedAt: null,
       preparingAt: null,
       readyAt: null,
       fulfilledAt: null,
+      cancelledAt: null,
+      cancelReason: null,
       ...overrides,
     },
   });
@@ -220,5 +231,70 @@ describe("Square webhook fulfillment rank guard (integration)", () => {
     const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
     expect(row?.fulfillmentStatus).toBe("fulfilled");
     expect(row?.fulfilledAt).not.toBeNull();
+  });
+
+  it("cancels order when Square sends CANCELED fulfillment state", async () => {
+    await upsertOrder("confirmed", {
+      confirmedAt: new Date("2026-04-10T10:00:00Z"),
+    });
+
+    await service.handleWebhook(
+      buildOrderUpdatedPayload("CANCELED", "evt-it-cancel-with-reason", {
+        cancelReason: "Out of stock",
+      })
+    );
+
+    const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
+    expect(row?.status).toBe("canceled");
+    expect(row?.cancelledAt).not.toBeNull();
+    expect(row?.cancelReason).toBe("Out of stock");
+  });
+
+  it("cancels order on FAILED fulfillment state with default reason", async () => {
+    await upsertOrder("preparing", {
+      confirmedAt: new Date("2026-04-10T10:00:00Z"),
+      preparingAt: new Date("2026-04-10T10:05:00Z"),
+    });
+
+    await service.handleWebhook(
+      buildOrderUpdatedPayload("FAILED", "evt-it-failed")
+    );
+
+    const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
+    expect(row?.status).toBe("canceled");
+    expect(row?.cancelReason).toBe("Fulfillment failed on Square");
+  });
+
+  it("cancellation overrides rank guard from ready state", async () => {
+    await upsertOrder("ready", {
+      confirmedAt: new Date("2026-04-10T10:00:00Z"),
+      preparingAt: new Date("2026-04-10T10:05:00Z"),
+      readyAt: new Date("2026-04-10T10:10:00Z"),
+    });
+
+    await service.handleWebhook(
+      buildOrderUpdatedPayload("CANCELED", "evt-it-cancel-from-ready")
+    );
+
+    const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
+    expect(row?.status).toBe("canceled");
+    expect(row?.cancelReason).toBe("Canceled on Square POS");
+  });
+
+  it("does not resurrect a canceled order via stale forward webhook", async () => {
+    await upsertOrder("pending");
+    // Pre-cancel the order
+    await prisma.order.update({
+      where: { id: ORDER_ID },
+      data: { status: "canceled", cancelledAt: new Date() },
+    });
+
+    await service.handleWebhook(
+      buildOrderUpdatedPayload("PREPARED", "evt-it-cancel-resurrect")
+    );
+
+    const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
+    expect(row?.status).toBe("canceled");
+    expect(row?.fulfillmentStatus).toBe("pending");
   });
 });

@@ -161,10 +161,17 @@ export class SquareWebhookService {
     const orderObj = (
       payload.data.object as Record<string, unknown>
     )?.order as
-      | { id: string; fulfillments?: Array<{ state: string }> }
+      | {
+          id: string;
+          fulfillments?: Array<{
+            state: string;
+            pickup_details?: { cancel_reason?: string };
+          }>;
+        }
       | undefined;
 
-    const squareFulfillmentState = orderObj?.fulfillments?.[0]?.state;
+    const fulfillment = orderObj?.fulfillments?.[0];
+    const squareFulfillmentState = fulfillment?.state;
     if (!squareFulfillmentState) {
       console.log(
         "[Square Webhook] No fulfillment state in order update, skipping"
@@ -172,9 +179,13 @@ export class SquareWebhookService {
       return;
     }
 
-    const internalStatus =
-      REVERSE_FULFILLMENT_STATUS_MAP[squareFulfillmentState];
-    if (!internalStatus) {
+    const isCancellation =
+      squareFulfillmentState === "CANCELED" ||
+      squareFulfillmentState === "FAILED";
+    if (
+      !isCancellation &&
+      !REVERSE_FULFILLMENT_STATUS_MAP[squareFulfillmentState]
+    ) {
       console.log(
         `[Square Webhook] Unknown Square fulfillment state: ${squareFulfillmentState}`
       );
@@ -193,6 +204,49 @@ export class SquareWebhookService {
       return;
     }
 
+    // Terminal cancellation states from Square — map straight to Order.status
+    // = "canceled" regardless of fulfillment progress. Cancellation is
+    // orthogonal to the forward rank and must be honored from any prior state.
+    if (
+      squareFulfillmentState === "CANCELED" ||
+      squareFulfillmentState === "FAILED"
+    ) {
+      const current = await prisma.order.findUnique({
+        where: { id: mapping.internalId },
+        select: { status: true },
+      });
+      if (!current) {
+        console.log(
+          `[Square Webhook] Order not found for mapping: ${mapping.internalId}, skipping`
+        );
+        return;
+      }
+      if (current.status === "canceled") {
+        // Idempotent: already canceled, nothing to do.
+        return;
+      }
+      const cancelReason =
+        fulfillment?.pickup_details?.cancel_reason?.trim() ||
+        (squareFulfillmentState === "FAILED"
+          ? "Fulfillment failed on Square"
+          : "Canceled on Square POS");
+      await prisma.order.update({
+        where: { id: mapping.internalId },
+        data: {
+          status: "canceled",
+          cancelledAt: new Date(),
+          cancelReason,
+        },
+      });
+      console.log(
+        `[Square Webhook] Order ${mapping.internalId} canceled via Square (${squareFulfillmentState})`
+      );
+      return;
+    }
+
+    const internalStatus =
+      REVERSE_FULFILLMENT_STATUS_MAP[squareFulfillmentState];
+
     // Monotonic guard: ignore reverse-mapped states that would walk the
     // order back to an earlier stage. The forward map collapses multiple
     // internal states onto the same Square state (e.g. confirmed + preparing
@@ -200,12 +254,16 @@ export class SquareWebhookService {
     // only be trusted when it advances the order.
     const current = await prisma.order.findUnique({
       where: { id: mapping.internalId },
-      select: { fulfillmentStatus: true },
+      select: { fulfillmentStatus: true, status: true },
     });
     if (!current) {
       console.log(
         `[Square Webhook] Order not found for mapping: ${mapping.internalId}, skipping`
       );
+      return;
+    }
+    // Do not resurrect a canceled order via a stale forward-progress webhook.
+    if (current.status === "canceled") {
       return;
     }
     const currentRank = FULFILLMENT_STATUS_RANK[current.fulfillmentStatus] ?? -1;
