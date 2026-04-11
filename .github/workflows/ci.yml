@@ -35,6 +35,37 @@ jobs:
       - run: npm ci
       - run: npx vitest run --coverage
 
+  migration-drift:
+    name: Migration Drift Check
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: plovr_shadow
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Verify schema.prisma matches migrations directory
+        run: |
+          npx prisma migrate diff \
+            --from-migrations prisma/migrations \
+            --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url mysql://root:password@127.0.0.1:3306/plovr_shadow \
+            --exit-code
+
   integration-test:
     name: Integration Test
     runs-on: ubuntu-latest
