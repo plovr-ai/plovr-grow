@@ -90,6 +90,18 @@ export class MenuService {
   // ==================== Menu Content ====================
 
   /**
+   * Count active items per menu in a single query.
+   * Returns a Map keyed by menuId; menus with zero items are omitted.
+   */
+  async countActiveItemsByMenuIds(
+    tenantId: string,
+    menuIds: string[]
+  ): Promise<Map<string, number>> {
+    const { menuRepository } = await getRepositories();
+    return menuRepository.countActiveItemsByMenuIds(tenantId, menuIds);
+  }
+
+  /**
    * Get menu for customer-facing display
    *
    * Populates tax information for each item based on:
@@ -99,23 +111,39 @@ export class MenuService {
    * @param tenantId - Tenant ID for isolation
    * @param merchantId - Merchant ID (used to get merchant info)
    * @param menuId - Optional menu ID (defaults to first menu)
+   * @param options.preloadedMerchant - Optional already-fetched merchant record
+   *   to avoid a duplicate DB query when the caller (e.g. the storefront page)
+   *   already resolved the merchant via slug.
    */
   async getMenu(
     tenantId: string,
     merchantId: string,
-    menuId?: string
+    menuId?: string,
+    options?: {
+      preloadedMerchant?: {
+        id: string;
+        name: string;
+        logoUrl: string | null;
+      } | null;
+    }
   ): Promise<GetMenuResponse> {
     const { menuRepository, menuEntityRepository, merchantRepository, taxConfigRepository, featuredItemRepository } =
       await getRepositories();
 
-    // Get merchant info
-    const merchant = await merchantRepository.getById(merchantId);
+    // Fetch merchant (unless preloaded) and menus in parallel. Previously
+    // these were serial AND the merchant was always refetched by id even when
+    // the caller had just resolved it by slug.
+    const [merchant, menus] = await Promise.all([
+      options?.preloadedMerchant !== undefined
+        ? Promise.resolve(options.preloadedMerchant)
+        : merchantRepository.getById(merchantId),
+      menuEntityRepository.getMenusByCompany(tenantId),
+    ]);
+
     if (!merchant) {
       throw new AppError(ErrorCodes.MERCHANT_NOT_FOUND, undefined, 404);
     }
 
-    // Get all active menus for the tenant
-    const menus = await menuEntityRepository.getMenusByCompany(tenantId);
     if (menus.length === 0) {
       throw new AppError(ErrorCodes.MENU_NOT_FOUND, undefined, 404);
     }

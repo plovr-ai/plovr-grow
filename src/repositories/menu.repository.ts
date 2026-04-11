@@ -46,6 +46,56 @@ export class MenuRepository {
   }
 
   /**
+   * Count active menu items across a set of menus in a single query.
+   * Returns a Map of menuId -> total active item count, covering only menus
+   * that have at least one active/out_of_stock item. Menus with no items are
+   * simply absent from the map.
+   *
+   * Used by the storefront menu page to filter out empty menus without
+   * re-fetching each menu's full content (fixes an N+1).
+   */
+  async countActiveItemsByMenuIds(
+    tenantId: string,
+    menuIds: string[]
+  ): Promise<Map<string, number>> {
+    const result = new Map<string, number>();
+    if (menuIds.length === 0) return result;
+
+    const categories = await prisma.menuCategory.findMany({
+      where: {
+        tenantId,
+        menuId: { in: menuIds },
+        status: "active",
+        deleted: false,
+      },
+      select: {
+        menuId: true,
+        _count: {
+          select: {
+            categoryItems: {
+              where: {
+                deleted: false,
+                menuItem: {
+                  is: {
+                    status: { in: ["active", "out_of_stock"] },
+                    deleted: false,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    for (const category of categories) {
+      const prev = result.get(category.menuId) ?? 0;
+      result.set(category.menuId, prev + category._count.categoryItems);
+    }
+    return result;
+  }
+
+  /**
    * Get all active categories with their items for a specific menu (Storefront)
    * Uses junction table for N:M relationship
    */
