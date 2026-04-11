@@ -3,7 +3,7 @@ import { integrationRepository } from "@/repositories/integration.repository";
 import { squareOrderService } from "./square-order.service";
 import type { OrderPaidEvent, FulfillmentStatusChangedEvent, OrderCancelledEvent } from "@/services/order/order-events.types";
 import type { SquareOrderPushItem } from "./square.types";
-import type { OrderItemData } from "@/types";
+import type { OrderItemData, SalesChannel } from "@/types";
 
 const INTEGRATION_TYPE = "POS_SQUARE";
 
@@ -39,6 +39,21 @@ export function registerSquareOrderEventHandlers(): void {
  */
 async function handleOrderPaid(event: OrderPaidEvent): Promise<void> {
   try {
+    // Gift card orders are virtual products with no merchantId — they must
+    // never be pushed to Square POS (no location, no catalog mapping).
+    if (!event.merchantId) {
+      return;
+    }
+
+    const orderForPush = await getOrderForPush(event.tenantId, event.orderId);
+    if (!orderForPush) {
+      return;
+    }
+
+    if (orderForPush.salesChannel === "giftcard") {
+      return;
+    }
+
     // Check if merchant has an active Square connection
     const hasConnection = await checkSquareConnection(
       event.tenantId,
@@ -48,13 +63,8 @@ async function handleOrderPaid(event: OrderPaidEvent): Promise<void> {
       return;
     }
 
-    // Build order push input from event data
-    // The event carries the order items from the OrderCreatedEvent
-    // For order.paid, we need to fetch items from the order
-    // Since OrderPaidEvent extends PaymentStatusChangedEvent and doesn't carry items,
-    // we need to handle this gracefully
-    const orderItems = await getOrderItems(event.tenantId, event.orderId);
-    if (!orderItems || orderItems.length === 0) {
+    const orderItems = orderForPush.items;
+    if (orderItems.length === 0) {
       console.log("[Square] Skipping order push - no items found:", {
         orderId: event.orderId,
       });
@@ -193,18 +203,21 @@ async function checkSquareConnection(
 }
 
 /**
- * Get order items from the database.
+ * Fetch the minimum order context needed to decide whether to push to Square.
  * Uses dynamic import to avoid circular dependency.
  */
-async function getOrderItems(
+async function getOrderForPush(
   tenantId: string,
   orderId: string
-): Promise<OrderItemData[] | null> {
+): Promise<{ items: OrderItemData[]; salesChannel: SalesChannel } | null> {
   try {
     const { orderService } = await import("@/services/order/order.service");
     const order = await orderService.getOrder(tenantId, orderId);
     if (!order) return null;
-    return order.items as unknown as OrderItemData[];
+    return {
+      items: order.items as unknown as OrderItemData[],
+      salesChannel: order.salesChannel as SalesChannel,
+    };
   } catch {
     return null;
   }
