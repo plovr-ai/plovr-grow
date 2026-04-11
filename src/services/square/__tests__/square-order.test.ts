@@ -813,22 +813,123 @@ describe("SquareOrderService", () => {
   // ==================== generateIdempotencyKey ====================
 
   describe("generateIdempotencyKey", () => {
-    it("should generate deterministic key for same inputs", () => {
-      const key1 = service.generateIdempotencyKey("t1", "m1", "o1");
-      const key2 = service.generateIdempotencyKey("t1", "m1", "o1");
+    const baseInput: SquareOrderPushInput = {
+      orderId: "o1",
+      orderNumber: "ORD-1",
+      customerFirstName: "Jane",
+      customerLastName: "Doe",
+      customerPhone: "555-0100",
+      customerEmail: "jane@example.com",
+      orderMode: "pickup",
+      totalAmount: 12.5,
+      notes: "",
+      items: [
+        {
+          menuItemId: "item-1",
+          name: "Coffee",
+          price: 4.5,
+          quantity: 1,
+          selectedModifiers: [],
+        },
+      ],
+    };
+
+    it("should generate deterministic key for identical content (transient retry)", () => {
+      const key1 = service.generateIdempotencyKey("t1", "m1", baseInput);
+      const key2 = service.generateIdempotencyKey("t1", "m1", baseInput);
       expect(key1).toBe(key2);
     });
 
-    it("should generate different keys for different inputs", () => {
-      const key1 = service.generateIdempotencyKey("t1", "m1", "o1");
-      const key2 = service.generateIdempotencyKey("t1", "m1", "o2");
-      const key3 = service.generateIdempotencyKey("t2", "m1", "o1");
-      expect(key1).not.toBe(key2);
-      expect(key1).not.toBe(key3);
+    it("should differ when tenant or merchant changes", () => {
+      const base = service.generateIdempotencyKey("t1", "m1", baseInput);
+      expect(service.generateIdempotencyKey("t2", "m1", baseInput)).not.toBe(
+        base
+      );
+      expect(service.generateIdempotencyKey("t1", "m2", baseInput)).not.toBe(
+        base
+      );
+    });
+
+    it("should differ when orderId changes", () => {
+      const a = service.generateIdempotencyKey("t1", "m1", baseInput);
+      const b = service.generateIdempotencyKey("t1", "m1", {
+        ...baseInput,
+        orderId: "o2",
+      });
+      expect(a).not.toBe(b);
+    });
+
+    it("should differ when totalAmount changes (retry after repricing)", () => {
+      const a = service.generateIdempotencyKey("t1", "m1", baseInput);
+      const b = service.generateIdempotencyKey("t1", "m1", {
+        ...baseInput,
+        totalAmount: 13.0,
+      });
+      expect(a).not.toBe(b);
+    });
+
+    it("should differ when items change (retry after fixing line items)", () => {
+      const a = service.generateIdempotencyKey("t1", "m1", baseInput);
+      const b = service.generateIdempotencyKey("t1", "m1", {
+        ...baseInput,
+        items: [
+          ...baseInput.items,
+          {
+            menuItemId: "item-2",
+            name: "Muffin",
+            price: 3,
+            quantity: 1,
+            selectedModifiers: [],
+          },
+        ],
+      });
+      expect(a).not.toBe(b);
+    });
+
+    it("should differ when a modifier changes", () => {
+      const a = service.generateIdempotencyKey("t1", "m1", baseInput);
+      const b = service.generateIdempotencyKey("t1", "m1", {
+        ...baseInput,
+        items: [
+          {
+            ...baseInput.items[0],
+            selectedModifiers: [
+              {
+                modifierId: "mod-1",
+                modifierName: "Large",
+                price: 1,
+                quantity: 1,
+              },
+            ],
+          },
+        ],
+      });
+      expect(a).not.toBe(b);
+    });
+
+    it("should differ when customerPhone changes", () => {
+      const a = service.generateIdempotencyKey("t1", "m1", baseInput);
+      const b = service.generateIdempotencyKey("t1", "m1", {
+        ...baseInput,
+        customerPhone: "555-9999",
+      });
+      expect(a).not.toBe(b);
+    });
+
+    it("should treat null notes and empty string as equivalent", () => {
+      const a = service.generateIdempotencyKey("t1", "m1", {
+        ...baseInput,
+        notes: undefined,
+      });
+      const b = service.generateIdempotencyKey("t1", "m1", {
+        ...baseInput,
+        notes: "",
+      });
+      expect(a).toBe(b);
     });
 
     it("should return UUID-like format", () => {
-      const key = service.generateIdempotencyKey("t1", "m1", "o1");
+      const key = service.generateIdempotencyKey("t1", "m1", baseInput);
       const parts = key.split("-");
       expect(parts).toHaveLength(5);
       expect(parts[0]).toHaveLength(8);
