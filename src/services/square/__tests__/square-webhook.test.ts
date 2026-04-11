@@ -40,6 +40,7 @@ vi.mock("../square.config", () => ({
 
 const mockMerchantFindFirst = vi.fn();
 const mockOrderUpdate = vi.fn();
+const mockOrderFindUnique = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   default: {
@@ -48,6 +49,7 @@ vi.mock("@/lib/db", () => ({
     },
     order: {
       update: (...args: unknown[]) => mockOrderUpdate(...args),
+      findUnique: (...args: unknown[]) => mockOrderFindUnique(...args),
     },
   },
 }));
@@ -107,6 +109,7 @@ describe("SquareWebhookService", () => {
     mockSyncCatalog.mockResolvedValue({});
     mockGetIdMappingByExternalId.mockResolvedValue(null);
     mockOrderUpdate.mockResolvedValue({});
+    mockOrderFindUnique.mockResolvedValue({ fulfillmentStatus: "pending" });
   });
 
   // ==================== verifySignature ====================
@@ -361,6 +364,106 @@ describe("SquareWebhookService", () => {
       expect(mockGetIdMappingByExternalId).not.toHaveBeenCalled();
       expect(mockOrderUpdate).not.toHaveBeenCalled();
     });
+
+    it("should not regress fulfillment status when stale webhook arrives", async () => {
+      // Order is already confirmed; a stale PROPOSED (→ pending) webhook
+      // must not walk it back to pending.
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "confirmed",
+      });
+
+      const staleProposedPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              fulfillments: [{ state: "PROPOSED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(staleProposedPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should not rewrite when incoming status matches current", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "ready",
+      });
+
+      // Incoming PREPARED maps to ready — same as current.
+      await service.handleWebhook(JSON.stringify(orderPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should advance confirmed → preparing on RESERVED webhook", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "confirmed",
+      });
+
+      const reservedPayload = buildPayload({
+        type: "order.updated",
+        data: {
+          type: "order",
+          id: "sq-order-1",
+          object: {
+            order: {
+              id: "sq-order-1",
+              fulfillments: [{ state: "RESERVED" }],
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(reservedPayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalledWith({
+        where: { id: "internal-order-1" },
+        data: expect.objectContaining({
+          fulfillmentStatus: "preparing",
+          preparingAt: expect.any(Date),
+        }),
+      });
+    });
+
+    it("should skip when internal order row is missing", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue(null);
+
+      await service.handleWebhook(JSON.stringify(orderPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should treat unknown current status as -1 rank (always advances)", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "weird-legacy-value",
+      });
+
+      await service.handleWebhook(JSON.stringify(orderPayload));
+
+      expect(mockOrderUpdate).toHaveBeenCalled();
+    });
   });
 
   // ==================== handlePaymentEvent ====================
@@ -527,6 +630,10 @@ describe("SquareWebhookService", () => {
     it("should not set timestamp field when status has no corresponding timestamp", async () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
+      });
+      // Current status is unknown (rank -1) so incoming pending still advances.
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "legacy-unknown",
       });
 
       const proposedPayload = buildPayload({

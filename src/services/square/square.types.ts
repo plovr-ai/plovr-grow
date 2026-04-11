@@ -76,13 +76,30 @@ export interface SquareOrderPushResult {
 
 /**
  * Fulfillment status mapping from internal status to Square FulfillmentState.
+ *
+ * Internal `confirmed` maps to Square `RESERVED` (not `PROPOSED`) so that
+ * when Square echoes the state back via webhook the reverse map does not
+ * collapse it into `pending`.
  */
 export const FULFILLMENT_STATUS_MAP: Record<string, string> = {
   pending: "PROPOSED",
-  confirmed: "PROPOSED",
+  confirmed: "RESERVED",
   preparing: "RESERVED",
   ready: "PREPARED",
   fulfilled: "COMPLETED",
+} as const;
+
+/**
+ * Monotonic rank for internal fulfillment statuses. Used when applying
+ * reverse-mapped Square webhook states so stale/coarse events cannot walk an
+ * order back to an earlier stage.
+ */
+export const FULFILLMENT_STATUS_RANK: Record<string, number> = {
+  pending: 0,
+  confirmed: 1,
+  preparing: 2,
+  ready: 3,
+  fulfilled: 4,
 } as const;
 
 /**

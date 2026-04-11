@@ -6,6 +6,7 @@ import prisma from "@/lib/db";
 import type { SquareWebhookPayload } from "./square.types";
 import {
   REVERSE_FULFILLMENT_STATUS_MAP,
+  FULFILLMENT_STATUS_RANK,
   WEBHOOK_EVENT_STATUS,
 } from "./square.types";
 
@@ -189,6 +190,34 @@ export class SquareWebhookService {
       console.log(
         `[Square Webhook] No mapping for Square order: ${squareOrderId}, skipping`
       );
+      return;
+    }
+
+    // Monotonic guard: ignore reverse-mapped states that would walk the
+    // order back to an earlier stage. The forward map collapses multiple
+    // internal states onto the same Square state (e.g. confirmed + preparing
+    // both become RESERVED), so the reverse map is inherently lossy and can
+    // only be trusted when it advances the order.
+    const current = await prisma.order.findUnique({
+      where: { id: mapping.internalId },
+      select: { fulfillmentStatus: true },
+    });
+    if (!current) {
+      console.log(
+        `[Square Webhook] Order not found for mapping: ${mapping.internalId}, skipping`
+      );
+      return;
+    }
+    const currentRank = FULFILLMENT_STATUS_RANK[current.fulfillmentStatus] ?? -1;
+    const incomingRank = FULFILLMENT_STATUS_RANK[internalStatus] ?? -1;
+    if (incomingRank < currentRank) {
+      console.log(
+        `[Square Webhook] Ignoring regressive fulfillment state for ${mapping.internalId}: ${current.fulfillmentStatus} → ${internalStatus}`
+      );
+      return;
+    }
+    if (incomingRank === currentRank) {
+      // Same status — nothing to write; avoid clobbering timestamps.
       return;
     }
 
