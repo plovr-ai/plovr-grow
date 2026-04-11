@@ -908,6 +908,500 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
     });
   });
 
+  describe("edge-case branches for coverage", () => {
+    it("handles measurement unit with no type and no custom name", () => {
+      const catalog = emptyCatalog();
+      catalog.measurementUnits = [
+        {
+          type: "MEASUREMENT_UNIT",
+          id: "mu-empty",
+          measurementUnitData: { measurementUnit: {} },
+        },
+      ];
+      const r = service.mapToMenuModels(catalog);
+      expect(r.measurementUnits[0]).toEqual({
+        externalId: "mu-empty",
+        name: "Unit",
+        abbreviation: null,
+        precision: 0,
+        type: "GENERIC",
+      });
+    });
+
+    it("handles tax with missing enabled field (still included)", () => {
+      const catalog = emptyCatalog();
+      catalog.taxes = [
+        {
+          type: "TAX",
+          id: "tax-noenabled",
+          taxData: { name: "Neutral", percentage: "3.0" },
+        },
+      ];
+      const r = service.mapToMenuModels(catalog);
+      expect(r.taxes).toHaveLength(1);
+    });
+
+    it("skips categories with no id entries in itemData.categories[]", () => {
+      const catalog = emptyCatalog();
+      catalog.items = [
+        {
+          type: "ITEM",
+          id: "item-nullcat",
+          itemData: {
+            name: "X",
+            categories: [{ id: null }, { id: "real-cat" }],
+            variations: [
+              {
+                id: "v1",
+                type: "ITEM_VARIATION",
+                itemVariationData: {
+                  priceMoney: { amount: BigInt(100), currency: "USD" },
+                },
+              },
+            ],
+          },
+        },
+      ];
+      const r = service.mapToMenuModels(catalog);
+      expect(r.items[0].categoryExternalIds).toEqual(["real-cat"]);
+    });
+
+    it("skips itemOption when lookup returns undefined or wrong type", () => {
+      const catalog = emptyCatalog();
+      catalog.items = [
+        {
+          type: "ITEM",
+          id: "item-nolist",
+          itemData: {
+            name: "X",
+            itemOptions: [
+              { itemOptionId: "missing-opt" },
+              { itemOptionId: null },
+            ],
+            variations: [
+              {
+                id: "v1",
+                type: "ITEM_VARIATION",
+                itemVariationData: {
+                  priceMoney: { amount: BigInt(100), currency: "USD" },
+                },
+              },
+            ],
+          },
+        },
+      ];
+      const r = service.mapToMenuModels(catalog);
+      expect(r.items[0].modifiers).toBeNull();
+    });
+
+    it("skips itemOption with no itemOptionData", () => {
+      const catalog = emptyCatalog();
+      catalog.itemOptions = [{ type: "ITEM_OPTION", id: "opt-empty" }];
+      catalog.items = [
+        {
+          type: "ITEM",
+          id: "item-empty-opt",
+          itemData: {
+            name: "X",
+            itemOptions: [{ itemOptionId: "opt-empty" }],
+            variations: [
+              {
+                id: "v1",
+                type: "ITEM_VARIATION",
+                itemVariationData: {
+                  priceMoney: { amount: BigInt(100), currency: "USD" },
+                },
+              },
+            ],
+          },
+        },
+      ];
+      const r = service.mapToMenuModels(catalog);
+      expect(r.items[0].modifiers).toBeNull();
+    });
+
+    it("falls back to option value description and generates default names for ITEM_OPTION", () => {
+      const catalog = emptyCatalog();
+      catalog.itemOptions = [
+        {
+          type: "ITEM_OPTION",
+          id: "opt-nodisp",
+          itemOptionData: {
+            values: [
+              {
+                type: "ITEM_OPTION_VAL",
+                id: "val-nn",
+                itemOptionValueData: {},
+              },
+            ],
+          },
+        },
+      ];
+      catalog.items = [
+        {
+          type: "ITEM",
+          id: "item-nodisp",
+          itemData: {
+            name: "X",
+            itemOptions: [{ itemOptionId: "opt-nodisp" }],
+            variations: [
+              {
+                id: "v1",
+                type: "ITEM_VARIATION",
+                itemVariationData: {
+                  priceMoney: { amount: BigInt(100), currency: "USD" },
+                },
+              },
+            ],
+          },
+        },
+      ];
+      const r = service.mapToMenuModels(catalog);
+      const group = r.items[0].modifiers!.groups[0];
+      expect(group.name).toBe("Option");
+      expect(group.options[0].name).toBe("Option");
+    });
+
+    it("handles modifier list with missing name and TEXT textRequired=false", () => {
+      const catalog = emptyCatalog();
+      catalog.modifierLists = [
+        {
+          type: "MODIFIER_LIST",
+          id: "ml-notxt",
+          modifierListData: {
+            modifierType: "TEXT",
+          },
+        },
+        {
+          type: "MODIFIER_LIST",
+          id: "ml-noname",
+          modifierListData: {
+            modifiers: [
+              {
+                id: "m",
+                type: "MODIFIER",
+                modifierData: {
+                  priceMoney: { amount: BigInt(0), currency: "USD" },
+                  imageId: "img-missing",
+                },
+              },
+            ],
+          },
+        },
+      ];
+      catalog.items = [
+        {
+          type: "ITEM",
+          id: "item-noname",
+          itemData: {
+            name: "X",
+            variations: [
+              {
+                id: "v1",
+                type: "ITEM_VARIATION",
+                itemVariationData: {
+                  priceMoney: { amount: BigInt(100), currency: "USD" },
+                },
+              },
+            ],
+            modifierListInfo: [
+              { modifierListId: "ml-notxt", enabled: true },
+              { modifierListId: "ml-noname", enabled: true },
+            ],
+          },
+        },
+      ];
+      const r = service.mapToMenuModels(catalog);
+      const groups = r.items[0].modifiers!.groups;
+      expect(groups).toHaveLength(2);
+      const txt = groups.find((g) => g.type === "text")!;
+      expect(txt.name).toBe("Text");
+      expect(txt.required).toBe(false);
+      const listGroup = groups.find((g) => g.type !== "text")!;
+      expect(listGroup.name).toBe("Options");
+      expect(listGroup.options[0].name).toBe("Option");
+      expect(listGroup.options[0].imageUrl).toBeNull(); // imageId lookup miss
+    });
+
+    it("persists isArchived=true into sourceMetadata", () => {
+      const catalog = emptyCatalog();
+      catalog.items = [
+        {
+          type: "ITEM",
+          id: "item-arch",
+          itemData: {
+            name: "Archived",
+            isArchived: true,
+            variations: [
+              {
+                id: "v1",
+                type: "ITEM_VARIATION",
+                itemVariationData: {
+                  priceMoney: { amount: BigInt(100), currency: "USD" },
+                },
+              },
+            ],
+          },
+        },
+      ];
+      const r = service.mapToMenuModels(catalog);
+      expect(r.items[0].sourceMetadata.isArchived).toBe(true);
+    });
+
+    it("resolveSelectionLimits: only min set, max falls back", () => {
+      const catalog = emptyCatalog();
+      catalog.modifierLists = [
+        {
+          type: "MODIFIER_LIST",
+          id: "ml-onemin",
+          modifierListData: {
+            name: "MinOnly",
+            minSelectedModifiers: BigInt(2),
+            modifiers: [
+              {
+                id: "m1",
+                type: "MODIFIER",
+                modifierData: {
+                  name: "A",
+                  priceMoney: { amount: BigInt(0), currency: "USD" },
+                },
+              },
+            ],
+          },
+        },
+      ];
+      catalog.items = [
+        {
+          type: "ITEM",
+          id: "item-minonly",
+          itemData: {
+            name: "X",
+            variations: [
+              {
+                id: "v1",
+                type: "ITEM_VARIATION",
+                itemVariationData: {
+                  priceMoney: { amount: BigInt(100), currency: "USD" },
+                },
+              },
+            ],
+            modifierListInfo: [{ modifierListId: "ml-onemin", enabled: true }],
+          },
+        },
+      ];
+      const r = service.mapToMenuModels(catalog);
+      const g = r.items[0].modifiers!.groups[0];
+      expect(g.minSelect).toBe(2);
+      expect(g.maxSelect).toBe(1); // falls back to modifier count
+    });
+  });
+
+  describe("kitchen-sink coverage of metadata branches", () => {
+    it("exercises category metadata, measurement units, dietary/ingredient/calorie/reportingCategory/itemOptionValues", () => {
+      const catalog = emptyCatalog();
+      catalog.images = [
+        { type: "IMAGE", id: "img-c1", imageData: { url: "https://cdn/c1.jpg" } },
+        { type: "IMAGE", id: "img-c2", imageData: { url: "https://cdn/c2.jpg" } },
+        { type: "IMAGE", id: "img-bad", imageData: {} },
+        { type: "CATEGORY" } as unknown as SquareCatalogResult["images"][0],
+      ];
+      catalog.categories = [
+        {
+          type: "CATEGORY",
+          id: "cat-meta",
+          categoryData: {
+            name: "With Meta",
+            imageIds: ["img-c1", "img-c2", "missing"],
+            categoryType: "MENU_CATEGORY",
+            parentCategory: { id: "cat-parent" },
+            isTopLevel: false,
+            channels: ["square-online"],
+            onlineVisibility: true,
+          },
+        },
+      ];
+      catalog.measurementUnits = [
+        {
+          type: "MEASUREMENT_UNIT",
+          id: "mu-custom",
+          measurementUnitData: {
+            precision: 2,
+            measurementUnit: {
+              type: "TYPE_CUSTOM",
+              customUnit: { name: "Slice", abbreviation: "sl" },
+            },
+          },
+        },
+        {
+          type: "MEASUREMENT_UNIT",
+          id: "mu-generic",
+          measurementUnitData: {
+            measurementUnit: { type: "TYPE_WEIGHT" },
+          },
+        },
+      ];
+      catalog.itemOptions = [
+        {
+          type: "ITEM_OPTION",
+          id: "opt-flavor",
+          itemOptionData: {
+            name: "flavor",
+            values: [
+              {
+                type: "ITEM_OPTION_VAL",
+                id: "val-choc",
+                itemOptionValueData: { description: "Chocolate", ordinal: 1 },
+              },
+            ],
+          },
+        },
+      ];
+      catalog.items = [
+        {
+          type: "ITEM",
+          id: "item-rich",
+          itemData: {
+            name: "Rich",
+            reportingCategory: { id: "rpt-cat" },
+            foodAndBeverageDetails: {
+              calorieCount: 420,
+              dietaryPreferences: [
+                { standardName: "VEGETARIAN" },
+                { customName: "kosher" },
+                {},
+              ],
+              ingredients: [
+                { standardName: "MILK" },
+                { customName: "Soy" },
+              ],
+            },
+            variations: [
+              {
+                id: "v-ok",
+                type: "ITEM_VARIATION",
+                itemVariationData: {
+                  priceMoney: { amount: BigInt(500), currency: "USD" },
+                  itemOptionValues: [
+                    { itemOptionId: "opt-flavor", itemOptionValueId: "val-choc" },
+                    { itemOptionId: null, itemOptionValueId: "bad" },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ];
+      const result = service.mapToMenuModels(catalog);
+      // Categories
+      const cat = result.categories[0];
+      expect(cat.imageUrl).toBe("https://cdn/c1.jpg");
+      expect(cat.sourceMetadata).toMatchObject({
+        categoryType: "MENU_CATEGORY",
+        parentExternalId: "cat-parent",
+        isTopLevel: false,
+        channels: ["square-online"],
+        onlineVisibility: true,
+        imageUrls: ["https://cdn/c1.jpg", "https://cdn/c2.jpg"],
+      });
+      // Measurement units
+      expect(result.measurementUnits).toHaveLength(2);
+      expect(result.measurementUnits[0]).toEqual({
+        externalId: "mu-custom",
+        name: "Slice",
+        abbreviation: "sl",
+        precision: 2,
+        type: "TYPE_CUSTOM",
+      });
+      expect(result.measurementUnits[1]).toEqual({
+        externalId: "mu-generic",
+        name: "TYPE_WEIGHT",
+        abbreviation: null,
+        precision: 0,
+        type: "TYPE_WEIGHT",
+      });
+      // Item metadata branches
+      const item = result.items[0];
+      expect(item.tags).toEqual(expect.arrayContaining(["vegetarian", "kosher"]));
+      expect(item.sourceMetadata.calorieCount).toBe(420);
+      expect(item.sourceMetadata.ingredients).toEqual(["MILK", "Soy"]);
+      expect(item.sourceMetadata.reportingCategoryExternalId).toBe("rpt-cat");
+      expect(item.variationMappings[0].itemOptionValues).toEqual([
+        { itemOptionId: "opt-flavor", itemOptionValueId: "val-choc" },
+      ]);
+    });
+
+    it("filters disabled taxes out of results", () => {
+      const catalog = emptyCatalog();
+      catalog.taxes = [
+        {
+          type: "TAX",
+          id: "tax-on",
+          taxData: { name: "Active", percentage: "5.0", enabled: true },
+        },
+        {
+          type: "TAX",
+          id: "tax-off",
+          taxData: { name: "Off", percentage: "1.0", enabled: false },
+        },
+      ];
+      const result = service.mapToMenuModels(catalog);
+      expect(result.taxes).toHaveLength(1);
+      expect(result.taxes[0].externalId).toBe("tax-on");
+    });
+
+    it("resolveSelectionLimits falls through to list-level when info has -1", () => {
+      const catalog = emptyCatalog();
+      catalog.modifierLists = [
+        {
+          type: "MODIFIER_LIST",
+          id: "ml-fallback",
+          modifierListData: {
+            name: "FB",
+            minSelectedModifiers: BigInt(1),
+            maxSelectedModifiers: BigInt(2),
+            modifiers: [
+              {
+                id: "m1",
+                type: "MODIFIER",
+                modifierData: { name: "A", priceMoney: { amount: BigInt(0), currency: "USD" } },
+              },
+            ],
+          },
+        },
+      ];
+      catalog.items = [
+        {
+          type: "ITEM",
+          id: "item-fb",
+          itemData: {
+            name: "FB",
+            variations: [
+              {
+                id: "v1",
+                type: "ITEM_VARIATION",
+                itemVariationData: {
+                  priceMoney: { amount: BigInt(100), currency: "USD" },
+                },
+              },
+            ],
+            modifierListInfo: [
+              {
+                modifierListId: "ml-fallback",
+                enabled: true,
+                minSelectedModifiers: -1,
+                maxSelectedModifiers: -1,
+              },
+            ],
+          },
+        },
+      ];
+      const result = service.mapToMenuModels(catalog);
+      const group = result.items[0].modifiers!.groups[0];
+      expect(group.minSelect).toBe(1);
+      expect(group.maxSelect).toBe(2);
+    });
+  });
+
   describe("item options flatten to synthetic groups", () => {
     it("generates one group per ITEM_OPTION with its values as options", () => {
       const catalog = emptyCatalog();
