@@ -43,6 +43,7 @@ describe("TaxConfigRepository", () => {
           name: "Standard Tax",
           description: "Standard sales tax",
           roundingMethod: "half_up",
+          inclusionType: "additive",
           status: "active",
           deleted: false,
           createdAt: new Date(),
@@ -54,6 +55,7 @@ describe("TaxConfigRepository", () => {
           name: "Alcohol Tax",
           description: "Additional alcohol tax",
           roundingMethod: "half_up",
+          inclusionType: "additive",
           status: "active",
           deleted: false,
           createdAt: new Date(),
@@ -96,6 +98,7 @@ describe("TaxConfigRepository", () => {
         name: "Standard Tax",
         description: "Standard sales tax",
         roundingMethod: "half_up",
+        inclusionType: "additive",
         status: "active",
         deleted: false,
         createdAt: new Date(),
@@ -137,6 +140,7 @@ describe("TaxConfigRepository", () => {
           name: "Standard Tax",
           description: null,
           roundingMethod: "half_up",
+          inclusionType: "additive",
           status: "active",
           deleted: false,
           createdAt: new Date(),
@@ -148,6 +152,7 @@ describe("TaxConfigRepository", () => {
           name: "Alcohol Tax",
           description: null,
           roundingMethod: "half_up",
+          inclusionType: "additive",
           status: "active",
           deleted: false,
           createdAt: new Date(),
@@ -447,6 +452,7 @@ describe("TaxConfigRepository", () => {
         name: "New Tax",
         description: "A new tax",
         roundingMethod: "half_up",
+        inclusionType: "additive",
         status: "active",
         deleted: false,
         createdAt: new Date(),
@@ -468,6 +474,7 @@ describe("TaxConfigRepository", () => {
           name: "New Tax",
           description: "A new tax",
           roundingMethod: "half_up",
+          inclusionType: "additive",
         },
       });
       expect(result.name).toBe("New Tax");
@@ -480,6 +487,7 @@ describe("TaxConfigRepository", () => {
         name: "Simple Tax",
         description: null,
         roundingMethod: "half_up",
+        inclusionType: "additive",
         status: "active",
         deleted: false,
         createdAt: new Date(),
@@ -499,6 +507,7 @@ describe("TaxConfigRepository", () => {
           name: "Simple Tax",
           description: undefined,
           roundingMethod: "half_up",
+          inclusionType: "additive",
         },
       });
     });
@@ -608,6 +617,71 @@ describe("TaxConfigRepository", () => {
           updatedAt: expect.any(Date),
         },
       });
+    });
+  });
+
+  describe("inclusionType round-trip", () => {
+    it("stores and returns inclusionType from DB row", async () => {
+      const createdRow = {
+        id: "tax-vat",
+        tenantId: "t-1",
+        name: "VAT",
+        description: null,
+        roundingMethod: "half_up",
+        inclusionType: "inclusive",
+        status: "active",
+        deleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.mocked(prisma.taxConfig.create).mockResolvedValue(createdRow);
+      vi.mocked(prisma.taxConfig.findFirst).mockResolvedValue(createdRow);
+
+      const config = await repository.createTaxConfig("t-1", {
+        name: "VAT",
+        inclusionType: "inclusive",
+        roundingMethod: "half_up",
+      });
+
+      // Verify inclusionType was passed to Prisma create
+      expect(prisma.taxConfig.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          inclusionType: "inclusive",
+        }),
+      });
+
+      // Verify the returned DTO has inclusionType
+      expect(config.inclusionType).toBe("inclusive");
+
+      const loaded = await repository.getTaxConfigById("t-1", config.id);
+      expect(loaded?.inclusionType).toBe("inclusive");
+    });
+
+    it("defaults inclusionType to 'additive' when field is null/missing in DB row", async () => {
+      const rowWithNullInclusion = {
+        id: "tax-old",
+        tenantId: "t-1",
+        name: "Legacy Tax",
+        description: null,
+        roundingMethod: "half_up",
+        inclusionType: null,
+        status: "active",
+        deleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      vi.mocked(prisma.taxConfig.findFirst).mockResolvedValue(
+        rowWithNullInclusion as unknown as ReturnType<
+          typeof prisma.taxConfig.findFirst
+        > extends Promise<infer T>
+          ? T
+          : never
+      );
+
+      const loaded = await repository.getTaxConfigById("t-1", "tax-old");
+      expect(loaded?.inclusionType).toBe("additive");
     });
   });
 });

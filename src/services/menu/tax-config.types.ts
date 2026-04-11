@@ -3,6 +3,9 @@
  * 税率配置类型定义
  */
 
+// Tax inclusion types for Square compatibility
+export type TaxInclusionType = "additive" | "inclusive";
+
 // Rounding methods for tax calculation
 export const ROUNDING_METHODS = [
   "half_up", // Standard rounding (0.5 rounds up)
@@ -45,6 +48,7 @@ export interface ItemTaxInfo {
   name: string;
   rate: number;
   roundingMethod: RoundingMethod;
+  inclusionType: TaxInclusionType;
 }
 
 /**
