@@ -1213,5 +1213,125 @@ describe("SquareCatalogService", () => {
         expect(names).toEqual(["Ketchup", "Mustard"]);
       });
     });
+
+    describe("tax + image + category mapping (TDD Task 12)", () => {
+      function buildTax(
+        id: string,
+        name: string,
+        percentage: string,
+        inclusion: "ADDITIVE" | "INCLUSIVE",
+        phase: "TAX_SUBTOTAL_PHASE" | "TAX_TOTAL_PHASE" = "TAX_SUBTOTAL_PHASE"
+      ): CatalogObject {
+        return {
+          type: "TAX",
+          id,
+          taxData: { name, percentage, inclusionType: inclusion, calculationPhase: phase, enabled: true },
+        } as CatalogObject;
+      }
+
+      function buildCategory(id: string, name: string, parentCategoryId?: string): CatalogObject {
+        return {
+          type: "CATEGORY",
+          id,
+          categoryData: {
+            name,
+            ...(parentCategoryId ? { parentCategory: { id: parentCategoryId, ordinal: 0 } } : {}),
+          },
+        } as CatalogObject;
+      }
+
+      function buildImage(id: string, url: string): CatalogObject {
+        return {
+          type: "IMAGE",
+          id,
+          imageData: { url, caption: "" },
+        } as CatalogObject;
+      }
+
+      it("maps ADDITIVE tax to additive inclusionType", () => {
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], images: [], items: [],
+          taxes: [buildTax("tax-1", "Sales Tax", "8.25", "ADDITIVE")],
+        });
+        expect(result.taxes[0]).toMatchObject({ inclusionType: "additive", percentage: 8.25 });
+      });
+
+      it("maps INCLUSIVE tax to inclusive inclusionType", () => {
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], images: [], items: [],
+          taxes: [buildTax("tax-2", "VAT", "10.0", "INCLUSIVE")],
+        });
+        expect(result.taxes[0]).toMatchObject({ inclusionType: "inclusive", percentage: 10 });
+      });
+
+      it("still maps tax with TAX_TOTAL_PHASE (downgraded to subtotal semantics silently)", () => {
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], images: [], items: [],
+          taxes: [buildTax("tax-3", "Fee Tax", "1.0", "ADDITIVE", "TAX_TOTAL_PHASE")],
+        });
+        expect(result.taxes).toHaveLength(1);
+      });
+
+      it("populates taxExternalIds on MappedMenuItem from item.taxIds", () => {
+        const tax = buildTax("tax-1", "Sales Tax", "8.25", "ADDITIVE");
+        const item = buildItem("item-1", "Burger", [buildVariation("v-1", "R", 500, 0)], {
+          taxIds: ["tax-1"],
+        });
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], images: [], taxes: [tax], items: [item],
+        });
+        expect(result.items[0].taxExternalIds).toEqual(["tax-1"]);
+      });
+
+      it("defaults taxExternalIds to empty array when item has no taxIds", () => {
+        const item = buildItem("item-1", "Burger", [buildVariation("v-1", "R", 500, 0)]);
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], images: [], taxes: [], items: [item],
+        });
+        expect(result.items[0].taxExternalIds).toEqual([]);
+      });
+
+      it("flattens category hierarchy — keeps leaf and parent as separate flat categories", () => {
+        const result = service.mapToMenuModels({
+          modifierLists: [], taxes: [], images: [], items: [],
+          categories: [
+            buildCategory("cat-parent", "Drinks"),
+            buildCategory("cat-child", "Coffee", "cat-parent"),
+          ],
+        });
+        // Phase 1: both mapped flat, parent link dropped
+        expect(result.categories.map((c) => c.name).sort()).toEqual(["Coffee", "Drinks"]);
+      });
+
+      it("resolves imageUrl from first image_id", () => {
+        const img1 = buildImage("img-1", "https://example.com/a.jpg");
+        const img2 = buildImage("img-2", "https://example.com/b.jpg");
+        const item = buildItem("item-1", "Burger", [buildVariation("v-1", "R", 500, 0)], {
+          imageIds: ["img-1", "img-2"],
+        });
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], taxes: [], items: [item], images: [img1, img2],
+        });
+        expect(result.items[0].imageUrl).toBe("https://example.com/a.jpg");
+      });
+
+      it("returns null imageUrl when image_ids is empty or missing", () => {
+        const item = buildItem("item-1", "Burger", [buildVariation("v-1", "R", 500, 0)]);
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], taxes: [], images: [], items: [item],
+        });
+        expect(result.items[0].imageUrl).toBeNull();
+      });
+
+      it("returns null imageUrl when image_id is missing from images map", () => {
+        const item = buildItem("item-1", "Burger", [buildVariation("v-1", "R", 500, 0)], {
+          imageIds: ["img-missing"],
+        });
+        const result = service.mapToMenuModels({
+          categories: [], modifierLists: [], taxes: [], items: [item], images: [],
+        });
+        expect(result.items[0].imageUrl).toBeNull();
+      });
+    });
   });
 });
