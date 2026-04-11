@@ -9,6 +9,9 @@ describe("AuthService.findOrCreateStytchUser", () => {
     await prisma.user.deleteMany({
       where: { email: { in: ["existing@test.com", "newuser@test.com", "linked@test.com"] } },
     });
+    await prisma.merchant.deleteMany({
+      where: { tenant: { name: { in: ["Test Co", "newuser's Company", "linked's Company"] } } },
+    });
     await prisma.tenant.deleteMany({
       where: { name: { in: ["Test Co", "newuser's Company", "linked's Company"] } },
     });
@@ -68,6 +71,49 @@ describe("AuthService.findOrCreateStytchUser", () => {
     const dbTenant = await prisma.tenant.findUnique({ where: { id: dbUser!.tenantId } });
     expect(dbTenant).not.toBeNull();
     expect(dbTenant!.slug).toBeTruthy();
+
+    // Verify a default merchant was also created in the same tenant
+    const dbMerchants = await prisma.merchant.findMany({
+      where: { tenantId: dbUser!.tenantId, deleted: false },
+    });
+    expect(dbMerchants).toHaveLength(1);
+    expect(dbMerchants[0].name).toBe("newuser's Company");
+    expect(dbMerchants[0].status).toBe("pending");
+    expect(dbMerchants[0].slug).toBeTruthy();
+  });
+
+  it("does not create a duplicate merchant when an existing user logs in", async () => {
+    const tenantId = generateEntityId();
+    await prisma.tenant.create({
+      data: { id: tenantId, name: "Test Co", slug: `test-co-dup-${Date.now()}` },
+    });
+    await prisma.merchant.create({
+      data: {
+        id: generateEntityId(),
+        tenantId,
+        slug: `test-co-merchant-${Date.now()}`,
+        name: "Test Co",
+        status: "pending",
+      },
+    });
+    await prisma.user.create({
+      data: {
+        id: generateEntityId(),
+        tenantId,
+        email: "existing@test.com",
+        passwordHash: "hashed_pw",
+        name: "Existing User",
+        role: "owner",
+        status: "active",
+      },
+    });
+
+    await authService.findOrCreateStytchUser("existing@test.com", "stytch-user-dup");
+
+    const merchants = await prisma.merchant.findMany({
+      where: { tenantId, deleted: false },
+    });
+    expect(merchants).toHaveLength(1);
   });
 
   it("returns existing user when stytchUserId already linked", async () => {
