@@ -11,6 +11,7 @@ import type {
   CreateTaxConfigInput,
   UpdateTaxConfigInput,
   RoundingMethod,
+  TaxInclusionType,
 } from "./tax-config.types";
 
 // Lazy load repository to avoid Prisma initialization at module load time
@@ -38,6 +39,7 @@ export class TaxConfigService {
       name: c.name,
       description: c.description,
       roundingMethod: c.roundingMethod as RoundingMethod,
+      inclusionType: (c.inclusionType ?? "additive") as TaxInclusionType,
       status: c.status as "active" | "inactive",
     }));
   }
@@ -59,6 +61,7 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
+      inclusionType: (config.inclusionType ?? "additive") as TaxInclusionType,
       status: config.status as "active" | "inactive",
     };
   }
@@ -80,6 +83,7 @@ export class TaxConfigService {
         name: c.name,
         description: c.description,
         roundingMethod: c.roundingMethod as RoundingMethod,
+        inclusionType: (c.inclusionType ?? "additive") as TaxInclusionType,
         status: c.status as "active" | "inactive",
       });
     }
@@ -98,6 +102,7 @@ export class TaxConfigService {
       name: r.taxConfig.name,
       rate: Number(r.rate),
       roundingMethod: r.taxConfig.roundingMethod as RoundingMethod,
+      inclusionType: ((r.taxConfig.inclusionType as string | null) ?? "additive") as TaxInclusionType,
     }));
   }
 
@@ -124,6 +129,7 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
+      inclusionType: (config.inclusionType ?? "additive") as TaxInclusionType,
       status: config.status as "active" | "inactive",
       merchantRates: merchants
         .map((merchant, index) => {
@@ -156,6 +162,7 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
+      inclusionType: (config.inclusionType ?? "additive") as TaxInclusionType,
       status: config.status as "active" | "inactive",
     };
   }
@@ -175,6 +182,7 @@ export class TaxConfigService {
       name: input.name,
       description: input.description,
       roundingMethod: input.roundingMethod,
+      inclusionType: input.inclusionType ?? "additive",
     });
 
     // Set merchant rates if provided
@@ -191,6 +199,7 @@ export class TaxConfigService {
       name: config.name,
       description: config.description,
       roundingMethod: config.roundingMethod as RoundingMethod,
+      inclusionType: (config.inclusionType ?? "additive") as TaxInclusionType,
       status: config.status as "active" | "inactive",
     };
   }
@@ -210,6 +219,7 @@ export class TaxConfigService {
     if (input.name !== undefined) updateData.name = input.name;
     if (input.description !== undefined) updateData.description = input.description;
     if (input.roundingMethod !== undefined) updateData.roundingMethod = input.roundingMethod;
+    if (input.inclusionType !== undefined) updateData.inclusionType = input.inclusionType;
     if (input.status !== undefined) updateData.status = input.status;
 
     if (Object.keys(updateData).length > 0) {

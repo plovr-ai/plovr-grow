@@ -25,6 +25,7 @@ export interface TaxConfigData {
   name: string;
   description: string | null;
   roundingMethod: RoundingMethod;
+  inclusionType: TaxInclusionType;
   status: "active" | "inactive";
 }
 
@@ -37,6 +38,7 @@ export interface MerchantTaxConfig {
   name: string;
   rate: number; // 该门店的具体税率
   roundingMethod: RoundingMethod;
+  inclusionType: TaxInclusionType;
 }
 
 /**
@@ -59,8 +61,10 @@ export interface TaxConfigInfo {
   name: string;
   description: string | null;
   roundingMethod: RoundingMethod;
+  inclusionType: TaxInclusionType;
   status: "active" | "inactive";
 }
+
 
 /**
  * Merchant tax rate info
@@ -85,6 +89,7 @@ export interface CreateTaxConfigInput {
   name: string;
   description?: string;
   roundingMethod: RoundingMethod;
+  inclusionType?: TaxInclusionType;
   merchantRates?: Array<{ merchantId: string; rate: number }>;
 }
 
@@ -95,6 +100,7 @@ export interface UpdateTaxConfigInput {
   name?: string;
   description?: string;
   roundingMethod?: RoundingMethod;
+  inclusionType?: TaxInclusionType;
   status?: "active" | "inactive";
   merchantRates?: Array<{ merchantId: string; rate: number }>;
 }

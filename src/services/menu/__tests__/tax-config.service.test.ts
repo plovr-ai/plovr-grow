@@ -83,6 +83,7 @@ describe("TaxConfigService", () => {
         name: "Standard Tax",
         description: "Standard sales tax",
         roundingMethod: "half_up",
+        inclusionType: "additive",
         status: "active",
       });
     });
@@ -115,6 +116,7 @@ describe("TaxConfigService", () => {
         name: "Standard Tax",
         description: "Standard sales tax",
         roundingMethod: "half_up",
+        inclusionType: "additive",
         status: "active",
       });
     });
@@ -160,6 +162,7 @@ describe("TaxConfigService", () => {
           taxConfig: {
             name: "Standard Tax",
             roundingMethod: "half_up",
+            inclusionType: "additive",
           },
         },
         {
@@ -168,6 +171,7 @@ describe("TaxConfigService", () => {
           taxConfig: {
             name: "Alcohol Tax",
             roundingMethod: "half_up",
+            inclusionType: "additive",
           },
         },
       ];
@@ -187,6 +191,7 @@ describe("TaxConfigService", () => {
         name: "Standard Tax",
         rate: 0.0825,
         roundingMethod: "half_up",
+        inclusionType: "additive",
       });
     });
   });
@@ -261,6 +266,7 @@ describe("TaxConfigService", () => {
           name: "New Tax",
           description: "A new tax",
           roundingMethod: "half_up",
+          inclusionType: "additive",
         }
       );
       expect(taxConfigRepository.setMerchantTaxRate).toHaveBeenCalledWith(
@@ -353,6 +359,119 @@ describe("TaxConfigService", () => {
     });
   });
 
+  describe("inclusionType propagation", () => {
+    it("returns inclusionType in getTaxConfig", async () => {
+      const inclusiveConfig = {
+        ...mockTaxConfigs[0],
+        inclusionType: "inclusive" as const,
+      };
+      vi.mocked(taxConfigRepository.getTaxConfigById).mockResolvedValue(
+        inclusiveConfig
+      );
+
+      const result = await service.getTaxConfig("tenant-1", "tax-standard");
+      expect(result?.inclusionType).toBe("inclusive");
+    });
+
+    it("returns inclusionType in getTaxConfigs list", async () => {
+      const inclusiveConfigs = [
+        { ...mockTaxConfigs[0], inclusionType: "inclusive" as const },
+        { ...mockTaxConfigs[1], inclusionType: "additive" as const },
+      ];
+      vi.mocked(taxConfigRepository.getTaxConfigsByTenant).mockResolvedValue(
+        inclusiveConfigs
+      );
+
+      const result = await service.getTaxConfigs("tenant-1");
+      expect(result[0].inclusionType).toBe("inclusive");
+      expect(result[1].inclusionType).toBe("additive");
+    });
+
+    it("returns inclusionType in createTaxConfig", async () => {
+      const newConfig = {
+        id: "tax-incl",
+        tenantId: "tenant-1",
+        name: "VAT 10%",
+        description: null,
+        roundingMethod: "half_up" as const,
+        inclusionType: "inclusive" as const,
+        status: "active" as const,
+        deleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      vi.mocked(taxConfigRepository.createTaxConfig).mockResolvedValue(newConfig);
+
+      const result = await service.createTaxConfig("tenant-1", {
+        name: "VAT 10%",
+        inclusionType: "inclusive",
+        roundingMethod: "half_up",
+      });
+      expect(result.inclusionType).toBe("inclusive");
+    });
+
+    it("passes inclusionType to repository on createTaxConfig", async () => {
+      const newConfig = {
+        id: "tax-incl",
+        tenantId: "tenant-1",
+        name: "VAT 10%",
+        description: null,
+        roundingMethod: "half_up" as const,
+        inclusionType: "inclusive" as const,
+        status: "active" as const,
+        deleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      vi.mocked(taxConfigRepository.createTaxConfig).mockResolvedValue(newConfig);
+
+      await service.createTaxConfig("tenant-1", {
+        name: "VAT 10%",
+        inclusionType: "inclusive",
+        roundingMethod: "half_up",
+      });
+      expect(taxConfigRepository.createTaxConfig).toHaveBeenCalledWith(
+        "tenant-1",
+        expect.objectContaining({ inclusionType: "inclusive" })
+      );
+    });
+
+    it("passes inclusionType to repository on updateTaxConfig", async () => {
+      vi.mocked(taxConfigRepository.updateTaxConfig).mockResolvedValue({
+        count: 1,
+      });
+
+      await service.updateTaxConfig("tenant-1", "tax-standard", {
+        inclusionType: "inclusive",
+      });
+      expect(taxConfigRepository.updateTaxConfig).toHaveBeenCalledWith(
+        "tenant-1",
+        "tax-standard",
+        { inclusionType: "inclusive" }
+      );
+    });
+
+    it("returns inclusionType in getMerchantTaxConfigs", async () => {
+      const mockMerchantRates = [
+        {
+          taxConfigId: "tax-standard",
+          rate: 0.1,
+          taxConfig: {
+            name: "VAT",
+            roundingMethod: "half_up",
+            inclusionType: "inclusive",
+          },
+        },
+      ];
+      vi.mocked(taxConfigRepository.getMerchantTaxRates).mockResolvedValue(
+        mockMerchantRates as never
+      );
+
+      const result = await service.getMerchantTaxConfigs("merchant-1");
+      expect(result[0].inclusionType).toBe("inclusive");
+    });
+  });
+
   describe("getTaxConfigInfo", () => {
     it("should return tax config info by ID", async () => {
       vi.mocked(taxConfigRepository.getTaxConfigById).mockResolvedValue(
@@ -370,6 +489,7 @@ describe("TaxConfigService", () => {
         name: "Standard Tax",
         description: "Standard sales tax",
         roundingMethod: "half_up",
+        inclusionType: "additive",
         status: "active",
       });
     });
@@ -406,10 +526,11 @@ describe("TaxConfigService", () => {
 
       expect(taxConfigRepository.createTaxConfig).toHaveBeenCalledWith(
         "tenant-1",
-                {
+        {
           name: "Simple Tax",
           description: undefined,
           roundingMethod: "half_even",
+          inclusionType: "additive",
         }
       );
       expect(taxConfigRepository.setMerchantTaxRate).not.toHaveBeenCalled();
