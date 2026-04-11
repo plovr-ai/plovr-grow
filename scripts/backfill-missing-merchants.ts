@@ -14,8 +14,11 @@ import { merchantRepository } from "@/repositories/merchant.repository";
 import { generateUniqueSlug } from "@/services/generator/slug.util";
 
 async function main() {
+  // Match the dashboard's invariant: a tenant is broken when it has zero
+  // *non-deleted* merchants. Tenants whose only merchants are soft-deleted
+  // also surface as "no store" via tenantRepository.getWithMerchants.
   const broken = await prisma.tenant.findMany({
-    where: { merchants: { none: {} }, deleted: false },
+    where: { merchants: { none: { deleted: false } }, deleted: false },
     select: { id: true, name: true, slug: true },
   });
 
@@ -32,7 +35,6 @@ async function main() {
     const merchant = await merchantRepository.create(tenant.id, {
       slug,
       name: tenant.name,
-      status: "pending",
     });
     console.log(
       `  ✓ ${tenant.name} (${tenant.id}) → merchant ${merchant.id} (${slug})`

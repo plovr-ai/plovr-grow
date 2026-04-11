@@ -22,7 +22,7 @@ describe("TenantService.createTenantWithMerchant", () => {
 
     expect(merchant.tenantId).toBe(tenant.id);
     expect(merchant.name).toBe("Acme Diner");
-    expect(merchant.status).toBe("pending");
+    expect(merchant.status).toBe("active");
     expect(merchant.slug).toMatch(/^acme-diner/);
 
     const dbTenant = await prisma.tenant.findUnique({
