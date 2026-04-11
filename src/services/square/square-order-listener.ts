@@ -104,6 +104,7 @@ async function handleOrderPaid(event: OrderPaidEvent): Promise<void> {
         deliveryAddress: orderForPush.deliveryAddress,
         items: pushItems,
         totalAmount: event.totalAmount ?? 0,
+        notes: orderForPush.notes ?? undefined,
       }
     );
 
@@ -220,6 +221,7 @@ async function getOrderForPush(
   salesChannel: SalesChannel;
   orderMode: OrderMode;
   deliveryAddress: DeliveryAddress | null;
+  notes: string | null;
 } | null> {
   try {
     const { orderService } = await import("@/services/order/order.service");
@@ -231,6 +233,7 @@ async function getOrderForPush(
       orderMode: order.orderMode as OrderMode,
       deliveryAddress:
         (order.deliveryAddress as unknown as DeliveryAddress | null) ?? null,
+      notes: order.notes ?? null,
     };
   } catch {
     return null;

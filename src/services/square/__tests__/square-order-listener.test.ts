@@ -119,6 +119,7 @@ describe("square-order-listener: handleOrderPaid giftcard guard", () => {
     mockGetOrder.mockResolvedValue({
       items: sampleItems,
       salesChannel: "online_order",
+      orderMode: "pickup",
     });
     mockGetConnection.mockResolvedValue({ status: "active" });
     mockCreateOrder.mockResolvedValue({ squareOrderId: "sq-1" });
@@ -130,6 +131,53 @@ describe("square-order-listener: handleOrderPaid giftcard guard", () => {
     const [, , pushInput] = mockCreateOrder.mock.calls[0];
     expect(pushInput.orderId).toBe("order-1");
     expect(pushInput.items).toHaveLength(1);
+  });
+
+  it("forwards orderMode, deliveryAddress and notes from the stored order", async () => {
+    mockGetOrder.mockResolvedValue({
+      items: sampleItems,
+      salesChannel: "online_order",
+      orderMode: "delivery",
+      deliveryAddress: {
+        street: "1 Market",
+        city: "SF",
+        state: "CA",
+        zipCode: "94103",
+        instructions: "Gate 7",
+      },
+      notes: "Please hurry",
+    });
+    mockGetConnection.mockResolvedValue({ status: "active" });
+    mockCreateOrder.mockResolvedValue({ squareOrderId: "sq-1" });
+
+    const handler = await getHandler();
+    await handler(makeEvent());
+
+    const [, , pushInput] = mockCreateOrder.mock.calls[0];
+    expect(pushInput.orderMode).toBe("delivery");
+    expect(pushInput.deliveryAddress).toMatchObject({
+      street: "1 Market",
+      instructions: "Gate 7",
+    });
+    expect(pushInput.notes).toBe("Please hurry");
+  });
+
+  it("forwards dine_in orderMode so buildFulfillmentNote adds the Dine-in prefix", async () => {
+    mockGetOrder.mockResolvedValue({
+      items: sampleItems,
+      salesChannel: "online_order",
+      orderMode: "dine_in",
+      notes: "Table 7",
+    });
+    mockGetConnection.mockResolvedValue({ status: "active" });
+    mockCreateOrder.mockResolvedValue({ squareOrderId: "sq-1" });
+
+    const handler = await getHandler();
+    await handler(makeEvent());
+
+    const [, , pushInput] = mockCreateOrder.mock.calls[0];
+    expect(pushInput.orderMode).toBe("dine_in");
+    expect(pushInput.notes).toBe("Table 7");
   });
 
   it("skips push when order is not found", async () => {

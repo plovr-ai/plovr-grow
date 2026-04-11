@@ -901,6 +901,44 @@ describe("SquareOrderService", () => {
       expect(fulfillment.pickupDetails.note).toBe("Dine-in");
     });
 
+    it("should append deliveryAddress.instructions to the delivery fulfillment note", async () => {
+      await service.createOrder(TENANT_ID, MERCHANT_ID, {
+        ...sampleInput,
+        orderMode: "delivery",
+        notes: "Ring doorbell",
+        deliveryAddress: {
+          street: "123 Main St",
+          city: "San Francisco",
+          state: "CA",
+          zipCode: "94103",
+          instructions: "Gate code 1234, leave at door",
+        },
+      });
+
+      const fulfillment = mockCreate.mock.calls[0][0].order.fulfillments[0];
+      expect(fulfillment.deliveryDetails.note).toBe(
+        "Ring doorbell | Gate code 1234, leave at door"
+      );
+    });
+
+    it("should fall back to only deliveryAddress.instructions when order notes missing", async () => {
+      await service.createOrder(TENANT_ID, MERCHANT_ID, {
+        ...sampleInput,
+        orderMode: "delivery",
+        notes: undefined,
+        deliveryAddress: {
+          street: "123 Main St",
+          city: "SF",
+          state: "CA",
+          zipCode: "94103",
+          instructions: "Apt 4B back entrance",
+        },
+      });
+
+      const fulfillment = mockCreate.mock.calls[0][0].order.fulfillments[0];
+      expect(fulfillment.deliveryDetails.note).toBe("Apt 4B back entrance");
+    });
+
     it("should handle delivery without optional apt field", async () => {
       await service.createOrder(TENANT_ID, MERCHANT_ID, {
         ...sampleInput,
