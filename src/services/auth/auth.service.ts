@@ -1,6 +1,6 @@
 import prisma from "@/lib/db";
 import { generateEntityId } from "@/lib/id";
-import { slugify } from "@/services/generator/slug.util";
+import { tenantService } from "@/services/tenant/tenant.service";
 import type { User } from "@prisma/client";
 
 export class AuthService {
@@ -32,31 +32,18 @@ export class AuthService {
 
     const emailPrefix = email.split("@")[0];
     const companyName = `${emailPrefix}'s Company`;
-    const baseSlug = slugify(companyName);
-
-    const existingTenant = await prisma.tenant.findUnique({
-      where: { slug: baseSlug },
-    });
-    const slug = existingTenant
-      ? `${baseSlug}-${Date.now()}`
-      : baseSlug;
-
-    const tenantId = generateEntityId();
-    const userId = generateEntityId();
 
     const user = await prisma.$transaction(async (tx) => {
-      await tx.tenant.create({
-        data: {
-          id: tenantId,
-          name: companyName,
-          slug,
-        },
+      const { tenant } = await tenantService.createTenantWithMerchant({
+        name: companyName,
+        source: "signup",
+        tx,
       });
 
       return tx.user.create({
         data: {
-          id: userId,
-          tenantId,
+          id: generateEntityId(),
+          tenantId: tenant.id,
           email,
           stytchUserId,
           name: emailPrefix,
