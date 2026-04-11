@@ -71,11 +71,14 @@ export class SquareOrderService {
     // Build fulfillment
     const fulfillment = this.buildFulfillment(input);
 
-    // Generate deterministic idempotency key
+    // Generate deterministic idempotency key derived from the full push
+    // payload so that retries with identical content reuse Square's dedup
+    // (transient failures), while intentionally modified retries produce a
+    // fresh key and do not collide with a previously created Square order.
     const idempotencyKey = this.generateIdempotencyKey(
       tenantId,
       merchantId,
-      input.orderId
+      input
     );
 
     // Create sync record for tracking
@@ -442,16 +445,26 @@ export class SquareOrderService {
   }
 
   /**
-   * Generate a deterministic idempotency key from tenant, merchant, and order IDs.
-   * Uses UUID v5 namespace-based approach for consistency.
+   * Generate a deterministic idempotency key for a Square order push.
+   *
+   * The key is a sha256 hash of a stable serialization of the full push
+   * payload (tenant + merchant namespace + canonicalized input). Properties:
+   *
+   *  - Same content on retry → same key → Square's dedup kicks in (transient
+   *    network retries are safe).
+   *  - Changed content on retry (fixed bug, edited line items) → new key →
+   *    the retry is NOT silently ignored as a duplicate, preventing the
+   *    state drift the prior version had.
+   *  - Different tenant / merchant / orderId → different key.
    */
   generateIdempotencyKey(
     tenantId: string,
     merchantId: string,
-    orderId: string
+    input: SquareOrderPushInput
   ): string {
-    const input = `${tenantId}:${merchantId}:${orderId}`;
-    const hash = crypto.createHash("sha256").update(input).digest("hex");
+    const canonical = this.canonicalizePushInput(input);
+    const serialized = `${tenantId}:${merchantId}:${canonical}`;
+    const hash = crypto.createHash("sha256").update(serialized).digest("hex");
 
     // Format as UUID v4-like string (deterministic)
     return [
@@ -461,6 +474,41 @@ export class SquareOrderService {
       hash.slice(16, 20),
       hash.slice(20, 32),
     ].join("-");
+  }
+
+  /**
+   * Stable serialization of a SquareOrderPushInput. Item ordering is
+   * preserved (Square respects the line-item sequence), but every field is
+   * explicit — no JSON.stringify over a free-shaped object — so future
+   * additions to the type must be considered here deliberately.
+   */
+  private canonicalizePushInput(input: SquareOrderPushInput): string {
+    const items = input.items.map((item) => {
+      const modifiers = item.selectedModifiers.map(
+        (mod) =>
+          `${mod.modifierId}|${mod.modifierName}|${mod.price}|${mod.quantity}`
+      );
+      return [
+        item.menuItemId,
+        item.name,
+        item.price,
+        item.quantity,
+        item.specialInstructions ?? "",
+        modifiers.join(","),
+      ].join("|");
+    });
+    return [
+      input.orderId,
+      input.orderNumber,
+      input.customerFirstName,
+      input.customerLastName,
+      input.customerPhone,
+      input.customerEmail ?? "",
+      input.orderMode,
+      input.totalAmount,
+      input.notes ?? "",
+      items.join(";"),
+    ].join("||");
   }
 
   /**
