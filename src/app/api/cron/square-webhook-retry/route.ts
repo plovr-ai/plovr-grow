@@ -6,10 +6,20 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   // Vercel cron invocations include an Authorization header with CRON_SECRET.
-  // Reject anything unauthenticated so manual callers can't spam the retry job.
-  const authHeader = request.headers.get("authorization");
+  // Fail closed: without a configured secret, refuse to run the retry worker
+  // so a misconfigured preview/local deployment can't be spammed anonymously.
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) {
+    console.error(
+      "[Square Webhook Retry Cron] CRON_SECRET is not configured; refusing to run."
+    );
+    return NextResponse.json(
+      { error: "Server misconfigured" },
+      { status: 500 }
+    );
+  }
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
