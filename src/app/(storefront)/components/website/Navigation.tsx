@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { NavigationLink } from "@/types/website";
 import { useLoyalty } from "@/contexts";
@@ -183,9 +184,12 @@ export function Navigation({
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
             <Link href={homeLink} className="flex items-center gap-3">
-              <img
+              <Image
                 src={logo}
                 alt={restaurantName}
+                width={48}
+                height={48}
+                priority
                 className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
               />
               <span className="font-bold text-lg md:text-xl text-gray-900 hidden sm:block">

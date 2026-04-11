@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useTransition } from "react";
 import {
   DndContext,
@@ -88,12 +89,14 @@ function SortableItem({
       </button>
 
       {/* Image */}
-      <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
+      <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
         {item.imageUrl ? (
-          <img
+          <Image
             src={item.imageUrl}
             alt={item.name}
-            className="h-full w-full object-cover"
+            fill
+            sizes="48px"
+            className="object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">

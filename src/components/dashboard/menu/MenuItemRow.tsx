@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ImageIcon } from "lucide-react";
 import { useDashboardFormatPrice } from "@/hooks";
 import { cn } from "@/lib/utils";
@@ -70,15 +71,17 @@ export function MenuItemRow({
       {/* Image */}
       <div
         className={cn(
-          "flex-shrink-0 overflow-hidden rounded-md bg-gray-100",
+          "relative flex-shrink-0 overflow-hidden rounded-md bg-gray-100",
           imageSizeClasses[imageSize]
         )}
       >
         {item.imageUrl ? (
-          <img
+          <Image
             src={item.imageUrl}
             alt={item.name}
-            className="h-full w-full object-cover"
+            fill
+            sizes="48px"
+            className="object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">

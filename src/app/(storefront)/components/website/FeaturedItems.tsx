@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { FeaturedItem } from "@/types/website";
 import { useFormatPrice } from "@/hooks";
@@ -52,10 +53,12 @@ export function FeaturedItems({
               {/* Image */}
               <div className="relative h-48 md:h-56 overflow-hidden">
                 {item.image ? (
-                  <img
+                  <Image
                     src={item.image}
                     alt={item.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-100 flex items-center justify-center">

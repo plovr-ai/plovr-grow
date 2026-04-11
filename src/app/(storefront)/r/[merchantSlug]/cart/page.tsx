@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCartStore, useCartHydration } from "@/stores";
@@ -106,9 +107,11 @@ export default function CartPage() {
                     <div className="flex gap-4">
                       {/* Item Image */}
                       {item.imageUrl ? (
-                        <img
+                        <Image
                           src={item.imageUrl}
                           alt={item.name}
+                          width={80}
+                          height={80}
                           className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                         />
                       ) : (

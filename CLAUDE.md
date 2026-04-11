@@ -95,7 +95,6 @@ npm run lint             # 代码检查
 ### TypeScript 规范 (ESLint 自动拦截)
 - **禁止使用 `any`**: 使用 `unknown` 或具体类型代替 (`@typescript-eslint/no-explicit-any`)
 - **禁止使用 `enum`**: 使用 `const` 对象 + `as const` 或联合类型代替 (`no-restricted-syntax`)
-- **禁止使用 `next/image`**: 使用原生 `<img>` 标签代替 (`no-restricted-imports`)
 
 ### i18n 规范
 - **禁止在 Service 层硬编码错误消息** — 使用 `AppError` + 错误码
