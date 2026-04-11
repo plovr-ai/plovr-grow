@@ -19,7 +19,7 @@ import type { RoundingMethod } from "@/services/menu/tax-config.types";
 import { orderEventEmitter } from "./order-events";
 import type {
   CreateMerchantOrderInput,
-  CreateCompanyOrderInput,
+  CreateGiftCardOrderInput,
   OrderCalculation,
   TenantOrderListOptions,
   TimelineEvent,
@@ -192,11 +192,10 @@ export class OrderService {
   }
 
   /**
-   * Create a company order (e.g., giftcards, virtual products)
-   * These orders are not associated with a specific merchant
+   * Create a gift card order (virtual product, not associated with a specific merchant)
    */
-  async createCompanyOrder(tenantId: string, input: CreateCompanyOrderInput) {
-    // Calculate order totals (simple sum, no tax/tip/delivery for company orders)
+  async createGiftCardOrder(tenantId: string, input: CreateGiftCardOrderInput) {
+    // Calculate order totals (simple sum, no tax/tip/delivery for gift card orders)
     const subtotal = input.items.reduce((sum, item) => sum + item.totalPrice, 0);
     const totalAmount = Math.round(subtotal * 100) / 100;
 
@@ -208,20 +207,20 @@ export class OrderService {
     const dateStr = new Date().toISOString().slice(0, 10);
 
     // Generate order number using atomic sequence
-    const sequence = await sequenceRepository.getNextCompanyOrderSequence(tenantId, dateStr);
+    const sequence = await sequenceRepository.getNextGiftCardOrderSequence(tenantId, dateStr);
     const orderNumber = generateGiftcardOrderNumber(sequence);
 
     // Create the order in database
     const order = await orderRepository.create(
       tenantId,
-      null, // No merchant for company orders
+      null, // No merchant for gift card orders
       {
         orderNumber,
         customerFirstName: input.customerFirstName,
         customerLastName: input.customerLastName,
         customerPhone: input.customerPhone,
         customerEmail: input.customerEmail ?? null,
-        orderMode: "pickup", // Default for company orders
+        orderMode: "pickup", // Default for gift card orders
         salesChannel: "giftcard",
         status: "created",
         fulfillmentStatus: "pending",

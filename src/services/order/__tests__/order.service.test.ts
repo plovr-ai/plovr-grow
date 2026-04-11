@@ -52,7 +52,7 @@ vi.mock("@/services/merchant", () => ({
 vi.mock("@/repositories/sequence.repository", () => ({
   sequenceRepository: {
     getNextOrderSequence: vi.fn(),
-    getNextCompanyOrderSequence: vi.fn(),
+    getNextGiftCardOrderSequence: vi.fn(),
   },
 }));
 
@@ -145,7 +145,7 @@ describe("OrderService", () => {
       } as never);
 
       vi.mocked(sequenceRepository.getNextOrderSequence).mockResolvedValue(1);
-      vi.mocked(sequenceRepository.getNextCompanyOrderSequence).mockResolvedValue(1);
+      vi.mocked(sequenceRepository.getNextGiftCardOrderSequence).mockResolvedValue(1);
 
       vi.mocked(orderRepository.create).mockResolvedValue({
         id: "order-1",
@@ -409,7 +409,7 @@ describe("OrderService", () => {
     });
   });
 
-  describe("createCompanyOrder()", () => {
+  describe("createGiftCardOrder()", () => {
     const mockInput = {
       customerFirstName: "Jane",
       customerLastName: "Smith",
@@ -429,7 +429,7 @@ describe("OrderService", () => {
     };
 
     beforeEach(() => {
-      vi.mocked(sequenceRepository.getNextCompanyOrderSequence).mockResolvedValue(1);
+      vi.mocked(sequenceRepository.getNextGiftCardOrderSequence).mockResolvedValue(1);
 
       vi.mocked(orderRepository.create).mockResolvedValue({
         id: "order-gc-1",
@@ -458,7 +458,7 @@ describe("OrderService", () => {
     });
 
     it("should create company order with merchantId as null", async () => {
-      const order = await orderService.createCompanyOrder("tenant-1", mockInput);
+      const order = await orderService.createGiftCardOrder("tenant-1", mockInput);
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
@@ -491,7 +491,7 @@ describe("OrderService", () => {
         ],
       };
 
-      await orderService.createCompanyOrder("tenant-1", multiItemInput);
+      await orderService.createGiftCardOrder("tenant-1", multiItemInput);
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
@@ -506,7 +506,7 @@ describe("OrderService", () => {
     });
 
     it("should not validate menu items (skip menu service call)", async () => {
-      await orderService.createCompanyOrder("tenant-1", mockInput);
+      await orderService.createGiftCardOrder("tenant-1", mockInput);
 
       // menuService.getMenuItemsByIds should NOT be called for company orders
       expect(menuService.getMenuItemsByIds).not.toHaveBeenCalled();
@@ -516,7 +516,7 @@ describe("OrderService", () => {
       const eventHandler = vi.fn();
       const unsubscribe = orderEventEmitter.on("order.created", eventHandler);
 
-      await orderService.createCompanyOrder("tenant-1", mockInput);
+      await orderService.createGiftCardOrder("tenant-1", mockInput);
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -526,10 +526,10 @@ describe("OrderService", () => {
       unsubscribe();
     });
 
-    it("should use getNextCompanyOrderSequence for order number generation", async () => {
-      await orderService.createCompanyOrder("tenant-1", mockInput);
+    it("should use getNextGiftCardOrderSequence for order number generation", async () => {
+      await orderService.createGiftCardOrder("tenant-1", mockInput);
 
-      expect(sequenceRepository.getNextCompanyOrderSequence).toHaveBeenCalledWith(
+      expect(sequenceRepository.getNextGiftCardOrderSequence).toHaveBeenCalledWith(
         "tenant-1",
         expect.any(String) // dateStr
       );
@@ -570,7 +570,7 @@ describe("OrderService", () => {
         updatedAt: new Date(),
       } as never);
 
-      const order = await orderService.createCompanyOrder("tenant-1", inputWithLoyalty);
+      const order = await orderService.createGiftCardOrder("tenant-1", inputWithLoyalty);
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
@@ -599,7 +599,7 @@ describe("OrderService", () => {
         updatedAt: new Date(),
       } as never);
 
-      await orderService.createCompanyOrder("tenant-1", inputWithGiftCard);
+      await orderService.createGiftCardOrder("tenant-1", inputWithGiftCard);
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
@@ -619,7 +619,7 @@ describe("OrderService", () => {
         notes: "Happy Birthday!",
       };
 
-      await orderService.createCompanyOrder("tenant-1", inputWithNotes);
+      await orderService.createGiftCardOrder("tenant-1", inputWithNotes);
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
@@ -640,7 +640,7 @@ describe("OrderService", () => {
         ],
       };
 
-      await orderService.createCompanyOrder("tenant-1", decimalInput);
+      await orderService.createGiftCardOrder("tenant-1", decimalInput);
 
       expect(orderRepository.create).toHaveBeenCalledWith(
         "tenant-1",
@@ -654,15 +654,15 @@ describe("OrderService", () => {
     });
   });
 
-  describe("createCompanyOrder() - branch coverage", () => {
+  describe("createGiftCardOrder() - branch coverage", () => {
     it("should default customerEmail to null when not provided", async () => {
-      vi.mocked(sequenceRepository.getNextCompanyOrderSequence).mockResolvedValue(1);
+      vi.mocked(sequenceRepository.getNextGiftCardOrderSequence).mockResolvedValue(1);
       vi.mocked(orderRepository.create).mockResolvedValue({
         id: "order-gc-2",
         orderNumber: "GC-20260410-0001",
       } as never);
 
-      await orderService.createCompanyOrder("tenant-1", {        customerFirstName: "Jane",
+      await orderService.createGiftCardOrder("tenant-1", {        customerFirstName: "Jane",
         customerLastName: "Smith",
         customerPhone: "555-0000",
         // no customerEmail

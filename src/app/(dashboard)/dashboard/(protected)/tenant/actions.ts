@@ -4,12 +4,12 @@ import { auth } from "@/lib/auth";
 import { tenantService } from "@/services/tenant/tenant.service";
 import { revalidatePath } from "next/cache";
 
-interface UpdateCompanySettingsInput {
+interface UpdateTenantSettingsInput {
   currency: string;
   locale: string;
 }
 
-export async function updateCompanySettingsAction(input: UpdateCompanySettingsInput) {
+export async function updateTenantSettingsAction(input: UpdateTenantSettingsInput) {
   const session = await auth();
 
   if (!session?.user?.tenantId) {
@@ -24,14 +24,14 @@ export async function updateCompanySettingsAction(input: UpdateCompanySettingsIn
       locale: input.locale,
     });
 
-    revalidatePath("/dashboard/company");
+    revalidatePath("/dashboard/tenant");
 
     return { success: true };
   } catch (error) {
-    console.error("Failed to update company settings:", error);
+    console.error("Failed to update tenant settings:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update company settings",
+      error: error instanceof Error ? error.message : "Failed to update tenant settings",
     };
   }
 }

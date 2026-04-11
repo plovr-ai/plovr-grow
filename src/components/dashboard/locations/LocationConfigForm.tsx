@@ -422,7 +422,7 @@ export function LocationConfigForm({ merchant }: LocationConfigFormProps) {
       <div className="flex justify-end gap-4">
         <Button
           variant="outline"
-          onClick={() => router.push("/dashboard/company")}
+          onClick={() => router.push("/dashboard/tenant")}
           disabled={isPending}
         >
           Cancel

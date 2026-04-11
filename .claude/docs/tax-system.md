@@ -3,12 +3,12 @@
 ## 数据模型
 
 税费系统采用三层结构，支持：
-- **Company 级别定义税种**（如 "Standard Tax", "Alcohol Tax"）
+- **Tenant 级别定义税种**（如 "Standard Tax", "Alcohol Tax"）
 - **Merchant 级别设置具体税率**（同一税种在不同门店可有不同税率）
 - **MenuItem 关联多个税种**（如酒类商品同时有标准税和酒税）
 
 ```
-Company (1:N) → TaxConfig (税种定义)
+Tenant (1:N) → TaxConfig (税种定义)
                     ↓
 Merchant (N:M) → MerchantTaxRate (门店具体税率)
                     ↓
@@ -18,11 +18,10 @@ MenuItem (N:M) → MenuItemTax (菜品关联的税种)
 ## 核心表结构
 
 ```prisma
-// 税种配置 (Company 级别)
+// 税种配置 (Tenant 级别)
 model TaxConfig {
   id              String   @id
   tenantId        String
-  companyId       String
   name            String   // "Standard Tax", "Alcohol Tax"
   description     String?
   roundingMethod  String   @default("half_up")  // half_up, half_even, always_round_up, always_round_down
@@ -64,7 +63,7 @@ model MenuItemTax {
 ┌─────────────────────────────────────────────────────────────────────┐
 │  菜单页面 (Menu Page)                                                │
 │  └─ MenuService.getMenu(tenantId, merchantId)                       │
-│      ├─ 获取 Company 级别菜单                                        │
+│      ├─ 获取 Tenant 级别菜单                                         │
 │      ├─ 获取菜品关联的税种 IDs (MenuItemTax)                         │
 │      ├─ 获取税种定义 (TaxConfig)                                     │
 │      ├─ 获取门店税率 (MerchantTaxRate)                               │

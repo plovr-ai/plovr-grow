@@ -7,16 +7,19 @@ const SECRET = new TextEncoder().encode(
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 
 /**
- * Get the cookie name for a specific company
- * Uses companyId for tenant isolation
+ * Get the cookie name for a specific tenant.
+ * NOTE: cookie name changed from `loyalty_session_<companyId>` to
+ * `loyalty_session_<tenantId>` as part of the Company → Tenant merge cleanup.
+ * Existing sessions from before this change will be invalidated and affected
+ * loyalty members will need to re-login once (acceptable for this refactor).
  */
-function getCookieName(companyId: string): string {
-  return `loyalty_session_${companyId}`;
+function getCookieName(tenantId: string): string {
+  return `loyalty_session_${tenantId}`;
 }
 
 export interface LoyaltySessionPayload {
   memberId: string;
-  companyId: string;
+  tenantId: string;
   phone: string;
 }
 
@@ -24,18 +27,18 @@ export interface LoyaltySessionPayload {
  * Set loyalty session cookie after successful OTP verification
  */
 export async function setLoyaltySession(
-  companyId: string,
+  tenantId: string,
   memberId: string,
   phone: string
 ): Promise<void> {
-  const token = await new SignJWT({ memberId, companyId, phone })
+  const token = await new SignJWT({ memberId, tenantId, phone })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
     .sign(SECRET);
 
   const cookieStore = await cookies();
-  cookieStore.set(getCookieName(companyId), token, {
+  cookieStore.set(getCookieName(tenantId), token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -49,10 +52,10 @@ export async function setLoyaltySession(
  * Returns null if no valid session exists
  */
 export async function getLoyaltySession(
-  companyId: string
+  tenantId: string
 ): Promise<LoyaltySessionPayload | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(getCookieName(companyId))?.value;
+  const token = cookieStore.get(getCookieName(tenantId))?.value;
 
   if (!token) {
     return null;
@@ -61,14 +64,14 @@ export async function getLoyaltySession(
   try {
     const { payload } = await jwtVerify(token, SECRET);
 
-    // Verify the companyId in the token matches the requested companyId
-    if (payload.companyId !== companyId) {
+    // Verify the tenantId in the token matches the requested tenantId
+    if (payload.tenantId !== tenantId) {
       return null;
     }
 
     return {
       memberId: payload.memberId as string,
-      companyId: payload.companyId as string,
+      tenantId: payload.tenantId as string,
       phone: payload.phone as string,
     };
   } catch {
@@ -80,7 +83,7 @@ export async function getLoyaltySession(
 /**
  * Clear loyalty session cookie (logout)
  */
-export async function clearLoyaltySession(companyId: string): Promise<void> {
+export async function clearLoyaltySession(tenantId: string): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.delete(getCookieName(companyId));
+  cookieStore.delete(getCookieName(tenantId));
 }

@@ -24,10 +24,10 @@ export class GeneratorRepository {
     });
   }
 
-  async markCompleted(id: string, tenantId: string, companySlug: string) {
+  async markCompleted(id: string, tenantId: string, tenantSlug: string) {
     return prisma.websiteGeneration.update({
       where: { id },
-      data: { status: "completed", stepDetail: null, tenantId, companySlug },
+      data: { status: "completed", stepDetail: null, tenantId, tenantSlug },
     });
   }
 

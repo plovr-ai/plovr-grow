@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get session from cookie (tenantId === companyId)
+    // Get session from cookie
     const session = await getLoyaltySession(tenantId);
 
     if (!session) {

@@ -69,10 +69,9 @@ export interface CreateMerchantOrderInput extends BaseOrderInput {
   discountCode?: string;
 }
 
-// Input for creating a company order (e.g., giftcards, virtual products)
-// merchantId is not needed for company orders
-// salesChannel is always "giftcard" for now
-export type CreateCompanyOrderInput = BaseOrderInput;
+// Input for creating a gift card order (virtual products, not tied to a merchant).
+// salesChannel is always "giftcard" for now.
+export type CreateGiftCardOrderInput = BaseOrderInput;
 
 export interface OrderCalculation {
   subtotal: number;

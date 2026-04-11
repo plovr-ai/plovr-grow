@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CompanySettingsForm } from "./CompanySettingsForm";
+import { TenantSettingsForm } from "./TenantSettingsForm";
 
 interface MerchantSummary {
   id: string;
@@ -32,7 +32,7 @@ interface MerchantSummary {
   status: string;
 }
 
-interface CompanyData {
+interface TenantData {
   id: string;
   name: string;
   slug: string;
@@ -49,8 +49,8 @@ interface CompanyData {
   merchants: MerchantSummary[];
 }
 
-interface CompanyInfoCardProps {
-  company: CompanyData;
+interface TenantInfoCardProps {
+  tenant: TenantData;
 }
 
 const statusColors: Record<string, string> = {
@@ -67,7 +67,7 @@ function formatDate(date: Date | string): string {
   });
 }
 
-export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
+export function TenantInfoCard({ tenant }: TenantInfoCardProps) {
   const router = useRouter();
   const [isEditingSettings, setIsEditingSettings] = useState(false);
 
@@ -79,10 +79,10 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
           <div className="flex items-start gap-6">
             {/* Logo */}
             <div className="flex-shrink-0">
-              {company.logoUrl ? (
+              {tenant.logoUrl ? (
                 <Image
-                  src={company.logoUrl}
-                  alt={company.name}
+                  src={tenant.logoUrl}
+                  alt={tenant.name}
                   width={80}
                   height={80}
                   className="h-20 w-20 rounded-lg object-cover"
@@ -98,24 +98,24 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <h3 className="text-2xl font-bold text-gray-900">
-                  {company.name}
+                  {tenant.name}
                 </h3>
                 <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[company.status]}`}
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[tenant.status]}`}
                 >
-                  {company.status.charAt(0).toUpperCase() +
-                    company.status.slice(1)}
+                  {tenant.status.charAt(0).toUpperCase() +
+                    tenant.status.slice(1)}
                 </span>
               </div>
 
-              {company.legalName && (
+              {tenant.legalName && (
                 <p className="mt-1 text-sm text-gray-500">
-                  Legal Name: {company.legalName}
+                  Legal Name: {tenant.legalName}
                 </p>
               )}
 
               <p className="mt-1 text-sm text-gray-500">
-                Slug: <code className="rounded bg-gray-100 px-1">{company.slug}</code>
+                Slug: <code className="rounded bg-gray-100 px-1">{tenant.slug}</code>
               </p>
             </div>
           </div>
@@ -133,17 +133,17 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
             <InfoRow
               icon={Mail}
               label="Support Email"
-              value={company.supportEmail}
+              value={tenant.supportEmail}
             />
             <InfoRow
               icon={Phone}
               label="Support Phone"
-              value={company.supportPhone}
+              value={tenant.supportPhone}
             />
             <InfoRow
               icon={Globe}
               label="Website"
-              value={company.websiteUrl}
+              value={tenant.websiteUrl}
               isLink
             />
           </CardContent>
@@ -167,45 +167,45 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
             <InfoRow
               icon={DollarSign}
               label="Currency"
-              value={company.currency}
+              value={tenant.currency}
             />
             <InfoRow
               icon={Languages}
               label="Locale"
-              value={company.locale}
+              value={tenant.locale}
             />
             <InfoRow
               icon={Calendar}
               label="Created"
-              value={formatDate(company.createdAt)}
+              value={formatDate(tenant.createdAt)}
             />
           </CardContent>
         </Card>
       </div>
 
       {/* Description */}
-      {company.description && (
+      {tenant.description && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Description</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-gray-600 whitespace-pre-wrap">
-              {company.description}
+              {tenant.description}
             </p>
           </CardContent>
         </Card>
       )}
 
       {/* Stores List */}
-      {company.merchants.length > 0 && (
+      {tenant.merchants.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Stores ({company.merchants.length})</CardTitle>
+            <CardTitle className="text-lg">Stores ({tenant.merchants.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="divide-y divide-gray-100">
-              {company.merchants.map((merchant) => (
+              {tenant.merchants.map((merchant) => (
                 <div
                   key={merchant.id}
                   className="flex items-center justify-between py-3 first:pt-0 last:pb-0 cursor-pointer hover:bg-gray-50 -mx-4 px-4 rounded-md transition-colors"
@@ -239,9 +239,9 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
 
       {/* Settings Edit Modal */}
       {isEditingSettings && (
-        <CompanySettingsForm
-          currency={company.currency}
-          locale={company.locale}
+        <TenantSettingsForm
+          currency={tenant.currency}
+          locale={tenant.locale}
           onClose={() => setIsEditingSettings(false)}
         />
       )}

@@ -42,8 +42,8 @@ export default function ProgressPage({ params }: Props) {
       const data = await res.json();
       if (!data.success) return;
       setStatus(data.data.status);
-      if (data.data.status === "completed" && data.data.companySlug) {
-        router.push(`/${data.data.companySlug}`);
+      if (data.data.status === "completed" && data.data.tenantSlug) {
+        router.push(`/${data.data.tenantSlug}`);
       } else if (data.data.status === "failed") {
         setErrorMessage(data.data.errorMessage ?? "Generation failed");
       }

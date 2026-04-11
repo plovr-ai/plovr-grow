@@ -23,7 +23,7 @@ describe("GeneratorRepository", () => {
 
   describe("findCompletedByPlaceId", () => {
     it("finds completed generation by placeId", async () => {
-      const mockRecord = { id: "gen1", placeId: "ChIJ_test", status: "completed", companySlug: "joes-pizza" };
+      const mockRecord = { id: "gen1", placeId: "ChIJ_test", status: "completed", tenantSlug: "joes-pizza" };
       vi.mocked(prisma.websiteGeneration.findFirst).mockResolvedValue(mockRecord as never);
       const result = await repo.findCompletedByPlaceId("ChIJ_test");
       expect(result).toEqual(mockRecord);
@@ -77,7 +77,7 @@ describe("GeneratorRepository", () => {
       await repo.markCompleted("gen1", "tenant1", "joes-pizza");
       expect(prisma.websiteGeneration.update).toHaveBeenCalledWith({
         where: { id: "gen1" },
-        data: { status: "completed", stepDetail: null, tenantId: "tenant1", companySlug: "joes-pizza" },
+        data: { status: "completed", stepDetail: null, tenantId: "tenant1", tenantSlug: "joes-pizza" },
       });
     });
   });

@@ -77,8 +77,8 @@ export async function POST(
       taxes: [], // Giftcards are tax-exempt
     };
 
-    // Create company order for giftcard
-    const order = await orderService.createCompanyOrder(company.tenantId, {
+    // Create gift card order
+    const order = await orderService.createGiftCardOrder(company.tenantId, {
       customerFirstName: data.buyerFirstName,
       customerLastName: data.buyerLastName,
       customerPhone: data.buyerPhone,

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { CompanyInfoCard } from "../CompanyInfoCard";
+import { TenantInfoCard } from "../TenantInfoCard";
 
 // Mock Next.js navigation
 const mockPush = vi.fn();
@@ -12,8 +12,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 // Mock server actions
-vi.mock("@/app/(dashboard)/dashboard/(protected)/company/actions", () => ({
-  updateCompanySettingsAction: vi.fn().mockResolvedValue({ success: true }),
+vi.mock("@/app/(dashboard)/dashboard/(protected)/tenant/actions", () => ({
+  updateTenantSettingsAction: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 const mockCompany = {
@@ -59,32 +59,32 @@ const mockCompany = {
   ],
 };
 
-describe("CompanyInfoCard", () => {
+describe("TenantInfoCard", () => {
   describe("Basic Information", () => {
     it("should render company name", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       expect(screen.getByText("Joe's Pizza")).toBeInTheDocument();
     });
 
     it("should render legal name", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       expect(screen.getByText(/Joe's Pizza Inc\./)).toBeInTheDocument();
     });
 
     it("should render slug", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       expect(screen.getByText("joes-pizza")).toBeInTheDocument();
     });
 
     it("should render status badge", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       // Multiple "Active" badges exist (company + merchants)
       const activeBadges = screen.getAllByText("Active");
       expect(activeBadges.length).toBeGreaterThan(0);
     });
 
     it("should render logo when logoUrl is provided", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       const logo = screen.getByAltText("Joe's Pizza");
       expect(logo).toBeInTheDocument();
       expect(logo).toHaveAttribute("src", "https://example.com/logo.png");
@@ -92,24 +92,24 @@ describe("CompanyInfoCard", () => {
 
     it("should render placeholder when logoUrl is not provided", () => {
       const companyWithoutLogo = { ...mockCompany, logoUrl: null };
-      render(<CompanyInfoCard company={companyWithoutLogo} />);
+      render(<TenantInfoCard tenant={companyWithoutLogo} />);
       expect(screen.queryByAltText("Joe's Pizza")).not.toBeInTheDocument();
     });
   });
 
   describe("Contact Information", () => {
     it("should render support email", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       expect(screen.getByText("support@joespizza.com")).toBeInTheDocument();
     });
 
     it("should render support phone", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       expect(screen.getByText("555-123-4567")).toBeInTheDocument();
     });
 
     it("should render website as a link", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       const link = screen.getByText("https://joespizza.com");
       expect(link).toBeInTheDocument();
       expect(link.tagName).toBe("A");
@@ -124,7 +124,7 @@ describe("CompanyInfoCard", () => {
         supportPhone: null,
         websiteUrl: null,
       };
-      render(<CompanyInfoCard company={companyWithoutContact} />);
+      render(<TenantInfoCard tenant={companyWithoutContact} />);
       const notSetElements = screen.getAllByText("Not set");
       expect(notSetElements.length).toBeGreaterThanOrEqual(3);
     });
@@ -132,30 +132,30 @@ describe("CompanyInfoCard", () => {
 
   describe("Business Information", () => {
     it("should render currency", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       expect(screen.getByText("USD")).toBeInTheDocument();
     });
 
     it("should render locale", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       expect(screen.getByText("en-US")).toBeInTheDocument();
     });
 
     it("should render stores section header with count", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       // The store count is shown in the Stores section header
       expect(screen.getByText("Stores (3)")).toBeInTheDocument();
     });
 
     it("should render created date", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       expect(screen.getByText("January 15, 2024")).toBeInTheDocument();
     });
   });
 
   describe("Description", () => {
     it("should render description when provided", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       expect(
         screen.getByText("Authentic New York Style Pizza Since 1985")
       ).toBeInTheDocument();
@@ -163,7 +163,7 @@ describe("CompanyInfoCard", () => {
 
     it("should not render description section when not provided", () => {
       const companyWithoutDescription = { ...mockCompany, description: null };
-      render(<CompanyInfoCard company={companyWithoutDescription} />);
+      render(<TenantInfoCard tenant={companyWithoutDescription} />);
       expect(
         screen.queryByText("Authentic New York Style Pizza Since 1985")
       ).not.toBeInTheDocument();
@@ -172,21 +172,21 @@ describe("CompanyInfoCard", () => {
 
   describe("Stores List", () => {
     it("should render all merchants", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       expect(screen.getByText("Joe's Pizza Downtown")).toBeInTheDocument();
       expect(screen.getByText("Joe's Pizza Midtown")).toBeInTheDocument();
       expect(screen.getByText("Joe's Pizza Brooklyn")).toBeInTheDocument();
     });
 
     it("should render merchant locations", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       const locations = screen.getAllByText("New York, NY");
       expect(locations.length).toBe(2);
       expect(screen.getByText("Brooklyn, NY")).toBeInTheDocument();
     });
 
     it("should render merchant status badges", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       const activeBadges = screen.getAllByText("Active");
       const inactiveBadges = screen.getAllByText("Inactive");
       expect(activeBadges.length).toBeGreaterThanOrEqual(2);
@@ -194,27 +194,27 @@ describe("CompanyInfoCard", () => {
     });
 
     it("should render stores count in header", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       expect(screen.getByText("Stores (3)")).toBeInTheDocument();
     });
 
     it("should not render stores section when no merchants", () => {
       const companyWithoutMerchants = { ...mockCompany, merchants: [] };
-      render(<CompanyInfoCard company={companyWithoutMerchants} />);
+      render(<TenantInfoCard tenant={companyWithoutMerchants} />);
       expect(screen.queryByText(/Stores \(/)).not.toBeInTheDocument();
     });
   });
 
   describe("Status Variations", () => {
     it("should render active status with green color", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       const badge = screen.getAllByText("Active")[0];
       expect(badge).toHaveClass("bg-green-100", "text-green-800");
     });
 
     it("should render inactive status with gray color", () => {
       const inactiveCompany = { ...mockCompany, status: "inactive" };
-      render(<CompanyInfoCard company={inactiveCompany} />);
+      render(<TenantInfoCard tenant={inactiveCompany} />);
       const badges = screen.getAllByText("Inactive");
       const companyBadge = badges[0];
       expect(companyBadge).toHaveClass("bg-gray-100", "text-gray-800");
@@ -222,7 +222,7 @@ describe("CompanyInfoCard", () => {
 
     it("should render suspended status with red color", () => {
       const suspendedCompany = { ...mockCompany, status: "suspended" };
-      render(<CompanyInfoCard company={suspendedCompany} />);
+      render(<TenantInfoCard tenant={suspendedCompany} />);
       const badge = screen.getByText("Suspended");
       expect(badge).toHaveClass("bg-red-100", "text-red-800");
     });
@@ -230,7 +230,7 @@ describe("CompanyInfoCard", () => {
 
   describe("Store click navigation", () => {
     it("should navigate to store detail when clicking a store", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       fireEvent.click(screen.getByText("Joe's Pizza Downtown"));
       expect(mockPush).toHaveBeenCalledWith("/dashboard/locations/merchant-1");
     });
@@ -249,7 +249,7 @@ describe("CompanyInfoCard", () => {
           },
         ],
       };
-      render(<CompanyInfoCard company={companyWithNoCityMerchant} />);
+      render(<TenantInfoCard tenant={companyWithNoCityMerchant} />);
       expect(screen.getByText("No City Store")).toBeInTheDocument();
       // Should not have city/state text
       expect(screen.queryByText(", ")).not.toBeInTheDocument();
@@ -269,7 +269,7 @@ describe("CompanyInfoCard", () => {
           },
         ],
       };
-      render(<CompanyInfoCard company={companyWithUnknownStatus} />);
+      render(<TenantInfoCard tenant={companyWithUnknownStatus} />);
       expect(screen.getByText("Pending")).toBeInTheDocument();
     });
   });
@@ -280,7 +280,7 @@ describe("CompanyInfoCard", () => {
         ...mockCompany,
         websiteUrl: "joespizza.com",
       };
-      render(<CompanyInfoCard company={companyWithPlainUrl} />);
+      render(<TenantInfoCard tenant={companyWithPlainUrl} />);
       const link = screen.getByText("joespizza.com");
       expect(link).toHaveAttribute("href", "https://joespizza.com");
     });
@@ -288,20 +288,20 @@ describe("CompanyInfoCard", () => {
 
   describe("Edit Settings", () => {
     it("should render edit button", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       const editButton = screen.getByRole("button", { name: /edit/i });
       expect(editButton).toBeInTheDocument();
     });
 
     it("should open settings modal when edit button is clicked", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       const editButton = screen.getByRole("button", { name: /edit/i });
       fireEvent.click(editButton);
       expect(screen.getByText("Edit Regional Settings")).toBeInTheDocument();
     });
 
     it("should close settings modal when cancel is clicked", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       const editButton = screen.getByRole("button", { name: /edit/i });
       fireEvent.click(editButton);
 
@@ -312,7 +312,7 @@ describe("CompanyInfoCard", () => {
     });
 
     it("should display current currency and locale in modal", () => {
-      render(<CompanyInfoCard company={mockCompany} />);
+      render(<TenantInfoCard tenant={mockCompany} />);
       const editButton = screen.getByRole("button", { name: /edit/i });
       fireEvent.click(editButton);
 
