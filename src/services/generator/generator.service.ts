@@ -1,9 +1,5 @@
 import { generatorRepository } from "@/repositories/generator.repository";
-import { tenantRepository } from "@/repositories/tenant.repository";
-import { merchantRepository } from "@/repositories/merchant.repository";
-import { generateEntityId } from "@/lib/id";
-import { generateUniqueSlug } from "./slug.util";
-import prisma from "@/lib/db";
+import { tenantService } from "@/services/tenant/tenant.service";
 import type { GooglePlacesClient, PlaceDetails } from "./google-places.client";
 import type {
   CreateGenerationInput,
@@ -58,20 +54,10 @@ export class GeneratorService {
   }
 
   private async buildTenant(details: PlaceDetails) {
-    const tenantId = generateEntityId();
-    const merchantId = generateEntityId();
-
-    const tenantSlug = await generateUniqueSlug(
-      details.name,
-      async (slug) => (await tenantRepository.getBySlug(slug)) === null
-    );
-    const merchantSlug = await generateUniqueSlug(
-      details.name,
-      async (slug) => merchantRepository.isSlugAvailable(slug)
-    );
-
     const reviews = details.reviews.slice(0, 5).map((r) => ({
-      author: r.author, rating: r.rating, text: r.text,
+      author: r.author,
+      rating: r.rating,
+      text: r.text,
     }));
 
     const tenantSettings = {
@@ -79,26 +65,28 @@ export class GeneratorService {
       website: { tagline: "", heroImage: "", socialLinks: [], reviews },
     };
 
-    await prisma.tenant.create({
-      data: {
-        id: tenantId,
-        name: details.name,
-        slug: tenantSlug,
-        websiteUrl: details.websiteUrl,
-        settings: tenantSettings,
-        source: "generator",
-        subscriptionStatus: "trial",
+    const { tenant, merchant } = await tenantService.createTenantWithMerchant({
+      name: details.name,
+      source: "generator",
+      websiteUrl: details.websiteUrl,
+      settings: tenantSettings,
+      subscriptionStatus: "trial",
+      merchant: {
+        address: details.address,
+        city: details.city,
+        state: details.state,
+        zipCode: details.zipCode,
+        phone: details.phone,
+        businessHours: details.businessHours,
       },
     });
 
-    await merchantRepository.create(tenantId, {
-      slug: merchantSlug, name: details.name,
-      address: details.address, city: details.city,
-      state: details.state, zipCode: details.zipCode,
-      phone: details.phone, businessHours: details.businessHours as never,
-    });
-
-    return { tenantId, merchantId, companySlug: tenantSlug, merchantSlug };
+    return {
+      tenantId: tenant.id,
+      merchantId: merchant.id,
+      companySlug: tenant.slug,
+      merchantSlug: merchant.slug,
+    };
   }
 }
 

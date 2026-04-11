@@ -12,33 +12,14 @@ vi.mock("@/repositories/generator.repository", () => ({
   },
 }));
 
-vi.mock("@/repositories/tenant.repository", () => ({
-  tenantRepository: {
-    getBySlug: vi.fn(),
+vi.mock("@/services/tenant/tenant.service", () => ({
+  tenantService: {
+    createTenantWithMerchant: vi.fn(),
   },
-}));
-
-vi.mock("@/repositories/merchant.repository", () => ({
-  merchantRepository: {
-    isSlugAvailable: vi.fn(),
-    create: vi.fn(),
-  },
-}));
-
-vi.mock("@/lib/db", () => ({
-  default: {
-    tenant: { create: vi.fn() },
-  },
-}));
-
-vi.mock("@/lib/id", () => ({
-  generateEntityId: vi.fn().mockReturnValue("mock-entity-id"),
 }));
 
 import { generatorRepository } from "@/repositories/generator.repository";
-import { tenantRepository } from "@/repositories/tenant.repository";
-import { merchantRepository } from "@/repositories/merchant.repository";
-import prisma from "@/lib/db";
+import { tenantService } from "@/services/tenant/tenant.service";
 import { GeneratorService } from "../generator.service";
 import type { PlaceDetails } from "../google-places.client";
 
@@ -113,10 +94,19 @@ describe("GeneratorService", () => {
         id: "gen1", placeId: "ChIJ_test", placeName: "Joe's Pizza",
       } as never);
       mockGetPlaceDetails.mockResolvedValue(mockPlaceDetails);
-      vi.mocked(tenantRepository.getBySlug).mockResolvedValue(null);
-      vi.mocked(merchantRepository.isSlugAvailable).mockResolvedValue(true);
-      vi.mocked(prisma.tenant.create).mockResolvedValue({ id: "mock-entity-id" } as never);
-      vi.mocked(merchantRepository.create).mockResolvedValue({ id: "mock-entity-id" } as never);
+      vi.mocked(tenantService.createTenantWithMerchant).mockResolvedValue({
+        tenant: {
+          id: "tenant-1",
+          slug: "joes-pizza",
+          name: "Joe's Pizza",
+        } as never,
+        merchant: {
+          id: "merchant-1",
+          slug: "joes-pizza",
+          name: "Joe's Pizza",
+          tenantId: "tenant-1",
+        } as never,
+      });
 
       await service.generate("gen1");
 
@@ -124,9 +114,22 @@ describe("GeneratorService", () => {
       expect(mockGetPlaceDetails).toHaveBeenCalledWith("ChIJ_test");
       expect(generatorRepository.updateGoogleData).toHaveBeenCalled();
       expect(generatorRepository.updateStatus).toHaveBeenCalledWith("gen1", "building", expect.any(String));
-      expect(prisma.tenant.create).toHaveBeenCalled();
-      expect(merchantRepository.create).toHaveBeenCalled();
-      expect(generatorRepository.markCompleted).toHaveBeenCalledWith("gen1", "mock-entity-id", expect.any(String));
+      expect(tenantService.createTenantWithMerchant).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Joe's Pizza",
+          source: "generator",
+          websiteUrl: "https://joespizza.com",
+          subscriptionStatus: "trial",
+          merchant: expect.objectContaining({
+            address: "123 Main St, New York, NY 10001",
+            city: "New York",
+            state: "NY",
+            zipCode: "10001",
+            phone: "(212) 555-0100",
+          }),
+        })
+      );
+      expect(generatorRepository.markCompleted).toHaveBeenCalledWith("gen1", "tenant-1", "joes-pizza");
     });
 
     it("should return early when generation not found", async () => {
