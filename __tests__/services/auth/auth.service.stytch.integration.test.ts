@@ -78,7 +78,7 @@ describe("AuthService.findOrCreateStytchUser", () => {
     });
     expect(dbMerchants).toHaveLength(1);
     expect(dbMerchants[0].name).toBe("newuser's Company");
-    expect(dbMerchants[0].status).toBe("pending");
+    expect(dbMerchants[0].status).toBe("active");
     expect(dbMerchants[0].slug).toBeTruthy();
   });
 

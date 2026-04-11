@@ -95,7 +95,9 @@ export class TenantService {
           tenantId,
           slug: merchantSlug,
           name: merchantName,
-          status: "pending",
+          // status defaults to "active" via the schema. Setting "pending" here
+          // would break getBySlugWithMerchants() lookups that the /generator
+          // storefront depends on right after markCompleted().
           address: input.merchant?.address ?? null,
           city: input.merchant?.city ?? null,
           state: input.merchant?.state ?? null,
