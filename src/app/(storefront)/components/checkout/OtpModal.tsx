@@ -26,11 +26,17 @@ export function OtpModal({
   const [canResend, setCanResend] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  // Mirrors `code` so handleInputChange can read the freshest value without
+  // being recreated on every keystroke. Prevents a stale closure that drops
+  // digits when change events fire faster than React can re-render.
+  const codeRef = useRef<string[]>(code);
 
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
-      setCode(["", "", "", "", "", ""]);
+      const empty = ["", "", "", "", "", ""];
+      setCode(empty);
+      codeRef.current = empty;
       setCountdown(60);
       setCanResend(false);
       // Focus first input after a short delay
@@ -65,8 +71,9 @@ export function OtpModal({
       // Only allow digits
       const digit = value.replace(/\D/g, "").slice(-1);
 
-      const newCode = [...code];
+      const newCode = [...codeRef.current];
       newCode[index] = digit;
+      codeRef.current = newCode;
       setCode(newCode);
 
       // Auto-submit when all digits entered
@@ -82,7 +89,7 @@ export function OtpModal({
         inputRefs.current[index + 1]?.focus();
       }
     },
-    [code, onVerify]
+    [onVerify]
   );
 
   const handleKeyDown = useCallback(
@@ -103,6 +110,7 @@ export function OtpModal({
         for (let i = 0; i < pastedData.length; i++) {
           newCode[i] = pastedData[i];
         }
+        codeRef.current = newCode;
         setCode(newCode);
 
         // Focus the appropriate input
@@ -125,7 +133,9 @@ export function OtpModal({
       await onResend();
       setCountdown(60);
       setCanResend(false);
-      setCode(["", "", "", "", "", ""]);
+      const empty = ["", "", "", "", "", ""];
+      codeRef.current = empty;
+      setCode(empty);
       inputRefs.current[0]?.focus();
     } finally {
       setIsResending(false);
