@@ -533,7 +533,9 @@ describe("SquareService", () => {
             name: "Spring Rolls",
             description: "Crispy rolls",
             price: 8.99,
-            modifiers: { groups: [{ name: "Extra sauce", required: false, minSelect: 0, maxSelect: 1, options: [{ name: "Extra sauce", price: 0.5, externalId: "sq-mod-1" }] }] },
+            imageUrl: null,
+            taxExternalIds: [],
+            modifiers: { groups: [{ name: "Extra sauce", required: false, minSelect: 0, maxSelect: 1, options: [{ name: "Extra sauce", price: 0.5, externalId: "sq-mod-1", isDefault: false, ordinal: 0 }] }] },
             categoryExternalIds: ["sq-cat-1"],
             variationMappings: [{ externalId: "sq-var-1", name: "Regular" }],
           },
@@ -542,13 +544,15 @@ describe("SquareService", () => {
             name: "Steak",
             description: null,
             price: 24.99,
+            imageUrl: null,
+            taxExternalIds: [],
             modifiers: null,
             categoryExternalIds: ["sq-cat-2", "sq-cat-nonexistent"],
             variationMappings: [],
           },
         ],
         taxes: [
-          { externalId: "sq-tax-1", name: "Sales Tax", percentage: 8.875 },
+          { externalId: "sq-tax-1", name: "Sales Tax", percentage: 8.875, inclusionType: "additive" as const },
         ],
       });
 
