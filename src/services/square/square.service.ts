@@ -289,9 +289,11 @@ export class SquareService {
               id: internalId,
               tenantId,
               name: tax.name,
+              inclusionType: tax.inclusionType,
             },
             update: {
               name: tax.name,
+              inclusionType: tax.inclusionType,
               deleted: false,
             },
           });
@@ -330,11 +332,15 @@ export class SquareService {
         mapped.categories.length + mapped.items.length + mapped.taxes.length;
       const objectsMapped = objectsSynced;
 
-      await integrationRepository.updateSyncRecord(syncRecord.id, {
-        status: "success",
-        objectsSynced,
-        objectsMapped,
-      });
+      await integrationRepository.updateSyncRecord(
+        syncRecord.id,
+        {
+          status: "success",
+          objectsSynced,
+          objectsMapped,
+        },
+        mapped.stats
+      );
 
       return { objectsSynced, objectsMapped };
     } catch (error) {

@@ -36,6 +36,22 @@ vi.mock("../square-catalog.service", () => ({
       categories: [],
       items: [],
       taxes: [],
+      stats: {
+        itemsMapped: 0,
+        itemsCreated: 0,
+        itemsUpdated: 0,
+        itemsSkipped: 0,
+        variationsAsOptions: 0,
+        modifierListsFlattened: 0,
+        categoriesFlattened: 0,
+        locationOverridesDropped: 0,
+        imagesDropped: 0,
+        taxesInclusive: 0,
+        taxesAdditive: 0,
+        discountsSkipped: 0,
+        pricingRulesSkipped: 0,
+        warnings: [],
+      },
     })),
   },
 }));
@@ -337,7 +353,8 @@ describe("SquareService", () => {
       expect(result.objectsMapped).toBe(0);
       expect(integrationRepository.updateSyncRecord).toHaveBeenCalledWith(
         "sync-1",
-        expect.objectContaining({ status: "success" })
+        expect.objectContaining({ status: "success" }),
+        expect.anything()
       );
     });
 
@@ -565,7 +582,8 @@ describe("SquareService", () => {
       expect(result.objectsMapped).toBe(5);
       expect(integrationRepository.updateSyncRecord).toHaveBeenCalledWith(
         "sync-1",
-        expect.objectContaining({ status: "success", objectsSynced: 5, objectsMapped: 5 })
+        expect.objectContaining({ status: "success", objectsSynced: 5, objectsMapped: 5 }),
+        expect.anything()
       );
     });
 
