@@ -102,6 +102,17 @@ export class MenuService {
   }
 
   /**
+   * Count featured items whose underlying menu item is active.
+   * getMenu() injects these as a synthetic "Featured" category on the first
+   * menu, so the storefront menu switcher must include them when deciding
+   * whether the first menu is empty.
+   */
+  async countActiveFeaturedItems(tenantId: string): Promise<number> {
+    const { featuredItemRepository } = await getRepositories();
+    return featuredItemRepository.countActiveByTenantId(tenantId);
+  }
+
+  /**
    * Get menu for customer-facing display
    *
    * Populates tax information for each item based on:

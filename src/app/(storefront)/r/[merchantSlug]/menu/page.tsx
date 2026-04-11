@@ -40,11 +40,36 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
   const otherMenuIds = response.menus
     .filter((m) => m.id !== response.currentMenuId)
     .map((m) => m.id);
-  const otherCounts = otherMenuIds.length
-    ? await menuService.countActiveItemsByMenuIds(tenantId, otherMenuIds)
-    : new Map<string, number>();
+
+  // getMenu() injects a synthetic "Featured" category only for the first
+  // menu in response.menus. If we are viewing a different menu, that first
+  // menu's regular-item count alone can under-report (a first menu with no
+  // regular items but some featured items should still appear in the
+  // switcher). Pull the featured count in parallel and add it in.
+  const firstMenuId = response.menus[0]?.id;
+  const firstMenuIsOther =
+    firstMenuId !== undefined && firstMenuId !== response.currentMenuId;
+
+  const [otherCounts, featuredCountForFirstMenu] = await Promise.all([
+    otherMenuIds.length
+      ? menuService.countActiveItemsByMenuIds(tenantId, otherMenuIds)
+      : Promise.resolve(new Map<string, number>()),
+    firstMenuIsOther
+      ? menuService.countActiveFeaturedItems(tenantId)
+      : Promise.resolve(0),
+  ]);
+
+  if (firstMenuIsOther && featuredCountForFirstMenu > 0) {
+    otherCounts.set(
+      firstMenuId,
+      (otherCounts.get(firstMenuId) ?? 0) + featuredCountForFirstMenu
+    );
+  }
 
   // Current menu: reuse already-fetched categories (no extra DB call).
+  // When viewing the first menu, `response.categories` already contains the
+  // synthetic Featured category (if any), so this sum correctly includes
+  // featured items without an extra query.
   const currentMenuItemCount = response.categories.reduce(
     (sum, cat) => sum + cat.menuItems.length,
     0
