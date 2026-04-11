@@ -1140,10 +1140,11 @@ describe("SquareWebhookService", () => {
       });
     });
 
-    it("should mark order as canceled when payment is FAILED", async () => {
+    it("should mark order as payment_failed when payment is FAILED (not canceled, #111)", async () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
+      mockOrderFindUnique.mockResolvedValue({ status: "created" });
 
       const failedPayload = buildPayload({
         type: "payment.completed",
@@ -1164,12 +1165,117 @@ describe("SquareWebhookService", () => {
 
       expect(mockOrderUpdate).toHaveBeenCalledWith({
         where: { id: "internal-order-1" },
-        data: expect.objectContaining({
-          status: "canceled",
-          cancelledAt: expect.any(Date),
-          cancelReason: "Payment failed on Square",
-        }),
+        data: { status: "payment_failed" },
       });
+      // Crucially, we do NOT write cancellation fields — order cancel and
+      // payment failure are semantically distinct (#111).
+      const call = mockOrderUpdate.mock.calls[0][0];
+      expect(call.data.cancelledAt).toBeUndefined();
+      expect(call.data.cancelReason).toBeUndefined();
+    });
+
+    it("should NOT downgrade a completed order into payment_failed (clobber guard)", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({ status: "completed" });
+
+      const failedPayload = buildPayload({
+        type: "payment.completed",
+        data: {
+          type: "payment",
+          id: "sq-payment-1",
+          object: {
+            payment: {
+              id: "sq-payment-1",
+              order_id: "sq-order-1",
+              status: "FAILED",
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(failedPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should NOT downgrade a canceled order into payment_failed (clobber guard)", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({ status: "canceled" });
+
+      const failedPayload = buildPayload({
+        type: "payment.completed",
+        data: {
+          type: "payment",
+          id: "sq-payment-1",
+          object: {
+            payment: {
+              id: "sq-payment-1",
+              order_id: "sq-order-1",
+              status: "FAILED",
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(failedPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should be idempotent when already payment_failed", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue({ status: "payment_failed" });
+
+      const failedPayload = buildPayload({
+        type: "payment.completed",
+        data: {
+          type: "payment",
+          id: "sq-payment-1",
+          object: {
+            payment: {
+              id: "sq-payment-1",
+              order_id: "sq-order-1",
+              status: "FAILED",
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(failedPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
+    });
+
+    it("should skip payment_failed when order row is missing", async () => {
+      mockGetIdMappingByExternalId.mockResolvedValue({
+        internalId: "internal-order-1",
+      });
+      mockOrderFindUnique.mockResolvedValue(null);
+
+      const failedPayload = buildPayload({
+        type: "payment.completed",
+        data: {
+          type: "payment",
+          id: "sq-payment-1",
+          object: {
+            payment: {
+              id: "sq-payment-1",
+              order_id: "sq-order-1",
+              status: "FAILED",
+            },
+          },
+        },
+      });
+
+      await service.handleWebhook(JSON.stringify(failedPayload));
+
+      expect(mockOrderUpdate).not.toHaveBeenCalled();
     });
 
     it("should skip when no order_id in payment event", async () => {

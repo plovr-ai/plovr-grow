@@ -90,10 +90,11 @@ export type OrderMode = "pickup" | "delivery" | "dine_in";
 
 // Payment status (user behavior)
 export type OrderStatus =
-  | "created"       // Order created but not paid
-  | "partial_paid"  // Partially paid
-  | "completed"     // Fully paid
-  | "canceled";     // Cancelled
+  | "created"        // Order created but not paid
+  | "partial_paid"   // Partially paid
+  | "completed"      // Fully paid
+  | "payment_failed" // Payment attempt failed (distinct from order cancel — retry is possible)
+  | "canceled";      // Order cancelled
 
 // Fulfillment status (merchant behavior)
 export type FulfillmentStatus =
