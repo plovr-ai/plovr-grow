@@ -8,6 +8,7 @@ vi.mock("@/repositories/menu.repository", () => ({
     getCategoriesWithItemsByCompany: vi.fn(),
     getCategoriesWithItemsByMenu: vi.fn(),
     getCategoriesWithItemsByMenuForDashboard: vi.fn(),
+    countActiveItemsByMenuIds: vi.fn(),
     getItemById: vi.fn(),
     getItemsByIdsByCompany: vi.fn(),
     createCategory: vi.fn(),
@@ -824,6 +825,69 @@ describe("MenuService", () => {
       const featuredCategory = result.categories.find((c: { id: string }) => c.id === "featured");
       expect(featuredCategory?.menuItems[0].taxes).toHaveLength(1);
       expect(featuredCategory?.menuItems[0].taxes![0].name).toBe("New Tax");
+    });
+  });
+
+  describe("getMenu() - preloadedMerchant option", () => {
+    beforeEach(() => {
+      vi.mocked(menuEntityRepository.getMenusByCompany).mockResolvedValue(mockMenus as never);
+      vi.mocked(menuRepository.getCategoriesWithItemsByMenu).mockResolvedValue([] as never);
+      vi.mocked(featuredItemRepository.getByTenantId).mockResolvedValue([] as never);
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(new Map());
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([] as never);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(new Map());
+    });
+
+    it("should skip merchantRepository.getById when preloadedMerchant is provided", async () => {
+      const result = await menuService.getMenu("tenant-1", "merchant-1", undefined, {
+        preloadedMerchant: {
+          id: "merchant-1",
+          name: "Preloaded Merchant",
+          logoUrl: "https://example.com/preloaded.png",
+        },
+      });
+
+      expect(merchantRepository.getById).not.toHaveBeenCalled();
+      expect(result.merchantName).toBe("Preloaded Merchant");
+      expect(result.merchantLogo).toBe("https://example.com/preloaded.png");
+    });
+
+    it("should throw MERCHANT_NOT_FOUND when preloadedMerchant is null", async () => {
+      await expect(
+        menuService.getMenu("tenant-1", "merchant-1", undefined, {
+          preloadedMerchant: null,
+        })
+      ).rejects.toThrow("MERCHANT_NOT_FOUND");
+      expect(merchantRepository.getById).not.toHaveBeenCalled();
+    });
+
+    it("should fall back to merchantRepository.getById when options omitted", async () => {
+      vi.mocked(merchantRepository.getById).mockResolvedValue(mockMerchant as never);
+
+      await menuService.getMenu("tenant-1", "merchant-1");
+
+      expect(merchantRepository.getById).toHaveBeenCalledWith("merchant-1");
+    });
+  });
+
+  describe("countActiveItemsByMenuIds()", () => {
+    it("should delegate to menuRepository.countActiveItemsByMenuIds", async () => {
+      const countMap = new Map([
+        ["menu-1", 3],
+        ["menu-2", 0],
+      ]);
+      vi.mocked(menuRepository.countActiveItemsByMenuIds).mockResolvedValue(countMap);
+
+      const result = await menuService.countActiveItemsByMenuIds("tenant-1", [
+        "menu-1",
+        "menu-2",
+      ]);
+
+      expect(menuRepository.countActiveItemsByMenuIds).toHaveBeenCalledWith(
+        "tenant-1",
+        ["menu-1", "menu-2"]
+      );
+      expect(result).toBe(countMap);
     });
   });
 
