@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Set HTTP-only cookie for session persistence (tenantId === companyId)
+    // Set HTTP-only cookie for session persistence
     await setLoyaltySession(tenantId, member.id, member.phone);
 
     return NextResponse.json({

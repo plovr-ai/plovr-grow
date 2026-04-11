@@ -21,7 +21,7 @@ export async function updateLocationAction(
     await merchantService.updateMerchant(tenantId, merchantId, input);
 
     revalidatePath(`/dashboard/locations/${merchantId}`);
-    revalidatePath("/dashboard/company");
+    revalidatePath("/dashboard/tenant");
 
     return { success: true };
   } catch (error) {

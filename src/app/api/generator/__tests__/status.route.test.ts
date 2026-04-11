@@ -19,7 +19,7 @@ describe("GET /api/generator/{generationId}/status", () => {
   it("returns generation status", async () => {
     mockGetStatus.mockResolvedValue({
       status: "building", stepDetail: "Creating tenant...",
-      companySlug: null, errorMessage: null,
+      tenantSlug: null, errorMessage: null,
     });
     const req = new NextRequest("http://localhost/api/generator/gen1/status");
     const res = await GET(req, makeParams("gen1"));
@@ -27,7 +27,7 @@ describe("GET /api/generator/{generationId}/status", () => {
     expect(res.status).toBe(200);
     expect(data).toEqual({
       success: true,
-      data: { status: "building", stepDetail: "Creating tenant...", companySlug: null, errorMessage: null },
+      data: { status: "building", stepDetail: "Creating tenant...", tenantSlug: null, errorMessage: null },
     });
   });
 

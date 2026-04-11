@@ -170,9 +170,6 @@ export class TenantService {
 
   /**
    * Create a new merchant under this tenant.
-   * NOTE: merchantRepository.create() currently takes (companyId, tenantId, data).
-   * In the merged model there is no separate companyId, so we pass tenantId for both.
-   * This will be cleaned up when merchantRepository is updated in Task 4.
    */
   async createMerchant(tenantId: string, input: CreateMerchantInput) {
     // Validate tenant exists

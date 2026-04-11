@@ -41,13 +41,13 @@ export class SequenceRepository {
   }
 
   /**
-   * Get next company order sequence (for gift card orders)
+   * Get next gift card order sequence (tenant-level)
    */
-  async getNextCompanyOrderSequence(
+  async getNextGiftCardOrderSequence(
     tenantId: string,
     date: string
   ): Promise<number> {
-    const result = await prisma.companyOrderSequence.upsert({
+    const result = await prisma.giftCardOrderSequence.upsert({
       where: {
         tenantId_date: {
           tenantId,

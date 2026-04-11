@@ -5,20 +5,20 @@ import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SelectField } from "@/components/dashboard/Form";
-import { updateCompanySettingsAction } from "@/app/(dashboard)/dashboard/(protected)/company/actions";
+import { updateTenantSettingsAction } from "@/app/(dashboard)/dashboard/(protected)/tenant/actions";
 import { CURRENCY_OPTIONS, LOCALE_OPTIONS } from "@/constants/i18n";
 
-interface CompanySettingsFormProps {
+interface TenantSettingsFormProps {
   currency: string;
   locale: string;
   onClose: () => void;
 }
 
-export function CompanySettingsForm({
+export function TenantSettingsForm({
   currency: initialCurrency,
   locale: initialLocale,
   onClose,
-}: CompanySettingsFormProps) {
+}: TenantSettingsFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export function CompanySettingsForm({
     setError(null);
 
     startTransition(async () => {
-      const result = await updateCompanySettingsAction({
+      const result = await updateTenantSettingsAction({
         currency,
         locale,
       });

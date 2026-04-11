@@ -16,8 +16,8 @@ export class GeneratorService {
 
   async create(input: CreateGenerationInput): Promise<CreateGenerationResult> {
     const existing = await generatorRepository.findCompletedByPlaceId(input.placeId);
-    if (existing?.companySlug) {
-      return { existingSlug: existing.companySlug };
+    if (existing?.tenantSlug) {
+      return { existingSlug: existing.tenantSlug };
     }
     const generation = await generatorRepository.create(input.placeId, input.placeName);
     return { generationId: generation.id };
@@ -29,7 +29,7 @@ export class GeneratorService {
     return {
       status: generation.status as GenerationStatusResult["status"],
       stepDetail: generation.stepDetail,
-      companySlug: generation.companySlug,
+      tenantSlug: generation.tenantSlug,
       errorMessage: generation.errorMessage,
     };
   }
@@ -46,7 +46,7 @@ export class GeneratorService {
       await generatorRepository.updateStatus(generationId, "building", "Building your website...");
       const result = await this.buildTenant(placeDetails);
 
-      await generatorRepository.markCompleted(generationId, result.tenantId, result.companySlug);
+      await generatorRepository.markCompleted(generationId, result.tenantId, result.tenantSlug);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       await generatorRepository.markFailed(generationId, message);
@@ -85,7 +85,7 @@ export class GeneratorService {
       tenantId: tenant.id,
       merchantId: merchant.id,
       // Slug is non-null by construction: createTenantWithMerchant always sets one.
-      companySlug: tenant.slug as string,
+      tenantSlug: tenant.slug as string,
       merchantSlug: merchant.slug,
     };
   }

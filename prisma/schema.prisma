@@ -50,7 +50,7 @@ model Tenant {
   giftCards               GiftCard[]
   giftCardTransactions    GiftCardTransaction[]
   orderSequences          OrderSequence[]
-  companyOrderSequences   CompanyOrderSequence[]
+  giftCardOrderSequences  GiftCardOrderSequence[]
   cateringOrderSequences  CateringOrderSequence[]
   invoiceSequences        InvoiceSequence[]
   payments                Payment[]
@@ -617,8 +617,8 @@ model OrderSequence {
   @@map("order_sequences")
 }
 
-/// Company-level order sequence (for gift card orders)
-model CompanyOrderSequence {
+/// Tenant-level order sequence for gift card orders
+model GiftCardOrderSequence {
   id        String   @id
   tenantId  String   @map("tenant_id")
   date      String   // Format: "2026-01-27"
@@ -632,7 +632,7 @@ model CompanyOrderSequence {
   @@unique([tenantId, date])
   @@index([tenantId])
   @@index([date])
-  @@map("company_order_sequences")
+  @@map("gift_card_order_sequences")
 }
 
 /// Catering order sequence table
@@ -811,7 +811,7 @@ model WebsiteGeneration {
   stepDetail   String?  @map("step_detail")
   googleData   Json?    @map("google_data")
   tenantId     String?  @map("tenant_id")
-  companySlug  String?  @map("company_slug")
+  tenantSlug   String?  @map("tenant_slug")
   errorMessage String?  @map("error_message") @db.Text
   deleted      Boolean  @default(false)
   createdAt    DateTime @default(now()) @map("created_at")

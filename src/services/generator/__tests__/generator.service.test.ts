@@ -37,7 +37,7 @@ describe("GeneratorService", () => {
     it("returns existingSlug when placeId already has a completed generation", async () => {
       vi.mocked(generatorRepository.findCompletedByPlaceId).mockResolvedValue({
         id: "gen1",
-        companySlug: "joes-pizza",
+        tenantSlug: "joes-pizza",
       } as never);
 
       const result = await service.create({ placeId: "ChIJ_test", placeName: "Joe's Pizza" });
@@ -59,13 +59,13 @@ describe("GeneratorService", () => {
     it("returns generation status", async () => {
       vi.mocked(generatorRepository.getById).mockResolvedValue({
         id: "gen1", status: "building", stepDetail: "Creating tenant...",
-        companySlug: null, errorMessage: null,
+        tenantSlug: null, errorMessage: null,
       } as never);
 
       const result = await service.getStatus("gen1");
       expect(result).toEqual({
         status: "building", stepDetail: "Creating tenant...",
-        companySlug: null, errorMessage: null,
+        tenantSlug: null, errorMessage: null,
       });
     });
 
@@ -163,10 +163,10 @@ describe("GeneratorService", () => {
   });
 
   describe("create - edge case", () => {
-    it("creates new generation when findCompleted returns record without companySlug", async () => {
+    it("creates new generation when findCompleted returns record without tenantSlug", async () => {
       vi.mocked(generatorRepository.findCompletedByPlaceId).mockResolvedValue({
         id: "gen1",
-        companySlug: null,
+        tenantSlug: null,
       } as never);
       vi.mocked(generatorRepository.create).mockResolvedValue({ id: "gen-new" } as never);
 
