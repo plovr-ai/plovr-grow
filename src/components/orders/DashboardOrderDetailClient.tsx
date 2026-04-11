@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, User, Phone, Mail, MapPin, FileText } from "lucide-react";
 import { useDashboardFormatPrice, useDashboardFormatDateTime } from "@/hooks";
@@ -276,9 +277,11 @@ function OrderItemsList({
               <div className="flex gap-3">
                 {/* Item Image */}
                 {imageUrl ? (
-                  <img
+                  <Image
                     src={imageUrl}
                     alt={item.name}
+                    width={64}
+                    height={64}
                     className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
                   />
                 ) : (

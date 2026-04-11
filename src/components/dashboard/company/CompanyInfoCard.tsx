@@ -19,6 +19,7 @@ import {
   Pencil,
   ChevronRight,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CompanySettingsForm } from "./CompanySettingsForm";
 
@@ -79,9 +80,11 @@ export function CompanyInfoCard({ company }: CompanyInfoCardProps) {
             {/* Logo */}
             <div className="flex-shrink-0">
               {company.logoUrl ? (
-                <img
+                <Image
                   src={company.logoUrl}
                   alt={company.name}
+                  width={80}
+                  height={80}
                   className="h-20 w-20 rounded-lg object-cover"
                 />
               ) : (

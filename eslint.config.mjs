@@ -42,9 +42,6 @@ const eslintConfig = defineConfig([
         },
       ],
 
-      // 允许使用原生 <img> 标签 (CLAUDE.md 要求)
-      "@next/next/no-img-element": "off",
-
       // 允许下划线前缀的未使用变量
       "@typescript-eslint/no-unused-vars": [
         "warn",
@@ -53,19 +50,6 @@ const eslintConfig = defineConfig([
           varsIgnorePattern: "^_",
           caughtErrorsIgnorePattern: "^_",
           destructuredArrayIgnorePattern: "^_",
-        },
-      ],
-
-      // 禁止 next/image，使用原生 <img>
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            {
-              name: "next/image",
-              message: "Use native <img> tag instead of next/image.",
-            },
-          ],
         },
       ],
     },
