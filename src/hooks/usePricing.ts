@@ -33,6 +33,7 @@ export function usePricing(
         taxes: taxes.map((t) => ({
           rate: t.rate,
           roundingMethod: t.roundingMethod,
+          inclusionType: t.inclusionType,
         })),
       };
     });

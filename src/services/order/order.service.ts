@@ -273,6 +273,7 @@ export class OrderService {
           return {
             rate: merchantTaxRateMap.get(taxId) || 0,
             roundingMethod: config.roundingMethod as RoundingMethod,
+            inclusionType: config.inclusionType,
           };
         })
         .filter((t): t is NonNullable<typeof t> => t !== null);
