@@ -102,25 +102,6 @@ describe("WebhookDispatcherService", () => {
     });
   });
 
-  // ==================== Dispatch: dedup ====================
-
-  describe("dispatch - dedup", () => {
-    it("should return 200 with deduplicated flag for duplicate events", async () => {
-      const provider = createMockProvider();
-      dispatcher.register("test", provider);
-      mockFindWebhookEventByEventId.mockResolvedValue({
-        id: "we-existing",
-        eventId: "evt-1",
-      });
-
-      const result = await dispatcher.dispatch("test", "{}", {});
-
-      expect(result.status).toBe(200);
-      expect(result.body.deduplicated).toBe(true);
-      expect(mockCreateWebhookEvent).not.toHaveBeenCalled();
-    });
-  });
-
   // ==================== Dispatch: connection lookup ====================
 
   describe("dispatch - connection lookup", () => {
@@ -145,6 +126,37 @@ describe("WebhookDispatcherService", () => {
       expect(mockGetConnectionByExternalAccountId).toHaveBeenCalledWith(
         "ext-acct-1",
         "POS_SQUARE"
+      );
+    });
+  });
+
+  // ==================== Dispatch: dedup (scoped by connection) ====================
+
+  describe("dispatch - dedup", () => {
+    it("should return 200 with deduplicated flag for duplicate events", async () => {
+      const provider = createMockProvider();
+      dispatcher.register("test", provider);
+      mockFindWebhookEventByEventId.mockResolvedValue({
+        id: "we-existing",
+        eventId: "evt-1",
+      });
+
+      const result = await dispatcher.dispatch("test", "{}", {});
+
+      expect(result.status).toBe(200);
+      expect(result.body.deduplicated).toBe(true);
+      expect(mockCreateWebhookEvent).not.toHaveBeenCalled();
+    });
+
+    it("should scope dedup by connectionId", async () => {
+      const provider = createMockProvider();
+      dispatcher.register("test", provider);
+
+      await dispatcher.dispatch("test", "{}", {});
+
+      expect(mockFindWebhookEventByEventId).toHaveBeenCalledWith(
+        CONNECTION_ID,
+        "evt-1"
       );
     });
   });
@@ -233,6 +245,35 @@ describe("WebhookDispatcherService", () => {
         expect.any(Date),
         "Unknown error"
       );
+    });
+  });
+
+  // ==================== Dispatch: pipeline error ack ====================
+
+  describe("dispatch - pipeline error", () => {
+    it("should return 200 when parseWebhookEvent throws after valid signature", async () => {
+      const provider = createMockProvider({
+        parseWebhookEvent: vi.fn().mockImplementation(() => {
+          throw new Error("malformed JSON");
+        }),
+      });
+      dispatcher.register("test", provider);
+
+      const result = await dispatcher.dispatch("test", "bad-json", {});
+
+      expect(result.status).toBe(200);
+      expect(result.body.received).toBe(true);
+    });
+
+    it("should return 200 when createWebhookEvent throws", async () => {
+      const provider = createMockProvider();
+      dispatcher.register("test", provider);
+      mockCreateWebhookEvent.mockRejectedValue(new Error("DB error"));
+
+      const result = await dispatcher.dispatch("test", "{}", {});
+
+      expect(result.status).toBe(200);
+      expect(result.body.received).toBe(true);
     });
   });
 

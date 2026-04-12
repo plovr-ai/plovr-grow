@@ -63,67 +63,78 @@ export class WebhookDispatcherService {
       };
     }
 
-    // 3. Parse event
-    const event = provider.parseWebhookEvent(rawBody);
-
-    // 4. Dedup check
-    const existing = await integrationRepository.findWebhookEventByEventId(
-      event.eventId
-    );
-    if (existing) {
-      console.log(
-        `[Webhook ${providerName}] Duplicate event skipped: ${event.eventId}`
-      );
-      return { status: 200, body: { received: true, deduplicated: true } };
-    }
-
-    // 5. Connection lookup
-    const connection =
-      await integrationRepository.getConnectionByExternalAccountId(
-        event.externalAccountId,
-        provider.type
-      );
-    if (!connection) {
-      console.error(
-        `[Webhook ${providerName}] No connection found for external account: ${event.externalAccountId}`
-      );
-      return { status: 200, body: { received: true, error: "connection_not_found" } };
-    }
-
-    // 6. Create webhook event record
-    const webhookEvent = await integrationRepository.createWebhookEvent({
-      tenantId: connection.tenantId,
-      merchantId: connection.merchantId,
-      connectionId: connection.id,
-      eventId: event.eventId,
-      eventType: event.eventType,
-      payload: event.rawPayload,
-    });
-
-    // 7. Process via provider + 8. Update status
+    // Signature is valid — always acknowledge with 200 from here on,
+    // even if downstream processing fails. Returning 5xx would cause the
+    // POS platform to retry the same payload indefinitely.
     try {
-      await provider.handleWebhookEvent(event, {
+      // 3. Parse event
+      const event = provider.parseWebhookEvent(rawBody);
+
+      // 4. Connection lookup (before dedup so we can scope dedup by connection)
+      const connection =
+        await integrationRepository.getConnectionByExternalAccountId(
+          event.externalAccountId,
+          provider.type
+        );
+      if (!connection) {
+        console.error(
+          `[Webhook ${providerName}] No connection found for external account: ${event.externalAccountId}`
+        );
+        return { status: 200, body: { received: true, error: "connection_not_found" } };
+      }
+
+      // 5. Dedup check — scoped by connection to avoid cross-provider collisions
+      const existing = await integrationRepository.findWebhookEventByEventId(
+        connection.id,
+        event.eventId
+      );
+      if (existing) {
+        console.log(
+          `[Webhook ${providerName}] Duplicate event skipped: ${event.eventId}`
+        );
+        return { status: 200, body: { received: true, deduplicated: true } };
+      }
+
+      // 6. Create webhook event record
+      const webhookEvent = await integrationRepository.createWebhookEvent({
         tenantId: connection.tenantId,
         merchantId: connection.merchantId,
-        id: connection.id,
+        connectionId: connection.id,
+        eventId: event.eventId,
+        eventType: event.eventType,
+        payload: event.rawPayload,
       });
-      await integrationRepository.updateWebhookEventStatus(
-        webhookEvent.id,
-        WEBHOOK_EVENT_STATUS.PROCESSED
-      );
+
+      // 7. Process via provider + 8. Update status
+      try {
+        await provider.handleWebhookEvent(event, {
+          tenantId: connection.tenantId,
+          merchantId: connection.merchantId,
+          id: connection.id,
+        });
+        await integrationRepository.updateWebhookEventStatus(
+          webhookEvent.id,
+          WEBHOOK_EVENT_STATUS.PROCESSED
+        );
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error(
+          `[Webhook ${providerName}] Handler failed for ${event.eventType}:`,
+          errorMessage
+        );
+        const nextRetryAt = computeNextRetryAt(0);
+        await integrationRepository.scheduleWebhookEventRetry(
+          webhookEvent.id,
+          1,
+          nextRetryAt,
+          errorMessage
+        );
+      }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
       console.error(
-        `[Webhook ${providerName}] Handler failed for ${event.eventType}:`,
-        errorMessage
-      );
-      const nextRetryAt = computeNextRetryAt(0);
-      await integrationRepository.scheduleWebhookEventRetry(
-        webhookEvent.id,
-        1,
-        nextRetryAt,
-        errorMessage
+        `[Webhook ${providerName}] Pipeline error (acked):`,
+        error instanceof Error ? error.message : error
       );
     }
 

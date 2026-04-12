@@ -431,16 +431,16 @@ describe("IntegrationRepository", () => {
   });
 
   describe("findWebhookEventByEventId", () => {
-    it("should find webhook event by event ID", async () => {
+    it("should find webhook event by connection and event ID", async () => {
       mockPrisma.webhookEvent.findUnique.mockResolvedValue({
         id: "wh-1",
         eventId: "evt_123",
       } as never);
 
-      const result = await repo.findWebhookEventByEventId("evt_123");
+      const result = await repo.findWebhookEventByEventId("conn-1", "evt_123");
 
       expect(mockPrisma.webhookEvent.findUnique).toHaveBeenCalledWith({
-        where: { eventId: "evt_123" },
+        where: { connectionId_eventId: { connectionId: "conn-1", eventId: "evt_123" } },
       });
       expect(result).toEqual({ id: "wh-1", eventId: "evt_123" });
     });

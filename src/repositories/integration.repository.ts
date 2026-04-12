@@ -294,9 +294,9 @@ export class IntegrationRepository {
     });
   }
 
-  async findWebhookEventByEventId(eventId: string) {
+  async findWebhookEventByEventId(connectionId: string, eventId: string) {
     return prisma.webhookEvent.findUnique({
-      where: { eventId },
+      where: { connectionId_eventId: { connectionId, eventId } },
     });
   }
 
