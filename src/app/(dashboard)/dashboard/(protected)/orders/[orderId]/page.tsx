@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { orderService } from "@/services/order";
 import { menuService } from "@/services/menu";
 import { DashboardOrderDetailClient } from "@/components/orders/DashboardOrderDetailClient";
-import type { OrderItemData, DeliveryAddress } from "@/types";
+import type { DeliveryAddress } from "@/types";
 
 interface PageProps {
   params: Promise<{ orderId: string }>;
@@ -50,8 +50,8 @@ export default async function DashboardOrderDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Get order items (already mapped from structured OrderItem rows by the service)
-  const items = order.items as OrderItemData[];
+  // Get order items (mapped from structured OrderItem rows by the service)
+  const items = order.items;
   const menuItemIds = items.map((item) => item.menuItemId);
   const menuItems = await menuService.getMenuItemsByIds(tenantId, merchant.id, menuItemIds);
 

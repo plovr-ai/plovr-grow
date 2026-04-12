@@ -86,6 +86,15 @@ describe("OrderRepository", () => {
               timezone: true,
             },
           },
+          orderItems: {
+            where: { deleted: false },
+            orderBy: { sortOrder: "asc" },
+            include: {
+              modifiers: {
+                where: { deleted: false },
+              },
+            },
+          },
         },
       });
 
@@ -284,6 +293,15 @@ describe("OrderRepository", () => {
               timezone: true,
             },
           },
+          orderItems: {
+            where: { deleted: false },
+            orderBy: { sortOrder: "asc" },
+            include: {
+              modifiers: {
+                where: { deleted: false },
+              },
+            },
+          },
         },
       });
     });
@@ -466,7 +484,7 @@ describe("OrderRepository", () => {
     });
   });
 
-  describe("create (dual-write with orderItems)", () => {
+  describe("create (with orderItems)", () => {
     it("should create order with nested orderItems and modifiers", async () => {
       const mockOrder = { id: "mock-id-1", orderNumber: "#001" };
       vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as never);
@@ -507,7 +525,6 @@ describe("OrderRepository", () => {
           salesChannel: "online_order",
           status: "created",
           fulfillmentStatus: "pending",
-          items: orderItems as unknown as Prisma.InputJsonValue,
           subtotal: 21.98,
           taxAmount: 1.76,
           tipAmount: 0,
@@ -524,6 +541,10 @@ describe("OrderRepository", () => {
         undefined,
         orderItems
       );
+
+      const callArgs = vi.mocked(prisma.order.create).mock.calls[0]?.[0];
+      // Verify items JSON field is NOT written (deprecated)
+      expect(callArgs?.data).not.toHaveProperty("items");
 
       expect(prisma.order.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -574,7 +595,6 @@ describe("OrderRepository", () => {
           salesChannel: "online_order",
           status: "created",
           fulfillmentStatus: "pending",
-          items: [] as unknown as Prisma.InputJsonValue,
           subtotal: 0,
           taxAmount: 0,
           tipAmount: 0,
@@ -621,7 +641,6 @@ describe("OrderRepository", () => {
           salesChannel: "online_order",
           status: "created",
           fulfillmentStatus: "pending",
-          items: orderItems as unknown as Prisma.InputJsonValue,
           subtotal: 4.99,
           taxAmount: 0,
           tipAmount: 0,

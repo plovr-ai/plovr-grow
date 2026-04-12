@@ -123,10 +123,8 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [merchantSlug, order.id, order.status]);
 
-  // Parse items from JSON if needed
-  const items: OrderItemData[] = Array.isArray(order.items)
-    ? order.items
-    : JSON.parse(order.items as unknown as string);
+  // Items are already mapped from structured OrderItem rows by the service
+  const items: OrderItemData[] = order.items;
 
   const orderModeLabelMap: Record<OrderMode, string> = {
     pickup: "Pickup",

@@ -23,6 +23,10 @@ type SerializedOrder = Omit<Order, "tenant" | "subtotal" | "taxAmount" | "tipAmo
     slug: string;
     timezone: string;
   } | null;
+  orderItems?: Array<{
+    name: string;
+    quantity: number;
+  }>;
 };
 
 interface OrderCardProps {
@@ -42,11 +46,8 @@ const salesChannelLabels: Record<SalesChannel, string> = {
 };
 
 export function OrderCard({ order }: OrderCardProps) {
-  // items is already parsed by Prisma (JSON field)
-  const items = order.items as Array<{
-    name: string;
-    quantity: number;
-  }>;
+  // Read from structured orderItems relation
+  const items = order.orderItems ?? [];
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   // Get timezone from merchant or use default

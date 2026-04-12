@@ -38,7 +38,8 @@ const baseOrder = {
   customerEmail: "john@test.com",
   orderMode: "pickup",
   salesChannel: "online_order",
-  items: [
+  items: null,
+  orderItems: [
     { name: "Burger", quantity: 2 },
     { name: "Fries", quantity: 1 },
   ],
@@ -100,7 +101,7 @@ describe("OrderCard", () => {
   it("should show singular 'item' when count is 1", () => {
     const orderSingleItem = {
       ...baseOrder,
-      items: [{ name: "Burger", quantity: 1 }],
+      orderItems: [{ name: "Burger", quantity: 1 }],
     };
     render(<OrderCard order={orderSingleItem} />);
 
