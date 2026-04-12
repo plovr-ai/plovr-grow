@@ -106,23 +106,33 @@ export class SquareService {
       throw new AppError(ErrorCodes.INTEGRATION_NOT_CONNECTED, undefined, 404);
     }
 
-    // Concurrency guard
-    const runningSync = await integrationRepository.getRunningSync(
-      connection.id
-    );
-    if (runningSync) {
-      throw new AppError(ErrorCodes.SQUARE_SYNC_ALREADY_RUNNING, undefined, 409);
-    }
-
     // Ensure token is valid
     const accessToken = await this.ensureValidToken(connection);
 
-    // Create sync record
-    const syncRecord = await integrationRepository.createSyncRecord(
-      tenantId,
-      connection.id,
-      "CATALOG_FULL"
-    );
+    // Atomic concurrency guard + sync record creation
+    const syncRecord = await prisma.$transaction(async (tx) => {
+      const staleThreshold = new Date(Date.now() - 10 * 60 * 1000);
+      const runningSync = await tx.integrationSyncRecord.findFirst({
+        where: {
+          connectionId: connection.id,
+          status: "running",
+          startedAt: { gte: staleThreshold },
+        },
+      });
+      if (runningSync) {
+        throw new AppError(ErrorCodes.SQUARE_SYNC_ALREADY_RUNNING, undefined, 409);
+      }
+      return tx.integrationSyncRecord.create({
+        data: {
+          id: generateEntityId(),
+          tenantId,
+          connectionId: connection.id,
+          syncType: "CATALOG_FULL",
+          status: "running",
+          startedAt: new Date(),
+        },
+      });
+    });
 
     try {
       // Fetch catalog from Square
