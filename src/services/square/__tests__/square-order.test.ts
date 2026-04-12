@@ -222,12 +222,20 @@ describe("SquareOrderService", () => {
       expect(lineItem1.modifiers[0].name).toBe("Extra Cheese");
       expect(lineItem1.modifiers[0].basePriceMoney.amount).toBe(BigInt(150));
 
+      // Check appliedTaxes on first line item (has taxes)
+      expect(lineItem1.appliedTaxes).toHaveLength(1);
+      expect(lineItem1.appliedTaxes[0].taxUid).toBe("tax-1");
+
       // Check second line item (no modifiers)
       const lineItem2 = createCall.order.lineItems[1];
       expect(lineItem2.name).toBe("French Fries");
       expect(lineItem2.quantity).toBe("1");
       expect(lineItem2.catalogObjectId).toBe("sq-var-2");
       expect(lineItem2.modifiers).toBeUndefined();
+
+      // Check appliedTaxes on second line item (also has taxes)
+      expect(lineItem2.appliedTaxes).toHaveLength(1);
+      expect(lineItem2.appliedTaxes[0].taxUid).toBe("tax-1");
 
       // Check fulfillment
       const fulfillment = createCall.order.fulfillments[0];
@@ -248,7 +256,7 @@ describe("SquareOrderService", () => {
         name: "Sales Tax",
         type: "ADDITIVE",
         percentage: "8.8750",
-        scope: "ORDER",
+        scope: "LINE_ITEM",
         catalogObjectId: "sq-tax-1",
       });
 
@@ -409,7 +417,7 @@ describe("SquareOrderService", () => {
         name: "Sales Tax",
         type: "ADDITIVE",
         percentage: "8.8750",
-        scope: "ORDER",
+        scope: "LINE_ITEM",
         catalogObjectId: "sq-tax-1",
       });
     });
@@ -504,6 +512,49 @@ describe("SquareOrderService", () => {
 
       const createCall = mockCreate.mock.calls[0][0];
       expect(createCall.order.taxes).toBeUndefined();
+    });
+
+    it("should only apply tax to items that carry it (mixed-tax order)", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+
+      const input: SquareOrderPushInput = {
+        ...sampleInput,
+        tipAmount: 0,
+        items: [
+          {
+            menuItemId: "i1",
+            name: "Taxable Item",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [],
+            taxes: [
+              { taxConfigId: "tax-1", name: "Sales Tax", rate: 0.08875, roundingMethod: "half_up" as const, inclusionType: "additive" as const },
+            ],
+          },
+          {
+            menuItemId: "i2",
+            name: "Tax-Exempt Item",
+            price: 5,
+            quantity: 1,
+            selectedModifiers: [],
+            // No taxes
+          },
+        ],
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, input);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      // Tax is LINE_ITEM scoped, so Square only applies it to items with appliedTaxes
+      expect(createCall.order.taxes).toHaveLength(1);
+      expect(createCall.order.taxes[0].scope).toBe("LINE_ITEM");
+
+      // Taxable item has appliedTaxes reference
+      expect(createCall.order.lineItems[0].appliedTaxes).toHaveLength(1);
+      expect(createCall.order.lineItems[0].appliedTaxes[0].taxUid).toBe("tax-1");
+
+      // Tax-exempt item has no appliedTaxes
+      expect(createCall.order.lineItems[1].appliedTaxes).toBeUndefined();
     });
 
     it("should build tip service charge", async () => {
