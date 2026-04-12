@@ -138,7 +138,7 @@ function redeemInTransaction(orderId: string, amount: number) {
         subtotal: amount,
         taxAmount: 0,
         giftCardPayment: amountToRedeem,
-        cashPayment: amount - amountToRedeem,
+        balanceDue: amount - amountToRedeem,
         totalAmount: amount,
       },
     });
@@ -522,7 +522,7 @@ describe("Gift Card Concurrency & Idempotency (Integration)", () => {
       // Verify the order recorded the correct giftCardPayment
       const order = await prisma.order.findUnique({ where: { id: orderId } });
       expect(Number(order!.giftCardPayment)).toBe(50);
-      expect(Number(order!.cashPayment)).toBe(30); // 80 - 50
+      expect(Number(order!.balanceDue)).toBe(30); // 80 - 50
     });
 
     it("should reject redemption on zero-balance card", async () => {

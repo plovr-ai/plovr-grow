@@ -129,7 +129,7 @@ describe("Order Transaction Atomicity (Integration)", () => {
           subtotal: 30,
           taxAmount: 0,
           giftCardPayment: 15,
-          cashPayment: 15,
+          balanceDue: 15,
           totalAmount: 30,
         },
       });
@@ -212,7 +212,7 @@ describe("Order Transaction Atomicity (Integration)", () => {
             subtotal: 60,
             taxAmount: 0,
             giftCardPayment: 60,
-            cashPayment: 0,
+            balanceDue: 0,
             totalAmount: 60,
           },
         });
@@ -277,7 +277,7 @@ describe("Order Transaction Atomicity (Integration)", () => {
             subtotal: 25,
             taxAmount: 0,
             giftCardPayment: 10,
-            cashPayment: 15,
+            balanceDue: 15,
             totalAmount: 25,
           },
         });

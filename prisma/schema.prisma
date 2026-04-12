@@ -278,7 +278,7 @@ model Order {
   deliveryFee         Decimal               @default(0.00) @map("delivery_fee") @db.Decimal(10, 2)
   discount            Decimal               @default(0.00) @db.Decimal(10, 2)
   giftCardPayment     Decimal               @default(0.00) @map("gift_card_payment") @db.Decimal(10, 2)
-  cashPayment         Decimal               @default(0.00) @map("cash_payment") @db.Decimal(10, 2)
+  balanceDue          Decimal               @default(0.00) @map("balance_due") @db.Decimal(10, 2)
   totalAmount         Decimal               @map("total_amount") @db.Decimal(10, 2)
   notes               String?               @db.Text
   deliveryAddress     Json?                 @map("delivery_address")

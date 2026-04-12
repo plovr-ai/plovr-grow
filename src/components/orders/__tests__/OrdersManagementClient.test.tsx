@@ -42,7 +42,7 @@ describe("OrdersManagementClient", () => {
       deliveryFee: 0.0,
       discount: 0.0,
       giftCardPayment: 0.0,
-      cashPayment: 10.88,
+      balanceDue: 10.88,
       totalAmount: 10.88,
       notes: null,
       deliveryAddress: null,
@@ -326,7 +326,7 @@ describe("OrdersManagementClient", () => {
       expect(typeof order.deliveryFee).toBe("number");
       expect(typeof order.discount).toBe("number");
       expect(typeof order.giftCardPayment).toBe("number");
-      expect(typeof order.cashPayment).toBe("number");
+      expect(typeof order.balanceDue).toBe("number");
       expect(typeof order.totalAmount).toBe("number");
     });
 
@@ -334,13 +334,13 @@ describe("OrdersManagementClient", () => {
       const orderWithGiftCard: SerializedOrder = {
         ...mockOrders[0],
         giftCardPayment: 5.0,
-        cashPayment: 5.88,
+        balanceDue: 5.88,
         totalAmount: 10.88,
       };
 
       expect(orderWithGiftCard.giftCardPayment).toBe(5.0);
-      expect(orderWithGiftCard.cashPayment).toBe(5.88);
-      expect(orderWithGiftCard.giftCardPayment + orderWithGiftCard.cashPayment).toBeCloseTo(10.88);
+      expect(orderWithGiftCard.balanceDue).toBe(5.88);
+      expect(orderWithGiftCard.giftCardPayment + orderWithGiftCard.balanceDue).toBeCloseTo(10.88);
     });
   });
 

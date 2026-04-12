@@ -85,7 +85,7 @@ export class OrderService {
 
     // Calculate payment breakdown
     const giftCardPayment = input.giftCardPayment ?? 0;
-    const cashPayment = Math.max(0, calculation.totalAmount - giftCardPayment);
+    const balanceDue = Math.max(0, calculation.totalAmount - giftCardPayment);
 
     // Get merchant timezone for accurate date-based sequencing
     const merchant = await merchantService.getMerchantById(merchantId);
@@ -125,7 +125,7 @@ export class OrderService {
           deliveryFee: calculation.deliveryFee,
           discount: calculation.discount,
           giftCardPayment: Math.round(giftCardPayment * 100) / 100,
-          cashPayment: Math.round(cashPayment * 100) / 100,
+          balanceDue: Math.round(balanceDue * 100) / 100,
           totalAmount: calculation.totalAmount,
           notes: input.notes ?? null,
           deliveryAddress: input.deliveryAddress
@@ -294,7 +294,7 @@ export class OrderService {
 
     // Calculate payment breakdown
     const giftCardPayment = input.giftCardPayment ?? 0;
-    const cashPayment = Math.max(0, totalAmount - giftCardPayment);
+    const balanceDue = Math.max(0, totalAmount - giftCardPayment);
 
     // Get current date for sequencing (use UTC since no merchant timezone)
     const dateStr = new Date().toISOString().slice(0, 10);
@@ -323,7 +323,7 @@ export class OrderService {
         deliveryFee: 0,
         discount: 0,
         giftCardPayment: Math.round(giftCardPayment * 100) / 100,
-        cashPayment: Math.round(cashPayment * 100) / 100,
+        balanceDue: Math.round(balanceDue * 100) / 100,
         totalAmount,
         notes: input.notes ?? null,
         deliveryAddress: Prisma.JsonNull,
