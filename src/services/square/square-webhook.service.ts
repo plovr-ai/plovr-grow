@@ -1,5 +1,3 @@
-import crypto from "crypto";
-import { squareConfig } from "./square.config";
 import { integrationRepository } from "@/repositories/integration.repository";
 import { squareService } from "./square.service";
 import prisma from "@/lib/db";
@@ -8,97 +6,11 @@ import type { SquareWebhookPayload } from "./square.types";
 import {
   REVERSE_FULFILLMENT_STATUS_MAP,
   FULFILLMENT_STATUS_RANK,
-  WEBHOOK_EVENT_STATUS,
   WEBHOOK_RETRY_POLICY,
   computeNextRetryAt,
 } from "./square.types";
 
-const INTEGRATION_TYPE = "POS_SQUARE";
-
-
 export class SquareWebhookService {
-  verifySignature(rawBody: string, signature: string): boolean {
-    if (!signature) return false;
-    try {
-      const hmac = crypto.createHmac(
-        "sha256",
-        squareConfig.webhookSignatureKey
-      );
-      hmac.update(squareConfig.webhookNotificationUrl + rawBody);
-      const expected = hmac.digest("base64");
-      const sigBuffer = Buffer.from(signature, "base64");
-      const expectedBuffer = Buffer.from(expected, "base64");
-      if (sigBuffer.length !== expectedBuffer.length) return false;
-      return crypto.timingSafeEqual(sigBuffer, expectedBuffer);
-    } catch {
-      return false;
-    }
-  }
-
-  async handleWebhook(
-    rawBody: string
-  ): Promise<{ deduplicated?: boolean; error?: string }> {
-    const payload: SquareWebhookPayload = JSON.parse(rawBody);
-    const { merchant_id, type: eventType, event_id: eventId } = payload;
-
-    // Dedup check
-    const existing =
-      await integrationRepository.findWebhookEventByEventId(eventId);
-    if (existing) {
-      console.log(`[Square Webhook] Duplicate event skipped: ${eventId}`);
-      return { deduplicated: true };
-    }
-
-    // Lookup connection
-    const connection =
-      await integrationRepository.getConnectionByExternalAccountId(
-        merchant_id,
-        INTEGRATION_TYPE
-      );
-    if (!connection) {
-      console.error(
-        `[Square Webhook] No connection found for Square merchant: ${merchant_id}`
-      );
-      return { error: "connection_not_found" };
-    }
-
-    // Store event
-    const webhookEvent = await integrationRepository.createWebhookEvent({
-      tenantId: connection.tenantId,
-      merchantId: connection.merchantId,
-      connectionId: connection.id,
-      eventId,
-      eventType,
-      payload,
-    });
-
-    // Route to handler
-    try {
-      await this.routeEvent(eventType, payload, connection);
-      await integrationRepository.updateWebhookEventStatus(
-        webhookEvent.id,
-        WEBHOOK_EVENT_STATUS.PROCESSED
-      );
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      console.error(
-        `[Square Webhook] Handler failed for ${eventType}:`,
-        errorMessage
-      );
-      // First failure: schedule first retry. retryCount tracks how many
-      // attempts have already been made (1 after this initial failure).
-      const nextRetryAt = computeNextRetryAt(0);
-      await integrationRepository.scheduleWebhookEventRetry(
-        webhookEvent.id,
-        1,
-        nextRetryAt,
-        errorMessage
-      );
-    }
-
-    return { deduplicated: false };
-  }
 
   /**
    * Retry failed webhook events whose next_retry_at has elapsed.
@@ -172,7 +84,7 @@ export class SquareWebhookService {
     return { processed, retried, deadLettered };
   }
 
-  private async routeEvent(
+  async routeEvent(
     eventType: string,
     payload: SquareWebhookPayload,
     connection: { tenantId: string; merchantId: string; id: string }
