@@ -107,6 +107,7 @@ const sampleInput: SquareOrderPushInput = {
       selectedModifiers: [
         {
           modifierId: "mod-1",
+          groupName: "Extras",
           modifierName: "Extra Cheese",
           price: 1.50,
           quantity: 1,
@@ -219,7 +220,7 @@ describe("SquareOrderService", () => {
       expect(lineItem1.note).toBe("No pickles");
       expect(lineItem1.modifiers).toHaveLength(1);
       expect(lineItem1.modifiers[0].catalogObjectId).toBe("sq-mod-1");
-      expect(lineItem1.modifiers[0].name).toBe("Extra Cheese");
+      expect(lineItem1.modifiers[0].name).toBe("Extras: Extra Cheese");
       expect(lineItem1.modifiers[0].basePriceMoney.amount).toBe(BigInt(150));
 
       // Check appliedTaxes on first line item (has taxes)
@@ -1244,6 +1245,127 @@ describe("SquareOrderService", () => {
     });
   });
 
+  describe("createOrder - modifier display name with group prefix", () => {
+    it("should prepend groupName to modifier name when groupName is set", async () => {
+      const inputWithGroup: SquareOrderPushInput = {
+        ...sampleInput,
+        items: [
+          {
+            menuItemId: "item-1",
+            name: "Burger",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [
+              {
+                modifierId: "mod-1",
+                groupName: "Size",
+                modifierName: "Large",
+                price: 2,
+                quantity: 1,
+              },
+            ],
+          },
+        ],
+      };
+
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+      mockCreate.mockResolvedValue({
+        order: { id: "sq-order-grp", version: 1 },
+      });
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, inputWithGroup);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      const modifier = createCall.order.lineItems[0].modifiers[0];
+      expect(modifier.name).toBe("Size: Large");
+    });
+
+    it("should use modifier name only when groupName is empty string", async () => {
+      const inputNoGroup: SquareOrderPushInput = {
+        ...sampleInput,
+        items: [
+          {
+            menuItemId: "item-1",
+            name: "Burger",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [
+              {
+                modifierId: "mod-1",
+                groupName: "",
+                modifierName: "Extra Sauce",
+                price: 0.5,
+                quantity: 1,
+              },
+            ],
+          },
+        ],
+      };
+
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+      mockCreate.mockResolvedValue({
+        order: { id: "sq-order-nogrp", version: 1 },
+      });
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, inputNoGroup);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      const modifier = createCall.order.lineItems[0].modifiers[0];
+      expect(modifier.name).toBe("Extra Sauce");
+    });
+
+    it("should format multiple modifiers with different groups correctly", async () => {
+      const inputMultiGroup: SquareOrderPushInput = {
+        ...sampleInput,
+        items: [
+          {
+            menuItemId: "item-1",
+            name: "Coffee",
+            price: 5,
+            quantity: 1,
+            selectedModifiers: [
+              {
+                modifierId: "mod-size",
+                groupName: "Size",
+                modifierName: "Large",
+                price: 1,
+                quantity: 1,
+              },
+              {
+                modifierId: "mod-milk",
+                groupName: "Milk",
+                modifierName: "Oat Milk",
+                price: 0.5,
+                quantity: 1,
+              },
+              {
+                modifierId: "mod-extra",
+                groupName: "",
+                modifierName: "Extra Shot",
+                price: 0.75,
+                quantity: 1,
+              },
+            ],
+          },
+        ],
+      };
+
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+      mockCreate.mockResolvedValue({
+        order: { id: "sq-order-multi", version: 1 },
+      });
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, inputMultiGroup);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      const modifiers = createCall.order.lineItems[0].modifiers;
+      expect(modifiers).toHaveLength(3);
+      expect(modifiers[0].name).toBe("Size: Large");
+      expect(modifiers[1].name).toBe("Milk: Oat Milk");
+      expect(modifiers[2].name).toBe("Extra Shot");
+    });
+  });
+
   describe("createOrder - production environment", () => {
     it("should use production environment when configured", async () => {
       const { squareConfig: configMock } = await import("../square.config");
@@ -1663,6 +1785,7 @@ describe("SquareOrderService", () => {
             selectedModifiers: [
               {
                 modifierId: "mod-1",
+                groupName: "Size",
                 modifierName: "Large",
                 price: 1,
                 quantity: 1,

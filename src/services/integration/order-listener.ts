@@ -97,6 +97,7 @@ async function handleOrderPaid(event: OrderPaidEvent): Promise<void> {
       quantity: item.quantity,
       selectedModifiers: item.selectedModifiers.map((mod) => ({
         modifierId: mod.modifierId,
+        groupName: mod.groupName,
         modifierName: mod.modifierName,
         price: mod.price,
         quantity: mod.quantity,
