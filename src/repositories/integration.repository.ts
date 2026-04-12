@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/db";
 import type { DbClient } from "@/lib/db";
 import { generateEntityId } from "@/lib/id";
+import { computeNextRetryAt } from "@/services/square/square.types";
 import type { CatalogSyncStats } from "./integration.types";
 
 export interface UpsertConnectionInput {
@@ -411,6 +412,96 @@ export class IntegrationRepository {
       },
     });
     return result.count > 0;
+  }
+
+  // ==================== Sync Record Retry ====================
+
+  async createFailedSyncRecordForRetry(
+    tenantId: string,
+    connectionId: string,
+    syncType: string,
+    payload: Prisma.InputJsonValue,
+    errorMessage: string
+  ) {
+    return prisma.integrationSyncRecord.create({
+      data: {
+        id: generateEntityId(),
+        tenantId,
+        connectionId,
+        syncType,
+        status: "failed",
+        retryCount: 0,
+        nextRetryAt: computeNextRetryAt(0),
+        payload,
+        errorMessage,
+        startedAt: new Date(),
+      },
+    });
+  }
+
+  async findRetryableSyncRecords(
+    syncType: string,
+    limit: number,
+    now: Date = new Date()
+  ) {
+    return prisma.integrationSyncRecord.findMany({
+      where: {
+        syncType,
+        status: { in: ["failed", "processing"] },
+        nextRetryAt: { lte: now },
+      },
+      orderBy: { nextRetryAt: "asc" },
+      take: limit,
+    });
+  }
+
+  async claimSyncRecordForRetry(
+    id: string,
+    leaseExpiresAt: Date,
+    now: Date = new Date()
+  ): Promise<boolean> {
+    const result = await prisma.integrationSyncRecord.updateMany({
+      where: {
+        id,
+        status: { in: ["failed", "processing"] },
+        nextRetryAt: { lte: now },
+      },
+      data: {
+        status: "processing",
+        nextRetryAt: leaseExpiresAt,
+      },
+    });
+    return result.count > 0;
+  }
+
+  async scheduleSyncRecordRetry(
+    id: string,
+    retryCount: number,
+    nextRetryAt: Date,
+    errorMessage: string
+  ) {
+    return prisma.integrationSyncRecord.update({
+      where: { id },
+      data: {
+        status: "failed",
+        retryCount,
+        nextRetryAt,
+        errorMessage,
+        finishedAt: new Date(),
+      },
+    });
+  }
+
+  async markSyncRecordDeadLetter(id: string, errorMessage: string) {
+    return prisma.integrationSyncRecord.update({
+      where: { id },
+      data: {
+        status: "dead_letter",
+        errorMessage,
+        nextRetryAt: null,
+        finishedAt: new Date(),
+      },
+    });
   }
 }
 

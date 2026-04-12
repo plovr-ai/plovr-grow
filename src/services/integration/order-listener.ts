@@ -1,12 +1,17 @@
 import { orderEventEmitter } from "@/services/order/order-events";
 import { integrationRepository } from "@/repositories/integration.repository";
 import { posProviderRegistry } from "./pos-provider-registry";
+import {
+  ORDER_PUSH_OPERATION,
+  SQUARE_ORDER_SYNC_TYPE,
+} from "@/services/square/square.types";
+import type { OrderPushRetryPayload } from "@/services/square/square.types";
 import type {
   OrderPaidEvent,
   FulfillmentStatusChangedEvent,
   OrderCancelledEvent,
 } from "@/services/order/order-events.types";
-import type { PosOrderPushItem } from "./pos-provider.types";
+import type { PosOrderPushItem, PosOrderPushInput } from "./pos-provider.types";
 import type {
   DeliveryAddress,
   OrderItemData,
@@ -98,28 +103,65 @@ async function handleOrderPaid(event: OrderPaidEvent): Promise<void> {
       specialInstructions: item.specialInstructions,
     }));
 
-    const result = await provider.pushOrder(
-      event.tenantId,
-      event.merchantId,
-      {
-        orderId: event.orderId,
-        orderNumber: event.orderNumber,
-        customerFirstName: event.customerFirstName ?? "",
-        customerLastName: event.customerLastName ?? "",
-        customerPhone: event.customerPhone ?? "",
-        customerEmail: event.customerEmail,
-        orderMode: orderForPush.orderMode,
-        deliveryAddress: orderForPush.deliveryAddress,
-        items: pushItems,
-        totalAmount: event.totalAmount ?? 0,
-        notes: orderForPush.notes ?? undefined,
-      }
-    );
-
-    console.log("[POS] Order pushed successfully:", {
+    const input: PosOrderPushInput = {
       orderId: event.orderId,
-      externalOrderId: result.externalOrderId,
-    });
+      orderNumber: event.orderNumber,
+      customerFirstName: event.customerFirstName ?? "",
+      customerLastName: event.customerLastName ?? "",
+      customerPhone: event.customerPhone ?? "",
+      customerEmail: event.customerEmail,
+      orderMode: orderForPush.orderMode,
+      deliveryAddress: orderForPush.deliveryAddress,
+      items: pushItems,
+      totalAmount: event.totalAmount ?? 0,
+      notes: orderForPush.notes ?? undefined,
+    };
+
+    try {
+      const result = await provider.pushOrder(
+        event.tenantId,
+        event.merchantId,
+        input
+      );
+
+      console.log("[POS] Order pushed successfully:", {
+        orderId: event.orderId,
+        externalOrderId: result.externalOrderId,
+      });
+    } catch (error) {
+      console.error("[POS] Failed to push order:", {
+        orderId: event.orderId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+
+      try {
+        if (connection.id) {
+          const payload: OrderPushRetryPayload = {
+            operation: ORDER_PUSH_OPERATION.CREATE,
+            tenantId: event.tenantId,
+            merchantId: event.merchantId,
+            input,
+          };
+          // JSON.parse(JSON.stringify()) strips undefined values that Prisma
+          // JSON columns reject at runtime (e.g. optional customerEmail, notes).
+          await integrationRepository.createFailedSyncRecordForRetry(
+            event.tenantId,
+            connection.id,
+            SQUARE_ORDER_SYNC_TYPE,
+            JSON.parse(JSON.stringify(payload)),
+            error instanceof Error ? error.message : "Unknown error"
+          );
+        }
+      } catch (retryError) {
+        console.error("[POS] Failed to create retry record:", {
+          orderId: event.orderId,
+          error:
+            retryError instanceof Error
+              ? retryError.message
+              : "Unknown error",
+        });
+      }
+    }
   } catch (error) {
     console.error("[POS] Failed to push order:", {
       orderId: event.orderId,
@@ -165,6 +207,35 @@ async function handleFulfillmentChanged(
       orderId: event.orderId,
       error: error instanceof Error ? error.message : "Unknown error",
     });
+
+    try {
+      const retryConn = await integrationRepository.getActivePosConnection(
+        event.tenantId,
+        event.merchantId
+      );
+      if (retryConn) {
+        const payload: OrderPushRetryPayload = {
+          operation: ORDER_PUSH_OPERATION.UPDATE_STATUS,
+          tenantId: event.tenantId,
+          merchantId: event.merchantId,
+          orderId: event.orderId,
+          fulfillmentStatus: event.fulfillmentStatus,
+        };
+        await integrationRepository.createFailedSyncRecordForRetry(
+          event.tenantId,
+          retryConn.id,
+          SQUARE_ORDER_SYNC_TYPE,
+          JSON.parse(JSON.stringify(payload)),
+          error instanceof Error ? error.message : "Unknown error"
+        );
+      }
+    } catch (retryError) {
+      console.error("[POS] Failed to create retry record:", {
+        orderId: event.orderId,
+        error:
+          retryError instanceof Error ? retryError.message : "Unknown error",
+      });
+    }
   }
 }
 
@@ -203,6 +274,36 @@ async function handleOrderCancelled(
       orderId: event.orderId,
       error: error instanceof Error ? error.message : "Unknown error",
     });
+
+    try {
+      const retryConn = await integrationRepository.getActivePosConnection(
+        event.tenantId,
+        event.merchantId
+      );
+      if (retryConn) {
+        const payload: OrderPushRetryPayload = {
+          operation: ORDER_PUSH_OPERATION.CANCEL,
+          tenantId: event.tenantId,
+          merchantId: event.merchantId,
+          orderId: event.orderId,
+          cancelReason: event.cancelReason,
+        };
+        // JSON.parse(JSON.stringify()) strips undefined cancelReason
+        await integrationRepository.createFailedSyncRecordForRetry(
+          event.tenantId,
+          retryConn.id,
+          SQUARE_ORDER_SYNC_TYPE,
+          JSON.parse(JSON.stringify(payload)),
+          error instanceof Error ? error.message : "Unknown error"
+        );
+      }
+    } catch (retryError) {
+      console.error("[POS] Failed to create retry record:", {
+        orderId: event.orderId,
+        error:
+          retryError instanceof Error ? retryError.message : "Unknown error",
+      });
+    }
   }
 }
 
@@ -212,7 +313,7 @@ async function handleOrderCancelled(
 async function findActivePosConnection(
   tenantId: string,
   merchantId: string
-): Promise<{ type: string } | null> {
+): Promise<{ id: string; type: string } | null> {
   try {
     const connection = await integrationRepository.getActivePosConnection(
       tenantId,

@@ -18,6 +18,8 @@ vi.mock("@/lib/db", () => {
       create: vi.fn(),
       update: vi.fn(),
       findFirst: vi.fn(),
+      findMany: vi.fn(),
+      updateMany: vi.fn(),
     },
     webhookEvent: {
       findUnique: vi.fn(),
@@ -41,7 +43,7 @@ type MockedFn = ReturnType<typeof vi.fn>;
 type MockedPrisma = {
   integrationConnection: { findUnique: MockedFn; findFirst: MockedFn; upsert: MockedFn; update: MockedFn };
   externalIdMapping: { upsert: MockedFn; findMany: MockedFn; findFirst: MockedFn };
-  integrationSyncRecord: { create: MockedFn; update: MockedFn; findFirst: MockedFn };
+  integrationSyncRecord: { create: MockedFn; update: MockedFn; findFirst: MockedFn; findMany: MockedFn; updateMany: MockedFn };
   webhookEvent: {
     findUnique: MockedFn;
     create: MockedFn;
@@ -628,6 +630,157 @@ describe("IntegrationRepository", () => {
       );
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe("updateSyncRecord with stats", () => {
+    it("should truncate stats warnings to 100 entries", async () => {
+      mockPrisma.integrationSyncRecord.update.mockResolvedValue({} as never);
+      const warnings = Array.from({ length: 150 }, (_, i) => `warn-${i}`);
+
+      await repo.updateSyncRecord(
+        "sync-1",
+        { status: "success", objectsSynced: 5 },
+        { itemsMapped: 5, itemsCreated: 3, itemsUpdated: 2, itemsSkipped: 0, variationsAsOptions: 0, modifierListsFlattened: 0, categoriesFlattened: 0, locationOverridesDropped: 0, imagesDropped: 0, taxesInclusive: 0, taxesAdditive: 0, discountsSkipped: 0, pricingRulesSkipped: 0, warnings }
+      );
+
+      const call = mockPrisma.integrationSyncRecord.update.mock.calls[0][0];
+      const savedStats = call.data.stats as { warnings: string[] };
+      expect(savedStats.warnings).toHaveLength(100);
+      expect(savedStats.warnings[0]).toBe("warn-0");
+      expect(savedStats.warnings[99]).toBe("warn-99");
+    });
+  });
+
+  // ==================== Sync Record Retry ====================
+
+  describe("createFailedSyncRecordForRetry", () => {
+    it("should create a sync record with failed status and retry payload", async () => {
+      mockPrisma.integrationSyncRecord.create.mockResolvedValue({
+        id: "test-id-123",
+        status: "failed",
+      } as never);
+
+      const payload = { operation: "CREATE", tenantId: "t1", merchantId: "m1", input: {} };
+
+      await repo.createFailedSyncRecordForRetry(
+        "t1",
+        "conn-1",
+        "ORDER_PUSH",
+        payload,
+        "Square down"
+      );
+
+      expect(mockPrisma.integrationSyncRecord.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          id: "test-id-123",
+          tenantId: "t1",
+          connectionId: "conn-1",
+          syncType: "ORDER_PUSH",
+          status: "failed",
+          retryCount: 0,
+          nextRetryAt: expect.any(Date),
+          payload,
+          errorMessage: "Square down",
+          startedAt: expect.any(Date),
+        }),
+      });
+    });
+  });
+
+  describe("findRetryableSyncRecords", () => {
+    it("should query failed/processing sync records whose nextRetryAt is due", async () => {
+      mockPrisma.integrationSyncRecord.findMany.mockResolvedValue([] as never);
+      const now = new Date("2026-04-12T00:00:00Z");
+
+      await repo.findRetryableSyncRecords("ORDER_PUSH", 20, now);
+
+      expect(mockPrisma.integrationSyncRecord.findMany).toHaveBeenCalledWith({
+        where: {
+          syncType: "ORDER_PUSH",
+          status: { in: ["failed", "processing"] },
+          nextRetryAt: { lte: now },
+        },
+        orderBy: { nextRetryAt: "asc" },
+        take: 20,
+      });
+    });
+  });
+
+  describe("claimSyncRecordForRetry", () => {
+    it("should return true when a sync record is claimed", async () => {
+      mockPrisma.integrationSyncRecord.updateMany.mockResolvedValue({
+        count: 1,
+      } as never);
+      const lease = new Date("2026-04-12T00:10:00Z");
+      const now = new Date("2026-04-12T00:00:00Z");
+
+      const result = await repo.claimSyncRecordForRetry("sync-1", lease, now);
+
+      expect(result).toBe(true);
+      expect(mockPrisma.integrationSyncRecord.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: "sync-1",
+          status: { in: ["failed", "processing"] },
+          nextRetryAt: { lte: now },
+        },
+        data: {
+          status: "processing",
+          nextRetryAt: lease,
+        },
+      });
+    });
+
+    it("should return false when no sync record was claimed", async () => {
+      mockPrisma.integrationSyncRecord.updateMany.mockResolvedValue({
+        count: 0,
+      } as never);
+
+      const result = await repo.claimSyncRecordForRetry(
+        "sync-1",
+        new Date(),
+        new Date()
+      );
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe("scheduleSyncRecordRetry", () => {
+    it("should update sync record with retry count and next retry time", async () => {
+      mockPrisma.integrationSyncRecord.update.mockResolvedValue({} as never);
+      const nextRetryAt = new Date("2026-04-12T00:05:00Z");
+
+      await repo.scheduleSyncRecordRetry("sync-1", 2, nextRetryAt, "transient error");
+
+      expect(mockPrisma.integrationSyncRecord.update).toHaveBeenCalledWith({
+        where: { id: "sync-1" },
+        data: {
+          status: "failed",
+          retryCount: 2,
+          nextRetryAt,
+          errorMessage: "transient error",
+          finishedAt: expect.any(Date),
+        },
+      });
+    });
+  });
+
+  describe("markSyncRecordDeadLetter", () => {
+    it("should update sync record to dead_letter and clear nextRetryAt", async () => {
+      mockPrisma.integrationSyncRecord.update.mockResolvedValue({} as never);
+
+      await repo.markSyncRecordDeadLetter("sync-1", "max retries exceeded");
+
+      expect(mockPrisma.integrationSyncRecord.update).toHaveBeenCalledWith({
+        where: { id: "sync-1" },
+        data: {
+          status: "dead_letter",
+          errorMessage: "max retries exceeded",
+          nextRetryAt: null,
+          finishedAt: expect.any(Date),
+        },
+      });
     });
   });
 });

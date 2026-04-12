@@ -318,6 +318,9 @@ describe("SquareService", () => {
         errorMessage: null,
         cursor: null,
         stats: null,
+        payload: null,
+        retryCount: 0,
+        nextRetryAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });

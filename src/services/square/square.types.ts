@@ -200,3 +200,33 @@ export const REVERSE_FULFILLMENT_STATUS_MAP: Record<string, string> = {
  * Square webhook sync type for sync records.
  */
 export const SQUARE_WEBHOOK_SYNC_TYPE = "WEBHOOK_EVENT" as const;
+
+// ==================== Order Push Retry Types ====================
+
+export const ORDER_PUSH_OPERATION = {
+  CREATE: "CREATE",
+  UPDATE_STATUS: "UPDATE_STATUS",
+  CANCEL: "CANCEL",
+} as const;
+
+export type OrderPushRetryPayload =
+  | {
+      operation: typeof ORDER_PUSH_OPERATION.CREATE;
+      tenantId: string;
+      merchantId: string;
+      input: SquareOrderPushInput;
+    }
+  | {
+      operation: typeof ORDER_PUSH_OPERATION.UPDATE_STATUS;
+      tenantId: string;
+      merchantId: string;
+      orderId: string;
+      fulfillmentStatus: string;
+    }
+  | {
+      operation: typeof ORDER_PUSH_OPERATION.CANCEL;
+      tenantId: string;
+      merchantId: string;
+      orderId: string;
+      cancelReason?: string;
+    };

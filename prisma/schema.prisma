@@ -956,12 +956,15 @@ model IntegrationSyncRecord {
   tenantId      String    @map("tenant_id")
   connectionId  String    @map("connection_id")
   syncType      String    @map("sync_type")
-  status        String // "running", "success", "failed"
+  status        String // "running", "success", "failed", "dead_letter"
   objectsSynced Int       @default(0) @map("objects_synced")
   objectsMapped Int       @default(0) @map("objects_mapped")
   cursor        String?
   errorMessage  String?   @map("error_message") @db.Text
   stats         Json?     @map("stats")
+  payload       Json?     @map("payload")
+  retryCount    Int       @default(0) @map("retry_count")
+  nextRetryAt   DateTime? @map("next_retry_at")
   startedAt     DateTime  @map("started_at")
   finishedAt    DateTime? @map("finished_at")
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -972,6 +975,7 @@ model IntegrationSyncRecord {
 
   @@index([tenantId])
   @@index([connectionId])
+  @@index([syncType, status, nextRetryAt])
   @@map("integration_sync_records")
 }
 
