@@ -5,21 +5,25 @@ import type {
   OrderCancelledEvent,
 } from "@/services/order/order-events.types";
 
-const mockGetConnection = vi.fn();
+const mockGetActivePosConnection = vi.fn();
 vi.mock("@/repositories/integration.repository", () => ({
   integrationRepository: {
-    getConnection: (...args: unknown[]) => mockGetConnection(...args),
+    getActivePosConnection: (...args: unknown[]) =>
+      mockGetActivePosConnection(...args),
   },
 }));
 
-const mockCreateOrder = vi.fn();
-const mockUpdateOrderStatus = vi.fn();
+const mockPushOrder = vi.fn();
+const mockUpdateFulfillment = vi.fn();
 const mockCancelOrder = vi.fn();
-vi.mock("../square-order.service", () => ({
-  squareOrderService: {
-    createOrder: (...args: unknown[]) => mockCreateOrder(...args),
-    updateOrderStatus: (...args: unknown[]) => mockUpdateOrderStatus(...args),
-    cancelOrder: (...args: unknown[]) => mockCancelOrder(...args),
+vi.mock("../pos-provider-registry", () => ({
+  posProviderRegistry: {
+    getProvider: () => ({
+      pushOrder: (...args: unknown[]) => mockPushOrder(...args),
+      updateFulfillment: (...args: unknown[]) =>
+        mockUpdateFulfillment(...args),
+      cancelOrder: (...args: unknown[]) => mockCancelOrder(...args),
+    }),
   },
 }));
 
@@ -38,9 +42,9 @@ vi.mock("@/services/order/order-events", () => ({
 }));
 
 import {
-  registerSquareOrderEventHandlers,
-  unregisterSquareOrderEventHandlers,
-} from "../square-order-listener";
+  registerOrderEventHandlers,
+  unregisterOrderEventHandlers,
+} from "../order-listener";
 
 const TENANT_ID = "tenant-1";
 const MERCHANT_ID = "merchant-1";
@@ -73,9 +77,9 @@ function makeEvent(overrides: Partial<OrderPaidEvent> = {}): OrderPaidEvent {
 }
 
 function getHandlerByEvent<T>(eventName: string): (event: T) => Promise<void> {
-  unregisterSquareOrderEventHandlers();
+  unregisterOrderEventHandlers();
   mockOn.mockClear();
-  registerSquareOrderEventHandlers();
+  registerOrderEventHandlers();
   const call = mockOn.mock.calls.find((c) => c[0] === eventName);
   if (!call) throw new Error(`${eventName} handler not registered`);
   return call[1] as (event: T) => Promise<void>;
@@ -85,10 +89,10 @@ async function getHandler(): Promise<(event: OrderPaidEvent) => Promise<void>> {
   return getHandlerByEvent<OrderPaidEvent>("order.paid");
 }
 
-describe("square-order-listener: handleOrderPaid giftcard guard", () => {
+describe("order-listener: handleOrderPaid giftcard guard", () => {
   beforeEach(() => {
-    mockGetConnection.mockReset();
-    mockCreateOrder.mockReset();
+    mockGetActivePosConnection.mockReset();
+    mockPushOrder.mockReset();
     mockGetOrder.mockReset();
   });
 
@@ -97,8 +101,8 @@ describe("square-order-listener: handleOrderPaid giftcard guard", () => {
     await handler(makeEvent({ merchantId: "" }));
 
     expect(mockGetOrder).not.toHaveBeenCalled();
-    expect(mockGetConnection).not.toHaveBeenCalled();
-    expect(mockCreateOrder).not.toHaveBeenCalled();
+    expect(mockGetActivePosConnection).not.toHaveBeenCalled();
+    expect(mockPushOrder).not.toHaveBeenCalled();
   });
 
   it("skips push when order.salesChannel is giftcard", async () => {
@@ -111,8 +115,8 @@ describe("square-order-listener: handleOrderPaid giftcard guard", () => {
     await handler(makeEvent());
 
     expect(mockGetOrder).toHaveBeenCalledWith(TENANT_ID, "order-1");
-    expect(mockGetConnection).not.toHaveBeenCalled();
-    expect(mockCreateOrder).not.toHaveBeenCalled();
+    expect(mockGetActivePosConnection).not.toHaveBeenCalled();
+    expect(mockPushOrder).not.toHaveBeenCalled();
   });
 
   it("pushes order when salesChannel is online_order and connection is active", async () => {
@@ -121,14 +125,17 @@ describe("square-order-listener: handleOrderPaid giftcard guard", () => {
       salesChannel: "online_order",
       orderMode: "pickup",
     });
-    mockGetConnection.mockResolvedValue({ status: "active" });
-    mockCreateOrder.mockResolvedValue({ squareOrderId: "sq-1" });
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
+    mockPushOrder.mockResolvedValue({ externalOrderId: "sq-1" });
 
     const handler = await getHandler();
     await handler(makeEvent());
 
-    expect(mockCreateOrder).toHaveBeenCalledTimes(1);
-    const [, , pushInput] = mockCreateOrder.mock.calls[0];
+    expect(mockPushOrder).toHaveBeenCalledTimes(1);
+    const [, , pushInput] = mockPushOrder.mock.calls[0];
     expect(pushInput.orderId).toBe("order-1");
     expect(pushInput.items).toHaveLength(1);
   });
@@ -147,13 +154,16 @@ describe("square-order-listener: handleOrderPaid giftcard guard", () => {
       },
       notes: "Please hurry",
     });
-    mockGetConnection.mockResolvedValue({ status: "active" });
-    mockCreateOrder.mockResolvedValue({ squareOrderId: "sq-1" });
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
+    mockPushOrder.mockResolvedValue({ externalOrderId: "sq-1" });
 
     const handler = await getHandler();
     await handler(makeEvent());
 
-    const [, , pushInput] = mockCreateOrder.mock.calls[0];
+    const [, , pushInput] = mockPushOrder.mock.calls[0];
     expect(pushInput.orderMode).toBe("delivery");
     expect(pushInput.deliveryAddress).toMatchObject({
       street: "1 Market",
@@ -169,13 +179,16 @@ describe("square-order-listener: handleOrderPaid giftcard guard", () => {
       orderMode: "dine_in",
       notes: "Table 7",
     });
-    mockGetConnection.mockResolvedValue({ status: "active" });
-    mockCreateOrder.mockResolvedValue({ squareOrderId: "sq-1" });
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
+    mockPushOrder.mockResolvedValue({ externalOrderId: "sq-1" });
 
     const handler = await getHandler();
     await handler(makeEvent());
 
-    const [, , pushInput] = mockCreateOrder.mock.calls[0];
+    const [, , pushInput] = mockPushOrder.mock.calls[0];
     expect(pushInput.orderMode).toBe("dine_in");
     expect(pushInput.notes).toBe("Table 7");
   });
@@ -186,50 +199,56 @@ describe("square-order-listener: handleOrderPaid giftcard guard", () => {
     const handler = await getHandler();
     await handler(makeEvent());
 
-    expect(mockGetConnection).not.toHaveBeenCalled();
-    expect(mockCreateOrder).not.toHaveBeenCalled();
+    expect(mockGetActivePosConnection).not.toHaveBeenCalled();
+    expect(mockPushOrder).not.toHaveBeenCalled();
   });
 
   it("skips push when order has no items", async () => {
     mockGetOrder.mockResolvedValue({ items: [], salesChannel: "online_order" });
-    mockGetConnection.mockResolvedValue({ status: "active" });
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
 
     const handler = await getHandler();
     await handler(makeEvent());
 
-    expect(mockCreateOrder).not.toHaveBeenCalled();
+    expect(mockPushOrder).not.toHaveBeenCalled();
   });
 
-  it("skips push when no active Square connection", async () => {
+  it("skips push when no active POS connection", async () => {
     mockGetOrder.mockResolvedValue({
       items: sampleItems,
       salesChannel: "online_order",
     });
-    mockGetConnection.mockResolvedValue(null);
+    mockGetActivePosConnection.mockResolvedValue(null);
 
     const handler = await getHandler();
     await handler(makeEvent());
 
-    expect(mockCreateOrder).not.toHaveBeenCalled();
+    expect(mockPushOrder).not.toHaveBeenCalled();
   });
 
-  it("swallows errors from createOrder without throwing", async () => {
+  it("swallows errors from pushOrder without throwing", async () => {
     mockGetOrder.mockResolvedValue({
       items: sampleItems,
       salesChannel: "online_order",
     });
-    mockGetConnection.mockResolvedValue({ status: "active" });
-    mockCreateOrder.mockRejectedValue(new Error("Square down"));
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
+    mockPushOrder.mockRejectedValue(new Error("POS down"));
 
     const handler = await getHandler();
     await expect(handler(makeEvent())).resolves.toBeUndefined();
   });
 });
 
-describe("square-order-listener: handleFulfillmentChanged", () => {
+describe("order-listener: handleFulfillmentChanged", () => {
   beforeEach(() => {
-    mockGetConnection.mockReset();
-    mockUpdateOrderStatus.mockReset();
+    mockGetActivePosConnection.mockReset();
+    mockUpdateFulfillment.mockReset();
   });
 
   function makeFulfillmentEvent(): FulfillmentStatusChangedEvent {
@@ -243,16 +262,19 @@ describe("square-order-listener: handleFulfillmentChanged", () => {
     };
   }
 
-  it("forwards status update to Square when connection is active", async () => {
-    mockGetConnection.mockResolvedValue({ status: "active" });
-    mockUpdateOrderStatus.mockResolvedValue(undefined);
+  it("forwards status update to POS when connection is active", async () => {
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
+    mockUpdateFulfillment.mockResolvedValue(undefined);
 
     const handler = getHandlerByEvent<FulfillmentStatusChangedEvent>(
       "order.fulfillment.ready"
     );
     await handler(makeFulfillmentEvent());
 
-    expect(mockUpdateOrderStatus).toHaveBeenCalledWith(
+    expect(mockUpdateFulfillment).toHaveBeenCalledWith(
       TENANT_ID,
       MERCHANT_ID,
       "order-1",
@@ -261,19 +283,22 @@ describe("square-order-listener: handleFulfillmentChanged", () => {
   });
 
   it("skips when no connection", async () => {
-    mockGetConnection.mockResolvedValue(null);
+    mockGetActivePosConnection.mockResolvedValue(null);
 
     const handler = getHandlerByEvent<FulfillmentStatusChangedEvent>(
       "order.fulfillment.ready"
     );
     await handler(makeFulfillmentEvent());
 
-    expect(mockUpdateOrderStatus).not.toHaveBeenCalled();
+    expect(mockUpdateFulfillment).not.toHaveBeenCalled();
   });
 
-  it("swallows errors from updateOrderStatus", async () => {
-    mockGetConnection.mockResolvedValue({ status: "active" });
-    mockUpdateOrderStatus.mockRejectedValue(new Error("network"));
+  it("swallows errors from updateFulfillment", async () => {
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
+    mockUpdateFulfillment.mockRejectedValue(new Error("network"));
 
     const handler = getHandlerByEvent<FulfillmentStatusChangedEvent>(
       "order.fulfillment.ready"
@@ -282,9 +307,9 @@ describe("square-order-listener: handleFulfillmentChanged", () => {
   });
 });
 
-describe("square-order-listener: handleOrderCancelled", () => {
+describe("order-listener: handleOrderCancelled", () => {
   beforeEach(() => {
-    mockGetConnection.mockReset();
+    mockGetActivePosConnection.mockReset();
     mockCancelOrder.mockReset();
   });
 
@@ -301,7 +326,10 @@ describe("square-order-listener: handleOrderCancelled", () => {
   }
 
   it("calls cancelOrder when connection is active", async () => {
-    mockGetConnection.mockResolvedValue({ status: "active" });
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
     mockCancelOrder.mockResolvedValue(undefined);
 
     const handler = getHandlerByEvent<OrderCancelledEvent>("order.cancelled");
@@ -316,7 +344,7 @@ describe("square-order-listener: handleOrderCancelled", () => {
   });
 
   it("skips when no connection", async () => {
-    mockGetConnection.mockResolvedValue(null);
+    mockGetActivePosConnection.mockResolvedValue(null);
 
     const handler = getHandlerByEvent<OrderCancelledEvent>("order.cancelled");
     await handler(makeCancelEvent());
@@ -325,15 +353,18 @@ describe("square-order-listener: handleOrderCancelled", () => {
   });
 
   it("swallows errors from cancelOrder", async () => {
-    mockGetConnection.mockResolvedValue({ status: "active" });
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
     mockCancelOrder.mockRejectedValue(new Error("boom"));
 
     const handler = getHandlerByEvent<OrderCancelledEvent>("order.cancelled");
     await expect(handler(makeCancelEvent())).resolves.toBeUndefined();
   });
 
-  it("returns false when getConnection throws (checkSquareConnection catch)", async () => {
-    mockGetConnection.mockRejectedValue(new Error("db down"));
+  it("returns false when getActivePosConnection throws", async () => {
+    mockGetActivePosConnection.mockRejectedValue(new Error("db down"));
 
     const handler = getHandlerByEvent<OrderCancelledEvent>("order.cancelled");
     await handler(makeCancelEvent());
@@ -342,20 +373,20 @@ describe("square-order-listener: handleOrderCancelled", () => {
   });
 });
 
-describe("square-order-listener: misc coverage", () => {
+describe("order-listener: misc coverage", () => {
   beforeEach(() => {
-    mockGetConnection.mockReset();
-    mockCreateOrder.mockReset();
+    mockGetActivePosConnection.mockReset();
+    mockPushOrder.mockReset();
     mockGetOrder.mockReset();
     mockCancelOrder.mockReset();
   });
 
-  it("registerSquareOrderEventHandlers is idempotent", () => {
-    unregisterSquareOrderEventHandlers();
+  it("registerOrderEventHandlers is idempotent", () => {
+    unregisterOrderEventHandlers();
     mockOn.mockClear();
-    registerSquareOrderEventHandlers();
+    registerOrderEventHandlers();
     const firstCount = mockOn.mock.calls.length;
-    registerSquareOrderEventHandlers();
+    registerOrderEventHandlers();
     expect(mockOn.mock.calls.length).toBe(firstCount);
   });
 
@@ -383,13 +414,16 @@ describe("square-order-listener: misc coverage", () => {
       ],
       salesChannel: "online_order",
     });
-    mockGetConnection.mockResolvedValue({ status: "active" });
-    mockCreateOrder.mockResolvedValue({ squareOrderId: "sq-2" });
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
+    mockPushOrder.mockResolvedValue({ externalOrderId: "sq-2" });
 
     const handler = await getHandler();
     await handler(makeEvent());
 
-    const [, , pushInput] = mockCreateOrder.mock.calls[0];
+    const [, , pushInput] = mockPushOrder.mock.calls[0];
     expect(pushInput.items[0].selectedModifiers).toHaveLength(1);
     expect(pushInput.items[0].selectedModifiers[0].modifierId).toBe("m1");
   });
@@ -400,8 +434,8 @@ describe("square-order-listener: misc coverage", () => {
     const handler = await getHandler();
     await handler(makeEvent());
 
-    expect(mockGetConnection).not.toHaveBeenCalled();
-    expect(mockCreateOrder).not.toHaveBeenCalled();
+    expect(mockGetActivePosConnection).not.toHaveBeenCalled();
+    expect(mockPushOrder).not.toHaveBeenCalled();
   });
 
   it("uses fallback defaults when customer fields are undefined", async () => {
@@ -409,8 +443,11 @@ describe("square-order-listener: misc coverage", () => {
       items: sampleItems,
       salesChannel: "online_order",
     });
-    mockGetConnection.mockResolvedValue({ status: "active" });
-    mockCreateOrder.mockResolvedValue({ squareOrderId: "sq-3" });
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
+    mockPushOrder.mockResolvedValue({ externalOrderId: "sq-3" });
 
     const handler = await getHandler();
     await handler({
@@ -423,7 +460,7 @@ describe("square-order-listener: misc coverage", () => {
       // customerFirstName / customerLastName / customerPhone / customerEmail / totalAmount all undefined
     });
 
-    const [, , pushInput] = mockCreateOrder.mock.calls[0];
+    const [, , pushInput] = mockPushOrder.mock.calls[0];
     expect(pushInput.customerFirstName).toBe("");
     expect(pushInput.customerLastName).toBe("");
     expect(pushInput.customerPhone).toBe("");
@@ -435,16 +472,22 @@ describe("square-order-listener: misc coverage", () => {
       items: sampleItems,
       salesChannel: "online_order",
     });
-    mockGetConnection.mockResolvedValue({ status: "active" });
-    mockCreateOrder.mockRejectedValue("string error");
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
+    mockPushOrder.mockRejectedValue("string error");
 
     const handler = await getHandler();
     await expect(handler(makeEvent())).resolves.toBeUndefined();
   });
 
   it("handles non-Error exceptions in handleFulfillmentChanged catch", async () => {
-    mockGetConnection.mockResolvedValue({ status: "active" });
-    mockUpdateOrderStatus.mockRejectedValue("oops");
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
+    mockUpdateFulfillment.mockRejectedValue("oops");
 
     const handler = getHandlerByEvent<FulfillmentStatusChangedEvent>(
       "order.fulfillment.ready"
@@ -462,7 +505,10 @@ describe("square-order-listener: misc coverage", () => {
   });
 
   it("handles non-Error exceptions in handleOrderCancelled catch", async () => {
-    mockGetConnection.mockResolvedValue({ status: "active" });
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
     mockCancelOrder.mockRejectedValue("nope");
 
     const handler = getHandlerByEvent<OrderCancelledEvent>("order.cancelled");
@@ -479,7 +525,10 @@ describe("square-order-listener: misc coverage", () => {
   });
 
   it("handleOrderCancelled passes undefined cancelReason through", async () => {
-    mockGetConnection.mockResolvedValue({ status: "active" });
+    mockGetActivePosConnection.mockResolvedValue({
+      type: "POS_SQUARE",
+      status: "active",
+    });
     mockCancelOrder.mockResolvedValue(undefined);
 
     const handler = getHandlerByEvent<OrderCancelledEvent>("order.cancelled");

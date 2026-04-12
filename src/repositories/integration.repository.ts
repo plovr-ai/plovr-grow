@@ -41,6 +41,18 @@ export class IntegrationRepository {
     });
   }
 
+  async getActivePosConnection(tenantId: string, merchantId: string) {
+    return prisma.integrationConnection.findFirst({
+      where: {
+        tenantId,
+        merchantId,
+        category: "POS",
+        status: "active",
+        deleted: false,
+      },
+    });
+  }
+
   async upsertConnection(
     tenantId: string,
     merchantId: string,

@@ -16,9 +16,19 @@ export async function register() {
     );
     registerLoyaltyEventHandlers();
 
-    const { registerSquareOrderEventHandlers } = await import(
-      "@/services/square/square-order-listener"
+    // Register POS providers
+    const { posProviderRegistry } = await import(
+      "@/services/integration/pos-provider-registry"
     );
-    registerSquareOrderEventHandlers();
+    const { squarePosProvider } = await import(
+      "@/services/square/square-pos-provider"
+    );
+    posProviderRegistry.register(squarePosProvider);
+
+    // Register POS-agnostic order event handlers
+    const { registerOrderEventHandlers } = await import(
+      "@/services/integration/order-listener"
+    );
+    registerOrderEventHandlers();
   }
 }
