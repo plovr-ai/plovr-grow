@@ -39,6 +39,7 @@ class SquarePosProvider implements PosProvider {
       quantity: item.quantity,
       selectedModifiers: item.selectedModifiers.map((mod) => ({
         modifierId: mod.modifierId,
+        groupName: mod.groupName,
         modifierName: mod.modifierName,
         price: mod.price,
         quantity: mod.quantity,

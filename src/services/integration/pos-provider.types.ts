@@ -86,6 +86,7 @@ export interface PosOrderPushItem {
 
 export interface PosOrderPushModifier {
   modifierId: string;
+  groupName: string;
   modifierName: string;
   price: number;
   quantity: number;

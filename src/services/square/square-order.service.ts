@@ -372,9 +372,12 @@ export class SquareOrderService {
       const modifiers: OrderLineItemModifier[] = item.selectedModifiers.map(
         (mod) => {
           const modExternalId = externalIdMap.get(mod.modifierId);
+          const displayName = mod.groupName
+            ? `${mod.groupName}: ${mod.modifierName}`
+            : mod.modifierName;
           return {
             catalogObjectId: modExternalId ?? undefined,
-            name: mod.modifierName,
+            name: displayName,
             quantity: String(mod.quantity),
             basePriceMoney: {
               amount: BigInt(Math.round(mod.price * 100)),
@@ -536,7 +539,7 @@ export class SquareOrderService {
     const items = input.items.map((item) => {
       const modifiers = item.selectedModifiers.map(
         (mod) =>
-          `${mod.modifierId}|${mod.modifierName}|${mod.price}|${mod.quantity}`
+          `${mod.modifierId}|${mod.groupName}|${mod.modifierName}|${mod.price}|${mod.quantity}`
       );
       return [
         item.menuItemId,

@@ -80,6 +80,7 @@ export interface SquareOrderPushItem {
 
 export interface SquareOrderPushModifier {
   modifierId: string;
+  groupName: string;
   modifierName: string;
   price: number;
   quantity: number;
