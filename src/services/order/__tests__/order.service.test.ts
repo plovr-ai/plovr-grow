@@ -1686,6 +1686,22 @@ describe("OrderService", () => {
         orderService.updateFulfillmentStatus("tenant-1", "order-missing", "confirmed")
       ).rejects.toThrow("ORDER_NOT_FOUND");
     });
+
+    it("skips timestamp and event when status has no mapping (pending)", async () => {
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
+      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+      const emitSpy = vi.spyOn(orderEventEmitter, "emit");
+
+      await orderService.updateFulfillmentStatus("tenant-1", "order-1", "pending");
+
+      // Should update only fulfillmentStatus — no timestamp field
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: "order-1" },
+        data: { fulfillmentStatus: "pending" },
+      });
+      // Should NOT emit any event since "pending" has no event mapping
+      expect(emitSpy).not.toHaveBeenCalled();
+    });
   });
 
   // ==================== updatePaymentStatus ====================
