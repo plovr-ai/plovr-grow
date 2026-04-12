@@ -569,6 +569,26 @@ export class OrderService {
       throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId });
     }
 
+    // Already canceled — idempotent
+    if (order.status === "canceled") {
+      return;
+    }
+
+    // Cancellation not allowed once kitchen has started working
+    const NON_CANCELLABLE_FULFILLMENT_STATUSES = [
+      "preparing",
+      "ready",
+      "fulfilled",
+    ];
+    if (
+      NON_CANCELLABLE_FULFILLMENT_STATUSES.includes(order.fulfillmentStatus)
+    ) {
+      throw new AppError(ErrorCodes.ORDER_CANCEL_NOT_ALLOWED, {
+        orderId,
+        fulfillmentStatus: order.fulfillmentStatus,
+      });
+    }
+
     await prisma.order.update({
       where: { id: orderId },
       data: {

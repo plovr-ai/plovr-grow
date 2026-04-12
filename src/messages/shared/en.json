@@ -3,6 +3,7 @@
     "ORDER_NOT_FOUND": "Order not found",
     "ORDER_ALREADY_PAID": "Order has already been paid",
     "ORDER_CANCELLED": "Order has been cancelled",
+    "ORDER_CANCEL_NOT_ALLOWED": "Order cannot be cancelled in its current state",
     "INVALID_PAYMENT_STATUS_TRANSITION": "Invalid payment status transition from {from} to {to}",
     "INVALID_FULFILLMENT_STATUS_TRANSITION": "Invalid fulfillment status transition from {from} to {to}",
     "FULFILLMENT_REQUIRES_PAYMENT": "Cannot update fulfillment status: order is not fully paid",
