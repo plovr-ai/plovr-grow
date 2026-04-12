@@ -788,8 +788,7 @@ export class MenuService {
       );
     }
 
-    // Fallback to JSON field
-    return (item.modifiers as unknown as ModifierGroupInput[]) || [];
+    return [];
   }
 
   // ==================== Featured Items ====================
