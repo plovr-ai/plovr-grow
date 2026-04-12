@@ -8,7 +8,7 @@ import { stripeConnectService } from "@/services/stripe-connect";
 import { checkoutFormSchema } from "@storefront/lib/validations/checkout";
 import { AppError } from "@/lib/errors";
 import { ErrorCodes } from "@/lib/errors/error-codes";
-import type { OrderItemData, OrderMode } from "@/types";
+import type { OrderItemData, OrderMode, PaymentType } from "@/types";
 
 type PaymentMethodType = "cash" | "card";
 
@@ -202,6 +202,9 @@ export async function POST(
       }
     }
 
+    // Map frontend paymentMethod to paymentType
+    const paymentType: PaymentType = body.paymentMethod === "cash" ? "in_store" : "online";
+
     // Create merchant order atomically (order + gift card redemption + payment record in one transaction)
     const order = await orderService.createMerchantOrderAtomic(
       tenantId,
@@ -214,6 +217,7 @@ export async function POST(
         customerEmail: formValidation.data.customerEmail || undefined,
         orderMode: formValidation.data.orderMode,
         salesChannel: "online_order",
+        paymentType,
         items: body.items,
         notes: formValidation.data.notes || undefined,
         deliveryAddress: formValidation.data.deliveryAddress,

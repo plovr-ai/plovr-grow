@@ -6,6 +6,7 @@ import type {
   DeliveryAddress,
   TaxBreakdownItem,
   SalesChannel,
+  PaymentType,
 } from "@/types";
 import type { FeeBreakdownItem } from "@/lib/pricing";
 
@@ -21,6 +22,7 @@ export interface OrderData {
   customerEmail: string | null;
   orderMode: string;
   salesChannel: string;
+  paymentType: string;
   status: string;                    // Payment status
   fulfillmentStatus: string;         // Fulfillment status
   items: OrderItemData[];
@@ -60,6 +62,7 @@ export interface CreateMerchantOrderInput extends BaseOrderInput {
   merchantId: string; // Required for merchant orders
   orderMode: OrderMode;
   salesChannel?: Exclude<SalesChannel, "giftcard">; // Defaults to "online_order"
+  paymentType?: PaymentType; // Defaults to "online"
   deliveryAddress?: DeliveryAddress;
   scheduledAt?: Date;
   tipAmount?: number;

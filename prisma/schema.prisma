@@ -268,6 +268,7 @@ model Order {
   customerEmail       String?               @map("customer_email")
   orderMode           String                @map("order_mode")
   salesChannel        String                @default("online_order") @map("sales_channel")
+  paymentType         String                @default("online") @map("payment_type")
   status              String                @default("created")
   fulfillmentStatus   String                @default("pending") @map("fulfillment_status")
   items               Json?
