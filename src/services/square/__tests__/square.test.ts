@@ -82,7 +82,15 @@ vi.mock("@/repositories/integration.repository", () => ({
 }));
 
 vi.mock("@/lib/db", () => {
+  // Universal tx mock that supports both guard and data transactions.
+  // syncCatalog calls $transaction twice: 1st for concurrency guard, 2nd for data write.
   const mockTx = {
+    // Guard transaction fields
+    integrationSyncRecord: {
+      findFirst: vi.fn(() => null), // no running sync by default
+      create: vi.fn(() => ({ id: "sync-1" })),
+    },
+    // Data transaction fields
     menu: { findFirst: vi.fn(() => ({ id: "menu-1" })), create: vi.fn() },
     menuCategory: { upsert: vi.fn() },
     menuItem: { upsert: vi.fn() },
@@ -103,6 +111,7 @@ vi.mock("@/lib/db", () => {
     default: {
       $transaction: vi.fn((fn: (tx: unknown) => unknown) => fn(mockTx)),
     },
+    __mockTx: mockTx,
   };
 });
 
@@ -132,6 +141,12 @@ const { integrationRepository } = await import(
 );
 const { squareOrderService } = await import("../square-order.service");
 const { squareCatalogService } = await import("../square-catalog.service");
+const { __mockTx } = await import("@/lib/db") as unknown as {
+  __mockTx: {
+    integrationSyncRecord: { findFirst: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
+    menu: { findFirst: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
+  };
+};
 
 describe("SquareService", () => {
   let service: SquareService;
@@ -311,24 +326,12 @@ describe("SquareService", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-      vi.mocked(integrationRepository.getRunningSync).mockResolvedValueOnce({
+      // The concurrency guard now runs inside $transaction.
+      // Mock the tx's findFirst to return a running sync record.
+      __mockTx.integrationSyncRecord.findFirst.mockResolvedValueOnce({
         id: "sync-running",
-        tenantId: "t1",
-        connectionId: "conn-1",
-        syncType: "CATALOG_FULL",
         status: "running",
         startedAt: new Date(),
-        finishedAt: null,
-        objectsSynced: 0,
-        objectsMapped: 0,
-        errorMessage: null,
-        cursor: null,
-        stats: null,
-        payload: null,
-        retryCount: 0,
-        nextRetryAt: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       });
 
       await expect(
@@ -608,22 +611,9 @@ describe("SquareService", () => {
     it("should create a default menu when none exists", async () => {
       vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(makeConnection());
 
-      // Override the mock $transaction to use a tx with no menu
-      const prisma = (await import("@/lib/db")).default;
-      const mockTx = {
-        menu: {
-          findFirst: vi.fn().mockResolvedValue(null),
-          create: vi.fn().mockResolvedValue({ id: "new-menu-1" }),
-        },
-        menuCategory: { upsert: vi.fn() },
-        menuItem: { upsert: vi.fn() },
-        menuCategoryItem: { upsert: vi.fn() },
-        taxConfig: { upsert: vi.fn() },
-        merchantTaxRate: { upsert: vi.fn() },
-      };
-      vi.mocked(prisma.$transaction).mockImplementationOnce(
-        ((fn: (tx: unknown) => unknown) => fn(mockTx) as Promise<unknown>) as never
-      );
+      // Override menu.findFirst to return null so a new menu is created
+      __mockTx.menu.findFirst.mockResolvedValueOnce(null);
+      __mockTx.menu.create.mockResolvedValueOnce({ id: "new-menu-1" });
 
       vi.mocked(squareCatalogService.mapToMenuModels).mockReturnValueOnce({
         categories: [{ externalId: "sq-cat-1", name: "Drinks", sortOrder: 0 }],
@@ -634,7 +624,7 @@ describe("SquareService", () => {
 
       const result = await service.syncCatalog("t1", "m1");
 
-      expect(mockTx.menu.create).toHaveBeenCalled();
+      expect(__mockTx.menu.create).toHaveBeenCalled();
       expect(result.objectsSynced).toBe(1);
     });
 
@@ -764,34 +754,8 @@ describe("SquareService", () => {
         }
       );
 
-      // Mock finding the existing option's group
-      const prisma = (await import("@/lib/db")).default;
-      const mockTx = (prisma.$transaction as ReturnType<typeof vi.fn>).mock.calls.length > 0
-        ? undefined
-        : undefined;
-      // Access the modifierOption mock through the transaction
-      vi.mocked(prisma.$transaction).mockImplementationOnce(
-        (async (fn: (tx: Record<string, unknown>) => unknown) => {
-          const tx = {
-            menu: { findFirst: vi.fn(() => ({ id: "menu-1" })), create: vi.fn() },
-            menuCategory: { upsert: vi.fn() },
-            menuItem: { upsert: vi.fn() },
-            menuCategoryItem: { upsert: vi.fn() },
-            taxConfig: { upsert: vi.fn() },
-            merchantTaxRate: { upsert: vi.fn() },
-            modifierGroup: { upsert: vi.fn() },
-            modifierOption: {
-              upsert: vi.fn(),
-              findUnique: vi.fn().mockResolvedValue({ groupId: "existing-grp-id" }),
-            },
-            menuItemModifierGroup: {
-              create: vi.fn(),
-              deleteMany: vi.fn(),
-            },
-          };
-          return fn(tx);
-        }) as never
-      );
+      // modifierOption.findUnique should return existing group
+      __mockTx.menu.findFirst.mockResolvedValue({ id: "menu-1" });
 
       vi.mocked(squareCatalogService.mapToMenuModels).mockReturnValueOnce({
         categories: [],
