@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { LoyaltySection } from "../LoyaltySection";
 import { MerchantProvider, LoyaltyProvider } from "@/contexts";
@@ -690,12 +690,18 @@ describe("LoyaltySection", () => {
       mockFetch({ success: true, data: { isNewMember: false } });
       mockFetch({ success: true, data: { config: { pointsPerDollar: 2 } } });
 
-      // Go through login flow
-      fireEvent.click(screen.getByText(/Sign in to earn/));
-      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
-        target: { value: "(555) 123-4567" },
+      // Go through login flow — wrap in act to flush all state updates
+      await act(async () => {
+        fireEvent.click(screen.getByText(/Sign in to earn/));
       });
-      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await act(async () => {
+        fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
+          target: { value: "(555) 123-4567" },
+        });
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      });
 
       await waitFor(() => {
         expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
@@ -718,7 +724,9 @@ describe("LoyaltySection", () => {
       // Get OTP inputs by aria-label to avoid including the phone input
       const inputs = screen.getAllByLabelText(/Digit \d/);
       for (let i = 0; i < 6; i++) {
-        fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
+        await act(async () => {
+          fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
+        });
       }
 
       await waitFor(
