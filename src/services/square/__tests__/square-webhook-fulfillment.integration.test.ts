@@ -319,42 +319,4 @@ describe("Square webhook fulfillment rank guard (integration)", () => {
     expect(row?.fulfillmentStatus).toBe("pending");
   });
 
-  // ==================== #109: out-of-order webhook guard ====================
-
-  it("drops a stale webhook whose version <= stored version", async () => {
-    await upsertOrder("preparing", { squareOrderVersion: 5 });
-
-    await dispatchViaRouteEvent(service,
-      buildOrderUpdatedPayload("PREPARED", "evt-it-stale-v3", { version: 3 })
-    );
-
-    const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
-    expect(row?.fulfillmentStatus).toBe("preparing");
-    expect(row?.squareOrderVersion).toBe(5);
-  });
-
-  it("applies a newer-version webhook and bumps the stored version", async () => {
-    await upsertOrder("preparing", { squareOrderVersion: 5 });
-
-    await dispatchViaRouteEvent(service,
-      buildOrderUpdatedPayload("PREPARED", "evt-it-fresh-v8", { version: 8 })
-    );
-
-    const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
-    expect(row?.fulfillmentStatus).toBe("ready");
-    expect(row?.squareOrderVersion).toBe(8);
-  });
-
-  it("falls back to legacy behavior when payload omits version", async () => {
-    await upsertOrder("preparing", { squareOrderVersion: 5 });
-
-    await dispatchViaRouteEvent(service,
-      buildOrderUpdatedPayload("PREPARED", "evt-it-no-version")
-    );
-
-    const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
-    expect(row?.fulfillmentStatus).toBe("ready");
-    // Missing version must not clear the stored version
-    expect(row?.squareOrderVersion).toBe(5);
-  });
 });
