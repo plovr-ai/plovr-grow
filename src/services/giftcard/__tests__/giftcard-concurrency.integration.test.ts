@@ -340,7 +340,8 @@ describe("Gift Card Concurrency & Idempotency (Integration)", () => {
           id: generateEntityId(),
           tenantId: TENANT_ID,
           orderId: orderId1,
-          stripePaymentIntentId: sharedPaymentIntentId,
+          provider: "stripe",
+          providerPaymentId: sharedPaymentIntentId,
           amount: 10,
           currency: "USD",
           status: "pending",
@@ -354,7 +355,8 @@ describe("Gift Card Concurrency & Idempotency (Integration)", () => {
             id: generateEntityId(),
             tenantId: TENANT_ID,
             orderId: orderId2,
-            stripePaymentIntentId: sharedPaymentIntentId,
+            provider: "stripe",
+            providerPaymentId: sharedPaymentIntentId,
             amount: 10,
             currency: "USD",
             status: "pending",
@@ -392,7 +394,8 @@ describe("Gift Card Concurrency & Idempotency (Integration)", () => {
           id: paymentId,
           tenantId: TENANT_ID,
           orderId,
-          stripePaymentIntentId: intentId,
+          provider: "stripe",
+          providerPaymentId: intentId,
           amount: 25,
           currency: "USD",
           status: "pending",
@@ -402,7 +405,8 @@ describe("Gift Card Concurrency & Idempotency (Integration)", () => {
       const casUpdate = (paidAt: Date) =>
         prisma.payment.updateMany({
           where: {
-            stripePaymentIntentId: intentId,
+            provider: "stripe",
+            providerPaymentId: intentId,
             status: "pending",
             deleted: false,
           },
@@ -458,7 +462,8 @@ describe("Gift Card Concurrency & Idempotency (Integration)", () => {
           id: paymentId,
           tenantId: TENANT_ID,
           orderId,
-          stripePaymentIntentId: intentId,
+          provider: "stripe",
+          providerPaymentId: intentId,
           amount: 15,
           currency: "USD",
           status: "succeeded",
@@ -469,7 +474,8 @@ describe("Gift Card Concurrency & Idempotency (Integration)", () => {
       // Try to transition succeeded → failed (late "failed" webhook)
       const result = await prisma.payment.updateMany({
         where: {
-          stripePaymentIntentId: intentId,
+          provider: "stripe",
+          providerPaymentId: intentId,
           status: "pending", // CAS: only from pending
           deleted: false,
         },

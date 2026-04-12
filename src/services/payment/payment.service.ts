@@ -1,5 +1,8 @@
 import type { DbClient } from "@/lib/db";
-import { paymentRepository } from "@/repositories/payment.repository";
+import {
+  paymentRepository,
+  type PaymentProvider,
+} from "@/repositories/payment.repository";
 import { AppError } from "@/lib/errors/app-error";
 import { ErrorCodes } from "@/lib/errors/error-codes";
 import {
@@ -65,11 +68,17 @@ export class PaymentService {
       input.tenantId,
       {
         orderId: input.orderId,
-        stripePaymentIntentId: input.stripePaymentIntentId,
-        stripeAccountId: input.stripeAccountId,
-        stripeCustomerId: input.stripeCustomerId,
+        provider: input.provider,
+        providerPaymentId: input.providerPaymentId,
         amount: input.amount,
         currency: input.currency,
+        ...(input.provider === "stripe" &&
+          input.stripeAccountId && {
+            stripeDetail: {
+              stripeAccountId: input.stripeAccountId,
+              stripeCustomerId: input.stripeCustomerId,
+            },
+          }),
       },
       tx
     );
@@ -133,13 +142,14 @@ export class PaymentService {
   }
 
   /**
-   * Handle successful payment from Stripe webhook.
+   * Handle successful payment from webhook.
    * Uses atomic CAS (Compare-And-Swap) to prevent race conditions
-   * when concurrent webhooks arrive for the same PaymentIntent.
+   * when concurrent webhooks arrive for the same payment.
    */
   async handlePaymentSucceeded(data: PaymentSucceededData): Promise<void> {
     const count = await paymentRepository.atomicUpdateStatus(
-      data.paymentIntentId,
+      data.provider,
+      data.providerPaymentId,
       "pending",
       {
         status: "succeeded",
@@ -152,22 +162,25 @@ export class PaymentService {
 
     if (count === 0) {
       console.log(
-        `Payment already processed or not found for PaymentIntent: ${data.paymentIntentId}`
+        `Payment already processed or not found for ${data.provider}:${data.providerPaymentId}`
       );
       return;
     }
 
-    console.log(`Payment succeeded: ${data.paymentIntentId}`);
+    console.log(
+      `Payment succeeded: ${data.provider}:${data.providerPaymentId}`
+    );
   }
 
   /**
-   * Handle failed payment from Stripe webhook.
+   * Handle failed payment from webhook.
    * Uses atomic CAS (Compare-And-Swap) to prevent race conditions
-   * when concurrent webhooks arrive for the same PaymentIntent.
+   * when concurrent webhooks arrive for the same payment.
    */
   async handlePaymentFailed(data: PaymentFailedData): Promise<void> {
     const count = await paymentRepository.atomicUpdateStatus(
-      data.paymentIntentId,
+      data.provider,
+      data.providerPaymentId,
       "pending",
       {
         status: "failed",
@@ -178,12 +191,14 @@ export class PaymentService {
 
     if (count === 0) {
       console.log(
-        `Payment already processed or not found for PaymentIntent: ${data.paymentIntentId}`
+        `Payment already processed or not found for ${data.provider}:${data.providerPaymentId}`
       );
       return;
     }
 
-    console.log(`Payment failed: ${data.paymentIntentId}`);
+    console.log(
+      `Payment failed: ${data.provider}:${data.providerPaymentId}`
+    );
   }
 
   /**
@@ -201,17 +216,29 @@ export class PaymentService {
   }
 
   /**
-   * Get payment by PaymentIntent ID
+   * Get payment by provider and provider payment ID
    */
-  async getPaymentByIntentId(paymentIntentId: string) {
-    return paymentRepository.getByPaymentIntentId(paymentIntentId);
+  async getPaymentByProviderPaymentId(
+    provider: PaymentProvider,
+    providerPaymentId: string
+  ) {
+    return paymentRepository.getByProviderPaymentId(
+      provider,
+      providerPaymentId
+    );
   }
 
   /**
-   * Check if a PaymentIntent has already been used for a payment record
+   * Check if a provider payment ID has already been used for a payment record
    */
-  async paymentIntentExists(stripePaymentIntentId: string): Promise<boolean> {
-    return paymentRepository.paymentIntentExists(stripePaymentIntentId);
+  async providerPaymentExists(
+    provider: PaymentProvider,
+    providerPaymentId: string
+  ): Promise<boolean> {
+    return paymentRepository.providerPaymentExists(
+      provider,
+      providerPaymentId
+    );
   }
 }
 

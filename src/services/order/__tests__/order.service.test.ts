@@ -1202,7 +1202,8 @@ describe("OrderService", () => {
     it("should create payment record within the transaction when provided", async () => {
       await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
         payment: {
-          stripePaymentIntentId: "pi_123",
+          provider: "stripe",
+          providerPaymentId: "pi_123",
           amount: 42.98,
           currency: "USD",
         },
@@ -1212,7 +1213,8 @@ describe("OrderService", () => {
         expect.objectContaining({
           tenantId: "tenant-1",
           orderId: "order-1",
-          stripePaymentIntentId: "pi_123",
+          provider: "stripe",
+          providerPaymentId: "pi_123",
           amount: 42.98,
           currency: "USD",
         }),
@@ -1231,7 +1233,8 @@ describe("OrderService", () => {
       await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
         giftCard: { id: "gc-1", amount: 20 },
         payment: {
-          stripePaymentIntentId: "pi_123",
+          provider: "stripe",
+          providerPaymentId: "pi_123",
           amount: 22.98,
           currency: "USD",
         },
@@ -1268,7 +1271,8 @@ describe("OrderService", () => {
       await expect(
         orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
           payment: {
-            stripePaymentIntentId: "pi_123",
+            provider: "stripe",
+            providerPaymentId: "pi_123",
             amount: 42.98,
             currency: "USD",
           },

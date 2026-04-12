@@ -2,6 +2,8 @@ import prisma from "@/lib/db";
 import type { DbClient } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
+import { AppError } from "@/lib/errors/app-error";
+import { ErrorCodes } from "@/lib/errors/error-codes";
 
 export const PAYMENT_STATUSES = [
   "pending",
@@ -15,13 +17,24 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export const PAYMENT_METHODS = ["card", "apple_pay", "google_pay"] as const;
 export type PaymentMethodType = (typeof PAYMENT_METHODS)[number];
 
+export const PAYMENT_PROVIDERS = [
+  "stripe",
+  "square",
+  "cash",
+  "external",
+] as const;
+export type PaymentProvider = (typeof PAYMENT_PROVIDERS)[number];
+
 export interface CreatePaymentInput {
   orderId: string;
-  stripePaymentIntentId: string;
-  stripeAccountId?: string | null;
-  stripeCustomerId?: string | null;
+  provider: PaymentProvider;
+  providerPaymentId?: string | null;
   amount: number;
   currency: string;
+  stripeDetail?: {
+    stripeAccountId: string;
+    stripeCustomerId?: string | null;
+  };
 }
 
 export interface UpdatePaymentStatusInput {
@@ -36,7 +49,7 @@ export interface UpdatePaymentStatusInput {
 
 export class PaymentRepository {
   /**
-   * Create a new payment record
+   * Create a new payment record, optionally with Stripe-specific details
    */
   async create(tenantId: string, data: CreatePaymentInput, tx?: DbClient) {
     const db = tx ?? prisma;
@@ -45,12 +58,23 @@ export class PaymentRepository {
         id: generateEntityId(),
         tenantId,
         orderId: data.orderId,
-        stripePaymentIntentId: data.stripePaymentIntentId,
-        stripeAccountId: data.stripeAccountId,
-        stripeCustomerId: data.stripeCustomerId,
+        provider: data.provider,
+        providerPaymentId: data.providerPaymentId,
         amount: data.amount,
         currency: data.currency,
         status: "pending",
+        ...(data.stripeDetail && {
+          stripeDetail: {
+            create: {
+              id: generateEntityId(),
+              stripeAccountId: data.stripeDetail.stripeAccountId,
+              stripeCustomerId: data.stripeDetail.stripeCustomerId,
+            },
+          },
+        }),
+      },
+      include: {
+        stripeDetail: true,
       },
     });
   }
@@ -69,12 +93,13 @@ export class PaymentRepository {
   }
 
   /**
-   * Get payment by Stripe PaymentIntent ID
+   * Get payment by provider and provider payment ID
    */
-  async getByPaymentIntentId(stripePaymentIntentId: string) {
+  async getByProviderPaymentId(provider: PaymentProvider, providerPaymentId: string) {
     return prisma.payment.findFirst({
       where: {
-        stripePaymentIntentId,
+        provider,
+        providerPaymentId,
         deleted: false,
       },
       include: {
@@ -86,6 +111,7 @@ export class PaymentRepository {
             merchantId: true,
           },
         },
+        stripeDetail: true,
       },
     });
   }
@@ -158,7 +184,8 @@ export class PaymentRepository {
    * Returns the number of rows updated (0 or 1).
    */
   async atomicUpdateStatus(
-    paymentIntentId: string,
+    provider: PaymentProvider,
+    providerPaymentId: string,
     expectedStatus: PaymentStatus,
     data: UpdatePaymentStatusInput
   ): Promise<number> {
@@ -187,7 +214,8 @@ export class PaymentRepository {
 
     const result = await prisma.payment.updateMany({
       where: {
-        stripePaymentIntentId: paymentIntentId,
+        provider,
+        providerPaymentId,
         status: expectedStatus,
         deleted: false,
       },
@@ -198,10 +226,11 @@ export class PaymentRepository {
   }
 
   /**
-   * Update payment by Stripe PaymentIntent ID
+   * Update payment by provider and provider payment ID
    */
-  async updateByPaymentIntentId(
-    stripePaymentIntentId: string,
+  async updateByProviderPaymentId(
+    provider: PaymentProvider,
+    providerPaymentId: string,
     data: UpdatePaymentStatusInput
   ) {
     const updateData: Prisma.PaymentUpdateInput = {
@@ -227,18 +256,30 @@ export class PaymentRepository {
       updateData.paidAt = data.paidAt;
     }
 
+    // Use findFirst + update since composite unique needs special handling
+    const payment = await prisma.payment.findFirst({
+      where: { provider, providerPaymentId, deleted: false },
+    });
+
+    if (!payment) {
+      throw new AppError(ErrorCodes.PAYMENT_NOT_FOUND, undefined, 404);
+    }
+
     return prisma.payment.update({
-      where: { stripePaymentIntentId },
+      where: { id: payment.id },
       data: updateData,
     });
   }
 
   /**
-   * Check if payment already exists for a PaymentIntent
+   * Check if payment already exists for a provider + payment ID combination
    */
-  async paymentIntentExists(stripePaymentIntentId: string): Promise<boolean> {
+  async providerPaymentExists(
+    provider: PaymentProvider,
+    providerPaymentId: string
+  ): Promise<boolean> {
     const payment = await prisma.payment.findFirst({
-      where: { stripePaymentIntentId, deleted: false },
+      where: { provider, providerPaymentId, deleted: false },
     });
     return payment !== null;
   }

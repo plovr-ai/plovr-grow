@@ -164,7 +164,8 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
       expect(paymentService.createPaymentRecord).toHaveBeenCalledWith({
         tenantId: "tenant-1",
         orderId: "order-1",
-        stripePaymentIntentId: "pi_test123",
+        provider: "stripe",
+        providerPaymentId: "pi_test123",
         amount: 50,
         currency: "USD",
       });

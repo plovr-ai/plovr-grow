@@ -26,13 +26,13 @@ vi.mock("@/repositories/payment.repository", () => ({
   paymentRepository: {
     create: vi.fn(),
     getById: vi.fn(),
-    getByPaymentIntentId: vi.fn(),
+    getByProviderPaymentId: vi.fn(),
     getByOrderId: vi.fn(),
     getSuccessfulPaymentByOrderId: vi.fn(),
     updateStatus: vi.fn(),
-    updateByPaymentIntentId: vi.fn(),
+    updateByProviderPaymentId: vi.fn(),
     atomicUpdateStatus: vi.fn(),
-    paymentIntentExists: vi.fn(),
+    providerPaymentExists: vi.fn(),
   },
 }));
 
@@ -284,7 +284,8 @@ describe("PaymentService", () => {
       vi.mocked(paymentRepository.atomicUpdateStatus).mockResolvedValue(1);
 
       await service.handlePaymentSucceeded({
-        paymentIntentId: "pi_test123",
+        provider: "stripe",
+        providerPaymentId: "pi_test123",
         status: "succeeded",
         paymentMethodType: "card",
         cardBrand: "visa",
@@ -292,6 +293,7 @@ describe("PaymentService", () => {
       });
 
       expect(paymentRepository.atomicUpdateStatus).toHaveBeenCalledWith(
+        "stripe",
         "pi_test123",
         "pending",
         expect.objectContaining({
@@ -308,12 +310,14 @@ describe("PaymentService", () => {
 
       await expect(
         service.handlePaymentSucceeded({
-          paymentIntentId: "pi_test123",
+          provider: "stripe",
+          providerPaymentId: "pi_test123",
           status: "succeeded",
         })
       ).resolves.not.toThrow();
 
       expect(paymentRepository.atomicUpdateStatus).toHaveBeenCalledWith(
+        "stripe",
         "pi_test123",
         "pending",
         expect.objectContaining({ status: "succeeded" })
@@ -326,12 +330,14 @@ describe("PaymentService", () => {
       vi.mocked(paymentRepository.atomicUpdateStatus).mockResolvedValue(1);
 
       await service.handlePaymentFailed({
-        paymentIntentId: "pi_test123",
+        provider: "stripe",
+        providerPaymentId: "pi_test123",
         failureCode: "card_declined",
         failureMessage: "Your card was declined.",
       });
 
       expect(paymentRepository.atomicUpdateStatus).toHaveBeenCalledWith(
+        "stripe",
         "pi_test123",
         "pending",
         expect.objectContaining({
@@ -347,7 +353,8 @@ describe("PaymentService", () => {
 
       await expect(
         service.handlePaymentFailed({
-          paymentIntentId: "pi_test123",
+          provider: "stripe",
+          providerPaymentId: "pi_test123",
           failureCode: "card_declined",
           failureMessage: "Your card was declined.",
         })
@@ -358,12 +365,14 @@ describe("PaymentService", () => {
       vi.mocked(paymentRepository.atomicUpdateStatus).mockResolvedValue(1);
 
       await service.handlePaymentFailed({
-        paymentIntentId: "pi_test123",
+        provider: "stripe",
+        providerPaymentId: "pi_test123",
         failureCode: "",
         failureMessage: "",
       });
 
       expect(paymentRepository.atomicUpdateStatus).toHaveBeenCalledWith(
+        "stripe",
         "pi_test123",
         "pending",
         expect.objectContaining({
@@ -375,14 +384,13 @@ describe("PaymentService", () => {
   });
 
   describe("createPaymentRecord", () => {
-    it("should create a payment record with stripeAccountId", async () => {
+    it("should create a payment record with provider=stripe including stripeDetail", async () => {
       const mockCreatedPayment = {
         id: "payment-new",
         tenantId: mockTenantId,
         orderId: mockOrderId,
-        stripePaymentIntentId: "pi_test123",
-        stripeCustomerId: null,
-        stripeAccountId: mockStripeAccountId,
+        provider: "stripe",
+        providerPaymentId: "pi_test123",
         amount: new Decimal(25.99),
         currency: "USD",
         status: "pending",
@@ -395,6 +403,13 @@ describe("PaymentService", () => {
         deleted: false,
         createdAt: new Date(),
         updatedAt: new Date(),
+        stripeDetail: {
+          id: "spd-1",
+          paymentId: "payment-new",
+          stripeAccountId: mockStripeAccountId,
+          stripeCustomerId: null,
+          createdAt: new Date(),
+        },
       };
 
       vi.mocked(paymentRepository.create).mockResolvedValue(mockCreatedPayment);
@@ -402,7 +417,8 @@ describe("PaymentService", () => {
       const result = await service.createPaymentRecord({
         tenantId: mockTenantId,
         orderId: mockOrderId,
-        stripePaymentIntentId: "pi_test123",
+        provider: "stripe",
+        providerPaymentId: "pi_test123",
         stripeAccountId: mockStripeAccountId,
         amount: 25.99,
         currency: "USD",
@@ -411,16 +427,67 @@ describe("PaymentService", () => {
       expect(result).toEqual(mockCreatedPayment);
       expect(paymentRepository.create).toHaveBeenCalledWith(
         mockTenantId,
-        {
+        expect.objectContaining({
           orderId: mockOrderId,
-          stripePaymentIntentId: "pi_test123",
-          stripeAccountId: mockStripeAccountId,
-          stripeCustomerId: undefined,
+          provider: "stripe",
+          providerPaymentId: "pi_test123",
           amount: 25.99,
           currency: "USD",
-        },
+          stripeDetail: {
+            stripeAccountId: mockStripeAccountId,
+            stripeCustomerId: undefined,
+          },
+        }),
         undefined
       );
+    });
+
+    it("should create a payment record with provider=cash (no providerPaymentId, no stripeDetail)", async () => {
+      const mockCreatedPayment = {
+        id: "payment-cash",
+        tenantId: mockTenantId,
+        orderId: mockOrderId,
+        provider: "cash",
+        providerPaymentId: null,
+        amount: new Decimal(15.0),
+        currency: "USD",
+        status: "pending",
+        paymentMethod: null,
+        cardBrand: null,
+        cardLast4: null,
+        failureCode: null,
+        failureMessage: null,
+        paidAt: null,
+        deleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        stripeDetail: null,
+      };
+
+      vi.mocked(paymentRepository.create).mockResolvedValue(mockCreatedPayment);
+
+      const result = await service.createPaymentRecord({
+        tenantId: mockTenantId,
+        orderId: mockOrderId,
+        provider: "cash",
+        amount: 15.0,
+        currency: "USD",
+      });
+
+      expect(result).toEqual(mockCreatedPayment);
+      expect(paymentRepository.create).toHaveBeenCalledWith(
+        mockTenantId,
+        expect.objectContaining({
+          orderId: mockOrderId,
+          provider: "cash",
+          amount: 15.0,
+          currency: "USD",
+        }),
+        undefined
+      );
+      // Should NOT have stripeDetail
+      const callArgs = vi.mocked(paymentRepository.create).mock.calls[0][1];
+      expect(callArgs.stripeDetail).toBeUndefined();
     });
   });
 
@@ -448,34 +515,42 @@ describe("PaymentService", () => {
     });
   });
 
-  describe("getPaymentByIntentId", () => {
+  describe("getPaymentByProviderPaymentId", () => {
     it("should delegate to paymentRepository", async () => {
-      const mockPayment = { id: "payment-1", stripePaymentIntentId: "pi_test" };
-      vi.mocked(paymentRepository.getByPaymentIntentId).mockResolvedValue(mockPayment as never);
+      const mockPayment = { id: "payment-1", provider: "stripe", providerPaymentId: "pi_test" };
+      vi.mocked(paymentRepository.getByProviderPaymentId).mockResolvedValue(mockPayment as never);
 
-      const result = await service.getPaymentByIntentId("pi_test");
+      const result = await service.getPaymentByProviderPaymentId("stripe", "pi_test");
 
       expect(result).toEqual(mockPayment);
-      expect(paymentRepository.getByPaymentIntentId).toHaveBeenCalledWith("pi_test");
+      expect(paymentRepository.getByProviderPaymentId).toHaveBeenCalledWith("stripe", "pi_test");
     });
   });
 
-  describe("paymentIntentExists", () => {
-    it("should return true when payment intent exists", async () => {
-      vi.mocked(paymentRepository.paymentIntentExists).mockResolvedValue(true);
+  describe("providerPaymentExists", () => {
+    it("should return true when provider payment exists", async () => {
+      vi.mocked(paymentRepository.providerPaymentExists).mockResolvedValue(true);
 
-      const result = await service.paymentIntentExists("pi_test123");
+      const result = await service.providerPaymentExists("stripe", "pi_test123");
 
       expect(result).toBe(true);
-      expect(paymentRepository.paymentIntentExists).toHaveBeenCalledWith("pi_test123");
+      expect(paymentRepository.providerPaymentExists).toHaveBeenCalledWith("stripe", "pi_test123");
     });
 
-    it("should return false when payment intent does not exist", async () => {
-      vi.mocked(paymentRepository.paymentIntentExists).mockResolvedValue(false);
+    it("should return false when provider payment does not exist", async () => {
+      vi.mocked(paymentRepository.providerPaymentExists).mockResolvedValue(false);
 
-      const result = await service.paymentIntentExists("pi_nonexistent");
+      const result = await service.providerPaymentExists("stripe", "pi_nonexistent");
 
       expect(result).toBe(false);
+    });
+
+    it("should differentiate between providers", async () => {
+      vi.mocked(paymentRepository.providerPaymentExists).mockResolvedValue(false);
+
+      await service.providerPaymentExists("square", "sq_test123");
+
+      expect(paymentRepository.providerPaymentExists).toHaveBeenCalledWith("square", "sq_test123");
     });
   });
 });
