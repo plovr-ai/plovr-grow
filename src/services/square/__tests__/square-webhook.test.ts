@@ -1165,7 +1165,7 @@ describe("SquareWebhookService", () => {
 
       expect(mockOrderUpdate).toHaveBeenCalledWith({
         where: { id: "internal-order-1" },
-        data: { status: "payment_failed" },
+        data: { status: "payment_failed", paymentFailedAt: expect.any(Date) },
       });
       // Crucially, we do NOT write cancellation fields — order cancel and
       // payment failure are semantically distinct (#111).

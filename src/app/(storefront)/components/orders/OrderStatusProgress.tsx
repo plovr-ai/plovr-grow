@@ -31,6 +31,7 @@ const FULFILLMENT_ORDER: Record<FulfillmentStatus, number> = {
 
 export function OrderStatusProgress({ paymentStatus, fulfillmentStatus, orderMode }: Props) {
   const isCancelled = paymentStatus === "canceled";
+  const isPaymentFailed = paymentStatus === "payment_failed";
   const isPaid = paymentStatus === "completed";
 
   // Show cancelled state
@@ -57,6 +58,37 @@ export function OrderStatusProgress({ paymentStatus, fulfillmentStatus, orderMod
             <p className="font-medium text-red-800">Order Cancelled</p>
             <p className="text-sm text-red-600">
               This order has been cancelled
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show payment failed state
+  if (isPaymentFailed) {
+    return (
+      <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center">
+            <svg
+              className="w-5 h-5 text-rose-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+          </div>
+          <div>
+            <p className="font-medium text-rose-800">Payment Failed</p>
+            <p className="text-sm text-rose-600">
+              The payment attempt was unsuccessful. Please try again.
             </p>
           </div>
         </div>
