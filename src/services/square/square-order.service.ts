@@ -3,6 +3,7 @@ import { SquareClient, SquareEnvironment } from "square";
 import type {
   OrderLineItem,
   OrderLineItemModifier,
+  OrderLineItemAppliedTax,
   OrderLineItemTax,
   OrderLineItemDiscount,
   OrderServiceCharge,
@@ -399,6 +400,11 @@ export class SquareOrderService {
         }
       );
 
+      // Build applied tax references for LINE_ITEM-scoped taxes
+      const appliedTaxes: OrderLineItemAppliedTax[] = (item.taxes ?? []).map(
+        (tax) => ({ taxUid: tax.taxConfigId })
+      );
+
       const lineItem: OrderLineItem = {
         quantity: String(item.quantity),
         name: item.name,
@@ -408,6 +414,7 @@ export class SquareOrderService {
         },
         note: item.specialInstructions ?? undefined,
         modifiers: modifiers.length > 0 ? modifiers : undefined,
+        appliedTaxes: appliedTaxes.length > 0 ? appliedTaxes : undefined,
       };
 
       // If we have a catalog mapping, link to the Square catalog
@@ -423,9 +430,9 @@ export class SquareOrderService {
    * Build order-level taxes from item tax configurations.
    *
    * Collects unique tax configs across all items, resolves their Square
-   * catalog TAX IDs via ExternalIdMapping, and builds ORDER-scoped tax
-   * entries with percentage. Square calculates the actual tax amounts
-   * from line item totals.
+   * catalog TAX IDs via ExternalIdMapping, and builds LINE_ITEM-scoped
+   * tax entries with percentage. Each line item that carries a given tax
+   * must reference it via `appliedTaxes` (see `buildLineItems`).
    */
   private async buildTaxes(
     tenantId: string,
@@ -473,7 +480,7 @@ export class SquareOrderService {
         name: config.name,
         type: config.inclusionType === "inclusive" ? "INCLUSIVE" : "ADDITIVE",
         percentage: (config.rate * 100).toFixed(4),
-        scope: "ORDER",
+        scope: "LINE_ITEM",
       };
       if (catalogObjectId) {
         tax.catalogObjectId = catalogObjectId;
