@@ -1,3 +1,5 @@
+import type { PaymentProvider } from "@/repositories/payment.repository";
+
 export interface CreatePaymentIntentRequest {
   tenantId: string;
   merchantId?: string;
@@ -13,7 +15,8 @@ export interface CreatePaymentIntentResponse {
 }
 
 export interface PaymentSucceededData {
-  paymentIntentId: string;
+  provider: PaymentProvider;
+  providerPaymentId: string;
   status: string;
   paymentMethodType?: string;
   cardBrand?: string;
@@ -21,7 +24,8 @@ export interface PaymentSucceededData {
 }
 
 export interface PaymentFailedData {
-  paymentIntentId: string;
+  provider: PaymentProvider;
+  providerPaymentId: string;
   failureCode?: string;
   failureMessage?: string;
 }
@@ -29,7 +33,8 @@ export interface PaymentFailedData {
 export interface CreatePaymentRecordInput {
   tenantId: string;
   orderId: string;
-  stripePaymentIntentId: string;
+  provider: PaymentProvider;
+  providerPaymentId?: string | null;
   stripeAccountId?: string;
   stripeCustomerId?: string | null;
   amount: number;

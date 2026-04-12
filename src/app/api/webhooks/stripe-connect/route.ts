@@ -45,7 +45,8 @@ export async function POST(request: Request) {
           `[Stripe Connect Webhook] Payment intent succeeded: ${paymentIntent.id}`
         );
         await paymentService.handlePaymentSucceeded({
-          paymentIntentId: paymentIntent.id,
+          provider: "stripe",
+          providerPaymentId: paymentIntent.id,
           status: paymentIntent.status || "succeeded",
           paymentMethodType: paymentMethodType,
           cardBrand: cardDetails?.brand,
@@ -60,7 +61,8 @@ export async function POST(request: Request) {
           `[Stripe Connect Webhook] Payment intent failed: ${paymentIntent.id}`
         );
         await paymentService.handlePaymentFailed({
-          paymentIntentId: paymentIntent.id,
+          provider: "stripe",
+          providerPaymentId: paymentIntent.id,
           failureCode: paymentIntent.last_payment_error?.code,
           failureMessage: paymentIntent.last_payment_error?.message,
         });

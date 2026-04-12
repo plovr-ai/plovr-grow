@@ -92,7 +92,8 @@ export async function POST(
       await paymentService.createPaymentRecord({
         tenantId: company.tenantId,
         orderId: order.id,
-        stripePaymentIntentId: data.stripePaymentIntentId,
+        provider: "stripe",
+        providerPaymentId: data.stripePaymentIntentId,
         amount: data.amount,
         currency: "USD",
       });

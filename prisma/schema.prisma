@@ -826,16 +826,15 @@ model InvoiceSequence {
 
 // ==================== Payment System ====================
 
-/// Payment record for Stripe payments
+/// Payment record supporting multiple payment providers
 model Payment {
   id       String @id
   tenantId String @map("tenant_id")
   orderId  String @map("order_id")
 
-  // Stripe fields
-  stripePaymentIntentId String  @unique @map("stripe_payment_intent_id")
-  stripeCustomerId      String? @map("stripe_customer_id")
-  stripeAccountId       String? @map("stripe_account_id")
+  // Generic payment source
+  provider          String  // "stripe" | "square" | "cash" | "external"
+  providerPaymentId String? @map("provider_payment_id")
 
   // Payment info
   amount        Decimal @db.Decimal(10, 2)
@@ -858,14 +857,28 @@ model Payment {
   updatedAt DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  order  Order  @relation(fields: [orderId], references: [id])
+  tenant       Tenant               @relation(fields: [tenantId], references: [id])
+  order        Order                @relation(fields: [orderId], references: [id])
+  stripeDetail StripePaymentDetail?
 
+  @@unique([provider, providerPaymentId])
   @@index([tenantId])
   @@index([orderId])
-  @@index([stripePaymentIntentId])
   @@index([status])
   @@map("payments")
+}
+
+/// Stripe-specific payment details (1:1 with Payment)
+model StripePaymentDetail {
+  id               String   @id
+  paymentId        String   @unique @map("payment_id")
+  stripeAccountId  String   @map("stripe_account_id")
+  stripeCustomerId String?  @map("stripe_customer_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  @@map("stripe_payment_details")
 }
 
 /// Stripe customer mapping for saved cards

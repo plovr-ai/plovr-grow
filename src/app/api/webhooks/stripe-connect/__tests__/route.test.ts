@@ -107,7 +107,8 @@ describe("POST /api/webhooks/stripe-connect", () => {
       expect(response.status).toBe(200);
       expect(data.received).toBe(true);
       expect(paymentService.handlePaymentSucceeded).toHaveBeenCalledWith({
-        paymentIntentId: "pi_test123",
+        provider: "stripe",
+        providerPaymentId: "pi_test123",
         status: "succeeded",
         paymentMethodType: "card",
         cardBrand: "visa",
@@ -142,7 +143,8 @@ describe("POST /api/webhooks/stripe-connect", () => {
       expect(response.status).toBe(200);
       expect(data.received).toBe(true);
       expect(paymentService.handlePaymentSucceeded).toHaveBeenCalledWith({
-        paymentIntentId: "pi_test123",
+        provider: "stripe",
+        providerPaymentId: "pi_test123",
         status: "succeeded",
         paymentMethodType: undefined,
         cardBrand: undefined,
@@ -181,7 +183,8 @@ describe("POST /api/webhooks/stripe-connect", () => {
       expect(response.status).toBe(200);
       expect(data.received).toBe(true);
       expect(paymentService.handlePaymentFailed).toHaveBeenCalledWith({
-        paymentIntentId: "pi_test456",
+        provider: "stripe",
+        providerPaymentId: "pi_test456",
         failureCode: "card_declined",
         failureMessage: "Your card was declined.",
       });
@@ -212,7 +215,8 @@ describe("POST /api/webhooks/stripe-connect", () => {
       expect(response.status).toBe(200);
       expect(data.received).toBe(true);
       expect(paymentService.handlePaymentFailed).toHaveBeenCalledWith({
-        paymentIntentId: "pi_test456",
+        provider: "stripe",
+        providerPaymentId: "pi_test456",
         failureCode: undefined,
         failureMessage: undefined,
       });
@@ -355,7 +359,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
 
       expect(response.status).toBe(200);
       expect(paymentService.handlePaymentSucceeded).toHaveBeenCalledWith(
-        expect.objectContaining({ status: "succeeded" })
+        expect.objectContaining({ provider: "stripe", status: "succeeded" })
       );
     });
 

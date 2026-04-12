@@ -190,7 +190,8 @@ export async function POST(
         };
 
         // Check if this PaymentIntent has already been used for another order
-        const alreadyUsed = await paymentService.paymentIntentExists(
+        const alreadyUsed = await paymentService.providerPaymentExists(
+          "stripe",
           verifiedPayment.paymentIntentId
         );
         if (alreadyUsed) {
@@ -227,7 +228,8 @@ export async function POST(
             : undefined,
         payment: verifiedPayment
           ? {
-              stripePaymentIntentId: verifiedPayment.paymentIntentId,
+              provider: "stripe",
+              providerPaymentId: verifiedPayment.paymentIntentId,
               amount: verifiedPayment.amount,
               currency: merchant.currency || "USD",
             }

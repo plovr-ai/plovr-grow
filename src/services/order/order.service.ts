@@ -7,6 +7,7 @@ import type { DbClient } from "@/lib/db";
 import { menuService } from "@/services/menu";
 import { giftCardService } from "@/services/giftcard";
 import { paymentService } from "@/services/payment";
+import type { PaymentProvider } from "@/repositories/payment.repository";
 import { merchantService } from "@/services/merchant";
 import { orderRepository } from "@/repositories/order.repository";
 import { fulfillmentRepository } from "@/repositories/fulfillment.repository";
@@ -169,9 +170,11 @@ export class OrderService {
     options?: {
       giftCard?: { id: string; amount: number };
       payment?: {
-        stripePaymentIntentId: string;
+        provider: PaymentProvider;
+        providerPaymentId?: string | null;
         amount: number;
         currency: string;
+        stripeAccountId?: string;
         stripeCustomerId?: string;
       };
     }
@@ -197,7 +200,9 @@ export class OrderService {
           {
             tenantId,
             orderId: createdOrder.id,
-            stripePaymentIntentId: options.payment.stripePaymentIntentId,
+            provider: options.payment.provider,
+            providerPaymentId: options.payment.providerPaymentId,
+            stripeAccountId: options.payment.stripeAccountId,
             stripeCustomerId: options.payment.stripeCustomerId,
             amount: options.payment.amount,
             currency: options.payment.currency,

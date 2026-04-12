@@ -25,7 +25,7 @@ vi.mock("@/services/giftcard", () => ({
 vi.mock("@/services/payment", () => ({
   paymentService: {
     verifyPayment: vi.fn(),
-    paymentIntentExists: vi.fn(),
+    providerPaymentExists: vi.fn(),
   },
 }));
 
@@ -222,7 +222,8 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
       expect.any(Object),
       expect.objectContaining({
         payment: {
-          stripePaymentIntentId: "pi_123",
+          provider: "stripe",
+          providerPaymentId: "pi_123",
           amount: 20,
           currency: "USD",
         },
@@ -287,7 +288,7 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
     } as never);
 
     // PaymentIntent already used
-    vi.mocked(paymentService.paymentIntentExists).mockResolvedValue(true);
+    vi.mocked(paymentService.providerPaymentExists).mockResolvedValue(true);
 
     const bodyWithPayment = {
       ...validBody,
@@ -335,7 +336,7 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
     } as never);
 
     // PaymentIntent not yet used
-    vi.mocked(paymentService.paymentIntentExists).mockResolvedValue(false);
+    vi.mocked(paymentService.providerPaymentExists).mockResolvedValue(false);
 
     const bodyWithPayment = {
       ...validBody,
@@ -728,7 +729,7 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
       status: "succeeded",
       amount: 2000,
     } as never);
-    vi.mocked(paymentService.paymentIntentExists).mockResolvedValue(false);
+    vi.mocked(paymentService.providerPaymentExists).mockResolvedValue(false);
 
     const request = createRequest({
       ...validBody,
@@ -743,6 +744,7 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
       expect.any(Object),
       expect.objectContaining({
         payment: expect.objectContaining({
+          provider: "stripe",
           currency: "USD",
         }),
       })
