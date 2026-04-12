@@ -6,8 +6,6 @@ import type {
   ModifierViewModel,
   MenuItemTag,
 } from "@/types/menu-page";
-import type { Prisma } from "@prisma/client";
-
 /**
  * Menu info with item count (for filtering empty menus)
  */
@@ -45,33 +43,6 @@ export interface MenuDisplayData {
 }
 
 /**
- * Modifier stored in database JSON field (legacy format)
- */
-interface StoredModifier {
-  id: string;
-  name: string;
-  price: number;
-  isDefault?: boolean;
-  isAvailable?: boolean;
-  availabilityNote?: string;
-}
-
-/**
- * ModifierGroup stored in database JSON field (legacy format)
- */
-interface StoredModifierGroup {
-  id: string;
-  name: string;
-  type: "single" | "multiple";
-  required: boolean;
-  allowQuantity?: boolean;
-  maxQuantityPerModifier?: number;
-  modifiers: StoredModifier[];
-  /** @deprecated Use modifiers instead */
-  choices?: StoredModifier[];
-}
-
-/**
  * Relational modifier option from Prisma include
  */
 interface RelationalModifierOption {
@@ -106,69 +77,37 @@ interface RelationalMenuItemModifierGroup {
 }
 
 /**
- * Parse modifier groups from relational data (preferred) or JSON fallback.
- *
- * When the menu item includes `modifierGroups` relation data, we use that.
- * Otherwise, we fall back to parsing the legacy JSON `modifiers` field.
+ * Parse modifier groups from relational data.
  */
 export function parseModifierGroups(
-  options: Prisma.JsonValue | null,
   relationalGroups?: RelationalMenuItemModifierGroup[]
 ): ModifierGroupViewModel[] {
-  // Prefer relational data if available
-  if (relationalGroups && relationalGroups.length > 0) {
-    return relationalGroups.map((junction) => {
-      const group = junction.modifierGroup;
-      return {
-        id: group.id,
-        name: group.name,
-        required: group.required,
-        minSelections: group.minSelect,
-        maxSelections: group.maxSelect,
-        allowQuantity: group.allowQuantity,
-        maxQuantityPerModifier: group.maxQuantityPerModifier,
-        modifiers: group.options.map(
-          (opt): ModifierViewModel => ({
-            id: opt.id,
-            name: opt.name,
-            price:
-              typeof opt.price === "number"
-                ? opt.price
-                : typeof opt.price?.toNumber === "function"
-                  ? opt.price.toNumber()
-                  : Number(opt.price),
-            isDefault: opt.isDefault,
-            isAvailable: opt.isAvailable,
-          })
-        ),
-      };
-    });
-  }
-
-  // Fallback to JSON parsing for legacy data
-  if (!options || !Array.isArray(options)) {
+  if (!relationalGroups || relationalGroups.length === 0) {
     return [];
   }
 
-  return (options as unknown as StoredModifierGroup[]).map((group) => {
-    const modifiers = group.modifiers || group.choices || [];
-
+  return relationalGroups.map((junction) => {
+    const group = junction.modifierGroup;
     return {
       id: group.id,
       name: group.name,
       required: group.required,
-      minSelections: group.required ? 1 : 0,
-      maxSelections: group.type === "single" ? 1 : modifiers.length,
-      allowQuantity: group.allowQuantity ?? false,
-      maxQuantityPerModifier: group.maxQuantityPerModifier ?? 1,
-      modifiers: modifiers.map(
-        (modifier, index): ModifierViewModel => ({
-          id: modifier.id,
-          name: modifier.name,
-          price: modifier.price,
-          isDefault: modifier.isDefault ?? (index === 0 && group.required),
-          isAvailable: modifier.isAvailable ?? true,
-          availabilityNote: modifier.availabilityNote,
+      minSelections: group.minSelect,
+      maxSelections: group.maxSelect,
+      allowQuantity: group.allowQuantity,
+      maxQuantityPerModifier: group.maxQuantityPerModifier,
+      modifiers: group.options.map(
+        (opt): ModifierViewModel => ({
+          id: opt.id,
+          name: opt.name,
+          price:
+            typeof opt.price === "number"
+              ? opt.price
+              : typeof opt.price?.toNumber === "function"
+                ? opt.price.toNumber()
+                : Number(opt.price),
+          isDefault: opt.isDefault,
+          isAvailable: opt.isAvailable,
         })
       ),
     };
@@ -197,7 +136,6 @@ export function convertToMenuDisplayData(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const itemAny = item as Record<string, any>;
           const modifierGroups = parseModifierGroups(
-            item.modifiers,
             itemAny.modifierGroups
           );
           return {
