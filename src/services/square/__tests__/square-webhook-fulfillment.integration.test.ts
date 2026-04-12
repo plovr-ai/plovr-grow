@@ -103,6 +103,8 @@ async function seedBaseFixtures() {
 }
 
 async function cleanupAll() {
+  await prisma.fulfillmentStatusLog.deleteMany({ where: { tenantId: TENANT_ID } });
+  await prisma.orderFulfillment.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.webhookEvent.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.externalIdMapping.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.integrationConnection.deleteMany({
@@ -112,6 +114,8 @@ async function cleanupAll() {
   await prisma.merchant.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.tenant.deleteMany({ where: { id: TENANT_ID } });
 }
+
+const FULFILLMENT_ID = generateEntityId();
 
 async function upsertOrder(
   fulfillmentStatus: string,
@@ -145,6 +149,23 @@ async function upsertOrder(
       ...overrides,
     },
   });
+
+  // Ensure a matching OrderFulfillment record exists
+  await prisma.orderFulfillment.upsert({
+    where: { id: FULFILLMENT_ID },
+    create: {
+      id: FULFILLMENT_ID,
+      orderId: ORDER_ID,
+      tenantId: TENANT_ID,
+      merchantId: MERCHANT_ID,
+      status: fulfillmentStatus,
+    },
+    update: {
+      status: fulfillmentStatus,
+      cancelledAt: null,
+      cancelReason: null,
+    },
+  });
 }
 
 describe("Square webhook fulfillment rank guard (integration)", () => {
@@ -161,8 +182,9 @@ describe("Square webhook fulfillment rank guard (integration)", () => {
   });
 
   beforeEach(async () => {
-    // Clear webhook events so each case reuses its own event_id without dedup
+    // Clear webhook events and status logs so each case starts clean
     await prisma.webhookEvent.deleteMany({ where: { tenantId: TENANT_ID } });
+    await prisma.fulfillmentStatusLog.deleteMany({ where: { tenantId: TENANT_ID } });
   });
 
   it("does not promote confirmed order when Square echoes RESERVED", async () => {
