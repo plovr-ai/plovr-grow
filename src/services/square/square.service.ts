@@ -6,6 +6,8 @@ import { integrationRepository } from "@/repositories/integration.repository";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import { generateEntityId } from "@/lib/id";
 import prisma from "@/lib/db";
+import { menuService } from "@/services/menu";
+import type { ModifierGroupInput, ModifierInput } from "@/services/menu/menu.types";
 import type {
   SquareLocation,
   SquareConnectionStatus,
@@ -208,17 +210,11 @@ export class SquareService {
               name: item.name,
               description: item.description,
               price: item.price,
-              modifiers: item.modifiers
-                ? JSON.parse(JSON.stringify(item.modifiers))
-                : null,
             },
             update: {
               name: item.name,
               description: item.description,
               price: item.price,
-              modifiers: item.modifiers
-                ? JSON.parse(JSON.stringify(item.modifiers))
-                : null,
               deleted: false,
             },
           });
@@ -293,33 +289,24 @@ export class SquareService {
             );
           }
 
-          // Persist modifier groups and options to normalized tables
-          if (item.modifiers && item.modifiers.groups.length > 0) {
-            // Soft-delete existing junction records for this item
-            // so we can recreate them cleanly
-            await tx.menuItemModifierGroup.deleteMany({
-              where: { menuItemId: internalId },
-            });
+          // Persist modifier groups via MenuService
+          if (item.modifierGroups.length > 0) {
+            // Resolve external IDs to internal IDs
+            const resolvedGroups: ModifierGroupInput[] = [];
 
-            for (let groupIdx = 0; groupIdx < item.modifiers.groups.length; groupIdx++) {
-              const group = item.modifiers.groups[groupIdx];
+            for (let groupIdx = 0; groupIdx < item.modifierGroups.length; groupIdx++) {
+              const group = item.modifierGroups[groupIdx];
 
-              // Determine a stable group ID: for variation groups, use the
-              // groupId generated in mapToMenuModels; for modifier-list groups,
-              // generate a new one (or reuse via externalId lookup).
-              // We look at the first option's externalId to find an existing group.
+              // Determine stable group ID via first option's external ID mapping
               const firstOptionExtId = group.options[0]?.externalId;
               let modifierGroupId: string | undefined;
 
               if (firstOptionExtId) {
                 const existingOptionMapping =
                   await integrationRepository.getIdMappingByExternalId(
-                    tenantId,
-                    "SQUARE",
-                    firstOptionExtId
+                    tenantId, "SQUARE", firstOptionExtId
                   );
                 if (existingOptionMapping?.internalType === "ModifierOption") {
-                  // Find the group via the existing option
                   const existingOption = await tx.modifierOption.findUnique({
                     where: { id: existingOptionMapping.internalId },
                     select: { groupId: true },
@@ -334,61 +321,25 @@ export class SquareService {
                 modifierGroupId = generateEntityId();
               }
 
-              await tx.modifierGroup.upsert({
-                where: { id: modifierGroupId },
-                create: {
-                  id: modifierGroupId,
-                  tenantId,
-                  name: group.name,
-                  required: group.required,
-                  minSelect: group.minSelect,
-                  maxSelect: group.maxSelect,
-                  allowQuantity: false,
-                  maxQuantityPerModifier: 1,
-                },
-                update: {
-                  name: group.name,
-                  required: group.required,
-                  minSelect: group.minSelect,
-                  maxSelect: group.maxSelect,
-                  deleted: false,
-                },
-              });
-
-              // Upsert options
+              // Resolve option IDs
+              const resolvedModifiers: ModifierInput[] = [];
               for (let optIdx = 0; optIdx < group.options.length; optIdx++) {
                 const opt = group.options[optIdx];
-                // Check if we already have a mapping for this external ID
                 const existingOptMapping =
                   await integrationRepository.getIdMappingByExternalId(
-                    tenantId,
-                    "SQUARE",
-                    opt.externalId
+                    tenantId, "SQUARE", opt.externalId
                   );
                 const optionId =
                   (existingOptMapping?.internalType === "ModifierOption"
                     ? existingOptMapping?.internalId
                     : undefined) ?? generateEntityId();
 
-                await tx.modifierOption.upsert({
-                  where: { id: optionId },
-                  create: {
-                    id: optionId,
-                    tenantId,
-                    groupId: modifierGroupId,
-                    name: opt.name,
-                    price: opt.price,
-                    isDefault: opt.isDefault,
-                    isAvailable: true,
-                    sortOrder: opt.ordinal,
-                  },
-                  update: {
-                    name: opt.name,
-                    price: opt.price,
-                    isDefault: opt.isDefault,
-                    sortOrder: opt.ordinal,
-                    deleted: false,
-                  },
+                resolvedModifiers.push({
+                  id: optionId,
+                  name: opt.name,
+                  price: opt.price,
+                  isDefault: opt.isDefault,
+                  isAvailable: true,
                 });
 
                 // Create ModifierOption external ID mapping
@@ -405,16 +356,16 @@ export class SquareService {
                 );
               }
 
-              // Create junction record
-              await tx.menuItemModifierGroup.create({
-                data: {
-                  id: generateEntityId(),
-                  menuItemId: internalId,
-                  modifierGroupId,
-                  sortOrder: groupIdx,
-                },
+              resolvedGroups.push({
+                id: modifierGroupId,
+                name: group.name,
+                type: group.maxSelect === 1 ? "single" : "multiple",
+                required: group.required,
+                modifiers: resolvedModifiers,
               });
             }
+
+            await menuService.syncModifierGroups(tenantId, internalId, resolvedGroups, tx);
           }
         }
 

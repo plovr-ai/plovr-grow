@@ -32,10 +32,6 @@ export interface MappedModifierGroup {
   options: MappedModifierOption[];
 }
 
-export interface MappedModifiers {
-  groups: MappedModifierGroup[];
-}
-
 export interface MappedMenuItem {
   externalId: string;
   name: string;
@@ -44,7 +40,7 @@ export interface MappedMenuItem {
   imageUrl: string | null;
   categoryExternalIds: string[];
   taxExternalIds: string[];
-  modifiers: MappedModifiers | null;
+  modifierGroups: MappedModifierGroup[];
   variationMappings: {
     externalId: string;
     name: string;
@@ -306,7 +302,7 @@ export class SquareCatalogService {
         imageUrl,
         categoryExternalIds,
         taxExternalIds: data.taxIds ?? [],
-        modifiers: groups.length > 0 ? { groups } : null,
+        modifierGroups: groups,
         variationMappings,
       });
 

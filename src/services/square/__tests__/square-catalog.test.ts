@@ -229,7 +229,7 @@ describe("SquareCatalogService", () => {
       expect(item.description).toBe("Beef burger");
       expect(item.price).toBe(12.99);
       expect(item.categoryExternalIds).toEqual(["cat-1"]);
-      expect(item.modifiers).toBeNull();
+      expect(item.modifierGroups).toHaveLength(0);
       expect(item.variationMappings).toEqual([
         { externalId: "var-1", name: "Regular" },
       ]);
@@ -285,10 +285,10 @@ describe("SquareCatalogService", () => {
       expect(result.items).toHaveLength(1);
       const item = result.items[0];
       expect(item.price).toBe(3.99); // base price = min variation price (Small)
-      expect(item.modifiers).not.toBeNull();
-      expect(item.modifiers!.groups).toHaveLength(1);
+      expect(item.modifierGroups.length).toBeGreaterThan(0);
+      expect(item.modifierGroups).toHaveLength(1);
 
-      const sizeGroup = item.modifiers!.groups[0];
+      const sizeGroup = item.modifierGroups[0];
       expect(sizeGroup.name).toBe("Options");
       expect(sizeGroup.required).toBe(true);
       expect(sizeGroup.minSelect).toBe(1);
@@ -385,10 +385,10 @@ describe("SquareCatalogService", () => {
       const result = service.mapToMenuModels(catalog);
 
       const item = result.items[0];
-      expect(item.modifiers).not.toBeNull();
-      expect(item.modifiers!.groups).toHaveLength(1);
+      expect(item.modifierGroups.length).toBeGreaterThan(0);
+      expect(item.modifierGroups).toHaveLength(1);
 
-      const sauceGroup = item.modifiers!.groups[0];
+      const sauceGroup = item.modifierGroups[0];
       expect(sauceGroup.name).toBe("Sauce");
       expect(sauceGroup.required).toBe(false);
       expect(sauceGroup.minSelect).toBe(0);
@@ -482,7 +482,7 @@ describe("SquareCatalogService", () => {
       const result = service.mapToMenuModels(catalog);
 
       const item = result.items[0];
-      const toppingsGroup = item.modifiers!.groups[0];
+      const toppingsGroup = item.modifierGroups[0];
       expect(toppingsGroup.name).toBe("Toppings");
       expect(toppingsGroup.maxSelect).toBe(3); // MULTIPLE → maxSelect = number of modifiers
     });
@@ -614,7 +614,7 @@ describe("SquareCatalogService", () => {
       const result = service.mapToMenuModels(catalog);
 
       const item = result.items[0];
-      expect(item.modifiers).toBeNull();
+      expect(item.modifierGroups).toHaveLength(0);
     });
 
     it("should use production environment when configured", async () => {
@@ -770,11 +770,11 @@ describe("SquareCatalogService", () => {
       const result = service.mapToMenuModels(catalog);
 
       const item = result.items[0];
-      expect(item.modifiers).not.toBeNull();
-      expect(item.modifiers!.groups).toHaveLength(1);
-      expect(item.modifiers!.groups[0].name).toBe("Options");
-      expect(item.modifiers!.groups[0].options[0].name).toBe("Option");
-      expect(item.modifiers!.groups[0].options[0].price).toBe(0);
+      expect(item.modifierGroups.length).toBeGreaterThan(0);
+      expect(item.modifierGroups).toHaveLength(1);
+      expect(item.modifierGroups[0].name).toBe("Options");
+      expect(item.modifierGroups[0].options[0].name).toBe("Option");
+      expect(item.modifierGroups[0].options[0].price).toBe(0);
     });
 
     it("should default variation name to 'Default' when null in multi-variation Size group", () => {
@@ -815,7 +815,7 @@ describe("SquareCatalogService", () => {
 
       const result = service.mapToMenuModels(catalog);
 
-      const optionsGroup = result.items[0].modifiers!.groups[0];
+      const optionsGroup = result.items[0].modifierGroups[0];
       expect(optionsGroup.options[0].name).toBe("Default");
       expect(optionsGroup.options[1].name).toBe("Large");
     });
@@ -889,7 +889,7 @@ describe("SquareCatalogService", () => {
 
       const result = service.mapToMenuModels(catalog);
 
-      const group = result.items[0].modifiers!.groups[0];
+      const group = result.items[0].modifierGroups[0];
       expect(group.maxSelect).toBe(0);
       expect(group.options).toEqual([]);
     });
@@ -925,7 +925,7 @@ describe("SquareCatalogService", () => {
 
       const result = service.mapToMenuModels(catalog);
 
-      expect(result.items[0].modifiers).toBeNull();
+      expect(result.items[0].modifierGroups).toHaveLength(0);
     });
 
     it("should skip modifier list entries with no modifierListData", () => {
@@ -967,7 +967,7 @@ describe("SquareCatalogService", () => {
 
       const result = service.mapToMenuModels(catalog);
 
-      expect(result.items[0].modifiers).toBeNull();
+      expect(result.items[0].modifierGroups).toHaveLength(0);
     });
 
     it("should handle modifier list with empty modifiers array", () => {
@@ -1014,8 +1014,8 @@ describe("SquareCatalogService", () => {
       const result = service.mapToMenuModels(catalog);
 
       // Even with 0 modifiers, the group is added (maxSelect = 0 under new semantics)
-      expect(result.items[0].modifiers).not.toBeNull();
-      expect(result.items[0].modifiers!.groups[0].maxSelect).toBe(0);
+      expect(result.items[0].modifierGroups.length).toBeGreaterThan(0);
+      expect(result.items[0].modifierGroups[0].maxSelect).toBe(0);
     });
 
     it("should set categoryExternalIds to empty array when item has no categoryId", () => {
@@ -1061,7 +1061,7 @@ describe("SquareCatalogService", () => {
         const result = service.mapToMenuModels(catalog);
         expect(result.items).toHaveLength(1);
         expect(result.items[0].price).toBe(5.0);
-        expect(result.items[0].modifiers).toBeNull();
+        expect(result.items[0].modifierGroups).toHaveLength(0);
         expect(result.items[0].variationMappings).toEqual([
           { externalId: "var-1", name: "Regular" },
         ]);
@@ -1078,8 +1078,8 @@ describe("SquareCatalogService", () => {
         };
         const result = service.mapToMenuModels(catalog);
         expect(result.items[0].price).toBe(3.0); // base = min price
-        expect(result.items[0].modifiers?.groups).toHaveLength(1);
-        const group = result.items[0].modifiers!.groups[0];
+        expect(result.items[0].modifierGroups).toHaveLength(1);
+        const group = result.items[0].modifierGroups[0];
         expect(group.name).toBe("Options");
         expect(group.required).toBe(true);
         expect(group.minSelect).toBe(1);
@@ -1102,7 +1102,7 @@ describe("SquareCatalogService", () => {
           ])],
         };
         const result = service.mapToMenuModels(catalog);
-        const names = result.items[0].modifiers!.groups[0].options.map((o) => o.name);
+        const names = result.items[0].modifierGroups[0].options.map((o) => o.name);
         expect(names).toEqual(["Small", "Medium", "Large"]);
         expect(result.items[0].price).toBe(3.0);
       });
@@ -1149,7 +1149,7 @@ describe("SquareCatalogService", () => {
         const result = service.mapToMenuModels({
           categories: [], modifierLists: [ml], taxes: [], images: [], items: [item],
         });
-        const groups = result.items[0].modifiers!.groups;
+        const groups = result.items[0].modifierGroups;
         expect(groups).toHaveLength(1);
         expect(groups[0]).toMatchObject({
           name: "Sauce",
@@ -1175,7 +1175,7 @@ describe("SquareCatalogService", () => {
         const result = service.mapToMenuModels({
           categories: [], modifierLists: [ml], taxes: [], images: [], items: [item],
         });
-        const group = result.items[0].modifiers!.groups[0];
+        const group = result.items[0].modifierGroups[0];
         expect(group).toMatchObject({
           name: "Toppings",
           required: false,
@@ -1195,7 +1195,7 @@ describe("SquareCatalogService", () => {
           categories: [], modifierLists: [ml], taxes: [], images: [], items: [item],
         });
         // Item is single-variation, no variation group, and modifier list is disabled → no groups at all
-        expect(result.items[0].modifiers).toBeNull();
+        expect(result.items[0].modifierGroups).toHaveLength(0);
       });
 
       it("sorts modifiers by ordinal regardless of array order", () => {
@@ -1209,7 +1209,7 @@ describe("SquareCatalogService", () => {
         const result = service.mapToMenuModels({
           categories: [], modifierLists: [ml], taxes: [], images: [], items: [item],
         });
-        const names = result.items[0].modifiers!.groups[0].options.map((o) => o.name);
+        const names = result.items[0].modifierGroups[0].options.map((o) => o.name);
         expect(names).toEqual(["Ketchup", "Mustard"]);
       });
     });
