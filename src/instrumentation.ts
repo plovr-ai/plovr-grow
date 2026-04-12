@@ -25,6 +25,15 @@ export async function register() {
     );
     posProviderRegistry.register(squarePosProvider);
 
+    // Register webhook providers
+    const { webhookDispatcher } = await import(
+      "@/services/integration/webhook-dispatcher.service"
+    );
+    const { squareWebhookProvider } = await import(
+      "@/services/square/square-webhook-provider"
+    );
+    webhookDispatcher.register("square", squareWebhookProvider);
+
     // Register POS-agnostic order event handlers
     const { registerOrderEventHandlers } = await import(
       "@/services/integration/order-listener"

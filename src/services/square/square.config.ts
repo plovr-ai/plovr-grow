@@ -31,7 +31,7 @@ export const squareConfig = {
   },
   get webhookNotificationUrl() {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    return `${baseUrl}/api/integration/square/webhook`;
+    return `${baseUrl}/api/integration/webhook/square`;
   },
 
   assertConfigured() {

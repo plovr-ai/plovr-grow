@@ -1,40 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import crypto from "crypto";
 
 // Mock dependencies
-const mockGetConnectionByExternalAccountId = vi.fn();
-const mockFindWebhookEventByEventId = vi.fn();
-const mockCreateWebhookEvent = vi.fn();
-const mockUpdateWebhookEventStatus = vi.fn();
 const mockGetIdMappingByExternalId = vi.fn();
-const mockScheduleWebhookEventRetry = vi.fn();
-const mockMarkWebhookEventDeadLetter = vi.fn();
 const mockMarkWebhookEventProcessed = vi.fn();
 const mockFindRetryableWebhookEvents = vi.fn();
 const mockClaimWebhookEventForRetry = vi.fn();
+const mockScheduleWebhookEventRetry = vi.fn();
+const mockMarkWebhookEventDeadLetter = vi.fn();
 
 vi.mock("@/repositories/integration.repository", () => ({
   integrationRepository: {
-    getConnectionByExternalAccountId: (...args: unknown[]) =>
-      mockGetConnectionByExternalAccountId(...args),
-    findWebhookEventByEventId: (...args: unknown[]) =>
-      mockFindWebhookEventByEventId(...args),
-    createWebhookEvent: (...args: unknown[]) =>
-      mockCreateWebhookEvent(...args),
-    updateWebhookEventStatus: (...args: unknown[]) =>
-      mockUpdateWebhookEventStatus(...args),
     getIdMappingByExternalId: (...args: unknown[]) =>
       mockGetIdMappingByExternalId(...args),
-    scheduleWebhookEventRetry: (...args: unknown[]) =>
-      mockScheduleWebhookEventRetry(...args),
-    markWebhookEventDeadLetter: (...args: unknown[]) =>
-      mockMarkWebhookEventDeadLetter(...args),
     markWebhookEventProcessed: (...args: unknown[]) =>
       mockMarkWebhookEventProcessed(...args),
     findRetryableWebhookEvents: (...args: unknown[]) =>
       mockFindRetryableWebhookEvents(...args),
     claimWebhookEventForRetry: (...args: unknown[]) =>
       mockClaimWebhookEventForRetry(...args),
+    scheduleWebhookEventRetry: (...args: unknown[]) =>
+      mockScheduleWebhookEventRetry(...args),
+    markWebhookEventDeadLetter: (...args: unknown[]) =>
+      mockMarkWebhookEventDeadLetter(...args),
   },
 }));
 
@@ -49,7 +36,7 @@ vi.mock("../square.service", () => ({
 vi.mock("../square.config", () => ({
   squareConfig: {
     webhookSignatureKey: "test-webhook-key",
-    webhookNotificationUrl: "https://example.com/api/integration/square/webhook",
+    webhookNotificationUrl: "https://example.com/api/integration/webhook/square",
   },
 }));
 
@@ -92,6 +79,7 @@ vi.mock("@/services/order/fulfillment.service", () => ({
 }));
 
 import { SquareWebhookService } from "../square-webhook.service";
+import type { SquareWebhookPayload } from "../square.types";
 
 const TENANT_ID = "tenant-1";
 const MERCHANT_ID = "merchant-1";
@@ -110,7 +98,7 @@ function buildPayload(
     event_id: string;
     data: Record<string, unknown>;
   }> = {}
-) {
+): SquareWebhookPayload {
   return {
     merchant_id: "sq-merchant-1",
     type: "catalog.version.updated",
@@ -118,13 +106,7 @@ function buildPayload(
     created_at: "2026-04-09T00:00:00Z",
     data: { type: "catalog", id: "cat-1" },
     ...overrides,
-  };
-}
-
-function computeSignature(rawBody: string): string {
-  const hmac = crypto.createHmac("sha256", "test-webhook-key");
-  hmac.update("https://example.com/api/integration/square/webhook" + rawBody);
-  return hmac.digest("base64");
+  } as SquareWebhookPayload;
 }
 
 describe("SquareWebhookService", () => {
@@ -135,18 +117,11 @@ describe("SquareWebhookService", () => {
     service = new SquareWebhookService();
 
     // Default mocks
-    mockFindWebhookEventByEventId.mockResolvedValue(null);
-    mockGetConnectionByExternalAccountId.mockResolvedValue(mockConnection);
-    mockCreateWebhookEvent.mockResolvedValue({
-      id: "we-1",
-      eventId: "evt-1",
-    });
-    mockUpdateWebhookEventStatus.mockResolvedValue({});
+    mockFindRetryableWebhookEvents.mockResolvedValue([]);
+    mockClaimWebhookEventForRetry.mockResolvedValue(true);
     mockScheduleWebhookEventRetry.mockResolvedValue({});
     mockMarkWebhookEventDeadLetter.mockResolvedValue({});
     mockMarkWebhookEventProcessed.mockResolvedValue({});
-    mockFindRetryableWebhookEvents.mockResolvedValue([]);
-    mockClaimWebhookEventForRetry.mockResolvedValue(true);
     mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
     mockSyncCatalog.mockResolvedValue({});
     mockGetIdMappingByExternalId.mockResolvedValue(null);
@@ -167,131 +142,12 @@ describe("SquareWebhookService", () => {
     mockCancelOrder.mockResolvedValue(undefined);
   });
 
-  // ==================== verifySignature ====================
-
-  describe("verifySignature()", () => {
-    it("should return true for a valid signature", () => {
-      const body = '{"test":"data"}';
-      const sig = computeSignature(body);
-      expect(service.verifySignature(body, sig)).toBe(true);
-    });
-
-    it("should return false for an invalid signature", () => {
-      const body = '{"test":"data"}';
-      const wrongSig = Buffer.from("wrong-signature").toString("base64");
-      expect(service.verifySignature(body, wrongSig)).toBe(false);
-    });
-
-    it("should return false when body is tampered", () => {
-      const body = '{"test":"data"}';
-      const sig = computeSignature(body);
-      expect(service.verifySignature('{"test":"tampered"}', sig)).toBe(false);
-    });
-
-    it("should return false for empty signature", () => {
-      expect(service.verifySignature('{"test":"data"}', "")).toBe(false);
-    });
-
-    it("should return false when crypto throws (catch branch)", async () => {
-      const { squareConfig } = await import("../square.config");
-      const origKey = squareConfig.webhookSignatureKey;
-      // Setting key to null forces createHmac to throw
-      (squareConfig as Record<string, unknown>).webhookSignatureKey = null;
-
-      const result = service.verifySignature('{"test":"data"}', "somesig");
-
-      expect(result).toBe(false);
-
-      (squareConfig as Record<string, unknown>).webhookSignatureKey = origKey;
-    });
-  });
-
-  // ==================== handleWebhook ====================
-
-  describe("handleWebhook()", () => {
-    it("should return deduplicated when event already exists", async () => {
-      mockFindWebhookEventByEventId.mockResolvedValue({
-        id: "we-existing",
-        eventId: "evt-1",
-      });
-
-      const payload = buildPayload();
-      const result = await service.handleWebhook(JSON.stringify(payload));
-
-      expect(result).toEqual({ deduplicated: true });
-      expect(mockCreateWebhookEvent).not.toHaveBeenCalled();
-    });
-
-    it("should return error when connection not found", async () => {
-      mockGetConnectionByExternalAccountId.mockResolvedValue(null);
-
-      const payload = buildPayload();
-      const result = await service.handleWebhook(JSON.stringify(payload));
-
-      expect(result).toEqual({ error: "connection_not_found" });
-      expect(mockCreateWebhookEvent).not.toHaveBeenCalled();
-    });
-
-    it("should store event and process successfully", async () => {
-      const payload = buildPayload();
-      const result = await service.handleWebhook(JSON.stringify(payload));
-
-      expect(result).toEqual({ deduplicated: false });
-      expect(mockCreateWebhookEvent).toHaveBeenCalledWith({
-        tenantId: TENANT_ID,
-        merchantId: MERCHANT_ID,
-        connectionId: CONNECTION_ID,
-        eventId: "evt-1",
-        eventType: "catalog.version.updated",
-        payload,
-      });
-      expect(mockUpdateWebhookEventStatus).toHaveBeenCalledWith(
-        "we-1",
-        "processed"
-      );
-    });
-
-    it("should schedule first retry when handler throws", async () => {
-      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
-      mockSyncCatalog.mockRejectedValue(new Error("sync failed"));
-
-      const payload = buildPayload({
-        type: "catalog.version.updated",
-      });
-      const result = await service.handleWebhook(JSON.stringify(payload));
-
-      expect(result).toEqual({ deduplicated: false });
-      expect(mockScheduleWebhookEventRetry).toHaveBeenCalledWith(
-        "we-1",
-        1,
-        expect.any(Date),
-        "sync failed"
-      );
-      expect(mockUpdateWebhookEventStatus).not.toHaveBeenCalledWith(
-        "we-1",
-        "failed",
-        expect.anything()
-      );
-    });
-
-    it("should process unhandled event types without error", async () => {
-      const payload = buildPayload({ type: "unknown.event.type" });
-      const result = await service.handleWebhook(JSON.stringify(payload));
-
-      expect(result).toEqual({ deduplicated: false });
-      expect(mockUpdateWebhookEventStatus).toHaveBeenCalledWith(
-        "we-1",
-        "processed"
-      );
-    });
-  });
-
-  // ==================== handleCatalogChange ====================
+  // ==================== routeEvent (catalog) ====================
 
   describe("catalog.version.updated handler", () => {
     it("should trigger syncCatalog when merchant is found", async () => {
       const payload = buildPayload({ type: "catalog.version.updated" });
-      await service.handleWebhook(JSON.stringify(payload));
+      await service.routeEvent("catalog.version.updated", payload, mockConnection);
 
       expect(mockMerchantFindFirst).toHaveBeenCalledWith({
         where: { id: MERCHANT_ID },
@@ -307,14 +163,9 @@ describe("SquareWebhookService", () => {
       mockMerchantFindFirst.mockResolvedValue(null);
 
       const payload = buildPayload({ type: "catalog.version.updated" });
-      await service.handleWebhook(JSON.stringify(payload));
+      await service.routeEvent("catalog.version.updated", payload, mockConnection);
 
       expect(mockSyncCatalog).not.toHaveBeenCalled();
-      // Should still mark as processed (no throw)
-      expect(mockUpdateWebhookEventStatus).toHaveBeenCalledWith(
-        "we-1",
-        "processed"
-      );
     });
 
     it("should suppress ALREADY_RUNNING error from syncCatalog", async () => {
@@ -323,16 +174,21 @@ describe("SquareWebhookService", () => {
       );
 
       const payload = buildPayload({ type: "catalog.version.updated" });
-      await service.handleWebhook(JSON.stringify(payload));
+      // Should not throw
+      await service.routeEvent("catalog.version.updated", payload, mockConnection);
+    });
 
-      expect(mockUpdateWebhookEventStatus).toHaveBeenCalledWith(
-        "we-1",
-        "processed"
-      );
+    it("should re-throw non-ALREADY_RUNNING errors", async () => {
+      mockSyncCatalog.mockRejectedValue(new Error("some other error"));
+
+      const payload = buildPayload({ type: "catalog.version.updated" });
+      await expect(
+        service.routeEvent("catalog.version.updated", payload, mockConnection)
+      ).rejects.toThrow("some other error");
     });
   });
 
-  // ==================== handleOrderUpdate ====================
+  // ==================== routeEvent (order) ====================
 
   describe("order.updated handler", () => {
     const orderPayload = buildPayload({
@@ -354,7 +210,7 @@ describe("SquareWebhookService", () => {
         internalId: "internal-order-1",
       });
 
-      await service.handleWebhook(JSON.stringify(orderPayload));
+      await service.routeEvent("order.updated", orderPayload, mockConnection);
 
       expect(mockGetIdMappingByExternalId).toHaveBeenCalledWith(
         TENANT_ID,
@@ -374,13 +230,9 @@ describe("SquareWebhookService", () => {
     it("should skip when no mapping found for order", async () => {
       mockGetIdMappingByExternalId.mockResolvedValue(null);
 
-      await service.handleWebhook(JSON.stringify(orderPayload));
+      await service.routeEvent("order.updated", orderPayload, mockConnection);
 
       expect(mockTransitionStatus).not.toHaveBeenCalled();
-      expect(mockUpdateWebhookEventStatus).toHaveBeenCalledWith(
-        "we-1",
-        "processed"
-      );
     });
 
     it("should skip when no fulfillment state present", async () => {
@@ -395,7 +247,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(noFulfillmentPayload));
+      await service.routeEvent("order.updated", noFulfillmentPayload, mockConnection);
 
       expect(mockGetIdMappingByExternalId).not.toHaveBeenCalled();
       expect(mockOrderUpdate).not.toHaveBeenCalled();
@@ -416,15 +268,13 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(unknownStatePayload));
+      await service.routeEvent("order.updated", unknownStatePayload, mockConnection);
 
       expect(mockGetIdMappingByExternalId).not.toHaveBeenCalled();
       expect(mockOrderUpdate).not.toHaveBeenCalled();
     });
 
     it("should not regress fulfillment status when stale webhook arrives", async () => {
-      // Order is already confirmed; a stale PROPOSED (→ pending) webhook
-      // must not walk it back to pending.
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
@@ -450,7 +300,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(staleProposedPayload));
+      await service.routeEvent("order.updated", staleProposedPayload, mockConnection);
 
       expect(mockTransitionStatus).not.toHaveBeenCalled();
     });
@@ -467,17 +317,12 @@ describe("SquareWebhookService", () => {
         orderId: "internal-order-1",
       });
 
-      // Incoming PREPARED maps to ready — same as current.
-      await service.handleWebhook(JSON.stringify(orderPayload));
+      await service.routeEvent("order.updated", orderPayload, mockConnection);
 
       expect(mockTransitionStatus).not.toHaveBeenCalled();
     });
 
     it("should not re-advance confirmed order when Square echoes RESERVED", async () => {
-      // After plovr sets confirmed and pushes RESERVED to Square, Square will
-      // echo the state back via order.updated. Reverse-mapping to confirmed
-      // + equal-rank guard ensures we don't spuriously promote the order to
-      // preparing or rewrite confirmedAt.
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
@@ -503,7 +348,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(reservedPayload));
+      await service.routeEvent("order.updated", reservedPayload, mockConnection);
 
       expect(mockTransitionStatus).not.toHaveBeenCalled();
     });
@@ -534,12 +379,12 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(reservedPayload));
+      await service.routeEvent("order.updated", reservedPayload, mockConnection);
 
       expect(mockTransitionStatus).not.toHaveBeenCalled();
     });
 
-    it("should advance pending → confirmed when Square accepts order", async () => {
+    it("should advance pending -> confirmed when Square accepts order", async () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
@@ -565,7 +410,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(reservedPayload));
+      await service.routeEvent("order.updated", reservedPayload, mockConnection);
 
       expect(mockTransitionStatus).toHaveBeenCalledWith(
         TENANT_ID,
@@ -583,7 +428,7 @@ describe("SquareWebhookService", () => {
       });
       mockOrderFindUnique.mockResolvedValue(null);
 
-      await service.handleWebhook(JSON.stringify(orderPayload));
+      await service.routeEvent("order.updated", orderPayload, mockConnection);
 
       expect(mockTransitionStatus).not.toHaveBeenCalled();
     });
@@ -603,7 +448,7 @@ describe("SquareWebhookService", () => {
         status: "completed",
       });
 
-      await service.handleWebhook(JSON.stringify(orderPayload));
+      await service.routeEvent("order.updated", orderPayload, mockConnection);
 
       expect(mockTransitionStatus).toHaveBeenCalled();
     });
@@ -633,7 +478,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(canceledPayload));
+      await service.routeEvent("order.updated", canceledPayload, mockConnection);
 
       expect(mockTransitionStatus).toHaveBeenCalledWith(
         TENANT_ID,
@@ -672,7 +517,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(canceledPayload));
+      await service.routeEvent("order.updated", canceledPayload, mockConnection);
 
       expect(mockTransitionStatus).toHaveBeenCalledWith(
         TENANT_ID,
@@ -711,7 +556,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(failedPayload));
+      await service.routeEvent("order.updated", failedPayload, mockConnection);
 
       expect(mockTransitionStatus).toHaveBeenCalledWith(
         TENANT_ID,
@@ -759,7 +604,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(canceledPayload));
+      await service.routeEvent("order.updated", canceledPayload, mockConnection);
 
       expect(mockCancelOrder).toHaveBeenCalledWith(
         TENANT_ID,
@@ -789,7 +634,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(canceledPayload));
+      await service.routeEvent("order.updated", canceledPayload, mockConnection);
 
       expect(mockTransitionStatus).not.toHaveBeenCalled();
       expect(mockCancelOrder).not.toHaveBeenCalled();
@@ -815,7 +660,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(canceledPayload));
+      await service.routeEvent("order.updated", canceledPayload, mockConnection);
 
       expect(mockTransitionStatus).not.toHaveBeenCalled();
       expect(mockCancelOrder).not.toHaveBeenCalled();
@@ -836,8 +681,7 @@ describe("SquareWebhookService", () => {
         status: "canceled",
       });
 
-      // PREPARED → ready would advance rank — but order is canceled.
-      await service.handleWebhook(JSON.stringify(orderPayload));
+      await service.routeEvent("order.updated", orderPayload, mockConnection);
 
       expect(mockTransitionStatus).not.toHaveBeenCalled();
     });
@@ -874,7 +718,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(staleVersionPayload));
+      await service.routeEvent("order.updated", staleVersionPayload, mockConnection);
 
       expect(mockTransitionStatus).not.toHaveBeenCalled();
     });
@@ -909,7 +753,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(samePayload));
+      await service.routeEvent("order.updated", samePayload, mockConnection);
 
       expect(mockTransitionStatus).not.toHaveBeenCalled();
     });
@@ -944,7 +788,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(freshPayload));
+      await service.routeEvent("order.updated", freshPayload, mockConnection);
 
       expect(mockTransitionStatus).toHaveBeenCalledWith(
         TENANT_ID,
@@ -987,14 +831,12 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(samePayload));
+      await service.routeEvent("order.updated", samePayload, mockConnection);
 
       expect(mockBumpExternalVersion).toHaveBeenCalledWith("ful-1", 7);
     });
 
     it("should fall back to legacy behavior when payload omits version", async () => {
-      // Older Square API payloads or synthetic tests without `version` must
-      // still work so we don't wedge existing flows.
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
@@ -1009,7 +851,7 @@ describe("SquareWebhookService", () => {
         status: "completed",
       });
 
-      await service.handleWebhook(JSON.stringify(orderPayload));
+      await service.routeEvent("order.updated", orderPayload, mockConnection);
 
       expect(mockTransitionStatus).toHaveBeenCalledWith(
         TENANT_ID,
@@ -1051,7 +893,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(payloadWithVersion));
+      await service.routeEvent("order.updated", payloadWithVersion, mockConnection);
 
       expect(mockTransitionStatus).toHaveBeenCalledWith(
         TENANT_ID,
@@ -1094,7 +936,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(cancelPayload));
+      await service.routeEvent("order.updated", cancelPayload, mockConnection);
 
       expect(mockTransitionStatus).toHaveBeenCalledWith(
         TENANT_ID,
@@ -1143,7 +985,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(staleCancelPayload));
+      await service.routeEvent("order.updated", staleCancelPayload, mockConnection);
 
       expect(mockTransitionStatus).not.toHaveBeenCalled();
       expect(mockCancelOrder).not.toHaveBeenCalled();
@@ -1166,9 +1008,6 @@ describe("SquareWebhookService", () => {
         status: "completed",
       });
 
-      // PROPOSED → pending is a rank regression (0 < 3), but the payload
-      // version (10) is newer than the stored version (5), so we must
-      // record it to prevent a later stale webhook from slipping past.
       const regressivePayload = buildPayload({
         type: "order.updated",
         data: {
@@ -1184,7 +1023,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(regressivePayload));
+      await service.routeEvent("order.updated", regressivePayload, mockConnection);
 
       expect(mockBumpExternalVersion).toHaveBeenCalledTimes(1);
       expect(mockBumpExternalVersion).toHaveBeenCalledWith("ful-1", 10);
@@ -1220,7 +1059,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(cancelPayload));
+      await service.routeEvent("order.updated", cancelPayload, mockConnection);
 
       expect(mockBumpExternalVersion).toHaveBeenCalledTimes(1);
       expect(mockBumpExternalVersion).toHaveBeenCalledWith("ful-1", 9);
@@ -1256,7 +1095,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(forwardPayload));
+      await service.routeEvent("order.updated", forwardPayload, mockConnection);
 
       expect(mockBumpExternalVersion).toHaveBeenCalledTimes(1);
       expect(mockBumpExternalVersion).toHaveBeenCalledWith("ful-1", 11);
@@ -1286,7 +1125,7 @@ describe("SquareWebhookService", () => {
         internalId: "internal-order-1",
       });
 
-      await service.handleWebhook(JSON.stringify(paymentPayload));
+      await service.routeEvent("payment.completed", paymentPayload, mockConnection);
 
       expect(mockUpdatePaymentStatus).toHaveBeenCalledWith(
         TENANT_ID,
@@ -1296,7 +1135,7 @@ describe("SquareWebhookService", () => {
       );
     });
 
-    it("should mark order as payment_failed when payment is FAILED (not canceled, #111)", async () => {
+    it("should mark order as payment_failed when payment is FAILED", async () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
@@ -1316,40 +1155,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(failedPayload));
-
-      expect(mockUpdatePaymentStatus).toHaveBeenCalledWith(
-        TENANT_ID,
-        "internal-order-1",
-        "payment_failed",
-        expect.objectContaining({ source: "square_webhook" })
-      );
-    });
-
-    it("should delegate payment_failed terminal-state guard to OrderService", async () => {
-      // Terminal state guards (completed, canceled, payment_failed) are now
-      // handled inside OrderService.updatePaymentStatus. The webhook handler
-      // simply delegates the call.
-      mockGetIdMappingByExternalId.mockResolvedValue({
-        internalId: "internal-order-1",
-      });
-
-      const failedPayload = buildPayload({
-        type: "payment.completed",
-        data: {
-          type: "payment",
-          id: "sq-payment-1",
-          object: {
-            payment: {
-              id: "sq-payment-1",
-              order_id: "sq-order-1",
-              status: "FAILED",
-            },
-          },
-        },
-      });
-
-      await service.handleWebhook(JSON.stringify(failedPayload));
+      await service.routeEvent("payment.completed", failedPayload, mockConnection);
 
       expect(mockUpdatePaymentStatus).toHaveBeenCalledWith(
         TENANT_ID,
@@ -1374,7 +1180,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(noOrderPayload));
+      await service.routeEvent("payment.completed", noOrderPayload, mockConnection);
 
       expect(mockGetIdMappingByExternalId).not.toHaveBeenCalled();
       expect(mockUpdatePaymentStatus).not.toHaveBeenCalled();
@@ -1383,13 +1189,9 @@ describe("SquareWebhookService", () => {
     it("should skip when no mapping found for order", async () => {
       mockGetIdMappingByExternalId.mockResolvedValue(null);
 
-      await service.handleWebhook(JSON.stringify(paymentPayload));
+      await service.routeEvent("payment.completed", paymentPayload, mockConnection);
 
       expect(mockUpdatePaymentStatus).not.toHaveBeenCalled();
-      expect(mockUpdateWebhookEventStatus).toHaveBeenCalledWith(
-        "we-1",
-        "processed"
-      );
     });
 
     it("should not update order when payment status is neither COMPLETED nor FAILED", async () => {
@@ -1412,41 +1214,17 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(pendingPayload));
+      await service.routeEvent("payment.updated", pendingPayload, mockConnection);
 
       expect(mockUpdatePaymentStatus).not.toHaveBeenCalled();
     });
   });
 
-  describe("handler error branch coverage", () => {
-    it("should schedule retry with 'Unknown error' when handler throws a non-Error", async () => {
-      mockMerchantFindFirst.mockResolvedValue({ tenantId: "tenant-1" });
-      mockSyncCatalog.mockRejectedValue("string-error");
-
-      const payload = buildPayload({ type: "catalog.version.updated" });
-      await service.handleWebhook(JSON.stringify(payload));
-
-      expect(mockScheduleWebhookEventRetry).toHaveBeenCalledWith(
-        "we-1",
-        1,
-        expect.any(Date),
-        "Unknown error"
-      );
-    });
-
-    it("should schedule retry when syncCatalog throws a non-Error non-ALREADY_RUNNING", async () => {
-      mockMerchantFindFirst.mockResolvedValue({ tenantId: "tenant-1" });
-      mockSyncCatalog.mockRejectedValue("some non-Error");
-
-      const payload = buildPayload({ type: "catalog.version.updated" });
-      await service.handleWebhook(JSON.stringify(payload));
-
-      expect(mockScheduleWebhookEventRetry).toHaveBeenCalledWith(
-        "we-1",
-        1,
-        expect.any(Date),
-        "Unknown error"
-      );
+  describe("unhandled event type", () => {
+    it("should not throw for unhandled event types", async () => {
+      const payload = buildPayload({ type: "unknown.event.type" });
+      await service.routeEvent("unknown.event.type", payload, mockConnection);
+      // No assertion needed — just verifying it doesn't throw.
     });
   });
 
@@ -1481,7 +1259,7 @@ describe("SquareWebhookService", () => {
         },
       });
 
-      await service.handleWebhook(JSON.stringify(proposedPayload));
+      await service.routeEvent("order.updated", proposedPayload, mockConnection);
 
       expect(mockTransitionStatus).toHaveBeenCalledWith(
         TENANT_ID,
@@ -1607,8 +1385,6 @@ describe("SquareWebhookService", () => {
       const call = mockClaimWebhookEventForRetry.mock.calls[0];
       expect(call[0]).toBe("we-failed-1");
       const leaseExpiresAt = call[1] as Date;
-      // Lease must be scheduled at least ~10 minutes in the future
-      // (WEBHOOK_RETRY_POLICY.LEASE_MS).
       expect(leaseExpiresAt.getTime()).toBeGreaterThanOrEqual(
         before + 10 * 60 * 1000
       );
@@ -1618,9 +1394,6 @@ describe("SquareWebhookService", () => {
     });
 
     it("should retry a stuck 'processing' event surfaced by findRetryableWebhookEvents", async () => {
-      // findRetryableWebhookEvents now returns both failed rows and
-      // processing rows whose lease has expired — the service treats them
-      // identically (claim-then-route).
       const staleEvent = {
         ...FAILED_CATALOG_EVENT,
         id: "we-stuck",
@@ -1693,7 +1466,6 @@ describe("SquareWebhookService", () => {
       expect(
         computeNextRetryAt(4, now).getTime() - now.getTime()
       ).toBe(WEBHOOK_RETRY_POLICY.BASE_DELAY_MS * 16);
-      // Very high retry count should cap at MAX_DELAY_MS.
       expect(
         computeNextRetryAt(20, now).getTime() - now.getTime()
       ).toBe(WEBHOOK_RETRY_POLICY.MAX_DELAY_MS);
