@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/square-webhook-retry",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/square-order-push-retry",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

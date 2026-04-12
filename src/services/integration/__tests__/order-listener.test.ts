@@ -6,10 +6,13 @@ import type {
 } from "@/services/order/order-events.types";
 
 const mockGetActivePosConnection = vi.fn();
+const mockCreateFailedSyncRecordForRetry = vi.fn();
 vi.mock("@/repositories/integration.repository", () => ({
   integrationRepository: {
     getActivePosConnection: (...args: unknown[]) =>
       mockGetActivePosConnection(...args),
+    createFailedSyncRecordForRetry: (...args: unknown[]) =>
+      mockCreateFailedSyncRecordForRetry(...args),
   },
 }));
 
@@ -94,6 +97,7 @@ describe("order-listener: handleOrderPaid giftcard guard", () => {
     mockGetActivePosConnection.mockReset();
     mockPushOrder.mockReset();
     mockGetOrder.mockReset();
+    mockCreateFailedSyncRecordForRetry.mockReset();
   });
 
   it("skips push when merchantId is missing (giftcard virtual order)", async () => {
@@ -126,6 +130,7 @@ describe("order-listener: handleOrderPaid giftcard guard", () => {
       orderMode: "pickup",
     });
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -155,6 +160,7 @@ describe("order-listener: handleOrderPaid giftcard guard", () => {
       notes: "Please hurry",
     });
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -180,6 +186,7 @@ describe("order-listener: handleOrderPaid giftcard guard", () => {
       notes: "Table 7",
     });
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -206,6 +213,7 @@ describe("order-listener: handleOrderPaid giftcard guard", () => {
   it("skips push when order has no items", async () => {
     mockGetOrder.mockResolvedValue({ items: [], salesChannel: "online_order" });
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -235,6 +243,7 @@ describe("order-listener: handleOrderPaid giftcard guard", () => {
       salesChannel: "online_order",
     });
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -249,6 +258,7 @@ describe("order-listener: handleFulfillmentChanged", () => {
   beforeEach(() => {
     mockGetActivePosConnection.mockReset();
     mockUpdateFulfillment.mockReset();
+    mockCreateFailedSyncRecordForRetry.mockReset();
   });
 
   function makeFulfillmentEvent(): FulfillmentStatusChangedEvent {
@@ -264,6 +274,7 @@ describe("order-listener: handleFulfillmentChanged", () => {
 
   it("forwards status update to POS when connection is active", async () => {
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -295,6 +306,7 @@ describe("order-listener: handleFulfillmentChanged", () => {
 
   it("swallows errors from updateFulfillment", async () => {
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -311,6 +323,7 @@ describe("order-listener: handleOrderCancelled", () => {
   beforeEach(() => {
     mockGetActivePosConnection.mockReset();
     mockCancelOrder.mockReset();
+    mockCreateFailedSyncRecordForRetry.mockReset();
   });
 
   function makeCancelEvent(): OrderCancelledEvent {
@@ -327,6 +340,7 @@ describe("order-listener: handleOrderCancelled", () => {
 
   it("calls cancelOrder when connection is active", async () => {
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -354,6 +368,7 @@ describe("order-listener: handleOrderCancelled", () => {
 
   it("swallows errors from cancelOrder", async () => {
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -370,6 +385,271 @@ describe("order-listener: handleOrderCancelled", () => {
     await handler(makeCancelEvent());
 
     expect(mockCancelOrder).not.toHaveBeenCalled();
+  });
+});
+
+describe("order-listener: retry record creation", () => {
+  beforeEach(() => {
+    mockGetActivePosConnection.mockReset();
+    mockPushOrder.mockReset();
+    mockUpdateFulfillment.mockReset();
+    mockCancelOrder.mockReset();
+    mockGetOrder.mockReset();
+    mockCreateFailedSyncRecordForRetry.mockReset();
+  });
+
+  it("creates retry record when pushOrder fails", async () => {
+    mockGetOrder.mockResolvedValue({
+      items: sampleItems,
+      salesChannel: "online_order",
+      orderMode: "pickup",
+    });
+    mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
+      type: "POS_SQUARE",
+      status: "active",
+    });
+    mockPushOrder.mockRejectedValue(new Error("POS down"));
+    mockCreateFailedSyncRecordForRetry.mockResolvedValue(undefined);
+
+    const handler = await getHandler();
+    await handler(makeEvent());
+
+    expect(mockCreateFailedSyncRecordForRetry).toHaveBeenCalledWith(
+      TENANT_ID,
+      "conn-1",
+      "ORDER_PUSH",
+      expect.objectContaining({
+        operation: "CREATE",
+        tenantId: TENANT_ID,
+        merchantId: MERCHANT_ID,
+        input: expect.objectContaining({ orderId: "order-1" }),
+      }),
+      "POS down"
+    );
+  });
+
+  it("creates retry record when updateFulfillment fails", async () => {
+    // First call: findActivePosConnection (success then throws)
+    // Second call: getActivePosConnection for retry
+    mockGetActivePosConnection
+      .mockResolvedValueOnce({
+        id: "conn-1",
+        type: "POS_SQUARE",
+        status: "active",
+      })
+      .mockResolvedValueOnce({ id: "conn-1" });
+    mockUpdateFulfillment.mockRejectedValue(new Error("network"));
+    mockCreateFailedSyncRecordForRetry.mockResolvedValue(undefined);
+
+    const handler = getHandlerByEvent<FulfillmentStatusChangedEvent>(
+      "order.fulfillment.ready"
+    );
+    await handler({
+      orderId: "order-1",
+      orderNumber: "ORD-001",
+      merchantId: MERCHANT_ID,
+      tenantId: TENANT_ID,
+      timestamp: new Date(),
+      fulfillmentStatus: "ready",
+    });
+
+    expect(mockCreateFailedSyncRecordForRetry).toHaveBeenCalledWith(
+      TENANT_ID,
+      "conn-1",
+      "ORDER_PUSH",
+      expect.objectContaining({
+        operation: "UPDATE_STATUS",
+        orderId: "order-1",
+        fulfillmentStatus: "ready",
+      }),
+      "network"
+    );
+  });
+
+  it("creates retry record when cancelOrder fails", async () => {
+    mockGetActivePosConnection
+      .mockResolvedValueOnce({
+        id: "conn-1",
+        type: "POS_SQUARE",
+        status: "active",
+      })
+      .mockResolvedValueOnce({ id: "conn-1" });
+    mockCancelOrder.mockRejectedValue(new Error("timeout"));
+    mockCreateFailedSyncRecordForRetry.mockResolvedValue(undefined);
+
+    const handler = getHandlerByEvent<OrderCancelledEvent>("order.cancelled");
+    await handler({
+      orderId: "order-1",
+      orderNumber: "ORD-001",
+      merchantId: MERCHANT_ID,
+      tenantId: TENANT_ID,
+      timestamp: new Date(),
+      status: "canceled",
+      cancelReason: "Customer request",
+    });
+
+    expect(mockCreateFailedSyncRecordForRetry).toHaveBeenCalledWith(
+      TENANT_ID,
+      "conn-1",
+      "ORDER_PUSH",
+      expect.objectContaining({
+        operation: "CANCEL",
+        orderId: "order-1",
+        cancelReason: "Customer request",
+      }),
+      "timeout"
+    );
+  });
+
+  it("skips retry record when connection lookup returns null after failure", async () => {
+    mockGetActivePosConnection
+      .mockResolvedValueOnce({
+        id: "conn-1",
+        type: "POS_SQUARE",
+        status: "active",
+      })
+      .mockResolvedValueOnce(null);
+    mockUpdateFulfillment.mockRejectedValue(new Error("network"));
+
+    const handler = getHandlerByEvent<FulfillmentStatusChangedEvent>(
+      "order.fulfillment.ready"
+    );
+    await handler({
+      orderId: "order-1",
+      orderNumber: "ORD-001",
+      merchantId: MERCHANT_ID,
+      tenantId: TENANT_ID,
+      timestamp: new Date(),
+      fulfillmentStatus: "ready",
+    });
+
+    expect(mockCreateFailedSyncRecordForRetry).not.toHaveBeenCalled();
+  });
+
+  it("swallows non-Error retry record creation failure for fulfillment", async () => {
+    mockGetActivePosConnection
+      .mockResolvedValueOnce({
+        id: "conn-1",
+        type: "POS_SQUARE",
+        status: "active",
+      })
+      .mockResolvedValueOnce({ id: "conn-1" });
+    mockUpdateFulfillment.mockRejectedValue(new Error("network"));
+    mockCreateFailedSyncRecordForRetry.mockRejectedValue("db error string");
+
+    const handler = getHandlerByEvent<FulfillmentStatusChangedEvent>(
+      "order.fulfillment.ready"
+    );
+    await expect(
+      handler({
+        orderId: "order-1",
+        orderNumber: "ORD-001",
+        merchantId: MERCHANT_ID,
+        tenantId: TENANT_ID,
+        timestamp: new Date(),
+        fulfillmentStatus: "ready",
+      })
+    ).resolves.toBeUndefined();
+  });
+
+  it("swallows non-Error retry record creation failure for cancel", async () => {
+    mockGetActivePosConnection
+      .mockResolvedValueOnce({
+        id: "conn-1",
+        type: "POS_SQUARE",
+        status: "active",
+      })
+      .mockResolvedValueOnce({ id: "conn-1" });
+    mockCancelOrder.mockRejectedValue(new Error("timeout"));
+    mockCreateFailedSyncRecordForRetry.mockRejectedValue("db error string");
+
+    const handler = getHandlerByEvent<OrderCancelledEvent>("order.cancelled");
+    await expect(
+      handler({
+        orderId: "order-1",
+        orderNumber: "ORD-001",
+        merchantId: MERCHANT_ID,
+        tenantId: TENANT_ID,
+        timestamp: new Date(),
+        status: "canceled",
+      })
+    ).resolves.toBeUndefined();
+  });
+
+  it("does not throw when retry record creation itself fails", async () => {
+    mockGetOrder.mockResolvedValue({
+      items: sampleItems,
+      salesChannel: "online_order",
+      orderMode: "pickup",
+    });
+    mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
+      type: "POS_SQUARE",
+      status: "active",
+    });
+    mockPushOrder.mockRejectedValue(new Error("POS down"));
+    mockCreateFailedSyncRecordForRetry.mockRejectedValue(
+      new Error("DB write failed")
+    );
+
+    const handler = await getHandler();
+    await expect(handler(makeEvent())).resolves.toBeUndefined();
+  });
+
+  it("strips undefined fields from retry payload before persisting", async () => {
+    mockGetOrder.mockResolvedValue({
+      items: sampleItems,
+      salesChannel: "online_order",
+      orderMode: "pickup",
+      deliveryAddress: null,
+      notes: null,
+    });
+    mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
+      type: "POS_SQUARE",
+      status: "active",
+    });
+    mockPushOrder.mockRejectedValue(new Error("POS down"));
+    mockCreateFailedSyncRecordForRetry.mockResolvedValue(undefined);
+
+    const handler = await getHandler();
+    await handler(makeEvent({ customerEmail: undefined }));
+
+    const savedPayload =
+      mockCreateFailedSyncRecordForRetry.mock.calls[0][3];
+    expect(savedPayload).not.toHaveProperty("input.customerEmail");
+    expect(savedPayload).not.toHaveProperty("input.notes");
+    expect(savedPayload.input.orderId).toBe("order-1");
+    expect(savedPayload.operation).toBe("CREATE");
+  });
+
+  it("strips undefined cancelReason from cancel retry payload", async () => {
+    mockGetActivePosConnection
+      .mockResolvedValueOnce({
+        id: "conn-1",
+        type: "POS_SQUARE",
+        status: "active",
+      })
+      .mockResolvedValueOnce({ id: "conn-1" });
+    mockCancelOrder.mockRejectedValue(new Error("timeout"));
+    mockCreateFailedSyncRecordForRetry.mockResolvedValue(undefined);
+
+    const handler = getHandlerByEvent<OrderCancelledEvent>("order.cancelled");
+    await handler({
+      orderId: "order-1",
+      orderNumber: "ORD-001",
+      merchantId: MERCHANT_ID,
+      tenantId: TENANT_ID,
+      timestamp: new Date(),
+      status: "canceled",
+    });
+
+    const savedPayload =
+      mockCreateFailedSyncRecordForRetry.mock.calls[0][3];
+    expect(savedPayload).not.toHaveProperty("cancelReason");
+    expect(savedPayload.operation).toBe("CANCEL");
+    expect(savedPayload.orderId).toBe("order-1");
   });
 });
 
@@ -432,6 +712,7 @@ describe("order-listener: misc coverage", () => {
     mockPushOrder.mockReset();
     mockGetOrder.mockReset();
     mockCancelOrder.mockReset();
+    mockCreateFailedSyncRecordForRetry.mockReset();
   });
 
   it("registerOrderEventHandlers is idempotent", () => {
@@ -468,6 +749,7 @@ describe("order-listener: misc coverage", () => {
       salesChannel: "online_order",
     });
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -497,6 +779,7 @@ describe("order-listener: misc coverage", () => {
       salesChannel: "online_order",
     });
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -510,7 +793,6 @@ describe("order-listener: misc coverage", () => {
       tenantId: TENANT_ID,
       timestamp: new Date(),
       status: "completed",
-      // customerFirstName / customerLastName / customerPhone / customerEmail / totalAmount all undefined
     });
 
     const [, , pushInput] = mockPushOrder.mock.calls[0];
@@ -526,6 +808,7 @@ describe("order-listener: misc coverage", () => {
       salesChannel: "online_order",
     });
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -537,6 +820,7 @@ describe("order-listener: misc coverage", () => {
 
   it("handles non-Error exceptions in handleFulfillmentChanged catch", async () => {
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -559,6 +843,7 @@ describe("order-listener: misc coverage", () => {
 
   it("handles non-Error exceptions in handleOrderCancelled catch", async () => {
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
@@ -577,8 +862,36 @@ describe("order-listener: misc coverage", () => {
     ).resolves.toBeUndefined();
   });
 
+  it("outer catch handles errors during push data preparation", async () => {
+    mockGetOrder.mockResolvedValue({
+      items: [
+        {
+          menuItemId: "item-1",
+          name: "Coffee",
+          price: 4.5,
+          quantity: 1,
+          totalPrice: 4.5,
+          selectedModifiers: undefined,
+        },
+      ],
+      salesChannel: "online_order",
+      orderMode: "pickup",
+    });
+    mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
+      type: "POS_SQUARE",
+      status: "active",
+    });
+
+    const handler = await getHandler();
+    await expect(handler(makeEvent())).resolves.toBeUndefined();
+
+    expect(mockPushOrder).not.toHaveBeenCalled();
+  });
+
   it("handleOrderCancelled passes undefined cancelReason through", async () => {
     mockGetActivePosConnection.mockResolvedValue({
+      id: "conn-1",
       type: "POS_SQUARE",
       status: "active",
     });
