@@ -11,6 +11,16 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+// Mock next/navigation
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    refresh: vi.fn(),
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+  }),
+}));
+
 function createWrapper() {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
@@ -43,6 +53,7 @@ const mockOrder = {
   fulfillmentStatus: "confirmed",
   orderMode: "pickup",
   salesChannel: "online_order",
+  paymentType: "online",
   items: [
     {
       menuItemId: "item-1",
@@ -416,8 +427,8 @@ describe("DashboardOrderDetailClient", () => {
         { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText("Awaiting Payment")).toBeInTheDocument();
-      expect(screen.getByText("Please complete the payment to proceed")).toBeInTheDocument();
+      expect(screen.getByText("awaitingPayment")).toBeInTheDocument();
+      expect(screen.getByText("awaitingPaymentMsg")).toBeInTheDocument();
     });
 
     it("should show partial payment state", () => {
@@ -431,8 +442,8 @@ describe("DashboardOrderDetailClient", () => {
         { wrapper: createWrapper() }
       );
 
-      expect(screen.getByText("Partial Payment Received")).toBeInTheDocument();
-      expect(screen.getByText("Please complete the remaining payment")).toBeInTheDocument();
+      expect(screen.getByText("partialPaymentTitle")).toBeInTheDocument();
+      expect(screen.getByText("partialPaymentMsg")).toBeInTheDocument();
     });
   });
 

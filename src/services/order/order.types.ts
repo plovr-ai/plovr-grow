@@ -85,6 +85,11 @@ export interface OrderCalculation {
   totalAmount: number;
 }
 
+export interface MarkCashOrderPaidInput {
+  amount?: number;
+  notes?: string;
+}
+
 export interface TenantOrderListOptions {
   merchantId?: string;
   status?: OrderStatus;

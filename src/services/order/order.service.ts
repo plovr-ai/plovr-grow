@@ -29,6 +29,7 @@ import type {
   TenantOrderListOptions,
   TimelineEvent,
   OrderWithTimeline,
+  MarkCashOrderPaidInput,
 } from "./order.types";
 import type { OrderItemWithModifiers } from "@/repositories/order.repository";
 import type { OrderItemData, SelectedModifier, ItemTaxInfo } from "@/types";
@@ -552,6 +553,85 @@ export class OrderService {
     await prisma.order.update({
       where: { id: orderId },
       data: { status: "payment_failed", paymentFailedAt: new Date() },
+    });
+  }
+
+  /**
+   * Mark a cash (in_store) order as paid.
+   * Creates a Payment record and transitions order to "completed".
+   * Idempotent: re-confirming an already-paid order is a no-op.
+   */
+  async markCashOrderPaid(
+    tenantId: string,
+    orderId: string,
+    input?: MarkCashOrderPaidInput
+  ): Promise<void> {
+    const order = await orderRepository.getByIdWithMerchant(tenantId, orderId);
+    if (!order) {
+      throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId });
+    }
+
+    // Idempotent: already completed → no-op
+    if (order.status === "completed") {
+      return;
+    }
+
+    // Only in_store orders in "created" status are eligible
+    if (order.status !== "created" || order.paymentType !== "in_store") {
+      throw new AppError(ErrorCodes.ORDER_NOT_ELIGIBLE_FOR_MARK_PAID, { orderId });
+    }
+
+    const amount = input?.amount ?? Number(order.totalAmount);
+    const now = new Date();
+
+    await prisma.$transaction(async (tx: DbClient) => {
+      // Create a Payment record
+      await paymentService.createPaymentRecord(
+        {
+          tenantId,
+          orderId,
+          provider: "cash" as PaymentProvider,
+          amount,
+          currency: "USD",
+        },
+        tx
+      );
+
+      // Mark the cash payment as succeeded immediately
+      // (for cash, we create with pending status via repository, then update)
+      // Actually, the repository creates with status "pending" by default.
+      // We need to update it to "succeeded". Let's do it in the same tx.
+      await tx.payment.updateMany({
+        where: { orderId, tenantId, provider: "cash", status: "pending" },
+        data: { status: "succeeded", paidAt: now, paymentMethod: "cash" },
+      });
+
+      // Update order status
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: "completed",
+          paidAt: now,
+          cashPayment: amount,
+        },
+      });
+    });
+
+    // Emit event outside of transaction
+    orderEventEmitter.emit("order.paid", {
+      orderId,
+      orderNumber: order.orderNumber,
+      merchantId: order.merchantId ?? "",
+      tenantId,
+      timestamp: now,
+      status: "completed",
+      previousStatus: order.status as OrderStatus,
+      source: "manual",
+      customerPhone: order.customerPhone,
+      customerFirstName: order.customerFirstName,
+      customerLastName: order.customerLastName,
+      customerEmail: order.customerEmail ?? undefined,
+      totalAmount: Number(order.totalAmount),
     });
   }
 

@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, User, Phone, Mail, MapPin, FileText } from "lucide-react";
@@ -7,7 +10,7 @@ import { useDashboardFormatPrice, useDashboardFormatDateTime } from "@/hooks";
 import { formatCustomerName } from "@/lib/names";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { PaymentStatusBadge, FulfillmentStatusBadge } from "./StatusBadge";
-import type { OrderStatus, FulfillmentStatus, OrderMode, OrderItemData, DeliveryAddress, SalesChannel } from "@/types";
+import type { OrderStatus, FulfillmentStatus, OrderMode, OrderItemData, DeliveryAddress, SalesChannel, PaymentType } from "@/types";
 
 // Types for Dashboard Order Detail
 interface TimelineEvent {
@@ -22,6 +25,7 @@ export interface DashboardOrderDetailData {
   fulfillmentStatus: string;
   orderMode: string;
   salesChannel: string;
+  paymentType: string;
   items: OrderItemData[];
   customerFirstName: string;
   customerLastName: string;
@@ -92,11 +96,52 @@ function OrderStatusProgress({
   paymentStatus,
   fulfillmentStatus,
   orderMode,
+  paymentType,
+  merchantId,
+  orderId,
 }: {
   paymentStatus: OrderStatus;
   fulfillmentStatus: FulfillmentStatus;
   orderMode: OrderMode;
+  paymentType: PaymentType;
+  merchantId: string;
+  orderId: string;
 }) {
+  const t = useTranslations("orders");
+  const router = useRouter();
+  const [isMarkingPaid, setIsMarkingPaid] = useState(false);
+  const [markPaidError, setMarkPaidError] = useState<string | null>(null);
+
+  const handleMarkAsPaid = async () => {
+    if (!window.confirm(t("actions.markAsPaidConfirm"))) {
+      return;
+    }
+
+    setIsMarkingPaid(true);
+    setMarkPaidError(null);
+
+    try {
+      const response = await fetch(
+        `/api/dashboard/${merchantId}/orders/${orderId}/mark-paid`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to mark order as paid");
+      }
+
+      router.refresh();
+    } catch (err) {
+      setMarkPaidError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsMarkingPaid(false);
+    }
+  };
   const currentIndex = FULFILLMENT_ORDER[fulfillmentStatus];
   const isCancelled = paymentStatus === "canceled";
   const isPaid = paymentStatus === "completed";
@@ -134,6 +179,9 @@ function OrderStatusProgress({
 
   // Show payment pending state
   if (!isPaid) {
+    const isInStoreAwaitingPayment =
+      paymentStatus === "created" && paymentType === "in_store";
+
     return (
       <Card className="border-yellow-200 bg-yellow-50">
         <CardContent className="pt-4">
@@ -153,16 +201,32 @@ function OrderStatusProgress({
                 />
               </svg>
             </div>
-            <div>
+            <div className="flex-1">
               <p className="font-medium text-yellow-800">
-                {paymentStatus === "partial_paid" ? "Partial Payment Received" : "Awaiting Payment"}
+                {isInStoreAwaitingPayment
+                  ? t("awaitingInStorePayment")
+                  : paymentStatus === "partial_paid"
+                    ? t("partialPaymentTitle")
+                    : t("awaitingPayment")}
               </p>
               <p className="text-sm text-yellow-600">
                 {paymentStatus === "partial_paid"
-                  ? "Please complete the remaining payment"
-                  : "Please complete the payment to proceed"}
+                  ? t("partialPaymentMsg")
+                  : t("awaitingPaymentMsg")}
               </p>
+              {markPaidError && (
+                <p className="text-sm text-red-600 mt-1">{markPaidError}</p>
+              )}
             </div>
+            {isInStoreAwaitingPayment && (
+              <button
+                onClick={handleMarkAsPaid}
+                disabled={isMarkingPaid}
+                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isMarkingPaid ? "..." : t("actions.markAsPaid")}
+              </button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -641,6 +705,9 @@ export function DashboardOrderDetailClient({ order, imageMap }: Props) {
         paymentStatus={order.status as OrderStatus}
         fulfillmentStatus={order.fulfillmentStatus as FulfillmentStatus}
         orderMode={order.orderMode as OrderMode}
+        paymentType={order.paymentType as PaymentType}
+        merchantId={order.merchant.id}
+        orderId={order.id}
       />
 
       {/* Two Column Layout for Items and Summary */}
