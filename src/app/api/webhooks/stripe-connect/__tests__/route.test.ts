@@ -12,6 +12,13 @@ vi.mock("@/services/payment", () => ({
   paymentService: {
     handlePaymentSucceeded: vi.fn(),
     handlePaymentFailed: vi.fn(),
+    getPaymentByIntentId: vi.fn(),
+  },
+}));
+
+vi.mock("@/services/order", () => ({
+  orderService: {
+    updatePaymentStatus: vi.fn(),
   },
 }));
 
@@ -23,6 +30,7 @@ vi.mock("@/services/stripe-connect", () => ({
 
 import { stripeService } from "@/services/stripe";
 import { paymentService } from "@/services/payment";
+import { orderService } from "@/services/order";
 import { stripeConnectService } from "@/services/stripe-connect";
 
 function makeRequest(body: unknown, signature?: string): Request {
@@ -36,6 +44,12 @@ function makeRequest(body: unknown, signature?: string): Request {
 describe("POST /api/webhooks/stripe-connect", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: getPaymentByIntentId returns a payment with order info
+    vi.mocked(paymentService.getPaymentByIntentId).mockResolvedValue({
+      id: "pay-1",
+      order: { id: "order-1", orderNumber: "ORD-001", tenantId: "tenant-1", merchantId: "merchant-1" },
+    } as never);
+    vi.mocked(orderService.updatePaymentStatus).mockResolvedValue(undefined);
   });
 
   describe("Signature Verification", () => {
@@ -415,6 +429,106 @@ describe("POST /api/webhooks/stripe-connect", () => {
 
       expect(response.status).toBe(200);
       expect(data.received).toBe(true);
+    });
+  });
+
+  describe("Order status update on payment events", () => {
+    it("should update order to completed when payment_intent.succeeded", async () => {
+      const event = {
+        type: "payment_intent.succeeded",
+        data: {
+          object: {
+            id: "pi_test_order",
+            status: "succeeded",
+            charges: { data: [] },
+          },
+        },
+      };
+
+      vi.mocked(stripeService.verifyConnectWebhookSignature).mockReturnValue(event as never);
+      vi.mocked(paymentService.handlePaymentSucceeded).mockResolvedValue(undefined);
+
+      const request = makeRequest(event, "valid_sig");
+      const response = await POST(request);
+
+      expect(response.status).toBe(200);
+      expect(paymentService.getPaymentByIntentId).toHaveBeenCalledWith("pi_test_order");
+      expect(orderService.updatePaymentStatus).toHaveBeenCalledWith(
+        "tenant-1",
+        "order-1",
+        "completed",
+        { source: "internal" }
+      );
+    });
+
+    it("should update order to payment_failed when payment_intent.payment_failed", async () => {
+      const event = {
+        type: "payment_intent.payment_failed",
+        data: {
+          object: {
+            id: "pi_test_fail",
+            last_payment_error: { code: "card_declined", message: "Declined" },
+          },
+        },
+      };
+
+      vi.mocked(stripeService.verifyConnectWebhookSignature).mockReturnValue(event as never);
+      vi.mocked(paymentService.handlePaymentFailed).mockResolvedValue(undefined);
+
+      const request = makeRequest(event, "valid_sig");
+      const response = await POST(request);
+
+      expect(response.status).toBe(200);
+      expect(paymentService.getPaymentByIntentId).toHaveBeenCalledWith("pi_test_fail");
+      expect(orderService.updatePaymentStatus).toHaveBeenCalledWith(
+        "tenant-1",
+        "order-1",
+        "payment_failed",
+        { source: "internal" }
+      );
+    });
+
+    it("should skip order update when payment record has no order", async () => {
+      vi.mocked(paymentService.getPaymentByIntentId).mockResolvedValue({
+        id: "pay-1",
+        order: null,
+      } as never);
+
+      const event = {
+        type: "payment_intent.succeeded",
+        data: {
+          object: { id: "pi_no_order", status: "succeeded", charges: { data: [] } },
+        },
+      };
+
+      vi.mocked(stripeService.verifyConnectWebhookSignature).mockReturnValue(event as never);
+      vi.mocked(paymentService.handlePaymentSucceeded).mockResolvedValue(undefined);
+
+      const request = makeRequest(event, "valid_sig");
+      const response = await POST(request);
+
+      expect(response.status).toBe(200);
+      expect(orderService.updatePaymentStatus).not.toHaveBeenCalled();
+    });
+
+    it("should skip order update when payment record not found", async () => {
+      vi.mocked(paymentService.getPaymentByIntentId).mockResolvedValue(null);
+
+      const event = {
+        type: "payment_intent.succeeded",
+        data: {
+          object: { id: "pi_missing", status: "succeeded", charges: { data: [] } },
+        },
+      };
+
+      vi.mocked(stripeService.verifyConnectWebhookSignature).mockReturnValue(event as never);
+      vi.mocked(paymentService.handlePaymentSucceeded).mockResolvedValue(undefined);
+
+      const request = makeRequest(event, "valid_sig");
+      const response = await POST(request);
+
+      expect(response.status).toBe(200);
+      expect(orderService.updatePaymentStatus).not.toHaveBeenCalled();
     });
   });
 

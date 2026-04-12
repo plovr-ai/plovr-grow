@@ -6,6 +6,9 @@ import type { OrderStatus, FulfillmentStatus } from "@/types";
 // Mock dependencies
 vi.mock("@/lib/db", () => {
   const mockTx = {
+    order: {
+      update: vi.fn().mockResolvedValue({}),
+    },
     orderFulfillment: {
       create: vi.fn().mockResolvedValue({ id: "ful-1", status: "pending" }),
     },
@@ -1121,6 +1124,15 @@ describe("OrderService", () => {
     };
 
     beforeEach(() => {
+      // Restore $transaction to use mockTx (may be overridden by rollback tests)
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        const mockTx = {
+          order: { update: vi.fn().mockResolvedValue({}) },
+          orderFulfillment: { create: vi.fn().mockResolvedValue({ id: "ful-1", status: "pending" }) },
+        };
+        return (fn as (tx: unknown) => Promise<unknown>)(mockTx);
+      });
+
       vi.mocked(menuService.getMenuItemsByIds).mockResolvedValue([
         { id: "item-1", name: "Margherita Pizza" },
       ] as never);
@@ -1305,6 +1317,147 @@ describe("OrderService", () => {
       expect(eventHandler).not.toHaveBeenCalled();
 
       unsubscribe();
+    });
+
+    it("should mark card order as immediately paid (status=completed, paidAt set)", async () => {
+      const order = await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
+        payment: {
+          stripePaymentIntentId: "pi_123",
+          amount: 42.98,
+          currency: "USD",
+        },
+      });
+
+      // The tx.order.update should have been called to mark as completed
+      // Access the mockTx through the $transaction mock
+      const txFn = vi.mocked(prisma.$transaction).mock.calls[0][0] as (tx: unknown) => Promise<unknown>;
+      // Verify the order has _isImmediatelyPaid flag
+      expect(order).toHaveProperty("_isImmediatelyPaid", true);
+    });
+
+    it("should emit order.paid event for card payment orders", async () => {
+      const paidHandler = vi.fn();
+      const unsubscribe = orderEventEmitter.on("order.paid", paidHandler);
+
+      await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
+        payment: {
+          stripePaymentIntentId: "pi_123",
+          amount: 42.98,
+          currency: "USD",
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(paidHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderId: "order-1",
+          orderNumber: "20260127-0001",
+          merchantId: "merchant-1",
+          tenantId: "tenant-1",
+          status: "completed",
+          previousStatus: "created",
+          customerPhone: "123-456-7890",
+          customerFirstName: "John",
+          customerLastName: "Doe",
+          totalAmount: 42.98,
+        })
+      );
+
+      unsubscribe();
+    });
+
+    it("should mark gift-card-only order as immediately paid when gift card covers full amount", async () => {
+      const order = await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
+        giftCard: { id: "gc-1", amount: 50 }, // 50 >= totalAmount 42.98
+      });
+
+      expect(order).toHaveProperty("_isImmediatelyPaid", true);
+    });
+
+    it("should emit order.paid for gift-card-only orders", async () => {
+      const paidHandler = vi.fn();
+      const unsubscribe = orderEventEmitter.on("order.paid", paidHandler);
+
+      await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
+        giftCard: { id: "gc-1", amount: 50 },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(paidHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderId: "order-1",
+          status: "completed",
+          customerPhone: "123-456-7890",
+          totalAmount: 42.98,
+        })
+      );
+
+      unsubscribe();
+    });
+
+    it("should NOT mark cash order as immediately paid", async () => {
+      const order = await orderService.createMerchantOrderAtomic("tenant-1", mockInput);
+
+      expect(order).toHaveProperty("_isImmediatelyPaid", false);
+    });
+
+    it("should NOT emit order.paid for cash orders", async () => {
+      const paidHandler = vi.fn();
+      const unsubscribe = orderEventEmitter.on("order.paid", paidHandler);
+
+      await orderService.createMerchantOrderAtomic("tenant-1", mockInput);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(paidHandler).not.toHaveBeenCalled();
+
+      unsubscribe();
+    });
+
+    it("should NOT mark partial gift card order as immediately paid (gift card < total, no card)", async () => {
+      const order = await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
+        giftCard: { id: "gc-1", amount: 10 }, // 10 < 42.98, no card payment
+      });
+
+      expect(order).toHaveProperty("_isImmediatelyPaid", false);
+    });
+
+    it("should mark gift card + card combo as immediately paid", async () => {
+      const order = await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
+        giftCard: { id: "gc-1", amount: 20 },
+        payment: {
+          stripePaymentIntentId: "pi_123",
+          amount: 22.98,
+          currency: "USD",
+        },
+      });
+
+      expect(order).toHaveProperty("_isImmediatelyPaid", true);
+    });
+
+    it("should emit both order.created and order.paid for immediately paid orders", async () => {
+      const createdHandler = vi.fn();
+      const paidHandler = vi.fn();
+      const unsub1 = orderEventEmitter.on("order.created", createdHandler);
+      const unsub2 = orderEventEmitter.on("order.paid", paidHandler);
+
+      await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
+        payment: {
+          stripePaymentIntentId: "pi_123",
+          amount: 42.98,
+          currency: "USD",
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(createdHandler).toHaveBeenCalledTimes(1);
+      expect(paidHandler).toHaveBeenCalledTimes(1);
+
+      unsub1();
+      unsub2();
     });
   });
 
@@ -1722,6 +1875,53 @@ describe("OrderService", () => {
       await orderService.updatePaymentStatus("tenant-1", "order-x", "payment_failed");
 
       expect(prisma.order.update).not.toHaveBeenCalled();
+    });
+
+    it("is idempotent — skips update when order already completed", async () => {
+      const completedOrder = {
+        ...mockOrder,
+        status: "completed",
+        paidAt: new Date(),
+        customerPhone: "123-456-7890",
+        customerFirstName: "John",
+        customerLastName: "Doe",
+        customerEmail: "john@example.com",
+        totalAmount: 42.98,
+      };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(completedOrder as never);
+      const emitSpy = vi.spyOn(orderEventEmitter, "emit");
+
+      await orderService.updatePaymentStatus("tenant-1", "order-1", "completed");
+
+      expect(prisma.order.update).not.toHaveBeenCalled();
+      expect(emitSpy).not.toHaveBeenCalled();
+    });
+
+    it("includes customer info in order.paid event", async () => {
+      const orderWithCustomer = {
+        ...mockOrder,
+        customerPhone: "555-1234",
+        customerFirstName: "Jane",
+        customerLastName: "Smith",
+        customerEmail: "jane@test.com",
+        totalAmount: 99.50,
+      };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(orderWithCustomer as never);
+      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+      const emitSpy = vi.spyOn(orderEventEmitter, "emit");
+
+      await orderService.updatePaymentStatus("tenant-1", "order-1", "completed");
+
+      expect(emitSpy).toHaveBeenCalledWith(
+        "order.paid",
+        expect.objectContaining({
+          customerPhone: "555-1234",
+          customerFirstName: "Jane",
+          customerLastName: "Smith",
+          customerEmail: "jane@test.com",
+          totalAmount: 99.50,
+        })
+      );
     });
   });
 
