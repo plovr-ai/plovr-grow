@@ -29,6 +29,7 @@ export interface MappedModifierOption {
 }
 
 export interface MappedModifierGroup {
+  externalId: string | null;
   name: string;
   required: boolean;
   minSelect: number;
@@ -285,6 +286,7 @@ export class SquareCatalogService {
         });
 
         groups.push({
+          externalId: null,
           name: "Options",
           required: true,
           minSelect: 1,
@@ -328,6 +330,7 @@ export class SquareCatalogService {
         );
 
         groups.push({
+          externalId: mlInfo.modifierListId ?? null,
           name: mlData.name ?? "Options",
           required: min > 0,
           minSelect: min,

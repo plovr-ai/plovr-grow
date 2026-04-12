@@ -414,6 +414,26 @@ export class SquareService {
             }
 
             await menuService.syncModifierGroups(tenantId, internalId, resolvedGroups, tx);
+
+            // Create ModifierGroup external ID mappings for MODIFIER_LIST types
+            for (const rg of resolvedGroups) {
+              const originalGroup = item.modifierGroups.find(
+                (g) => g.name === rg.name && g.externalId
+              );
+              if (originalGroup?.externalId) {
+                await integrationRepository.upsertIdMapping(
+                  tenantId,
+                  {
+                    internalType: "ModifierGroup",
+                    internalId: rg.id,
+                    externalSource: "SQUARE",
+                    externalType: "MODIFIER_LIST",
+                    externalId: originalGroup.externalId,
+                  },
+                  tx
+                );
+              }
+            }
           }
         }
 
@@ -497,6 +517,21 @@ export class SquareService {
             case "TaxConfig":
               await tx.taxConfig.updateMany({
                 where: { id: mapping.internalId, tenantId },
+                data: { deleted: true },
+              });
+              await tx.merchantTaxRate.updateMany({
+                where: { taxConfigId: mapping.internalId, deleted: false },
+                data: { deleted: true },
+              });
+              break;
+            case "ModifierGroup":
+              await tx.modifierGroup.updateMany({
+                where: { id: mapping.internalId, tenantId },
+                data: { deleted: true },
+              });
+              // Also soft-delete all options in this group
+              await tx.modifierOption.updateMany({
+                where: { groupId: mapping.internalId },
                 data: { deleted: true },
               });
               break;
