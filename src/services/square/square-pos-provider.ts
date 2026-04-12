@@ -44,6 +44,7 @@ class SquarePosProvider implements PosProvider {
         quantity: mod.quantity,
       })),
       specialInstructions: item.specialInstructions,
+      taxes: item.taxes,
     }));
 
     const result = await squareOrderService.createOrder(tenantId, merchantId, {
@@ -57,6 +58,10 @@ class SquarePosProvider implements PosProvider {
       deliveryAddress: input.deliveryAddress,
       items: squareItems,
       totalAmount: input.totalAmount,
+      taxAmount: input.taxAmount,
+      tipAmount: input.tipAmount,
+      deliveryFee: input.deliveryFee,
+      discount: input.discount,
       notes: input.notes,
     });
 

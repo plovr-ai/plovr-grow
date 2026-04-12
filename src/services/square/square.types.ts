@@ -1,4 +1,4 @@
-import type { OrderMode, DeliveryAddress } from "@/types";
+import type { OrderMode, DeliveryAddress, ItemTaxInfo } from "@/types";
 
 export interface SquareTokenResponse {
   accessToken: string;
@@ -50,6 +50,10 @@ export interface SquareOrderPushInput {
   deliveryAddress?: DeliveryAddress | null;
   items: SquareOrderPushItem[];
   totalAmount: number;
+  taxAmount: number;
+  tipAmount: number;
+  deliveryFee: number;
+  discount: number;
   notes?: string;
 }
 
@@ -76,6 +80,7 @@ export interface SquareOrderPushItem {
   quantity: number;
   selectedModifiers: SquareOrderPushModifier[];
   specialInstructions?: string;
+  taxes?: ItemTaxInfo[];
 }
 
 export interface SquareOrderPushModifier {

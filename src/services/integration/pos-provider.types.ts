@@ -1,4 +1,4 @@
-import type { OrderMode, DeliveryAddress, FulfillmentStatus } from "@/types";
+import type { OrderMode, DeliveryAddress, FulfillmentStatus, ItemTaxInfo } from "@/types";
 
 /**
  * POS Provider interface — abstraction for multi-POS extensibility.
@@ -72,6 +72,10 @@ export interface PosOrderPushInput {
   deliveryAddress?: DeliveryAddress | null;
   items: PosOrderPushItem[];
   totalAmount: number;
+  taxAmount: number;
+  tipAmount: number;
+  deliveryFee: number;
+  discount: number;
   notes?: string;
 }
 
@@ -82,6 +86,7 @@ export interface PosOrderPushItem {
   quantity: number;
   selectedModifiers: PosOrderPushModifier[];
   specialInstructions?: string;
+  taxes?: ItemTaxInfo[];
 }
 
 export interface PosOrderPushModifier {
