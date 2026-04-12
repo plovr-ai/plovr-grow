@@ -72,7 +72,7 @@ export class OrderService {
 
     const salesChannel = input.salesChannel ?? "online_order";
 
-    // Create the order in database
+    // Create the order in database (dual-write: JSON snapshot + structured OrderItem rows)
     const order = await orderRepository.create(
       tenantId,
       merchantId,
@@ -102,7 +102,8 @@ export class OrderService {
         scheduledAt: input.scheduledAt ?? null,
       },
       input.loyaltyMemberId,
-      tx
+      tx,
+      input.items
     );
 
     // Emit order created event (only when not inside a transaction —
@@ -218,7 +219,7 @@ export class OrderService {
     const sequence = await sequenceRepository.getNextGiftCardOrderSequence(tenantId, dateStr);
     const orderNumber = generateGiftcardOrderNumber(sequence);
 
-    // Create the order in database
+    // Create the order in database (dual-write: JSON snapshot + structured OrderItem rows)
     const order = await orderRepository.create(
       tenantId,
       null, // No merchant for gift card orders
@@ -245,7 +246,9 @@ export class OrderService {
         deliveryAddress: Prisma.JsonNull,
         scheduledAt: null,
       },
-      input.loyaltyMemberId
+      input.loyaltyMemberId,
+      undefined, // no transaction
+      input.items
     );
 
     return order;

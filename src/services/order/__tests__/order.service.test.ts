@@ -192,7 +192,8 @@ describe("OrderService", () => {
           fulfillmentStatus: "pending",
         }),
         undefined, // loyaltyMemberId
-        undefined // tx
+        undefined, // tx
+        mockInput.items
       );
 
       expect(order.id).toBe("order-1");
@@ -244,7 +245,8 @@ describe("OrderService", () => {
           fulfillmentStatus: "pending",
         }),
         "loyalty-member-123",
-        undefined // tx
+        undefined, // tx
+        inputWithLoyalty.items
       );
 
       expect(order.id).toBe("order-1");
@@ -320,7 +322,8 @@ describe("OrderService", () => {
           deliveryAddress: deliveryInput.deliveryAddress,
         }),
         undefined,
-        undefined // tx
+        undefined, // tx
+        deliveryInput.items
       );
     });
 
@@ -354,7 +357,8 @@ describe("OrderService", () => {
           cashPayment: expect.any(Number),
         }),
         undefined,
-        undefined // tx
+        undefined, // tx
+        inputWithGiftCard.items
       );
     });
 
@@ -368,7 +372,8 @@ describe("OrderService", () => {
           salesChannel: "online_order",
         }),
         undefined,
-        undefined // tx
+        undefined, // tx
+        mockInput.items
       );
     });
 
@@ -387,7 +392,8 @@ describe("OrderService", () => {
           notes: "No onions please",
         }),
         undefined,
-        undefined // tx
+        undefined, // tx
+        inputWithNotes.items
       );
     });
 
@@ -407,7 +413,8 @@ describe("OrderService", () => {
           scheduledAt: scheduledTime,
         }),
         undefined,
-        undefined // tx
+        undefined, // tx
+        inputWithSchedule.items
       );
     });
   });
@@ -478,7 +485,9 @@ describe("OrderService", () => {
           tipAmount: 0,
           deliveryFee: 0,
         }),
-        undefined
+        undefined, // loyaltyMemberId
+        undefined, // tx
+        mockInput.items
       );
 
       expect(order.id).toBe("order-gc-1");
@@ -504,7 +513,9 @@ describe("OrderService", () => {
           totalAmount: 75,
           taxAmount: 0,
         }),
-        undefined
+        undefined, // loyaltyMemberId
+        undefined, // tx
+        multiItemInput.items
       );
     });
 
@@ -579,7 +590,9 @@ describe("OrderService", () => {
         "tenant-1",
         null,
         expect.any(Object),
-        "loyalty-member-456"
+        "loyalty-member-456",
+        undefined, // tx
+        inputWithLoyalty.items
       );
 
       expect(order.loyaltyMemberId).toBe("loyalty-member-456");
@@ -612,7 +625,9 @@ describe("OrderService", () => {
           cashPayment: 20,
           totalAmount: 50,
         }),
-        undefined
+        undefined, // loyaltyMemberId
+        undefined, // tx
+        inputWithGiftCard.items
       );
     });
 
@@ -630,7 +645,9 @@ describe("OrderService", () => {
         expect.objectContaining({
           notes: "Happy Birthday!",
         }),
-        undefined
+        undefined, // loyaltyMemberId
+        undefined, // tx
+        inputWithNotes.items
       );
     });
 
@@ -652,7 +669,9 @@ describe("OrderService", () => {
           subtotal: 49.99,
           totalAmount: 49.99,
         }),
-        undefined
+        undefined, // loyaltyMemberId
+        undefined, // tx
+        decimalInput.items
       );
     });
   });
