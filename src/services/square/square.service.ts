@@ -261,8 +261,25 @@ export class SquareService {
             tx
           );
 
-          // ID mappings for variations
+          // ID mappings for variations — also create ModifierGroup/ModifierOption
+          // for multi-variation items that produce a "variation group"
           for (const variation of item.variationMappings) {
+            // If this variation is part of a modifier group (multi-variation),
+            // create the ModifierOption and map it
+            if (variation.groupId && variation.optionId) {
+              await integrationRepository.upsertIdMapping(
+                tenantId,
+                {
+                  internalType: "ModifierOption",
+                  internalId: variation.optionId,
+                  externalSource: "SQUARE",
+                  externalType: "ITEM_VARIATION",
+                  externalId: variation.externalId,
+                },
+                tx
+              );
+            }
+            // Keep backward-compat mapping: MenuItem → ITEM_VARIATION
             await integrationRepository.upsertIdMapping(
               tenantId,
               {
@@ -274,6 +291,130 @@ export class SquareService {
               },
               tx
             );
+          }
+
+          // Persist modifier groups and options to normalized tables
+          if (item.modifiers && item.modifiers.groups.length > 0) {
+            // Soft-delete existing junction records for this item
+            // so we can recreate them cleanly
+            await tx.menuItemModifierGroup.deleteMany({
+              where: { menuItemId: internalId },
+            });
+
+            for (let groupIdx = 0; groupIdx < item.modifiers.groups.length; groupIdx++) {
+              const group = item.modifiers.groups[groupIdx];
+
+              // Determine a stable group ID: for variation groups, use the
+              // groupId generated in mapToMenuModels; for modifier-list groups,
+              // generate a new one (or reuse via externalId lookup).
+              // We look at the first option's externalId to find an existing group.
+              const firstOptionExtId = group.options[0]?.externalId;
+              let modifierGroupId: string | undefined;
+
+              if (firstOptionExtId) {
+                const existingOptionMapping =
+                  await integrationRepository.getIdMappingByExternalId(
+                    tenantId,
+                    "SQUARE",
+                    firstOptionExtId
+                  );
+                if (existingOptionMapping?.internalType === "ModifierOption") {
+                  // Find the group via the existing option
+                  const existingOption = await tx.modifierOption.findUnique({
+                    where: { id: existingOptionMapping.internalId },
+                    select: { groupId: true },
+                  });
+                  if (existingOption) {
+                    modifierGroupId = existingOption.groupId;
+                  }
+                }
+              }
+
+              if (!modifierGroupId) {
+                modifierGroupId = generateEntityId();
+              }
+
+              await tx.modifierGroup.upsert({
+                where: { id: modifierGroupId },
+                create: {
+                  id: modifierGroupId,
+                  tenantId,
+                  name: group.name,
+                  required: group.required,
+                  minSelect: group.minSelect,
+                  maxSelect: group.maxSelect,
+                  allowQuantity: false,
+                  maxQuantityPerModifier: 1,
+                },
+                update: {
+                  name: group.name,
+                  required: group.required,
+                  minSelect: group.minSelect,
+                  maxSelect: group.maxSelect,
+                  deleted: false,
+                },
+              });
+
+              // Upsert options
+              for (let optIdx = 0; optIdx < group.options.length; optIdx++) {
+                const opt = group.options[optIdx];
+                // Check if we already have a mapping for this external ID
+                const existingOptMapping =
+                  await integrationRepository.getIdMappingByExternalId(
+                    tenantId,
+                    "SQUARE",
+                    opt.externalId
+                  );
+                const optionId =
+                  (existingOptMapping?.internalType === "ModifierOption"
+                    ? existingOptMapping?.internalId
+                    : undefined) ?? generateEntityId();
+
+                await tx.modifierOption.upsert({
+                  where: { id: optionId },
+                  create: {
+                    id: optionId,
+                    tenantId,
+                    groupId: modifierGroupId,
+                    name: opt.name,
+                    price: opt.price,
+                    isDefault: opt.isDefault,
+                    isAvailable: true,
+                    sortOrder: opt.ordinal,
+                  },
+                  update: {
+                    name: opt.name,
+                    price: opt.price,
+                    isDefault: opt.isDefault,
+                    sortOrder: opt.ordinal,
+                    deleted: false,
+                  },
+                });
+
+                // Create ModifierOption external ID mapping
+                await integrationRepository.upsertIdMapping(
+                  tenantId,
+                  {
+                    internalType: "ModifierOption",
+                    internalId: optionId,
+                    externalSource: "SQUARE",
+                    externalType: "MODIFIER",
+                    externalId: opt.externalId,
+                  },
+                  tx
+                );
+              }
+
+              // Create junction record
+              await tx.menuItemModifierGroup.create({
+                data: {
+                  id: generateEntityId(),
+                  menuItemId: internalId,
+                  modifierGroupId,
+                  sortOrder: groupIdx,
+                },
+              });
+            }
           }
         }
 

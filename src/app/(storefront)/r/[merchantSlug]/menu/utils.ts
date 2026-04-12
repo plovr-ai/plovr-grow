@@ -45,7 +45,7 @@ export interface MenuDisplayData {
 }
 
 /**
- * Modifier stored in database JSON field
+ * Modifier stored in database JSON field (legacy format)
  */
 interface StoredModifier {
   id: string;
@@ -57,7 +57,7 @@ interface StoredModifier {
 }
 
 /**
- * ModifierGroup stored in database JSON field
+ * ModifierGroup stored in database JSON field (legacy format)
  */
 interface StoredModifierGroup {
   id: string;
@@ -72,17 +72,85 @@ interface StoredModifierGroup {
 }
 
 /**
- * Parse modifier groups from database JSON options
+ * Relational modifier option from Prisma include
+ */
+interface RelationalModifierOption {
+  id: string;
+  name: string;
+  price: { toNumber?: () => number } | number;
+  isDefault: boolean;
+  isAvailable: boolean;
+  sortOrder: number;
+}
+
+/**
+ * Relational modifier group from Prisma include
+ */
+interface RelationalModifierGroup {
+  id: string;
+  name: string;
+  required: boolean;
+  minSelect: number;
+  maxSelect: number;
+  allowQuantity: boolean;
+  maxQuantityPerModifier: number;
+  options: RelationalModifierOption[];
+}
+
+/**
+ * Junction record from MenuItemModifierGroup include
+ */
+interface RelationalMenuItemModifierGroup {
+  sortOrder: number;
+  modifierGroup: RelationalModifierGroup;
+}
+
+/**
+ * Parse modifier groups from relational data (preferred) or JSON fallback.
+ *
+ * When the menu item includes `modifierGroups` relation data, we use that.
+ * Otherwise, we fall back to parsing the legacy JSON `modifiers` field.
  */
 export function parseModifierGroups(
-  options: Prisma.JsonValue | null
+  options: Prisma.JsonValue | null,
+  relationalGroups?: RelationalMenuItemModifierGroup[]
 ): ModifierGroupViewModel[] {
+  // Prefer relational data if available
+  if (relationalGroups && relationalGroups.length > 0) {
+    return relationalGroups.map((junction) => {
+      const group = junction.modifierGroup;
+      return {
+        id: group.id,
+        name: group.name,
+        required: group.required,
+        minSelections: group.minSelect,
+        maxSelections: group.maxSelect,
+        allowQuantity: group.allowQuantity,
+        maxQuantityPerModifier: group.maxQuantityPerModifier,
+        modifiers: group.options.map(
+          (opt): ModifierViewModel => ({
+            id: opt.id,
+            name: opt.name,
+            price:
+              typeof opt.price === "number"
+                ? opt.price
+                : typeof opt.price?.toNumber === "function"
+                  ? opt.price.toNumber()
+                  : Number(opt.price),
+            isDefault: opt.isDefault,
+            isAvailable: opt.isAvailable,
+          })
+        ),
+      };
+    });
+  }
+
+  // Fallback to JSON parsing for legacy data
   if (!options || !Array.isArray(options)) {
     return [];
   }
 
   return (options as unknown as StoredModifierGroup[]).map((group) => {
-    // 兼容旧数据：优先使用 modifiers，回退到 choices
     const modifiers = group.modifiers || group.choices || [];
 
     return {
@@ -126,7 +194,12 @@ export function convertToMenuDisplayData(
           itemCount: category.menuItems.length,
         },
         items: category.menuItems.map((item): MenuItemViewModel => {
-          const modifierGroups = parseModifierGroups(item.modifiers);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const itemAny = item as Record<string, any>;
+          const modifierGroups = parseModifierGroups(
+            item.modifiers,
+            itemAny.modifierGroups
+          );
           return {
             id: item.id,
             name: item.name,

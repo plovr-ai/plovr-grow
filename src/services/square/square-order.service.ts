@@ -584,18 +584,53 @@ export class SquareOrderService {
       }
     }
 
-    // Batch lookup for modifiers
+    // Batch lookup for modifiers — try ModifierOption first, fall back to MenuItem
     if (modifierIds.length > 0) {
-      const modifierMappings =
+      // New path: modifiers are stored as ModifierOption
+      const modifierOptionMappings =
         await integrationRepository.getIdMappingsByInternalIds(
           tenantId,
           "SQUARE",
-          "MenuItem",
+          "ModifierOption",
           modifierIds,
           "MODIFIER"
         );
-      for (const mapping of modifierMappings) {
+      for (const mapping of modifierOptionMappings) {
         result.set(mapping.internalId, mapping.externalId);
+      }
+
+      // Also check ITEM_VARIATION type for variation-based modifiers
+      const variationModMappings =
+        await integrationRepository.getIdMappingsByInternalIds(
+          tenantId,
+          "SQUARE",
+          "ModifierOption",
+          modifierIds,
+          "ITEM_VARIATION"
+        );
+      for (const mapping of variationModMappings) {
+        if (!result.has(mapping.internalId)) {
+          result.set(mapping.internalId, mapping.externalId);
+        }
+      }
+
+      // Backward compat: fall back to old MenuItem mapping for modifiers
+      // that haven't been re-synced yet
+      const unresolvedModifierIds = modifierIds.filter(
+        (id) => !result.has(id)
+      );
+      if (unresolvedModifierIds.length > 0) {
+        const legacyMappings =
+          await integrationRepository.getIdMappingsByInternalIds(
+            tenantId,
+            "SQUARE",
+            "MenuItem",
+            unresolvedModifierIds,
+            "MODIFIER"
+          );
+        for (const mapping of legacyMappings) {
+          result.set(mapping.internalId, mapping.externalId);
+        }
       }
     }
 

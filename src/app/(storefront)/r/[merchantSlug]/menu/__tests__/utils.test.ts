@@ -231,6 +231,178 @@ describe("parseModifierGroups", () => {
     });
   });
 
+  describe("relational modifier groups", () => {
+    it("should parse relational modifier groups when provided", () => {
+      const relationalGroups = [
+        {
+          sortOrder: 0,
+          modifierGroup: {
+            id: "mg-1",
+            name: "Size",
+            required: true,
+            minSelect: 1,
+            maxSelect: 1,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            options: [
+              {
+                id: "opt-1",
+                name: "Small",
+                price: 0,
+                isDefault: true,
+                isAvailable: true,
+                sortOrder: 0,
+              },
+              {
+                id: "opt-2",
+                name: "Large",
+                price: 2.5,
+                isDefault: false,
+                isAvailable: true,
+                sortOrder: 1,
+              },
+            ],
+          },
+        },
+      ];
+
+      const result = parseModifierGroups(null, relationalGroups);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("mg-1");
+      expect(result[0].name).toBe("Size");
+      expect(result[0].required).toBe(true);
+      expect(result[0].minSelections).toBe(1);
+      expect(result[0].maxSelections).toBe(1);
+      expect(result[0].modifiers).toHaveLength(2);
+      expect(result[0].modifiers[0].id).toBe("opt-1");
+      expect(result[0].modifiers[0].price).toBe(0);
+      expect(result[0].modifiers[1].price).toBe(2.5);
+    });
+
+    it("should handle Decimal price objects with toNumber()", () => {
+      const relationalGroups = [
+        {
+          sortOrder: 0,
+          modifierGroup: {
+            id: "mg-1",
+            name: "Size",
+            required: false,
+            minSelect: 0,
+            maxSelect: 3,
+            allowQuantity: true,
+            maxQuantityPerModifier: 5,
+            options: [
+              {
+                id: "opt-1",
+                name: "Cheese",
+                price: { toNumber: () => 1.5 },
+                isDefault: false,
+                isAvailable: true,
+                sortOrder: 0,
+              },
+            ],
+          },
+        },
+      ];
+
+      const result = parseModifierGroups(null, relationalGroups);
+
+      expect(result[0].modifiers[0].price).toBe(1.5);
+      expect(result[0].allowQuantity).toBe(true);
+      expect(result[0].maxQuantityPerModifier).toBe(5);
+    });
+
+    it("should handle string price values via Number() fallback", () => {
+      const relationalGroups = [
+        {
+          sortOrder: 0,
+          modifierGroup: {
+            id: "mg-1",
+            name: "Test",
+            required: false,
+            minSelect: 0,
+            maxSelect: 1,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            options: [
+              {
+                id: "opt-1",
+                name: "Option",
+                price: "2.50", // string, no toNumber method
+                isDefault: false,
+                isAvailable: true,
+                sortOrder: 0,
+              },
+            ],
+          },
+        },
+      ];
+
+      const result = parseModifierGroups(null, relationalGroups as never);
+
+      expect(result[0].modifiers[0].price).toBe(2.5);
+    });
+
+    it("should prefer relational data over JSON when both present", () => {
+      const jsonOptions = [
+        {
+          id: "json-group",
+          name: "From JSON",
+          type: "single",
+          required: true,
+          modifiers: [{ id: "j1", name: "JSON Opt", price: 0 }],
+        },
+      ];
+      const relationalGroups = [
+        {
+          sortOrder: 0,
+          modifierGroup: {
+            id: "rel-group",
+            name: "From Relations",
+            required: true,
+            minSelect: 1,
+            maxSelect: 1,
+            allowQuantity: false,
+            maxQuantityPerModifier: 1,
+            options: [
+              {
+                id: "r1",
+                name: "Relational Opt",
+                price: 0,
+                isDefault: true,
+                isAvailable: true,
+                sortOrder: 0,
+              },
+            ],
+          },
+        },
+      ];
+
+      const result = parseModifierGroups(jsonOptions, relationalGroups);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe("From Relations");
+    });
+
+    it("should fall back to JSON when relational groups are empty", () => {
+      const jsonOptions = [
+        {
+          id: "size",
+          name: "Size",
+          type: "single" as const,
+          required: true,
+          modifiers: [{ id: "s1", name: "Small", price: 0 }],
+        },
+      ];
+
+      const result = parseModifierGroups(jsonOptions, []);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe("Size");
+    });
+  });
+
   describe("backward compatibility (choices field)", () => {
     it("should support legacy choices field", () => {
       const options = [
