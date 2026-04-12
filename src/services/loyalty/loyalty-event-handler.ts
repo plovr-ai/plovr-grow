@@ -47,6 +47,8 @@ async function handleOrderPaid(event: OrderPaidEvent): Promise<void> {
         customerLastName: event.customerLastName,
         customerEmail: event.customerEmail,
         totalAmount: event.totalAmount,
+        giftCardPayment: event.giftCardPayment,
+        loyaltyMemberId: event.loyaltyMemberId,
       }
     );
 

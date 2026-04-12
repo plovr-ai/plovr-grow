@@ -65,6 +65,10 @@ export interface OrderPaidEvent extends PaymentStatusChangedEvent {
   customerLastName?: string;
   customerEmail?: string;
   totalAmount?: number;
+  /** Amount paid via gift card (for 2x loyalty points calculation) */
+  giftCardPayment?: number;
+  /** Loyalty member ID if customer was logged in at checkout */
+  loyaltyMemberId?: string;
 }
 
 // Order cancelled event
