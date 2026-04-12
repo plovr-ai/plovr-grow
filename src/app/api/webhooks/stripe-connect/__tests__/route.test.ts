@@ -44,9 +44,10 @@ function makeRequest(body: unknown, signature?: string): Request {
 describe("POST /api/webhooks/stripe-connect", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: getPaymentByIntentId returns a payment with order info
+    // Default: getPaymentByIntentId returns a succeeded payment with order info
     vi.mocked(paymentService.getPaymentByIntentId).mockResolvedValue({
       id: "pay-1",
+      status: "succeeded",
       order: { id: "order-1", orderNumber: "ORD-001", tenantId: "tenant-1", merchantId: "merchant-1" },
     } as never);
     vi.mocked(orderService.updatePaymentStatus).mockResolvedValue(undefined);
@@ -462,6 +463,13 @@ describe("POST /api/webhooks/stripe-connect", () => {
     });
 
     it("should update order to payment_failed when payment_intent.payment_failed", async () => {
+      // Override default to return failed status for this test
+      vi.mocked(paymentService.getPaymentByIntentId).mockResolvedValue({
+        id: "pay-1",
+        status: "failed",
+        order: { id: "order-1", orderNumber: "ORD-001", tenantId: "tenant-1", merchantId: "merchant-1" },
+      } as never);
+
       const event = {
         type: "payment_intent.payment_failed",
         data: {
@@ -498,6 +506,32 @@ describe("POST /api/webhooks/stripe-connect", () => {
         type: "payment_intent.succeeded",
         data: {
           object: { id: "pi_no_order", status: "succeeded", charges: { data: [] } },
+        },
+      };
+
+      vi.mocked(stripeService.verifyConnectWebhookSignature).mockReturnValue(event as never);
+      vi.mocked(paymentService.handlePaymentSucceeded).mockResolvedValue(undefined);
+
+      const request = makeRequest(event, "valid_sig");
+      const response = await POST(request);
+
+      expect(response.status).toBe(200);
+      expect(orderService.updatePaymentStatus).not.toHaveBeenCalled();
+    });
+
+    it("should skip order update when payment CAS failed (status still pending/failed)", async () => {
+      // Simulates Stripe retry: payment_failed then succeeded, but CAS only does pending->succeeded
+      // If payment is still 'failed' after handlePaymentSucceeded CAS no-op, don't complete the order
+      vi.mocked(paymentService.getPaymentByIntentId).mockResolvedValue({
+        id: "pay-1",
+        status: "failed", // CAS didn't flip because expected "pending" but found "failed"
+        order: { id: "order-1", orderNumber: "ORD-001", tenantId: "tenant-1", merchantId: "merchant-1" },
+      } as never);
+
+      const event = {
+        type: "payment_intent.succeeded",
+        data: {
+          object: { id: "pi_retry", status: "succeeded", charges: { data: [] } },
         },
       };
 
