@@ -69,6 +69,7 @@ export default async function DashboardOrderDetailPage({ params }: PageProps) {
     fulfillmentStatus: order.fulfillmentStatus,
     orderMode: order.orderMode,
     salesChannel: order.salesChannel,
+    paymentType: order.paymentType,
     items,
     customerFirstName: order.customerFirstName,
     customerLastName: order.customerLastName,

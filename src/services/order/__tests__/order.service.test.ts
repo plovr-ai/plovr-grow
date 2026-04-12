@@ -12,6 +12,9 @@ vi.mock("@/lib/db", () => {
     orderFulfillment: {
       create: vi.fn().mockResolvedValue({ id: "ful-1", status: "pending" }),
     },
+    payment: {
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    },
   };
   const mockPrisma = {
     $transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(mockTx)),
@@ -2094,6 +2097,141 @@ describe("OrderService", () => {
           cancelReason: "changed mind",
         }),
       });
+    });
+  });
+
+  describe("markCashOrderPaid()", () => {
+    const mockCashOrder = {
+      id: "order-1",
+      orderNumber: "ORD-001",
+      merchantId: "merchant-1",
+      tenantId: "tenant-1",
+      status: "created",
+      paymentType: "in_store",
+      totalAmount: 42.98,
+      customerPhone: "123-456-7890",
+      customerFirstName: "John",
+      customerLastName: "Doe",
+      customerEmail: "john@example.com",
+      merchant: { id: "merchant-1", name: "M", slug: "m", timezone: "UTC" },
+    };
+
+    beforeEach(() => {
+      // Restore $transaction with a mockTx that includes payment model
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn) => {
+        const mockTx = {
+          order: { update: vi.fn().mockResolvedValue({}) },
+          payment: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+        };
+        return (fn as (tx: unknown) => Promise<unknown>)(mockTx);
+      });
+    });
+
+    it("creates payment record, updates order, and emits order.paid", async () => {
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockCashOrder as never);
+      vi.mocked(paymentService.createPaymentRecord).mockResolvedValue({} as never);
+      const emitSpy = vi.spyOn(orderEventEmitter, "emit");
+
+      await orderService.markCashOrderPaid("tenant-1", "order-1");
+
+      // Should create payment record
+      expect(paymentService.createPaymentRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: "tenant-1",
+          orderId: "order-1",
+          provider: "cash",
+          amount: 42.98,
+          currency: "USD",
+        }),
+        expect.anything() // tx
+      );
+
+      // Should emit order.paid event with source "manual"
+      expect(emitSpy).toHaveBeenCalledWith(
+        "order.paid",
+        expect.objectContaining({
+          orderId: "order-1",
+          orderNumber: "ORD-001",
+          merchantId: "merchant-1",
+          tenantId: "tenant-1",
+          status: "completed",
+          previousStatus: "created",
+          source: "manual",
+          totalAmount: 42.98,
+        })
+      );
+    });
+
+    it("uses custom amount when provided", async () => {
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockCashOrder as never);
+      vi.mocked(paymentService.createPaymentRecord).mockResolvedValue({} as never);
+
+      await orderService.markCashOrderPaid("tenant-1", "order-1", { amount: 50 });
+
+      expect(paymentService.createPaymentRecord).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: 50 }),
+        expect.anything()
+      );
+    });
+
+    it("is idempotent — no-op when order already completed", async () => {
+      const completedOrder = { ...mockCashOrder, status: "completed" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(completedOrder as never);
+      const emitSpy = vi.spyOn(orderEventEmitter, "emit");
+
+      await orderService.markCashOrderPaid("tenant-1", "order-1");
+
+      expect(paymentService.createPaymentRecord).not.toHaveBeenCalled();
+      expect(emitSpy).not.toHaveBeenCalled();
+    });
+
+    it("throws ORDER_NOT_FOUND when order missing", async () => {
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(null);
+
+      await expect(
+        orderService.markCashOrderPaid("tenant-1", "order-x")
+      ).rejects.toThrow("ORDER_NOT_FOUND");
+    });
+
+    it("throws ORDER_NOT_ELIGIBLE_FOR_MARK_PAID for online payment orders", async () => {
+      const onlineOrder = { ...mockCashOrder, paymentType: "online" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(onlineOrder as never);
+
+      await expect(
+        orderService.markCashOrderPaid("tenant-1", "order-1")
+      ).rejects.toThrow("ORDER_NOT_ELIGIBLE_FOR_MARK_PAID");
+    });
+
+    it("throws ORDER_NOT_ELIGIBLE_FOR_MARK_PAID for canceled orders", async () => {
+      const canceledOrder = { ...mockCashOrder, status: "canceled", paymentType: "in_store" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(canceledOrder as never);
+
+      await expect(
+        orderService.markCashOrderPaid("tenant-1", "order-1")
+      ).rejects.toThrow("ORDER_NOT_ELIGIBLE_FOR_MARK_PAID");
+    });
+
+    it("throws ORDER_NOT_ELIGIBLE_FOR_MARK_PAID for payment_failed orders", async () => {
+      const failedOrder = { ...mockCashOrder, status: "payment_failed", paymentType: "in_store" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(failedOrder as never);
+
+      await expect(
+        orderService.markCashOrderPaid("tenant-1", "order-1")
+      ).rejects.toThrow("ORDER_NOT_ELIGIBLE_FOR_MARK_PAID");
+    });
+
+    it("uses empty string for merchantId when null", async () => {
+      const noMerchantOrder = { ...mockCashOrder, merchantId: null };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(noMerchantOrder as never);
+      vi.mocked(paymentService.createPaymentRecord).mockResolvedValue({} as never);
+      const emitSpy = vi.spyOn(orderEventEmitter, "emit");
+
+      await orderService.markCashOrderPaid("tenant-1", "order-1");
+
+      expect(emitSpy).toHaveBeenCalledWith(
+        "order.paid",
+        expect.objectContaining({ merchantId: "" })
+      );
     });
   });
 });
