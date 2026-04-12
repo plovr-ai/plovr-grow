@@ -46,13 +46,8 @@ const salesChannelLabels: Record<SalesChannel, string> = {
 };
 
 export function OrderCard({ order }: OrderCardProps) {
-  // Read from structured orderItems relation, fallback to JSON for legacy orders
   const orderItems = order.orderItems ?? [];
-  const itemCount = orderItems.length > 0
-    ? orderItems.reduce((sum, item) => sum + item.quantity, 0)
-    : (Array.isArray(order.items)
-        ? (order.items as Array<{ quantity: number }>).reduce((sum, i) => sum + i.quantity, 0)
-        : 0);
+  const itemCount = orderItems.reduce((sum, item) => sum + item.quantity, 0);
 
   // Get timezone from merchant or use default
   const timezone = order.merchant?.timezone ?? "America/New_York";
