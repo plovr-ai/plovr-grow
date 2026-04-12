@@ -200,11 +200,7 @@ export class OrderRepository {
           orderItems: {
             where: { deleted: false },
             orderBy: { sortOrder: "asc" },
-            include: {
-              modifiers: {
-                where: { deleted: false },
-              },
-            },
+            select: { name: true, quantity: true },
           },
         },
       }),
