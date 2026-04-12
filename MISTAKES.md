@@ -31,3 +31,19 @@ Always use `VARCHAR(191)` in migration SQL for Prisma `String` fields (without `
 Before writing migration SQL, check how Prisma maps the field type by looking at the init migration for similar columns.
 
 ---
+
+## [170] Migration used Prisma model name instead of actual MySQL table name
+
+**Date**: 2026-04-13
+**Category**: convention-violation
+
+### What went wrong
+The migration SQL used `ALTER TABLE \`Order\`` (Prisma model name) instead of `ALTER TABLE \`orders\`` (actual MySQL table name). Prisma models use `@@map("orders")` to map PascalCase model names to snake_case table names, but raw SQL migrations must use the actual database table name.
+
+### Correct approach
+Always check the `@@map()` annotation on the Prisma model to determine the actual database table name. For this project, all tables use snake_case names (e.g., `orders`, `menu_items`, `merchants`).
+
+### How to avoid
+Before writing any migration SQL, grep for `@@map` on the target model to find the actual table name.
+
+---
