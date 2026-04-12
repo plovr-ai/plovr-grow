@@ -255,11 +255,11 @@ describe("FulfillmentService", () => {
       mockRepo.getById.mockResolvedValue(fulfillmentRecord as never);
 
       const input: TransitionStatusInput = {
-        fulfillmentStatus: "fulfilled",
+        fulfillmentStatus: "pending",
         source: "internal",
       };
 
-      // confirmed -> fulfilled is a skip (invalid)
+      // confirmed -> pending is a backward transition (invalid)
       await expect(
         fulfillmentService.transitionStatusByFulfillmentId(tenantId, fulfillmentId, input)
       ).rejects.toThrow(AppError);

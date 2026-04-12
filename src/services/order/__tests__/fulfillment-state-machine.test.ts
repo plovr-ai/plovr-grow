@@ -80,8 +80,8 @@ describe("fulfillment-state-machine", () => {
       );
     });
 
-    describe("invalid skip transitions", () => {
-      const skipCases: [FulfillmentStatus, FulfillmentStatus][] = [
+    describe("valid forward-jump transitions (for coarse POS integrations)", () => {
+      const jumpCases: [FulfillmentStatus, FulfillmentStatus][] = [
         ["pending", "preparing"],
         ["pending", "ready"],
         ["pending", "fulfilled"],
@@ -90,10 +90,10 @@ describe("fulfillment-state-machine", () => {
         ["preparing", "fulfilled"],
       ];
 
-      it.each(skipCases)(
-        "should reject skipping %s → %s",
+      it.each(jumpCases)(
+        "should allow forward jump %s → %s",
         (from, to) => {
-          expect(canTransition(from, to)).toBe(false);
+          expect(canTransition(from, to)).toBe(true);
         }
       );
     });

@@ -3,6 +3,7 @@ import { squareConfig } from "./square.config";
 import { integrationRepository } from "@/repositories/integration.repository";
 import { squareService } from "./square.service";
 import prisma from "@/lib/db";
+import { AppError, ErrorCodes } from "@/lib/errors";
 import type { SquareWebhookPayload } from "./square.types";
 import {
   REVERSE_FULFILLMENT_STATUS_MAP,
@@ -338,7 +339,8 @@ export class SquareWebhookService {
           ? "Fulfillment failed on Square"
           : "Canceled on Square POS");
 
-      // Cancel the fulfillment
+      // Cancel the fulfillment — only ignore "already in terminal state" errors;
+      // re-throw real failures (DB errors, etc.) to prevent inconsistency.
       try {
         await fulfillmentService.transitionStatus(tenantId, mapping.internalId, {
           fulfillmentStatus: "canceled",
@@ -346,8 +348,11 @@ export class SquareWebhookService {
           externalVersion: incomingVersion ?? undefined,
           metadata: { cancelReason },
         });
-      } catch {
-        // Fulfillment may already be canceled — still cancel the order
+      } catch (error) {
+        const isAlreadyTerminal =
+          error instanceof AppError &&
+          error.code === ErrorCodes.INVALID_FULFILLMENT_STATUS_TRANSITION;
+        if (!isAlreadyTerminal) throw error;
       }
 
       // Cancel the order (payment-level)

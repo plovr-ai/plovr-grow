@@ -4,13 +4,18 @@ import { AppError, ErrorCodes } from "@/lib/errors";
 /**
  * Allowed fulfillment status transitions.
  *
- * Each key lists the statuses it may transition **to**. Terminal states
- * (`fulfilled`, `canceled`) have no outgoing transitions.
+ * Each key lists the statuses it may transition **to**. Forward jumps that
+ * skip intermediate states are permitted (e.g. pending → ready) because
+ * coarse POS integrations like Square may collapse multiple internal states
+ * into a single external state, producing valid forward-progress webhooks
+ * that skip steps.
+ *
+ * Terminal states (`fulfilled`, `canceled`) have no outgoing transitions.
  */
 export const FULFILLMENT_TRANSITIONS: Record<FulfillmentStatus, readonly FulfillmentStatus[]> = {
-  pending:   ["confirmed", "canceled"],
-  confirmed: ["preparing", "canceled"],
-  preparing: ["ready", "canceled"],
+  pending:   ["confirmed", "preparing", "ready", "fulfilled", "canceled"],
+  confirmed: ["preparing", "ready", "fulfilled", "canceled"],
+  preparing: ["ready", "fulfilled", "canceled"],
   ready:     ["fulfilled", "canceled"],
   fulfilled: [],
   canceled:  [],
