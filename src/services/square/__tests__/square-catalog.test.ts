@@ -82,7 +82,7 @@ function makePage(objects: object[]) {
 
 const mockCatalogApi = {
   list: vi.fn(() => Promise.resolve(makePage(mockCatalogObjects))),
-  search: vi.fn(() => Promise.resolve({ objects: [], cursor: undefined })),
+  search: vi.fn(),
 };
 
 vi.mock("square", () => {

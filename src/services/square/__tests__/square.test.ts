@@ -108,11 +108,12 @@ vi.mock("@/lib/db", () => {
     menuItem: { upsert: vi.fn(), updateMany: vi.fn() },
     menuCategoryItem: { upsert: vi.fn() },
     taxConfig: { upsert: vi.fn(), updateMany: vi.fn() },
-    merchantTaxRate: { upsert: vi.fn() },
-    modifierGroup: { upsert: vi.fn() },
+    merchantTaxRate: { upsert: vi.fn(), updateMany: vi.fn() },
+    modifierGroup: { upsert: vi.fn(), updateMany: vi.fn() },
     modifierOption: {
       upsert: vi.fn(),
       findUnique: vi.fn(() => null),
+      updateMany: vi.fn(),
     },
     menuItemModifierGroup: {
       create: vi.fn(),
@@ -162,6 +163,10 @@ const { __mockTx } = await import("@/lib/db") as unknown as {
     menu: { findFirst: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
     menuCategory: { upsert: ReturnType<typeof vi.fn> };
     menuItem: { upsert: ReturnType<typeof vi.fn>; updateMany: ReturnType<typeof vi.fn> };
+    taxConfig: { upsert: ReturnType<typeof vi.fn>; updateMany: ReturnType<typeof vi.fn> };
+    merchantTaxRate: { upsert: ReturnType<typeof vi.fn>; updateMany: ReturnType<typeof vi.fn> };
+    modifierGroup: { upsert: ReturnType<typeof vi.fn>; updateMany: ReturnType<typeof vi.fn> };
+    modifierOption: { upsert: ReturnType<typeof vi.fn>; findUnique: ReturnType<typeof vi.fn>; updateMany: ReturnType<typeof vi.fn> };
     externalIdMapping: { updateMany: ReturnType<typeof vi.fn> };
   };
 };
@@ -601,7 +606,7 @@ describe("SquareService", () => {
             price: 8.99,
             imageUrl: null,
             taxExternalIds: [],
-            modifierGroups: [{ name: "Extra sauce", required: false, minSelect: 0, maxSelect: 1, options: [{ name: "Extra sauce", price: 0.5, externalId: "sq-mod-1", isDefault: false, ordinal: 0 }] }],
+            modifierGroups: [{ externalId: "sq-modlist-1", name: "Extra sauce", required: false, minSelect: 0, maxSelect: 1, options: [{ name: "Extra sauce", price: 0.5, externalId: "sq-mod-1", isDefault: false, ordinal: 0 }] }],
             categoryExternalIds: ["sq-cat-1"],
             variationMappings: [{ externalId: "sq-var-1", name: "Regular" }],
           },
@@ -719,6 +724,7 @@ describe("SquareService", () => {
             taxExternalIds: [],
             modifierGroups: [
               {
+                externalId: null,
                 name: "Size",
                 required: true,
                 minSelect: 1,
@@ -795,6 +801,7 @@ describe("SquareService", () => {
             taxExternalIds: [],
             modifierGroups: [
               {
+                externalId: "sq-modlist-addons",
                 name: "Add-ons",
                 required: false,
                 minSelect: 0,
@@ -1011,6 +1018,84 @@ describe("SquareService", () => {
       expect(__mockTx.menuCategory.upsert).not.toHaveBeenCalled();
       // Verify soft-delete was called on the externalIdMapping
       expect(__mockTx.externalIdMapping.updateMany).toHaveBeenCalledTimes(2);
+    });
+
+    it("should soft-delete merchantTaxRate when TaxConfig is deleted incrementally", async () => {
+      vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(makeConnection());
+      vi.mocked(integrationRepository.getLastSuccessfulSyncCursor).mockResolvedValueOnce(
+        "2026-04-01T00:00:00.000Z"
+      );
+      vi.mocked(squareCatalogService.fetchIncrementalCatalog).mockResolvedValueOnce({
+        categories: [],
+        items: [],
+        modifierLists: [],
+        taxes: [],
+        images: [],
+        deletedIds: ["sq-tax-deleted"],
+      });
+      vi.mocked(integrationRepository.getIdMappingByExternalId).mockResolvedValueOnce({
+        id: "map-tax",
+        tenantId: "t1",
+        internalType: "TaxConfig",
+        internalId: "internal-tax-1",
+        externalSource: "SQUARE",
+        externalType: "TAX",
+        externalId: "sq-tax-deleted",
+        externalVersion: null,
+        deleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await service.syncCatalog("t1", "m1", true);
+
+      expect(__mockTx.taxConfig.updateMany).toHaveBeenCalledWith({
+        where: { id: "internal-tax-1", tenantId: "t1" },
+        data: { deleted: true },
+      });
+      expect(__mockTx.merchantTaxRate.updateMany).toHaveBeenCalledWith({
+        where: { taxConfigId: "internal-tax-1", deleted: false },
+        data: { deleted: true },
+      });
+    });
+
+    it("should soft-delete ModifierGroup and its options when deleted incrementally", async () => {
+      vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(makeConnection());
+      vi.mocked(integrationRepository.getLastSuccessfulSyncCursor).mockResolvedValueOnce(
+        "2026-04-01T00:00:00.000Z"
+      );
+      vi.mocked(squareCatalogService.fetchIncrementalCatalog).mockResolvedValueOnce({
+        categories: [],
+        items: [],
+        modifierLists: [],
+        taxes: [],
+        images: [],
+        deletedIds: ["sq-modlist-deleted"],
+      });
+      vi.mocked(integrationRepository.getIdMappingByExternalId).mockResolvedValueOnce({
+        id: "map-modgroup",
+        tenantId: "t1",
+        internalType: "ModifierGroup",
+        internalId: "internal-modgroup-1",
+        externalSource: "SQUARE",
+        externalType: "MODIFIER_LIST",
+        externalId: "sq-modlist-deleted",
+        externalVersion: null,
+        deleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await service.syncCatalog("t1", "m1", true);
+
+      expect(__mockTx.modifierGroup.updateMany).toHaveBeenCalledWith({
+        where: { id: "internal-modgroup-1", tenantId: "t1" },
+        data: { deleted: true },
+      });
+      expect(__mockTx.modifierOption.updateMany).toHaveBeenCalledWith({
+        where: { groupId: "internal-modgroup-1" },
+        data: { deleted: true },
+      });
     });
 
     it("should use CATALOG_INCREMENTAL sync type for incremental sync", async () => {
