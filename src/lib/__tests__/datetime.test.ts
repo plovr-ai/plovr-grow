@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   formatDate,
   formatTime,
@@ -130,6 +130,22 @@ describe("datetime utilities", () => {
       const result = getTimezoneAbbr("America/New_York");
       // Should return either EST or EDT depending on current date
       expect(["EST", "EDT"]).toContain(result);
+    });
+
+    it("should fall back to raw timezone string when timeZoneName part is missing", () => {
+      // Mock formatToParts to return no timeZoneName part
+      const spy = vi.spyOn(Intl.DateTimeFormat.prototype, "formatToParts").mockReturnValue([
+        { type: "month", value: "1" },
+        { type: "literal", value: "/" },
+        { type: "day", value: "15" },
+        { type: "literal", value: "/" },
+        { type: "year", value: "2024" },
+      ]);
+
+      const result = getTimezoneAbbr("America/New_York", new Date("2024-01-15T12:00:00Z"));
+      expect(result).toBe("America/New_York");
+
+      spy.mockRestore();
     });
   });
 
