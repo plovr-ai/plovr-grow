@@ -89,6 +89,15 @@ vi.mock("@/lib/db", () => {
     menuCategoryItem: { upsert: vi.fn() },
     taxConfig: { upsert: vi.fn() },
     merchantTaxRate: { upsert: vi.fn() },
+    modifierGroup: { upsert: vi.fn() },
+    modifierOption: {
+      upsert: vi.fn(),
+      findUnique: vi.fn(() => null),
+    },
+    menuItemModifierGroup: {
+      create: vi.fn(),
+      deleteMany: vi.fn(),
+    },
   };
   return {
     default: {

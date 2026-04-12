@@ -32,7 +32,23 @@ export class MenuRepository {
             },
           },
           include: {
-            menuItem: true,
+            menuItem: {
+              include: {
+                modifierGroups: {
+                  include: {
+                    modifierGroup: {
+                      include: {
+                        options: {
+                          where: { deleted: false },
+                          orderBy: { sortOrder: "asc" },
+                        },
+                      },
+                    },
+                  },
+                  orderBy: { sortOrder: "asc" },
+                },
+              },
+            },
           },
           orderBy: {
             sortOrder: "asc",
@@ -119,7 +135,23 @@ export class MenuRepository {
             },
           },
           include: {
-            menuItem: true,
+            menuItem: {
+              include: {
+                modifierGroups: {
+                  include: {
+                    modifierGroup: {
+                      include: {
+                        options: {
+                          where: { deleted: false },
+                          orderBy: { sortOrder: "asc" },
+                        },
+                      },
+                    },
+                  },
+                  orderBy: { sortOrder: "asc" },
+                },
+              },
+            },
           },
           orderBy: {
             sortOrder: "asc",

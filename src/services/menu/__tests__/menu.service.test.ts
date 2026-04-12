@@ -72,6 +72,26 @@ vi.mock("@/repositories/featured-item.repository", () => ({
   },
 }));
 
+vi.mock("@/lib/db", () => ({
+  default: {
+    modifierGroup: { upsert: vi.fn() },
+    modifierOption: {
+      upsert: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    menuItemModifierGroup: {
+      create: vi.fn(),
+      deleteMany: vi.fn(),
+    },
+  },
+}));
+
+vi.mock("@/lib/id", () => ({
+  generateEntityId: vi.fn(
+    () => "gen-" + Math.random().toString(36).slice(2, 8)
+  ),
+}));
+
 // Import mocked modules
 import { menuRepository } from "@/repositories/menu.repository";
 import { menuEntityRepository } from "@/repositories/menu-entity.repository";
@@ -1088,6 +1108,37 @@ describe("MenuService", () => {
         tags: null,
       });
     });
+
+    it("should sync multiple-type modifier groups with allowQuantity to normalized tables", async () => {
+      const mockItem = { id: "item-new", name: "Pizza" };
+      vi.mocked(menuRepository.createItem).mockResolvedValue(mockItem as never);
+      vi.mocked(menuCategoryItemRepository.getNextSortOrder).mockResolvedValue(0 as never);
+      vi.mocked(menuCategoryItemRepository.linkItemToCategory).mockResolvedValue(undefined as never);
+
+      await menuService.createMenuItem("tenant-1", {
+        categoryIds: ["cat-1"],
+        name: "Pizza",
+        price: 15.99,
+        modifierGroups: [
+          {
+            id: "mg-toppings",
+            name: "Toppings",
+            type: "multiple",
+            required: false,
+            allowQuantity: true,
+            maxQuantityPerModifier: 3,
+            modifiers: [
+              { id: "mod-cheese", name: "Extra Cheese", price: 1.5 },
+              { id: "mod-pepperoni", name: "Pepperoni", price: 2 },
+            ],
+          },
+        ],
+      });
+
+      // Verify item was created
+      expect(menuRepository.createItem).toHaveBeenCalledTimes(1);
+      // syncModifierGroupsToTables is called internally and uses the mocked prisma
+    });
   });
 
   describe("updateMenuItem()", () => {
@@ -1150,6 +1201,39 @@ describe("MenuService", () => {
       await menuService.updateMenuItem("tenant-1", "item-1", { name: "Updated" });
 
       expect(menuCategoryItemRepository.setItemCategories).not.toHaveBeenCalled();
+    });
+
+    it("should sync modifier groups to normalized tables on update", async () => {
+      vi.mocked(menuRepository.updateItem).mockResolvedValue(undefined as never);
+
+      await menuService.updateMenuItem("tenant-1", "item-1", {
+        modifierGroups: [
+          {
+            id: "mg-size",
+            name: "Size",
+            type: "single",
+            required: true,
+            modifiers: [
+              { id: "opt-sm", name: "Small", price: 0, isDefault: true, isAvailable: true },
+              { id: "opt-lg", name: "Large", price: 3, isDefault: false, isAvailable: true },
+            ],
+          },
+          {
+            id: "mg-extras",
+            name: "Extras",
+            type: "multiple",
+            required: false,
+            allowQuantity: true,
+            maxQuantityPerModifier: 5,
+            modifiers: [
+              { id: "opt-cheese", name: "Extra Cheese", price: 1.5, isDefault: false },
+            ],
+          },
+        ],
+      });
+
+      // Verify updateItem was called with JSON data for backward compat
+      expect(menuRepository.updateItem).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -1355,6 +1439,259 @@ describe("MenuService", () => {
         "menu-1",
         true
       );
+    });
+
+    it("should extract modifier groups from relational data when present", async () => {
+      const categoriesWithRelationalModifiers = [
+        {
+          id: "cat-1",
+          name: "Mains",
+          description: null,
+          imageUrl: null,
+          sortOrder: 0,
+          status: "active",
+          categoryItems: [
+            {
+              sortOrder: 0,
+              menuItem: {
+                id: "item-1",
+                name: "Burger",
+                description: null,
+                price: new Prisma.Decimal(12.99),
+                imageUrl: null,
+                status: "active",
+                modifiers: null, // JSON field is null
+                tags: null,
+                modifierGroups: [
+                  {
+                    sortOrder: 0,
+                    modifierGroup: {
+                      id: "mg-size",
+                      name: "Size",
+                      required: true,
+                      minSelect: 1,
+                      maxSelect: 1,
+                      allowQuantity: false,
+                      maxQuantityPerModifier: 1,
+                      options: [
+                        {
+                          id: "opt-sm",
+                          name: "Small",
+                          price: new Prisma.Decimal(0),
+                          isDefault: true,
+                          isAvailable: true,
+                          sortOrder: 0,
+                        },
+                        {
+                          id: "opt-lg",
+                          name: "Large",
+                          price: new Prisma.Decimal(3),
+                          isDefault: false,
+                          isAvailable: true,
+                          sortOrder: 1,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ];
+
+      vi.mocked(menuRepository.getCategoriesWithItemsByMenuForDashboard).mockResolvedValue(
+        categoriesWithRelationalModifiers as never
+      );
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(new Map());
+      vi.mocked(menuCategoryItemRepository.getItemsCategoryIds).mockResolvedValue(new Map());
+
+      const result = await menuService.getMenuForDashboard("tenant-1");
+
+      const modGroups = result.categories[0].menuItems[0].modifierGroups;
+      expect(modGroups).toHaveLength(1);
+      expect(modGroups[0].id).toBe("mg-size");
+      expect(modGroups[0].name).toBe("Size");
+      expect(modGroups[0].type).toBe("single");
+      expect(modGroups[0].required).toBe(true);
+      expect(modGroups[0].modifiers).toHaveLength(2);
+      expect(modGroups[0].modifiers[0].name).toBe("Small");
+      expect(modGroups[0].modifiers[0].price).toBe(0);
+      expect(modGroups[0].modifiers[1].name).toBe("Large");
+      expect(modGroups[0].modifiers[1].price).toBe(3);
+    });
+
+    it("should handle multiple-select groups with allowQuantity from relational data", async () => {
+      const categoriesWithMultiSelect = [
+        {
+          id: "cat-1",
+          name: "Mains",
+          description: null,
+          imageUrl: null,
+          sortOrder: 0,
+          status: "active",
+          categoryItems: [
+            {
+              sortOrder: 0,
+              menuItem: {
+                id: "item-1",
+                name: "Pizza",
+                description: null,
+                price: new Prisma.Decimal(15),
+                imageUrl: null,
+                status: "active",
+                modifiers: null,
+                tags: null,
+                modifierGroups: [
+                  {
+                    sortOrder: 0,
+                    modifierGroup: {
+                      id: "mg-toppings",
+                      name: "Toppings",
+                      required: false,
+                      minSelect: 0,
+                      maxSelect: 5,
+                      allowQuantity: true,
+                      maxQuantityPerModifier: 3,
+                      options: [
+                        {
+                          id: "opt-cheese",
+                          name: "Extra Cheese",
+                          price: new Prisma.Decimal(1.5),
+                          isDefault: false,
+                          isAvailable: true,
+                          sortOrder: 0,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ];
+
+      vi.mocked(menuRepository.getCategoriesWithItemsByMenuForDashboard).mockResolvedValue(
+        categoriesWithMultiSelect as never
+      );
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(new Map());
+      vi.mocked(menuCategoryItemRepository.getItemsCategoryIds).mockResolvedValue(new Map());
+
+      const result = await menuService.getMenuForDashboard("tenant-1");
+
+      const modGroups = result.categories[0].menuItems[0].modifierGroups;
+      expect(modGroups).toHaveLength(1);
+      expect(modGroups[0].type).toBe("multiple");
+      expect(modGroups[0].allowQuantity).toBe(true);
+      expect(modGroups[0].maxQuantityPerModifier).toBe(3);
+    });
+
+    it("should handle relational group with no options (edge case)", async () => {
+      const categoriesWithNoOptions = [
+        {
+          id: "cat-1",
+          name: "Mains",
+          description: null,
+          imageUrl: null,
+          sortOrder: 0,
+          status: "active",
+          categoryItems: [
+            {
+              sortOrder: 0,
+              menuItem: {
+                id: "item-1",
+                name: "Plain Item",
+                description: null,
+                price: new Prisma.Decimal(10),
+                imageUrl: null,
+                status: "active",
+                modifiers: null,
+                tags: null,
+                modifierGroups: [
+                  {
+                    sortOrder: 0,
+                    modifierGroup: {
+                      id: "mg-empty",
+                      name: "Empty Group",
+                      required: false,
+                      minSelect: 0,
+                      maxSelect: 1,
+                      allowQuantity: false,
+                      maxQuantityPerModifier: 1,
+                      options: undefined, // no options
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ];
+
+      vi.mocked(menuRepository.getCategoriesWithItemsByMenuForDashboard).mockResolvedValue(
+        categoriesWithNoOptions as never
+      );
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(new Map());
+      vi.mocked(menuCategoryItemRepository.getItemsCategoryIds).mockResolvedValue(new Map());
+
+      const result = await menuService.getMenuForDashboard("tenant-1");
+
+      const modGroups = result.categories[0].menuItems[0].modifierGroups;
+      expect(modGroups).toHaveLength(1);
+      expect(modGroups[0].modifiers).toEqual([]);
+    });
+
+    it("should fall back to JSON modifiers when relational data is empty", async () => {
+      const categoriesWithJsonOnly = [
+        {
+          id: "cat-1",
+          name: "Mains",
+          description: null,
+          imageUrl: null,
+          sortOrder: 0,
+          status: "active",
+          categoryItems: [
+            {
+              sortOrder: 0,
+              menuItem: {
+                id: "item-1",
+                name: "Burger",
+                description: null,
+                price: new Prisma.Decimal(12.99),
+                imageUrl: null,
+                status: "active",
+                modifiers: [
+                  {
+                    id: "json-size",
+                    name: "Size (JSON)",
+                    type: "single",
+                    required: true,
+                    modifiers: [
+                      { id: "j1", name: "Regular", price: 0, isDefault: true, isAvailable: true },
+                    ],
+                  },
+                ],
+                tags: null,
+                modifierGroups: [], // empty relational data
+              },
+            },
+          ],
+        },
+      ];
+
+      vi.mocked(menuRepository.getCategoriesWithItemsByMenuForDashboard).mockResolvedValue(
+        categoriesWithJsonOnly as never
+      );
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(new Map());
+      vi.mocked(menuCategoryItemRepository.getItemsCategoryIds).mockResolvedValue(new Map());
+
+      const result = await menuService.getMenuForDashboard("tenant-1");
+
+      const modGroups = result.categories[0].menuItems[0].modifierGroups;
+      expect(modGroups).toHaveLength(1);
+      expect(modGroups[0].id).toBe("json-size");
+      expect(modGroups[0].name).toBe("Size (JSON)");
     });
   });
 

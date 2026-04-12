@@ -412,6 +412,11 @@ export class MenuService {
       await menuCategoryItemRepository.linkItemToCategory(tenantId, categoryId, item.id, sortOrder);
     }
 
+    // Sync modifier groups to normalized tables
+    if (input.modifierGroups && input.modifierGroups.length > 0) {
+      await this.syncModifierGroupsToTables(tenantId, item.id, input.modifierGroups);
+    }
+
     return item;
   }
 
@@ -442,6 +447,11 @@ export class MenuService {
     // Update category associations if provided
     if (input.categoryIds !== undefined) {
       await menuCategoryItemRepository.setItemCategories(tenantId, itemId, input.categoryIds);
+    }
+
+    // Sync modifier groups to normalized tables
+    if (input.modifierGroups) {
+      await this.syncModifierGroupsToTables(tenantId, itemId, input.modifierGroups);
     }
   }
 
@@ -551,6 +561,8 @@ export class MenuService {
       status: category.status as DashboardCategory["status"],
       menuItems: category.categoryItems.map((ci): DashboardMenuItem => {
         const item = ci.menuItem;
+        // Prefer relational modifier data, fall back to JSON
+        const modifierGroups = this.extractDashboardModifierGroups(item);
         return {
           id: item.id,
           name: item.name,
@@ -559,7 +571,7 @@ export class MenuService {
           imageUrl: item.imageUrl,
           sortOrder: ci.sortOrder,
           status: item.status as DashboardMenuItem["status"],
-          modifierGroups: (item.modifiers as unknown as ModifierGroupInput[]) || [],
+          modifierGroups,
           tags: (item.tags as unknown as string[]) || [],
           taxConfigIds: itemTaxMap.get(item.id) || [],
           categoryIds: itemCategoryMap.get(item.id) || [],
@@ -642,6 +654,142 @@ export class MenuService {
   async countItemCategories(itemId: string): Promise<number> {
     const { menuCategoryItemRepository } = await getRepositories();
     return menuCategoryItemRepository.countItemCategories(itemId);
+  }
+
+  /**
+   * Sync modifier groups from the dashboard form to normalized tables.
+   * Replaces all modifier group associations for the given menu item.
+   */
+  private async syncModifierGroupsToTables(
+    tenantId: string,
+    menuItemId: string,
+    groups: ModifierGroupInput[]
+  ): Promise<void> {
+    const { default: prisma } = await import("@/lib/db");
+    const { generateEntityId } = await import("@/lib/id");
+
+    // Remove existing junction records
+    await prisma.menuItemModifierGroup.deleteMany({
+      where: { menuItemId },
+    });
+
+    for (let groupIdx = 0; groupIdx < groups.length; groupIdx++) {
+      const group = groups[groupIdx];
+      const groupId = group.id;
+
+      // Upsert the modifier group
+      await prisma.modifierGroup.upsert({
+        where: { id: groupId },
+        create: {
+          id: groupId,
+          tenantId,
+          name: group.name,
+          required: group.required,
+          minSelect: group.required ? 1 : 0,
+          maxSelect: group.type === "single" ? 1 : group.modifiers.length,
+          allowQuantity: group.allowQuantity ?? false,
+          maxQuantityPerModifier: group.maxQuantityPerModifier ?? 1,
+        },
+        update: {
+          name: group.name,
+          required: group.required,
+          minSelect: group.required ? 1 : 0,
+          maxSelect: group.type === "single" ? 1 : group.modifiers.length,
+          allowQuantity: group.allowQuantity ?? false,
+          maxQuantityPerModifier: group.maxQuantityPerModifier ?? 1,
+          deleted: false,
+        },
+      });
+
+      // Soft-delete existing options for this group that are no longer present
+      const currentOptionIds = group.modifiers.map((m) => m.id);
+      await prisma.modifierOption.updateMany({
+        where: {
+          groupId,
+          id: { notIn: currentOptionIds },
+          deleted: false,
+        },
+        data: { deleted: true },
+      });
+
+      // Upsert each option
+      for (let optIdx = 0; optIdx < group.modifiers.length; optIdx++) {
+        const mod = group.modifiers[optIdx];
+        await prisma.modifierOption.upsert({
+          where: { id: mod.id },
+          create: {
+            id: mod.id,
+            tenantId,
+            groupId,
+            name: mod.name,
+            price: mod.price,
+            isDefault: mod.isDefault ?? false,
+            isAvailable: mod.isAvailable ?? true,
+            sortOrder: optIdx,
+          },
+          update: {
+            name: mod.name,
+            price: mod.price,
+            isDefault: mod.isDefault ?? false,
+            isAvailable: mod.isAvailable ?? true,
+            sortOrder: optIdx,
+            deleted: false,
+          },
+        });
+      }
+
+      // Create junction record
+      await prisma.menuItemModifierGroup.create({
+        data: {
+          id: generateEntityId(),
+          menuItemId,
+          modifierGroupId: groupId,
+          sortOrder: groupIdx,
+        },
+      });
+    }
+  }
+
+  /**
+   * Extract modifier groups from a menu item, preferring relational data
+   * over the legacy JSON field.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private extractDashboardModifierGroups(item: Record<string, any>): ModifierGroupInput[] {
+    // If relational modifier groups are present (from Prisma include), use them
+    const relationalGroups = item.modifierGroups;
+    if (Array.isArray(relationalGroups) && relationalGroups.length > 0) {
+      return relationalGroups.map(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (junction: any): ModifierGroupInput => {
+          const group = junction.modifierGroup;
+          const isSingle = group.maxSelect === 1;
+          return {
+            id: group.id,
+            name: group.name,
+            type: isSingle ? "single" : "multiple",
+            required: group.required,
+            allowQuantity: group.allowQuantity || undefined,
+            maxQuantityPerModifier: group.allowQuantity
+              ? group.maxQuantityPerModifier
+              : undefined,
+            modifiers: (group.options || []).map(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (opt: any) => ({
+                id: opt.id,
+                name: opt.name,
+                price: Number(opt.price),
+                isDefault: opt.isDefault,
+                isAvailable: opt.isAvailable,
+              })
+            ),
+          };
+        }
+      );
+    }
+
+    // Fallback to JSON field
+    return (item.modifiers as unknown as ModifierGroupInput[]) || [];
   }
 
   // ==================== Featured Items ====================

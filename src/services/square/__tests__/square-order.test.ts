@@ -878,6 +878,90 @@ describe("SquareOrderService", () => {
       // Should only be called once (for menu items), not twice (no modifiers to look up)
       expect(mockGetIdMappingsByInternalIds).toHaveBeenCalledTimes(1);
     });
+
+    it("should resolve modifiers via ModifierOption type first, then fall back to MenuItem", async () => {
+      // Simulate the new ModifierOption mapping existing for mod-1
+      mockGetIdMappingsByInternalIds.mockImplementation(
+        (_tenantId: string, _source: string, internalType: string, ids: string[], externalType?: string) => {
+          // Menu item variations
+          if (internalType === "MenuItem" && externalType === "ITEM_VARIATION") {
+            return Promise.resolve([
+              { internalId: "item-1", externalId: "sq-var-1" },
+              { internalId: "item-2", externalId: "sq-var-2" },
+            ]);
+          }
+          // New path: ModifierOption + MODIFIER
+          if (internalType === "ModifierOption" && externalType === "MODIFIER") {
+            if (ids.includes("mod-1")) {
+              return Promise.resolve([
+                { internalId: "mod-1", externalId: "sq-mod-new-1" },
+              ]);
+            }
+            return Promise.resolve([]);
+          }
+          // ModifierOption + ITEM_VARIATION (for variation-based modifiers)
+          if (internalType === "ModifierOption" && externalType === "ITEM_VARIATION") {
+            return Promise.resolve([]);
+          }
+          // Legacy fallback: MenuItem + MODIFIER (should not be reached for mod-1)
+          if (internalType === "MenuItem" && externalType === "MODIFIER") {
+            return Promise.resolve([]);
+          }
+          return Promise.resolve([]);
+        }
+      );
+
+      mockCreate.mockResolvedValue({
+        order: { id: "sq-order-mod", version: 1 },
+      });
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, sampleInput);
+
+      // Verify the modifier was resolved
+      const createCall = mockCreate.mock.calls[0][0];
+      const lineItem1 = createCall.order.lineItems[0];
+      expect(lineItem1.modifiers[0].catalogObjectId).toBe("sq-mod-new-1");
+    });
+
+    it("should fall back to legacy MenuItem mapping for unresolved modifiers", async () => {
+      mockGetIdMappingsByInternalIds.mockImplementation(
+        (_tenantId: string, _source: string, internalType: string, ids: string[], externalType?: string) => {
+          if (internalType === "MenuItem" && externalType === "ITEM_VARIATION") {
+            return Promise.resolve([
+              { internalId: "item-1", externalId: "sq-var-1" },
+              { internalId: "item-2", externalId: "sq-var-2" },
+            ]);
+          }
+          // New path returns nothing
+          if (internalType === "ModifierOption" && externalType === "MODIFIER") {
+            return Promise.resolve([]);
+          }
+          if (internalType === "ModifierOption" && externalType === "ITEM_VARIATION") {
+            return Promise.resolve([]);
+          }
+          // Legacy fallback returns the mapping
+          if (internalType === "MenuItem" && externalType === "MODIFIER") {
+            if (ids.includes("mod-1")) {
+              return Promise.resolve([
+                { internalId: "mod-1", externalId: "sq-mod-legacy-1" },
+              ]);
+            }
+            return Promise.resolve([]);
+          }
+          return Promise.resolve([]);
+        }
+      );
+
+      mockCreate.mockResolvedValue({
+        order: { id: "sq-order-legacy", version: 1 },
+      });
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, sampleInput);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      const lineItem1 = createCall.order.lineItems[0];
+      expect(lineItem1.modifiers[0].catalogObjectId).toBe("sq-mod-legacy-1");
+    });
   });
 
   // ==================== orderMode → fulfillment type ====================
