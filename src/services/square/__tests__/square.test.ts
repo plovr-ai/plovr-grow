@@ -448,6 +448,10 @@ describe("SquareService", () => {
         orderMode: "pickup",
         items: [],
         totalAmount: 10,
+        taxAmount: 0,
+        tipAmount: 0,
+        deliveryFee: 0,
+        discount: 0,
       });
 
       expect(squareOrderService.createOrder).toHaveBeenCalledWith(
@@ -462,7 +466,7 @@ describe("SquareService", () => {
       vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(null);
 
       await expect(
-        service.pushOrder("t1", "m1", { orderId: "o-1", orderNumber: "ORD-001", customerFirstName: "J", customerLastName: "D", customerPhone: "555", orderMode: "pickup", items: [], totalAmount: 0 })
+        service.pushOrder("t1", "m1", { orderId: "o-1", orderNumber: "ORD-001", customerFirstName: "J", customerLastName: "D", customerPhone: "555", orderMode: "pickup", items: [], totalAmount: 0, taxAmount: 0, tipAmount: 0, deliveryFee: 0, discount: 0 })
       ).rejects.toMatchObject({ code: "INTEGRATION_NOT_CONNECTED" });
     });
 
@@ -472,7 +476,7 @@ describe("SquareService", () => {
       );
 
       await expect(
-        service.pushOrder("t1", "m1", { orderId: "o-1", orderNumber: "ORD-001", customerFirstName: "J", customerLastName: "D", customerPhone: "555", orderMode: "pickup", items: [], totalAmount: 0 })
+        service.pushOrder("t1", "m1", { orderId: "o-1", orderNumber: "ORD-001", customerFirstName: "J", customerLastName: "D", customerPhone: "555", orderMode: "pickup", items: [], totalAmount: 0, taxAmount: 0, tipAmount: 0, deliveryFee: 0, discount: 0 })
       ).rejects.toMatchObject({ code: "INTEGRATION_TOKEN_EXPIRED" });
     });
 
@@ -497,6 +501,10 @@ describe("SquareService", () => {
         orderMode: "pickup",
         items: [],
         totalAmount: 0,
+        taxAmount: 0,
+        tipAmount: 0,
+        deliveryFee: 0,
+        discount: 0,
       });
 
       expect(squareOAuthService.refreshToken).toHaveBeenCalledWith("refresh-456");
@@ -514,7 +522,7 @@ describe("SquareService", () => {
       );
 
       await expect(
-        service.pushOrder("t1", "m1", { orderId: "o-1", orderNumber: "ORD-001", customerFirstName: "J", customerLastName: "D", customerPhone: "555", orderMode: "pickup", items: [], totalAmount: 0 })
+        service.pushOrder("t1", "m1", { orderId: "o-1", orderNumber: "ORD-001", customerFirstName: "J", customerLastName: "D", customerPhone: "555", orderMode: "pickup", items: [], totalAmount: 0, taxAmount: 0, tipAmount: 0, deliveryFee: 0, discount: 0 })
       ).rejects.toMatchObject({ code: "INTEGRATION_TOKEN_EXPIRED" });
     });
   });

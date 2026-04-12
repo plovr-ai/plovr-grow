@@ -3,6 +3,9 @@ import { SquareClient, SquareEnvironment } from "square";
 import type {
   OrderLineItem,
   OrderLineItemModifier,
+  OrderLineItemTax,
+  OrderLineItemDiscount,
+  OrderServiceCharge,
   Fulfillment,
   FulfillmentState,
 } from "square";
@@ -72,6 +75,15 @@ export class SquareOrderService {
     // Build fulfillment
     const fulfillment = this.buildFulfillment(input);
 
+    // Build order-level taxes (P0-2: map tax configs to Square catalog taxes)
+    const taxes = await this.buildTaxes(tenantId, input);
+
+    // Build service charges (tip + delivery fee)
+    const serviceCharges = this.buildServiceCharges(input);
+
+    // Build discounts
+    const discounts = this.buildDiscounts(input);
+
     // Generate deterministic idempotency key derived from the full push
     // payload so that retries with identical content reuse Square's dedup
     // (transient failures), while intentionally modified retries produce a
@@ -97,6 +109,9 @@ export class SquareOrderService {
           locationId,
           referenceId: input.orderId,
           lineItems,
+          taxes: taxes.length > 0 ? taxes : undefined,
+          serviceCharges: serviceCharges.length > 0 ? serviceCharges : undefined,
+          discounts: discounts.length > 0 ? discounts : undefined,
           fulfillments: [fulfillment],
           ticketName: input.orderNumber,
           metadata: {
@@ -405,6 +420,133 @@ export class SquareOrderService {
   }
 
   /**
+   * Build order-level taxes from item tax configurations.
+   *
+   * Collects unique tax configs across all items, resolves their Square
+   * catalog TAX IDs via ExternalIdMapping, and builds ORDER-scoped tax
+   * entries with percentage. Square calculates the actual tax amounts
+   * from line item totals.
+   */
+  private async buildTaxes(
+    tenantId: string,
+    input: SquareOrderPushInput
+  ): Promise<OrderLineItemTax[]> {
+    // Collect unique tax configs from all items
+    const taxConfigMap = new Map<
+      string,
+      { name: string; rate: number; inclusionType: string }
+    >();
+    for (const item of input.items) {
+      if (!item.taxes) continue;
+      for (const tax of item.taxes) {
+        if (!taxConfigMap.has(tax.taxConfigId)) {
+          taxConfigMap.set(tax.taxConfigId, {
+            name: tax.name,
+            rate: tax.rate,
+            inclusionType: tax.inclusionType,
+          });
+        }
+      }
+    }
+
+    if (taxConfigMap.size === 0) return [];
+
+    // Resolve TaxConfig IDs to Square catalog TAX IDs
+    const taxConfigIds = [...taxConfigMap.keys()];
+    const taxMappings =
+      await integrationRepository.getIdMappingsByInternalIds(
+        tenantId,
+        "SQUARE",
+        "TaxConfig",
+        taxConfigIds,
+        "TAX"
+      );
+    const catalogIdMap = new Map(
+      taxMappings.map((m) => [m.internalId, m.externalId])
+    );
+
+    return taxConfigIds.map((taxConfigId) => {
+      const config = taxConfigMap.get(taxConfigId)!;
+      const catalogObjectId = catalogIdMap.get(taxConfigId);
+      const tax: OrderLineItemTax = {
+        uid: taxConfigId,
+        name: config.name,
+        type: config.inclusionType === "inclusive" ? "INCLUSIVE" : "ADDITIVE",
+        percentage: (config.rate * 100).toFixed(4),
+        scope: "ORDER",
+      };
+      if (catalogObjectId) {
+        tax.catalogObjectId = catalogObjectId;
+      }
+      return tax;
+    });
+  }
+
+  /**
+   * Build service charges for tip and delivery fee.
+   *
+   * - tipAmount → AUTO_GRATUITY service charge at TOTAL_PHASE
+   * - deliveryFee → CUSTOM service charge at TOTAL_PHASE
+   */
+  private buildServiceCharges(
+    input: SquareOrderPushInput
+  ): OrderServiceCharge[] {
+    const charges: OrderServiceCharge[] = [];
+
+    if (input.tipAmount > 0) {
+      charges.push({
+        uid: "tip",
+        name: "Tip",
+        amountMoney: {
+          amount: BigInt(Math.round(input.tipAmount * 100)),
+          currency: "USD",
+        },
+        calculationPhase: "TOTAL_PHASE",
+        type: "AUTO_GRATUITY",
+        taxable: false,
+      });
+    }
+
+    if (input.deliveryFee > 0) {
+      charges.push({
+        uid: "delivery-fee",
+        name: "Delivery Fee",
+        amountMoney: {
+          amount: BigInt(Math.round(input.deliveryFee * 100)),
+          currency: "USD",
+        },
+        calculationPhase: "TOTAL_PHASE",
+        type: "CUSTOM",
+        taxable: false,
+      });
+    }
+
+    return charges;
+  }
+
+  /**
+   * Build order-level discount from the discount amount.
+   */
+  private buildDiscounts(
+    input: SquareOrderPushInput
+  ): OrderLineItemDiscount[] {
+    if (input.discount <= 0) return [];
+
+    return [
+      {
+        uid: "discount",
+        name: "Discount",
+        type: "FIXED_AMOUNT",
+        amountMoney: {
+          amount: BigInt(Math.round(input.discount * 100)),
+          currency: "USD",
+        },
+        scope: "ORDER",
+      },
+    ];
+  }
+
+  /**
    * Build a Square fulfillment from the order input.
    *
    * Maps our internal `OrderMode` to Square's fulfillment type:
@@ -556,6 +698,10 @@ export class SquareOrderService {
       input.customerEmail ?? "",
       input.orderMode,
       input.totalAmount,
+      input.taxAmount,
+      input.tipAmount,
+      input.deliveryFee,
+      input.discount,
       input.notes ?? "",
       items.join(";"),
     ].join("||");

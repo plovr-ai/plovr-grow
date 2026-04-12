@@ -102,6 +102,7 @@ async function handleOrderPaid(event: OrderPaidEvent): Promise<void> {
         quantity: mod.quantity,
       })),
       specialInstructions: item.specialInstructions,
+      taxes: item.taxes,
     }));
 
     const input: PosOrderPushInput = {
@@ -115,6 +116,10 @@ async function handleOrderPaid(event: OrderPaidEvent): Promise<void> {
       deliveryAddress: orderForPush.deliveryAddress,
       items: pushItems,
       totalAmount: event.totalAmount ?? 0,
+      taxAmount: orderForPush.taxAmount,
+      tipAmount: orderForPush.tipAmount,
+      deliveryFee: orderForPush.deliveryFee,
+      discount: orderForPush.discount,
       notes: orderForPush.notes ?? undefined,
     };
 
@@ -339,6 +344,10 @@ async function getOrderForPush(
   orderMode: OrderMode;
   deliveryAddress: DeliveryAddress | null;
   notes: string | null;
+  taxAmount: number;
+  tipAmount: number;
+  deliveryFee: number;
+  discount: number;
 } | null> {
   try {
     const { orderService } = await import("@/services/order/order.service");
@@ -351,6 +360,10 @@ async function getOrderForPush(
       deliveryAddress:
         (order.deliveryAddress as unknown as DeliveryAddress | null) ?? null,
       notes: order.notes ?? null,
+      taxAmount: Number(order.taxAmount ?? 0),
+      tipAmount: Number(order.tipAmount ?? 0),
+      deliveryFee: Number(order.deliveryFee ?? 0),
+      discount: Number(order.discount ?? 0),
     };
   } catch {
     return null;

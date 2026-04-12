@@ -94,6 +94,10 @@ const sampleInput: SquareOrderPushInput = {
   customerEmail: "john@example.com",
   orderMode: "pickup",
   totalAmount: 25.99,
+  taxAmount: 2.31,
+  tipAmount: 3.00,
+  deliveryFee: 0,
+  discount: 0,
   items: [
     {
       menuItemId: "item-1",
@@ -109,6 +113,15 @@ const sampleInput: SquareOrderPushInput = {
         },
       ],
       specialInstructions: "No pickles",
+      taxes: [
+        {
+          taxConfigId: "tax-1",
+          name: "Sales Tax",
+          rate: 0.08875,
+          roundingMethod: "half_up" as const,
+          inclusionType: "additive" as const,
+        },
+      ],
     },
     {
       menuItemId: "item-2",
@@ -116,6 +129,15 @@ const sampleInput: SquareOrderPushInput = {
       price: 4.99,
       quantity: 1,
       selectedModifiers: [],
+      taxes: [
+        {
+          taxConfigId: "tax-1",
+          name: "Sales Tax",
+          rate: 0.08875,
+          roundingMethod: "half_up" as const,
+          inclusionType: "additive" as const,
+        },
+      ],
     },
   ],
   notes: "Ring doorbell",
@@ -141,7 +163,7 @@ describe("SquareOrderService", () => {
   describe("createOrder", () => {
     it("should create a Square order with correct line items and fulfillment", async () => {
       mockGetIdMappingsByInternalIds.mockImplementation(
-        (_tenantId: string, _source: string, _type: string, _ids: string[], externalType?: string) => {
+        (_tenantId: string, _source: string, internalType: string, _ids: string[], externalType?: string) => {
           if (externalType === "ITEM_VARIATION") {
             return Promise.resolve([
               { internalId: "item-1", externalId: "sq-var-1" },
@@ -151,6 +173,11 @@ describe("SquareOrderService", () => {
           if (externalType === "MODIFIER") {
             return Promise.resolve([
               { internalId: "mod-1", externalId: "sq-mod-1" },
+            ]);
+          }
+          if (internalType === "TaxConfig" && externalType === "TAX") {
+            return Promise.resolve([
+              { internalId: "tax-1", externalId: "sq-tax-1" },
             ]);
           }
           return Promise.resolve([]);
@@ -213,6 +240,31 @@ describe("SquareOrderService", () => {
       expect(fulfillment.pickupDetails.recipient.emailAddress).toBe(
         "john@example.com"
       );
+
+      // Check taxes (P0-2: tax configs mapped to Square catalog)
+      expect(createCall.order.taxes).toHaveLength(1);
+      expect(createCall.order.taxes[0]).toMatchObject({
+        uid: "tax-1",
+        name: "Sales Tax",
+        type: "ADDITIVE",
+        percentage: "8.8750",
+        scope: "ORDER",
+        catalogObjectId: "sq-tax-1",
+      });
+
+      // Check service charges (tip)
+      expect(createCall.order.serviceCharges).toHaveLength(1);
+      expect(createCall.order.serviceCharges[0]).toMatchObject({
+        uid: "tip",
+        name: "Tip",
+        type: "AUTO_GRATUITY",
+        calculationPhase: "TOTAL_PHASE",
+        taxable: false,
+      });
+      expect(createCall.order.serviceCharges[0].amountMoney.amount).toBe(BigInt(300));
+
+      // No discounts for this input
+      expect(createCall.order.discounts).toBeUndefined();
 
       // Verify idempotency key is set
       expect(createCall.idempotencyKey).toBeTruthy();
@@ -307,6 +359,323 @@ describe("SquareOrderService", () => {
         status: "failed",
         errorMessage: "Square API error",
       });
+    });
+  });
+
+  // ==================== buildTaxes / buildServiceCharges / buildDiscounts ====================
+
+  describe("order amount mapping (P0-1, P0-2)", () => {
+    beforeEach(() => {
+      mockCreate.mockResolvedValue({
+        order: { id: "sq-order-1", version: 1 },
+      });
+    });
+
+    it("should build taxes from item tax configs with catalog mapping", async () => {
+      mockGetIdMappingsByInternalIds.mockImplementation(
+        (_t: string, _s: string, internalType: string, _ids: string[], externalType?: string) => {
+          if (internalType === "TaxConfig" && externalType === "TAX") {
+            return Promise.resolve([
+              { internalId: "tax-1", externalId: "sq-tax-1" },
+            ]);
+          }
+          return Promise.resolve([]);
+        }
+      );
+
+      const input: SquareOrderPushInput = {
+        ...sampleInput,
+        tipAmount: 0,
+        items: [
+          {
+            menuItemId: "item-1",
+            name: "Burger",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [],
+            taxes: [
+              { taxConfigId: "tax-1", name: "Sales Tax", rate: 0.08875, roundingMethod: "half_up" as const, inclusionType: "additive" as const },
+            ],
+          },
+        ],
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, input);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      expect(createCall.order.taxes).toHaveLength(1);
+      expect(createCall.order.taxes[0]).toMatchObject({
+        uid: "tax-1",
+        name: "Sales Tax",
+        type: "ADDITIVE",
+        percentage: "8.8750",
+        scope: "ORDER",
+        catalogObjectId: "sq-tax-1",
+      });
+    });
+
+    it("should build taxes without catalog mapping (ad-hoc taxes)", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+
+      const input: SquareOrderPushInput = {
+        ...sampleInput,
+        tipAmount: 0,
+        items: [
+          {
+            menuItemId: "item-1",
+            name: "Burger",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [],
+            taxes: [
+              { taxConfigId: "tax-99", name: "City Tax", rate: 0.025, roundingMethod: "half_up" as const, inclusionType: "additive" as const },
+            ],
+          },
+        ],
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, input);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      expect(createCall.order.taxes).toHaveLength(1);
+      expect(createCall.order.taxes[0].catalogObjectId).toBeUndefined();
+      expect(createCall.order.taxes[0].name).toBe("City Tax");
+      expect(createCall.order.taxes[0].percentage).toBe("2.5000");
+    });
+
+    it("should deduplicate taxes across items", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+
+      const sharedTax = { taxConfigId: "tax-1", name: "Sales Tax", rate: 0.08875, roundingMethod: "half_up" as const, inclusionType: "additive" as const };
+      const input: SquareOrderPushInput = {
+        ...sampleInput,
+        tipAmount: 0,
+        items: [
+          { menuItemId: "i1", name: "A", price: 5, quantity: 1, selectedModifiers: [], taxes: [sharedTax] },
+          { menuItemId: "i2", name: "B", price: 3, quantity: 1, selectedModifiers: [], taxes: [sharedTax] },
+        ],
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, input);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      expect(createCall.order.taxes).toHaveLength(1);
+    });
+
+    it("should handle inclusive tax type", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+
+      const input: SquareOrderPushInput = {
+        ...sampleInput,
+        tipAmount: 0,
+        items: [
+          {
+            menuItemId: "i1",
+            name: "A",
+            price: 10,
+            quantity: 1,
+            selectedModifiers: [],
+            taxes: [
+              { taxConfigId: "tax-inc", name: "VAT", rate: 0.1, roundingMethod: "half_up" as const, inclusionType: "inclusive" as const },
+            ],
+          },
+        ],
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, input);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      expect(createCall.order.taxes[0].type).toBe("INCLUSIVE");
+    });
+
+    it("should omit taxes when no items have tax info", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+
+      const input: SquareOrderPushInput = {
+        ...sampleInput,
+        taxAmount: 0,
+        tipAmount: 0,
+        items: [
+          { menuItemId: "i1", name: "A", price: 5, quantity: 1, selectedModifiers: [] },
+        ],
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, input);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      expect(createCall.order.taxes).toBeUndefined();
+    });
+
+    it("should build tip service charge", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+
+      const input: SquareOrderPushInput = {
+        ...sampleInput,
+        tipAmount: 5.5,
+        deliveryFee: 0,
+        items: [
+          { menuItemId: "i1", name: "A", price: 10, quantity: 1, selectedModifiers: [] },
+        ],
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, input);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      expect(createCall.order.serviceCharges).toHaveLength(1);
+      expect(createCall.order.serviceCharges[0]).toMatchObject({
+        uid: "tip",
+        name: "Tip",
+        type: "AUTO_GRATUITY",
+        calculationPhase: "TOTAL_PHASE",
+        taxable: false,
+      });
+      expect(createCall.order.serviceCharges[0].amountMoney.amount).toBe(BigInt(550));
+      expect(createCall.order.serviceCharges[0].amountMoney.currency).toBe("USD");
+    });
+
+    it("should build delivery fee service charge", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+
+      const input: SquareOrderPushInput = {
+        ...sampleInput,
+        tipAmount: 0,
+        deliveryFee: 3.99,
+        items: [
+          { menuItemId: "i1", name: "A", price: 10, quantity: 1, selectedModifiers: [] },
+        ],
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, input);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      expect(createCall.order.serviceCharges).toHaveLength(1);
+      expect(createCall.order.serviceCharges[0]).toMatchObject({
+        uid: "delivery-fee",
+        name: "Delivery Fee",
+        type: "CUSTOM",
+        calculationPhase: "TOTAL_PHASE",
+        taxable: false,
+      });
+      expect(createCall.order.serviceCharges[0].amountMoney.amount).toBe(BigInt(399));
+    });
+
+    it("should build both tip and delivery fee", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+
+      const input: SquareOrderPushInput = {
+        ...sampleInput,
+        tipAmount: 2,
+        deliveryFee: 3.99,
+        items: [
+          { menuItemId: "i1", name: "A", price: 10, quantity: 1, selectedModifiers: [] },
+        ],
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, input);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      expect(createCall.order.serviceCharges).toHaveLength(2);
+      expect(createCall.order.serviceCharges[0].uid).toBe("tip");
+      expect(createCall.order.serviceCharges[1].uid).toBe("delivery-fee");
+    });
+
+    it("should omit service charges when tip and delivery fee are both 0", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+
+      const input: SquareOrderPushInput = {
+        ...sampleInput,
+        tipAmount: 0,
+        deliveryFee: 0,
+        items: [
+          { menuItemId: "i1", name: "A", price: 10, quantity: 1, selectedModifiers: [] },
+        ],
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, input);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      expect(createCall.order.serviceCharges).toBeUndefined();
+    });
+
+    it("should build discount", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+
+      const input: SquareOrderPushInput = {
+        ...sampleInput,
+        tipAmount: 0,
+        discount: 5.0,
+        items: [
+          { menuItemId: "i1", name: "A", price: 20, quantity: 1, selectedModifiers: [] },
+        ],
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, input);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      expect(createCall.order.discounts).toHaveLength(1);
+      expect(createCall.order.discounts[0]).toMatchObject({
+        uid: "discount",
+        name: "Discount",
+        type: "FIXED_AMOUNT",
+        scope: "ORDER",
+      });
+      expect(createCall.order.discounts[0].amountMoney.amount).toBe(BigInt(500));
+    });
+
+    it("should omit discounts when discount is 0", async () => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+
+      const input: SquareOrderPushInput = {
+        ...sampleInput,
+        tipAmount: 0,
+        discount: 0,
+        items: [
+          { menuItemId: "i1", name: "A", price: 10, quantity: 1, selectedModifiers: [] },
+        ],
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, input);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      expect(createCall.order.discounts).toBeUndefined();
+    });
+
+    it("should build all amount fields together (tax + tip + delivery + discount)", async () => {
+      mockGetIdMappingsByInternalIds.mockImplementation(
+        (_t: string, _s: string, internalType: string, _ids: string[], externalType?: string) => {
+          if (internalType === "TaxConfig" && externalType === "TAX") {
+            return Promise.resolve([{ internalId: "tax-1", externalId: "sq-tax-1" }]);
+          }
+          return Promise.resolve([]);
+        }
+      );
+
+      const input: SquareOrderPushInput = {
+        ...sampleInput,
+        taxAmount: 1.77,
+        tipAmount: 4.0,
+        deliveryFee: 3.99,
+        discount: 2.5,
+        items: [
+          {
+            menuItemId: "i1",
+            name: "Combo",
+            price: 20,
+            quantity: 1,
+            selectedModifiers: [],
+            taxes: [
+              { taxConfigId: "tax-1", name: "Sales Tax", rate: 0.08875, roundingMethod: "half_up" as const, inclusionType: "additive" as const },
+            ],
+          },
+        ],
+      };
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, input);
+
+      const createCall = mockCreate.mock.calls[0][0];
+      expect(createCall.order.taxes).toHaveLength(1);
+      expect(createCall.order.serviceCharges).toHaveLength(2);
+      expect(createCall.order.discounts).toHaveLength(1);
     });
   });
 
@@ -1165,6 +1534,10 @@ describe("SquareOrderService", () => {
       customerEmail: "jane@example.com",
       orderMode: "pickup",
       totalAmount: 12.5,
+      taxAmount: 1.11,
+      tipAmount: 0,
+      deliveryFee: 0,
+      discount: 0,
       notes: "",
       items: [
         {
