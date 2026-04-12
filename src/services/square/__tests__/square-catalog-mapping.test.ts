@@ -163,11 +163,10 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
       expect(wings.name).toBe("Chicken Wings");
       expect(wings.price).toBe(10.99);
       expect(wings.categoryExternalIds).toEqual(["cat-appetizers"]);
-      expect(wings.modifiers).not.toBeNull();
-      expect(wings.modifiers!.groups).toHaveLength(2);
+      expect(wings.modifierGroups).toHaveLength(2);
 
       // Options group (from multi-variation)
-      const optionsGroup = wings.modifiers!.groups[0];
+      const optionsGroup = wings.modifierGroups[0];
       expect(optionsGroup.name).toBe("Options");
       expect(optionsGroup.required).toBe(true);
       expect(optionsGroup.minSelect).toBe(1);
@@ -191,7 +190,7 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
       });
 
       // Sauce group (MULTIPLE selection)
-      const sauceGroup = wings.modifiers!.groups[1];
+      const sauceGroup = wings.modifierGroups[1];
       expect(sauceGroup.name).toBe("Sauce");
       expect(sauceGroup.required).toBe(false);
       expect(sauceGroup.minSelect).toBe(0);
@@ -225,7 +224,7 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
       expect(steak.name).toBe("Ribeye Steak");
       expect(steak.price).toBe(34.99);
       expect(steak.categoryExternalIds).toEqual(["cat-mains"]);
-      expect(steak.modifiers).toBeNull();
+      expect(steak.modifierGroups).toHaveLength(0);
 
       // 1 tax (disabled "Old Tax" filtered out)
       expect(result.taxes).toHaveLength(1);
@@ -339,10 +338,9 @@ describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
       const result = service.mapToMenuModels(catalog);
 
       const item = result.items[0];
-      expect(item.modifiers).not.toBeNull();
-      expect(item.modifiers!.groups).toHaveLength(1);
+      expect(item.modifierGroups).toHaveLength(1);
 
-      const donenessGroup = item.modifiers!.groups[0];
+      const donenessGroup = item.modifierGroups[0];
       expect(donenessGroup.name).toBe("Doneness");
       expect(donenessGroup.maxSelect).toBe(1); // SINGLE → maxSelect 1
       expect(donenessGroup.options).toHaveLength(3);

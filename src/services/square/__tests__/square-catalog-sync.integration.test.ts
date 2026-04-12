@@ -290,24 +290,26 @@ describe("Square Catalog Sync (Integration)", () => {
       // Base price = min variation = $4.00
       expect(Number(items[0].price)).toBe(4);
 
-      // Modifiers JSON contains the variation group ("Options") AND the Syrup modifier list
-      const modifiers = items[0].modifiers as {
-        groups: Array<{
-          name: string;
-          required: boolean;
-          options: unknown[];
-        }>;
-      };
-      expect(modifiers.groups).toHaveLength(2);
+      // Modifier groups are stored in normalized tables (not JSON)
+      const modifierJunctions = await prisma.menuItemModifierGroup.findMany({
+        where: { menuItemId: items[0].id },
+        include: {
+          modifierGroup: {
+            include: { options: { where: { deleted: false } } },
+          },
+        },
+        orderBy: { sortOrder: "asc" },
+      });
+      expect(modifierJunctions).toHaveLength(2);
 
-      const variationGroup = modifiers.groups.find((g) => g.name === "Options");
+      const variationGroup = modifierJunctions.find((j) => j.modifierGroup.name === "Options");
       expect(variationGroup).toBeDefined();
-      expect(variationGroup!.required).toBe(true);
-      expect(variationGroup!.options).toHaveLength(3);
+      expect(variationGroup!.modifierGroup.required).toBe(true);
+      expect(variationGroup!.modifierGroup.options).toHaveLength(3);
 
-      const syrupGroup = modifiers.groups.find((g) => g.name === "Syrup");
+      const syrupGroup = modifierJunctions.find((j) => j.modifierGroup.name === "Syrup");
       expect(syrupGroup).toBeDefined();
-      expect(syrupGroup!.options).toHaveLength(1);
+      expect(syrupGroup!.modifierGroup.options).toHaveLength(1);
 
       // Assert gift card was SKIPPED (not in ExternalIdMapping)
       const giftCardMapping = await prisma.externalIdMapping.findFirst({

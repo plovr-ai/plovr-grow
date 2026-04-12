@@ -106,6 +106,12 @@ vi.mock("@/lib/db", () => {
   };
 });
 
+vi.mock("@/services/menu", () => ({
+  menuService: {
+    syncModifierGroups: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 vi.mock("@/lib/id", () => ({
   generateEntityId: vi.fn(
     () => "gen-" + Math.random().toString(36).slice(2, 8)
@@ -566,7 +572,7 @@ describe("SquareService", () => {
             price: 8.99,
             imageUrl: null,
             taxExternalIds: [],
-            modifiers: { groups: [{ name: "Extra sauce", required: false, minSelect: 0, maxSelect: 1, options: [{ name: "Extra sauce", price: 0.5, externalId: "sq-mod-1", isDefault: false, ordinal: 0 }] }] },
+            modifierGroups: [{ name: "Extra sauce", required: false, minSelect: 0, maxSelect: 1, options: [{ name: "Extra sauce", price: 0.5, externalId: "sq-mod-1", isDefault: false, ordinal: 0 }] }],
             categoryExternalIds: ["sq-cat-1"],
             variationMappings: [{ externalId: "sq-var-1", name: "Regular" }],
           },
@@ -577,7 +583,7 @@ describe("SquareService", () => {
             price: 24.99,
             imageUrl: null,
             taxExternalIds: [],
-            modifiers: null,
+            modifierGroups: [],
             categoryExternalIds: ["sq-cat-2", "sq-cat-nonexistent"],
             variationMappings: [],
           },
@@ -695,20 +701,18 @@ describe("SquareService", () => {
             price: 10.0,
             imageUrl: null,
             taxExternalIds: [],
-            modifiers: {
-              groups: [
-                {
-                  name: "Size",
-                  required: true,
-                  minSelect: 1,
-                  maxSelect: 1,
-                  options: [
-                    { name: "Regular", price: 0, externalId: "sq-var-r", isDefault: true, ordinal: 0 },
-                    { name: "Large", price: 3, externalId: "sq-var-l", isDefault: false, ordinal: 1 },
-                  ],
-                },
-              ],
-            },
+            modifierGroups: [
+              {
+                name: "Size",
+                required: true,
+                minSelect: 1,
+                maxSelect: 1,
+                options: [
+                  { name: "Regular", price: 0, externalId: "sq-var-r", isDefault: true, ordinal: 0 },
+                  { name: "Large", price: 3, externalId: "sq-var-l", isDefault: false, ordinal: 1 },
+                ],
+              },
+            ],
             categoryExternalIds: ["sq-cat-1"],
             variationMappings: [
               { externalId: "sq-var-r", name: "Regular", groupId: "grp-1", optionId: "opt-r" },
@@ -799,19 +803,17 @@ describe("SquareService", () => {
             price: 5.0,
             imageUrl: null,
             taxExternalIds: [],
-            modifiers: {
-              groups: [
-                {
-                  name: "Add-ons",
-                  required: false,
-                  minSelect: 0,
-                  maxSelect: 2,
-                  options: [
-                    { name: "Bread", price: 1.5, externalId: "sq-mod-existing", isDefault: false, ordinal: 0 },
-                  ],
-                },
-              ],
-            },
+            modifierGroups: [
+              {
+                name: "Add-ons",
+                required: false,
+                minSelect: 0,
+                maxSelect: 2,
+                options: [
+                  { name: "Bread", price: 1.5, externalId: "sq-mod-existing", isDefault: false, ordinal: 0 },
+                ],
+              },
+            ],
             categoryExternalIds: [],
             variationMappings: [{ externalId: "sq-var-1", name: "Regular" }],
           },
