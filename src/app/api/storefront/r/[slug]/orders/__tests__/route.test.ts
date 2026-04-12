@@ -708,6 +708,55 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
     expect(paymentService.verifyPayment).not.toHaveBeenCalled();
   });
 
+  it("should set paymentType to 'online' when paymentMethod is 'card'", async () => {
+    const bodyWithCard = {
+      ...validBody,
+      paymentMethod: "card",
+    };
+
+    const request = createRequest(bodyWithCard);
+    await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+
+    expect(orderService.createMerchantOrderAtomic).toHaveBeenCalledWith(
+      "tenant-1",
+      expect.objectContaining({
+        paymentType: "online",
+      }),
+      expect.any(Object)
+    );
+  });
+
+  it("should set paymentType to 'in_store' when paymentMethod is 'cash'", async () => {
+    const bodyWithCash = {
+      ...validBody,
+      paymentMethod: "cash",
+    };
+
+    const request = createRequest(bodyWithCash);
+    await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+
+    expect(orderService.createMerchantOrderAtomic).toHaveBeenCalledWith(
+      "tenant-1",
+      expect.objectContaining({
+        paymentType: "in_store",
+      }),
+      expect.any(Object)
+    );
+  });
+
+  it("should default paymentType to 'online' when paymentMethod is not provided", async () => {
+    const request = createRequest(validBody);
+    await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
+
+    expect(orderService.createMerchantOrderAtomic).toHaveBeenCalledWith(
+      "tenant-1",
+      expect.objectContaining({
+        paymentType: "online",
+      }),
+      expect.any(Object)
+    );
+  });
+
   it("should use merchant currency for payment record, defaulting to USD when null", async () => {
     const merchantNoCurrency = {
       ...mockMerchant,

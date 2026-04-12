@@ -100,6 +100,7 @@ export class OrderService {
     const orderNumber = generateOrderNumber(sequence, timezone);
 
     const salesChannel = input.salesChannel ?? "online_order";
+    const paymentType = input.paymentType ?? "online";
 
     // Create the order + fulfillment in database with structured OrderItem rows
     const createOrderAndFulfillment = async (dbClient?: DbClient) => {
@@ -114,6 +115,7 @@ export class OrderService {
           customerEmail: input.customerEmail ?? null,
           orderMode: input.orderMode,
           salesChannel,
+          paymentType,
           status: "created",
           fulfillmentStatus: "pending",
           subtotal: calculation.subtotal,

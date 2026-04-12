@@ -38,6 +38,7 @@ const baseOrder = {
   customerEmail: "john@test.com",
   orderMode: "pickup",
   salesChannel: "online_order",
+  paymentType: "online",
   items: null,
   orderItems: [
     { name: "Burger", quantity: 2 },

@@ -32,6 +32,7 @@ describe("OrdersManagementClient", () => {
       customerEmail: "john@example.com",
       orderMode: "pickup",
       salesChannel: "online_order",
+      paymentType: "online",
       status: "created",
       fulfillmentStatus: "pending",
       items: [{ name: "Test Item", quantity: 1 }],

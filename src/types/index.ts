@@ -107,6 +107,8 @@ export type FulfillmentStatus =
 
 export type SalesChannel = "online_order" | "catering" | "giftcard";
 
+export type PaymentType = "online" | "in_store";
+
 export interface OrderItemData {
   menuItemId: string;
   name: string;
