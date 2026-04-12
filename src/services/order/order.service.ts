@@ -481,7 +481,11 @@ export class OrderService {
     options?: StatusUpdateOptions
   ): Promise<void> {
     const order = await orderRepository.getByIdWithMerchant(tenantId, orderId);
+
+    // For payment_failed, treat missing/terminal orders as a no-op — stale
+    // ExternalIdMapping records should not cause webhook retry loops.
     if (!order) {
+      if (status === "payment_failed") return;
       throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId });
     }
 

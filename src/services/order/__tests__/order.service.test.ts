@@ -1759,12 +1759,20 @@ describe("OrderService", () => {
       );
     });
 
-    it("throws ORDER_NOT_FOUND when order missing", async () => {
+    it("throws ORDER_NOT_FOUND when order missing for completed status", async () => {
       vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(null);
 
       await expect(
         orderService.updatePaymentStatus("tenant-1", "order-x", "completed")
       ).rejects.toThrow("ORDER_NOT_FOUND");
+    });
+
+    it("silently returns when order missing for payment_failed status", async () => {
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(null);
+
+      await orderService.updatePaymentStatus("tenant-1", "order-x", "payment_failed");
+
+      expect(prisma.order.update).not.toHaveBeenCalled();
     });
   });
 
