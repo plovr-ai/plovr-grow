@@ -41,7 +41,7 @@ export function PriceSummary({
   const resolvedAdditive = taxAmountAdditive ?? taxAmount;
   const resolvedInclusive = taxAmountInclusive ?? 0;
 
-  const cashPayment = Math.max(0, totalAmount - giftCardPayment);
+  const balanceDue = Math.max(0, totalAmount - giftCardPayment);
 
   return (
     <div className="space-y-2">
@@ -95,7 +95,7 @@ export function PriceSummary({
             <span>
               {orderMode === "delivery" ? "Due at Delivery" : "Due at Pickup"}
             </span>
-            <span>{formatPrice(cashPayment)}</span>
+            <span>{formatPrice(balanceDue)}</span>
           </div>
         </>
       )}

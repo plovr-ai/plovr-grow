@@ -32,7 +32,7 @@ export interface OrderData {
   deliveryFee: number | unknown;
   discount: number | unknown;
   giftCardPayment: number | unknown;
-  cashPayment: number | unknown;
+  balanceDue: number | unknown;
   totalAmount: number | unknown;
   notes: string | null;
   deliveryAddress: DeliveryAddress | unknown | null;

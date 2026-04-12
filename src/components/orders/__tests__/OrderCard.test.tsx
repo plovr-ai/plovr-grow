@@ -50,7 +50,7 @@ const baseOrder = {
   deliveryFee: 0,
   discount: 0,
   giftCardPayment: 0,
-  cashPayment: 24.5,
+  balanceDue: 24.5,
   totalAmount: 24.5,
   notes: null,
   loyaltyMemberId: null,

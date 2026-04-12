@@ -105,7 +105,7 @@ const mockOrder = {
   id: "order-1",
   orderNumber: "20260408-0001",
   giftCardPayment: 0,
-  cashPayment: 20,
+  balanceDue: 20,
   totalAmount: 20,
 };
 
