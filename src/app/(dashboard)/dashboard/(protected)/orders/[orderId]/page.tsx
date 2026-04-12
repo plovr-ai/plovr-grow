@@ -50,7 +50,7 @@ export default async function DashboardOrderDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Get order items and fetch images from menu service
+  // Get order items (already mapped from structured OrderItem rows by the service)
   const items = order.items as OrderItemData[];
   const menuItemIds = items.map((item) => item.menuItemId);
   const menuItems = await menuService.getMenuItemsByIds(tenantId, merchant.id, menuItemIds);

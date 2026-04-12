@@ -31,11 +31,15 @@ vi.mock("../pos-provider-registry", () => ({
 }));
 
 const mockGetOrder = vi.fn();
-vi.mock("@/services/order/order.service", () => ({
-  orderService: {
-    getOrder: (...args: unknown[]) => mockGetOrder(...args),
-  },
-}));
+vi.mock("@/services/order/order.service", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/services/order/order.service")>();
+  return {
+    ...actual,
+    orderService: {
+      getOrder: (...args: unknown[]) => mockGetOrder(...args),
+    },
+  };
+});
 
 const mockOn = vi.fn();
 vi.mock("@/services/order/order-events", () => ({
@@ -60,6 +64,27 @@ const sampleItems = [
     quantity: 1,
     totalPrice: 4.5,
     selectedModifiers: [],
+  },
+];
+
+/** Prisma-shaped OrderItem rows matching sampleItems (plain numbers work with Number()) */
+const sampleOrderItems = [
+  {
+    id: "oi-1",
+    orderId: "order-1",
+    menuItemId: "item-1",
+    name: "Coffee",
+    unitPrice: 4.5,
+    quantity: 1,
+    totalPrice: 4.5,
+    notes: null,
+    imageUrl: null,
+    taxes: null,
+    sortOrder: 0,
+    deleted: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    modifiers: [],
   },
 ];
 
@@ -111,7 +136,7 @@ describe("order-listener: handleOrderPaid giftcard guard", () => {
 
   it("skips push when order.salesChannel is giftcard", async () => {
     mockGetOrder.mockResolvedValue({
-      items: sampleItems,
+      orderItems: sampleOrderItems,
       salesChannel: "giftcard",
     });
 
@@ -125,7 +150,7 @@ describe("order-listener: handleOrderPaid giftcard guard", () => {
 
   it("pushes order when salesChannel is online_order and connection is active", async () => {
     mockGetOrder.mockResolvedValue({
-      items: sampleItems,
+      orderItems: sampleOrderItems,
       salesChannel: "online_order",
       orderMode: "pickup",
     });
@@ -147,7 +172,7 @@ describe("order-listener: handleOrderPaid giftcard guard", () => {
 
   it("forwards orderMode, deliveryAddress and notes from the stored order", async () => {
     mockGetOrder.mockResolvedValue({
-      items: sampleItems,
+      orderItems: sampleOrderItems,
       salesChannel: "online_order",
       orderMode: "delivery",
       deliveryAddress: {
@@ -180,7 +205,7 @@ describe("order-listener: handleOrderPaid giftcard guard", () => {
 
   it("forwards dine_in orderMode so buildFulfillmentNote adds the Dine-in prefix", async () => {
     mockGetOrder.mockResolvedValue({
-      items: sampleItems,
+      orderItems: sampleOrderItems,
       salesChannel: "online_order",
       orderMode: "dine_in",
       notes: "Table 7",
@@ -211,7 +236,7 @@ describe("order-listener: handleOrderPaid giftcard guard", () => {
   });
 
   it("skips push when order has no items", async () => {
-    mockGetOrder.mockResolvedValue({ items: [], salesChannel: "online_order" });
+    mockGetOrder.mockResolvedValue({ orderItems: [], salesChannel: "online_order" });
     mockGetActivePosConnection.mockResolvedValue({
       id: "conn-1",
       type: "POS_SQUARE",
@@ -226,7 +251,7 @@ describe("order-listener: handleOrderPaid giftcard guard", () => {
 
   it("skips push when no active POS connection", async () => {
     mockGetOrder.mockResolvedValue({
-      items: sampleItems,
+      orderItems: sampleOrderItems,
       salesChannel: "online_order",
     });
     mockGetActivePosConnection.mockResolvedValue(null);
@@ -239,7 +264,7 @@ describe("order-listener: handleOrderPaid giftcard guard", () => {
 
   it("swallows errors from pushOrder without throwing", async () => {
     mockGetOrder.mockResolvedValue({
-      items: sampleItems,
+      orderItems: sampleOrderItems,
       salesChannel: "online_order",
     });
     mockGetActivePosConnection.mockResolvedValue({
@@ -400,7 +425,7 @@ describe("order-listener: retry record creation", () => {
 
   it("creates retry record when pushOrder fails", async () => {
     mockGetOrder.mockResolvedValue({
-      items: sampleItems,
+      orderItems: sampleOrderItems,
       salesChannel: "online_order",
       orderMode: "pickup",
     });
@@ -579,7 +604,7 @@ describe("order-listener: retry record creation", () => {
 
   it("does not throw when retry record creation itself fails", async () => {
     mockGetOrder.mockResolvedValue({
-      items: sampleItems,
+      orderItems: sampleOrderItems,
       salesChannel: "online_order",
       orderMode: "pickup",
     });
@@ -599,7 +624,7 @@ describe("order-listener: retry record creation", () => {
 
   it("strips undefined fields from retry payload before persisting", async () => {
     mockGetOrder.mockResolvedValue({
-      items: sampleItems,
+      orderItems: sampleOrderItems,
       salesChannel: "online_order",
       orderMode: "pickup",
       deliveryAddress: null,
@@ -726,22 +751,35 @@ describe("order-listener: misc coverage", () => {
 
   it("maps selectedModifiers when pushing order", async () => {
     mockGetOrder.mockResolvedValue({
-      items: [
+      orderItems: [
         {
+          id: "oi-2",
+          orderId: "order-1",
           menuItemId: "item-1",
           name: "Coffee",
-          price: 4.5,
+          unitPrice: 4.5,
           quantity: 1,
           totalPrice: 4.5,
-          specialInstructions: "extra hot",
-          selectedModifiers: [
+          notes: "extra hot",
+          imageUrl: null,
+          taxes: null,
+          sortOrder: 0,
+          deleted: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          modifiers: [
             {
-              groupId: "g1",
+              id: "om-1",
+              orderItemId: "oi-2",
+              modifierGroupId: "g1",
+              modifierOptionId: "m1",
               groupName: "Size",
-              modifierId: "m1",
-              modifierName: "Large",
+              name: "Large",
               price: 1,
               quantity: 1,
+              deleted: false,
+              createdAt: new Date(),
+              updatedAt: new Date(),
             },
           ],
         },
@@ -775,7 +813,7 @@ describe("order-listener: misc coverage", () => {
 
   it("uses fallback defaults when customer fields are undefined", async () => {
     mockGetOrder.mockResolvedValue({
-      items: sampleItems,
+      orderItems: sampleOrderItems,
       salesChannel: "online_order",
     });
     mockGetActivePosConnection.mockResolvedValue({
@@ -804,7 +842,7 @@ describe("order-listener: misc coverage", () => {
 
   it("handles non-Error exceptions in handleOrderPaid catch", async () => {
     mockGetOrder.mockResolvedValue({
-      items: sampleItems,
+      orderItems: sampleOrderItems,
       salesChannel: "online_order",
     });
     mockGetActivePosConnection.mockResolvedValue({
@@ -864,14 +902,23 @@ describe("order-listener: misc coverage", () => {
 
   it("outer catch handles errors during push data preparation", async () => {
     mockGetOrder.mockResolvedValue({
-      items: [
+      orderItems: [
         {
+          id: "oi-bad",
+          orderId: "order-1",
           menuItemId: "item-1",
           name: "Coffee",
-          price: 4.5,
+          unitPrice: 4.5,
           quantity: 1,
           totalPrice: 4.5,
-          selectedModifiers: undefined,
+          notes: null,
+          imageUrl: null,
+          taxes: null,
+          sortOrder: 0,
+          deleted: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          modifiers: undefined, // malformed — triggers outer catch
         },
       ],
       salesChannel: "online_order",
