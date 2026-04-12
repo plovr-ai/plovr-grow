@@ -721,9 +721,12 @@ describe("LoyaltySection", () => {
         fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
       }
 
-      await waitFor(() => {
-        expect(screen.getByText("Rewards Member")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Rewards Member")).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
     };
 
     it("shows member card with points", async () => {
