@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { squareService } from "@/services/square";
+import { integrationRepository } from "@/repositories/integration.repository";
+import { posProviderRegistry } from "@/services/integration/pos-provider-registry";
+import { AppError } from "@/lib/errors";
 import { z } from "zod";
 
 const syncSchema = z.object({
@@ -32,23 +34,44 @@ export async function POST(request: NextRequest) {
     }
 
     const { merchantId } = validation.data;
-    const result = await squareService.syncCatalog(
-      session.user.tenantId,
+    const { tenantId } = session.user;
+
+    // Look up the active POS connection for this merchant
+    const connection = await integrationRepository.getActivePosConnection(
+      tenantId,
       merchantId
     );
+
+    if (!connection) {
+      return NextResponse.json(
+        { success: false, error: "INTEGRATION_NOT_CONNECTED" },
+        { status: 404 }
+      );
+    }
+
+    // Dispatch to the correct POS provider via registry
+    const provider = posProviderRegistry.getProvider(connection.type);
+    const result = await provider.syncCatalog(tenantId, merchantId);
 
     return NextResponse.json({
       success: true,
       data: result,
     });
   } catch (error) {
-    console.error("[Square Catalog Sync] Error:", error);
+    console.error("[Catalog Sync] Error:", error);
+
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { success: false, error: error.code },
+        { status: error.statusCode }
+      );
+    }
+
     const message =
       error instanceof Error ? error.message : "Failed to sync catalog";
-    const status = (error as { statusCode?: number }).statusCode ?? 500;
     return NextResponse.json(
       { success: false, error: message },
-      { status }
+      { status: 500 }
     );
   }
 }
