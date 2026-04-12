@@ -15,6 +15,7 @@ import type {
   FeaturedItemData,
 } from "./menu.types";
 import type { RoundingMethod } from "./tax-config.types";
+import type { DbClient } from "@/lib/db";
 import { AppError, ErrorCodes } from "@/lib/errors";
 
 // Lazy load repositories to avoid Prisma initialization at module load time
@@ -414,7 +415,7 @@ export class MenuService {
 
     // Sync modifier groups to normalized tables
     if (input.modifierGroups && input.modifierGroups.length > 0) {
-      await this.syncModifierGroupsToTables(tenantId, item.id, input.modifierGroups);
+      await this.syncModifierGroups(tenantId, item.id, input.modifierGroups);
     }
 
     return item;
@@ -451,7 +452,7 @@ export class MenuService {
 
     // Sync modifier groups to normalized tables
     if (input.modifierGroups) {
-      await this.syncModifierGroupsToTables(tenantId, itemId, input.modifierGroups);
+      await this.syncModifierGroups(tenantId, itemId, input.modifierGroups);
     }
   }
 
@@ -660,16 +661,18 @@ export class MenuService {
    * Sync modifier groups from the dashboard form to normalized tables.
    * Replaces all modifier group associations for the given menu item.
    */
-  private async syncModifierGroupsToTables(
+  async syncModifierGroups(
     tenantId: string,
     menuItemId: string,
-    groups: ModifierGroupInput[]
+    groups: ModifierGroupInput[],
+    tx?: DbClient
   ): Promise<void> {
     const { default: prisma } = await import("@/lib/db");
+    const db = tx ?? prisma;
     const { generateEntityId } = await import("@/lib/id");
 
     // Remove existing junction records
-    await prisma.menuItemModifierGroup.deleteMany({
+    await db.menuItemModifierGroup.deleteMany({
       where: { menuItemId },
     });
 
@@ -678,7 +681,7 @@ export class MenuService {
       const groupId = group.id;
 
       // Upsert the modifier group
-      await prisma.modifierGroup.upsert({
+      await db.modifierGroup.upsert({
         where: { id: groupId },
         create: {
           id: groupId,
@@ -703,7 +706,7 @@ export class MenuService {
 
       // Soft-delete existing options for this group that are no longer present
       const currentOptionIds = group.modifiers.map((m) => m.id);
-      await prisma.modifierOption.updateMany({
+      await db.modifierOption.updateMany({
         where: {
           groupId,
           id: { notIn: currentOptionIds },
@@ -715,7 +718,7 @@ export class MenuService {
       // Upsert each option
       for (let optIdx = 0; optIdx < group.modifiers.length; optIdx++) {
         const mod = group.modifiers[optIdx];
-        await prisma.modifierOption.upsert({
+        await db.modifierOption.upsert({
           where: { id: mod.id },
           create: {
             id: mod.id,
@@ -739,7 +742,7 @@ export class MenuService {
       }
 
       // Create junction record
-      await prisma.menuItemModifierGroup.create({
+      await db.menuItemModifierGroup.create({
         data: {
           id: generateEntityId(),
           menuItemId,

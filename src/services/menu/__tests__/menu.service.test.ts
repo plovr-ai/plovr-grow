@@ -99,6 +99,7 @@ import { merchantRepository } from "@/repositories/merchant.repository";
 import { taxConfigRepository } from "@/repositories/tax-config.repository";
 import { menuCategoryItemRepository } from "@/repositories/menu-category-item.repository";
 import { featuredItemRepository } from "@/repositories/featured-item.repository";
+import prisma from "@/lib/db";
 
 describe("MenuService", () => {
   let menuService: MenuService;
@@ -1940,6 +1941,116 @@ describe("MenuService", () => {
         []
       );
       expect(result).toEqual([]);
+    });
+  });
+
+  describe("syncModifierGroups()", () => {
+    const tenantId = "tenant-1";
+    const menuItemId = "item-1";
+
+    const sampleGroups = [
+      {
+        id: "mg-size",
+        name: "Size",
+        type: "single" as const,
+        required: true,
+        modifiers: [
+          { id: "mod-small", name: "Small", price: 0 },
+          { id: "mod-large", name: "Large", price: 2.5 },
+        ],
+      },
+    ];
+
+    it("should use provided tx client when given", async () => {
+      const txClient = {
+        modifierGroup: { upsert: vi.fn().mockResolvedValue({}) },
+        modifierOption: {
+          upsert: vi.fn().mockResolvedValue({}),
+          updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+        },
+        menuItemModifierGroup: {
+          create: vi.fn().mockResolvedValue({}),
+          deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+        },
+      };
+
+      await menuService.syncModifierGroups(
+        tenantId,
+        menuItemId,
+        sampleGroups,
+        txClient as never
+      );
+
+      // tx client should be used, not the default prisma
+      expect(txClient.menuItemModifierGroup.deleteMany).toHaveBeenCalledWith({
+        where: { menuItemId },
+      });
+      expect(txClient.modifierGroup.upsert).toHaveBeenCalled();
+      expect(txClient.modifierOption.upsert).toHaveBeenCalledTimes(2);
+      expect(txClient.menuItemModifierGroup.create).toHaveBeenCalled();
+
+      // Default prisma should NOT have been called
+      expect(prisma.menuItemModifierGroup.deleteMany).not.toHaveBeenCalled();
+      expect(prisma.modifierGroup.upsert).not.toHaveBeenCalled();
+    });
+
+    it("should fall back to default prisma when no tx provided", async () => {
+      vi.mocked(prisma.menuItemModifierGroup.deleteMany).mockResolvedValue({ count: 0 });
+      vi.mocked(prisma.modifierGroup.upsert).mockResolvedValue({} as never);
+      vi.mocked(prisma.modifierOption.upsert).mockResolvedValue({} as never);
+      vi.mocked(prisma.modifierOption.updateMany).mockResolvedValue({ count: 0 });
+      vi.mocked(prisma.menuItemModifierGroup.create).mockResolvedValue({} as never);
+
+      await menuService.syncModifierGroups(tenantId, menuItemId, sampleGroups);
+
+      expect(prisma.menuItemModifierGroup.deleteMany).toHaveBeenCalledWith({
+        where: { menuItemId },
+      });
+      expect(prisma.modifierGroup.upsert).toHaveBeenCalled();
+    });
+
+    it("should clear all modifier groups when given empty array", async () => {
+      vi.mocked(prisma.menuItemModifierGroup.deleteMany).mockResolvedValue({ count: 0 });
+
+      await menuService.syncModifierGroups(tenantId, menuItemId, []);
+
+      expect(prisma.menuItemModifierGroup.deleteMany).toHaveBeenCalledWith({
+        where: { menuItemId },
+      });
+      // No upserts should be called for empty groups
+      expect(prisma.modifierGroup.upsert).not.toHaveBeenCalled();
+      expect(prisma.modifierOption.upsert).not.toHaveBeenCalled();
+      expect(prisma.menuItemModifierGroup.create).not.toHaveBeenCalled();
+    });
+
+    it("should soft-delete removed options", async () => {
+      vi.mocked(prisma.menuItemModifierGroup.deleteMany).mockResolvedValue({ count: 0 });
+      vi.mocked(prisma.modifierGroup.upsert).mockResolvedValue({} as never);
+      vi.mocked(prisma.modifierOption.upsert).mockResolvedValue({} as never);
+      vi.mocked(prisma.modifierOption.updateMany).mockResolvedValue({ count: 1 });
+      vi.mocked(prisma.menuItemModifierGroup.create).mockResolvedValue({} as never);
+
+      // Pass a group with only one modifier — any previously existing ones should be soft-deleted
+      const groups = [
+        {
+          id: "mg-size",
+          name: "Size",
+          type: "single" as const,
+          required: true,
+          modifiers: [{ id: "mod-small", name: "Small", price: 0 }],
+        },
+      ];
+
+      await menuService.syncModifierGroups(tenantId, menuItemId, groups);
+
+      expect(prisma.modifierOption.updateMany).toHaveBeenCalledWith({
+        where: {
+          groupId: "mg-size",
+          id: { notIn: ["mod-small"] },
+          deleted: false,
+        },
+        data: { deleted: true },
+      });
     });
   });
 });
