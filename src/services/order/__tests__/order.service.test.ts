@@ -1942,6 +1942,7 @@ describe("OrderService", () => {
       merchantId: "merchant-1",
       tenantId: "tenant-1",
       status: "completed",
+      fulfillmentStatus: "pending",
       merchant: { id: "merchant-1", name: "M", slug: "m", timezone: "UTC" },
     };
 
@@ -1993,6 +1994,76 @@ describe("OrderService", () => {
       await expect(
         orderService.cancelOrder("tenant-1", "order-x")
       ).rejects.toThrow("ORDER_NOT_FOUND");
+    });
+
+    it("returns without error when order is already canceled (idempotent)", async () => {
+      const canceledOrder = { ...mockOrder, status: "canceled" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(canceledOrder as never);
+      const emitSpy = vi.spyOn(orderEventEmitter, "emit");
+
+      await orderService.cancelOrder("tenant-1", "order-1", "duplicate request");
+
+      expect(prisma.order.update).not.toHaveBeenCalled();
+      expect(emitSpy).not.toHaveBeenCalled();
+    });
+
+    it("throws ORDER_CANCEL_NOT_ALLOWED when fulfillmentStatus is preparing", async () => {
+      const preparingOrder = { ...mockOrder, fulfillmentStatus: "preparing" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(preparingOrder as never);
+
+      await expect(
+        orderService.cancelOrder("tenant-1", "order-1")
+      ).rejects.toThrow("ORDER_CANCEL_NOT_ALLOWED");
+    });
+
+    it("throws ORDER_CANCEL_NOT_ALLOWED when fulfillmentStatus is ready", async () => {
+      const readyOrder = { ...mockOrder, fulfillmentStatus: "ready" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(readyOrder as never);
+
+      await expect(
+        orderService.cancelOrder("tenant-1", "order-1")
+      ).rejects.toThrow("ORDER_CANCEL_NOT_ALLOWED");
+    });
+
+    it("throws ORDER_CANCEL_NOT_ALLOWED when fulfillmentStatus is fulfilled", async () => {
+      const fulfilledOrder = { ...mockOrder, fulfillmentStatus: "fulfilled" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(fulfilledOrder as never);
+
+      await expect(
+        orderService.cancelOrder("tenant-1", "order-1")
+      ).rejects.toThrow("ORDER_CANCEL_NOT_ALLOWED");
+    });
+
+    it("allows cancel when fulfillmentStatus is pending", async () => {
+      const pendingOrder = { ...mockOrder, fulfillmentStatus: "pending" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(pendingOrder as never);
+      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+
+      await orderService.cancelOrder("tenant-1", "order-1", "changed mind");
+
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: "order-1" },
+        data: expect.objectContaining({
+          status: "canceled",
+          cancelReason: "changed mind",
+        }),
+      });
+    });
+
+    it("allows cancel when fulfillmentStatus is confirmed", async () => {
+      const confirmedOrder = { ...mockOrder, fulfillmentStatus: "confirmed" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(confirmedOrder as never);
+      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+
+      await orderService.cancelOrder("tenant-1", "order-1", "changed mind");
+
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: "order-1" },
+        data: expect.objectContaining({
+          status: "canceled",
+          cancelReason: "changed mind",
+        }),
+      });
     });
   });
 });
