@@ -174,6 +174,23 @@ export class IntegrationRepository {
     });
   }
 
+  async getLastSuccessfulSyncCursor(
+    connectionId: string,
+    syncType: string
+  ): Promise<string | null> {
+    const record = await prisma.integrationSyncRecord.findFirst({
+      where: {
+        connectionId,
+        syncType: { in: [syncType, "CATALOG_INCREMENTAL"] },
+        status: "success",
+        cursor: { not: null },
+      },
+      orderBy: { finishedAt: "desc" },
+      select: { cursor: true },
+    });
+    return record?.cursor ?? null;
+  }
+
   async upsertIdMapping(tenantId: string, data: UpsertIdMappingInput, tx?: DbClient) {
     const db = tx ?? prisma;
     return db.externalIdMapping.upsert({

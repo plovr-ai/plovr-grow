@@ -16,6 +16,10 @@ export interface SquareCatalogResult {
   images: CatalogObject[];
 }
 
+export interface IncrementalCatalogResult extends SquareCatalogResult {
+  deletedIds: string[];
+}
+
 export interface MappedModifierOption {
   name: string;
   price: number;
@@ -78,6 +82,62 @@ export class SquareCatalogService {
           ? SquareEnvironment.Production
           : SquareEnvironment.Sandbox,
     });
+  }
+
+  /**
+   * Fetch catalog objects modified after `beginTime` (RFC 3339).
+   * Uses `catalog.search()` with manual cursor-based pagination.
+   * Includes deleted objects so we can propagate deletions.
+   */
+  async fetchIncrementalCatalog(
+    accessToken: string,
+    beginTime: string
+  ): Promise<IncrementalCatalogResult> {
+    const client = this.getClient(accessToken);
+    const objectTypes: Array<"CATEGORY" | "ITEM" | "MODIFIER_LIST" | "TAX" | "IMAGE"> = [
+      "CATEGORY",
+      "ITEM",
+      "MODIFIER_LIST",
+      "TAX",
+      "IMAGE",
+    ];
+
+    const allObjects: CatalogObject[] = [];
+    const deletedIds: string[] = [];
+    let cursor: string | undefined;
+
+    do {
+      const response = await client.catalog.search({
+        beginTime,
+        objectTypes,
+        includeDeletedObjects: true,
+        includeRelatedObjects: false,
+        cursor,
+        limit: 1000,
+      });
+
+      const objects = response.objects ?? [];
+      for (const obj of objects) {
+        if (obj.isDeleted) {
+          if (obj.id) {
+            deletedIds.push(obj.id);
+          }
+        } else {
+          allObjects.push(obj);
+        }
+      }
+
+      cursor = response.cursor;
+    } while (cursor);
+
+    return {
+      categories: allObjects.filter((o) => o.type === "CATEGORY"),
+      items: allObjects.filter((o) => o.type === "ITEM"),
+      modifierLists: allObjects.filter((o) => o.type === "MODIFIER_LIST"),
+      taxes: allObjects.filter((o) => o.type === "TAX"),
+      images: allObjects.filter((o) => o.type === "IMAGE"),
+      deletedIds,
+    };
   }
 
   async fetchFullCatalog(accessToken: string): Promise<SquareCatalogResult> {

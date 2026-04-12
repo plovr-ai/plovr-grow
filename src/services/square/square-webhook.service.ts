@@ -127,7 +127,8 @@ export class SquareWebhookService {
     try {
       await squareService.syncCatalog(
         connection.tenantId,
-        connection.merchantId
+        connection.merchantId,
+        true
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "";

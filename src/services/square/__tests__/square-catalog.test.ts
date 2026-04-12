@@ -82,6 +82,7 @@ function makePage(objects: object[]) {
 
 const mockCatalogApi = {
   list: vi.fn(() => Promise.resolve(makePage(mockCatalogObjects))),
+  search: vi.fn(() => Promise.resolve({ objects: [], cursor: undefined })),
 };
 
 vi.mock("square", () => {
@@ -1483,6 +1484,111 @@ describe("SquareCatalogService", () => {
         });
         expect(result.stats.imagesDropped).toBe(2);
       });
+    });
+  });
+
+  describe("fetchIncrementalCatalog", () => {
+    beforeEach(() => {
+      mockCatalogApi.search.mockReset();
+    });
+
+    it("should return modified objects grouped by type", async () => {
+      mockCatalogApi.search.mockResolvedValueOnce({
+        objects: [
+          { type: "CATEGORY", id: "cat-1", categoryData: { name: "Appetizers" }, isDeleted: false },
+          { type: "ITEM", id: "item-1", itemData: { name: "Soup" }, isDeleted: false },
+          { type: "TAX", id: "tax-1", taxData: { name: "Sales Tax" }, isDeleted: false },
+        ],
+        cursor: undefined,
+      });
+
+      const result = await service.fetchIncrementalCatalog("test-token", "2026-01-01T00:00:00Z");
+
+      expect(result.categories).toHaveLength(1);
+      expect(result.categories[0].id).toBe("cat-1");
+      expect(result.items).toHaveLength(1);
+      expect(result.taxes).toHaveLength(1);
+      expect(result.deletedIds).toHaveLength(0);
+      expect(mockCatalogApi.search).toHaveBeenCalledWith(
+        expect.objectContaining({
+          beginTime: "2026-01-01T00:00:00Z",
+          includeDeletedObjects: true,
+          includeRelatedObjects: false,
+        })
+      );
+    });
+
+    it("should collect deleted object IDs separately", async () => {
+      mockCatalogApi.search.mockResolvedValueOnce({
+        objects: [
+          { type: "ITEM", id: "item-alive", itemData: { name: "Alive" }, isDeleted: false },
+          { type: "ITEM", id: "item-deleted", itemData: { name: "Gone" }, isDeleted: true },
+          { type: "CATEGORY", id: "cat-deleted", categoryData: { name: "Old" }, isDeleted: true },
+        ],
+        cursor: undefined,
+      });
+
+      const result = await service.fetchIncrementalCatalog("test-token", "2026-01-01T00:00:00Z");
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].id).toBe("item-alive");
+      expect(result.deletedIds).toEqual(["item-deleted", "cat-deleted"]);
+    });
+
+    it("should handle pagination with cursor", async () => {
+      mockCatalogApi.search
+        .mockResolvedValueOnce({
+          objects: [
+            { type: "ITEM", id: "item-1", itemData: { name: "Item 1" }, isDeleted: false },
+          ],
+          cursor: "page-2-cursor",
+        })
+        .mockResolvedValueOnce({
+          objects: [
+            { type: "ITEM", id: "item-2", itemData: { name: "Item 2" }, isDeleted: false },
+          ],
+          cursor: undefined,
+        });
+
+      const result = await service.fetchIncrementalCatalog("test-token", "2026-01-01T00:00:00Z");
+
+      expect(result.items).toHaveLength(2);
+      expect(mockCatalogApi.search).toHaveBeenCalledTimes(2);
+      // Second call should include the cursor
+      expect(mockCatalogApi.search).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ cursor: "page-2-cursor" })
+      );
+    });
+
+    it("should return empty result when no objects modified", async () => {
+      mockCatalogApi.search.mockResolvedValueOnce({
+        objects: undefined,
+        cursor: undefined,
+      });
+
+      const result = await service.fetchIncrementalCatalog("test-token", "2026-01-01T00:00:00Z");
+
+      expect(result.categories).toHaveLength(0);
+      expect(result.items).toHaveLength(0);
+      expect(result.modifierLists).toHaveLength(0);
+      expect(result.taxes).toHaveLength(0);
+      expect(result.images).toHaveLength(0);
+      expect(result.deletedIds).toHaveLength(0);
+    });
+
+    it("should skip deleted objects with no ID", async () => {
+      mockCatalogApi.search.mockResolvedValueOnce({
+        objects: [
+          { type: "ITEM", id: undefined, isDeleted: true },
+          { type: "ITEM", id: "item-deleted", isDeleted: true },
+        ],
+        cursor: undefined,
+      });
+
+      const result = await service.fetchIncrementalCatalog("test-token", "2026-01-01T00:00:00Z");
+
+      expect(result.deletedIds).toEqual(["item-deleted"]);
     });
   });
 });

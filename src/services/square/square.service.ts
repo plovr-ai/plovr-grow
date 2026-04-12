@@ -95,7 +95,8 @@ export class SquareService {
 
   async syncCatalog(
     tenantId: string,
-    merchantId: string
+    merchantId: string,
+    incremental: boolean = false
   ): Promise<{ objectsSynced: number; objectsMapped: number }> {
     const connection = await integrationRepository.getConnection(
       tenantId,
@@ -108,6 +109,24 @@ export class SquareService {
 
     // Ensure token is valid
     const accessToken = await this.ensureValidToken(connection);
+
+    // Determine if incremental sync is possible
+    let useIncremental = incremental;
+    let lastCursor: string | null = null;
+    if (useIncremental) {
+      lastCursor = await integrationRepository.getLastSuccessfulSyncCursor(
+        connection.id,
+        "CATALOG_FULL"
+      );
+      if (!lastCursor) {
+        // No previous successful sync with cursor — fall back to full
+        useIncremental = false;
+      }
+    }
+
+    // Capture sync start time before fetching (to avoid missing changes during sync)
+    const syncStartTime = new Date().toISOString();
+    const syncType = useIncremental ? "CATALOG_INCREMENTAL" : "CATALOG_FULL";
 
     // Atomic concurrency guard + sync record creation
     const syncRecord = await prisma.$transaction(async (tx) => {
@@ -127,7 +146,7 @@ export class SquareService {
           id: generateEntityId(),
           tenantId,
           connectionId: connection.id,
-          syncType: "CATALOG_FULL",
+          syncType,
           status: "running",
           startedAt: new Date(),
         },
@@ -136,9 +155,28 @@ export class SquareService {
 
     try {
       // Fetch catalog from Square
-      const rawCatalog = await squareCatalogService.fetchFullCatalog(
-        accessToken
-      );
+      let rawCatalog;
+      let deletedIds: string[] = [];
+
+      if (useIncremental && lastCursor) {
+        try {
+          const incrementalResult = await squareCatalogService.fetchIncrementalCatalog(
+            accessToken,
+            lastCursor
+          );
+          rawCatalog = incrementalResult;
+          deletedIds = incrementalResult.deletedIds;
+        } catch (incrementalError) {
+          // Fall back to full sync on incremental failure
+          console.warn(
+            "[Square Sync] Incremental sync failed, falling back to full sync:",
+            incrementalError instanceof Error ? incrementalError.message : "Unknown error"
+          );
+          rawCatalog = await squareCatalogService.fetchFullCatalog(accessToken);
+        }
+      } else {
+        rawCatalog = await squareCatalogService.fetchFullCatalog(accessToken);
+      }
 
       // Map to internal models
       const mapped = squareCatalogService.mapToMenuModels(rawCatalog);
@@ -433,6 +471,43 @@ export class SquareService {
             tx
           );
         }
+
+        // Soft-delete objects that were deleted in Square (incremental sync only)
+        for (const deletedExtId of deletedIds) {
+          const mapping = await integrationRepository.getIdMappingByExternalId(
+            tenantId,
+            "SQUARE",
+            deletedExtId
+          );
+          if (!mapping) continue;
+
+          switch (mapping.internalType) {
+            case "MenuCategory":
+              await tx.menuCategory.updateMany({
+                where: { id: mapping.internalId, tenantId },
+                data: { deleted: true },
+              });
+              break;
+            case "MenuItem":
+              await tx.menuItem.updateMany({
+                where: { id: mapping.internalId, tenantId },
+                data: { deleted: true },
+              });
+              break;
+            case "TaxConfig":
+              await tx.taxConfig.updateMany({
+                where: { id: mapping.internalId, tenantId },
+                data: { deleted: true },
+              });
+              break;
+          }
+
+          // Mark the ID mapping as deleted
+          await tx.externalIdMapping.updateMany({
+            where: { id: mapping.id },
+            data: { deleted: true },
+          });
+        }
       });
 
       const objectsSynced =
@@ -445,6 +520,7 @@ export class SquareService {
           status: "success",
           objectsSynced,
           objectsMapped,
+          cursor: syncStartTime,
         },
         mapped.stats
       );

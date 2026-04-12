@@ -155,7 +155,8 @@ describe("SquareWebhookService", () => {
       });
       expect(mockSyncCatalog).toHaveBeenCalledWith(
         TENANT_ID,
-        MERCHANT_ID
+        MERCHANT_ID,
+        true
       );
     });
 
@@ -1316,7 +1317,7 @@ describe("SquareWebhookService", () => {
         "we-failed-1",
         expect.any(Date)
       );
-      expect(mockSyncCatalog).toHaveBeenCalledWith(TENANT_ID, MERCHANT_ID);
+      expect(mockSyncCatalog).toHaveBeenCalledWith(TENANT_ID, MERCHANT_ID, true);
       expect(mockMarkWebhookEventProcessed).toHaveBeenCalledWith("we-failed-1");
       expect(result).toEqual({ processed: 1, retried: 0, deadLettered: 0 });
     });
