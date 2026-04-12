@@ -685,7 +685,6 @@ async function main() {
       price: 8.99,
       imageUrl: "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=800&h=600&fit=crop",
       tags: ["vegetarian", "vegan"],
-      modifiers: [],
     },
     {
       id: "bella-item-baguette",
@@ -695,7 +694,6 @@ async function main() {
       price: 4.49,
       imageUrl: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&h=600&fit=crop",
       tags: ["vegetarian", "vegan"],
-      modifiers: [],
     },
     {
       id: "bella-item-focaccia",
@@ -705,7 +703,6 @@ async function main() {
       price: 6.99,
       imageUrl: "https://images.unsplash.com/photo-1621583441131-ec7572d5e6ae?w=800&h=600&fit=crop",
       tags: ["vegetarian", "vegan"],
-      modifiers: [],
     },
     // Pastries
     {
@@ -716,7 +713,6 @@ async function main() {
       price: 4.49,
       imageUrl: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
-      modifiers: [],
     },
     {
       id: "bella-item-almond-danish",
@@ -726,7 +722,6 @@ async function main() {
       price: 5.29,
       imageUrl: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
-      modifiers: [],
     },
     {
       id: "bella-item-chocolate-croissant",
@@ -736,7 +731,6 @@ async function main() {
       price: 4.99,
       imageUrl: "https://images.unsplash.com/photo-1623334044303-241021148842?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
-      modifiers: [],
     },
     {
       id: "bella-item-cinnamon-roll",
@@ -746,7 +740,6 @@ async function main() {
       price: 5.49,
       imageUrl: "https://images.unsplash.com/photo-1619985632461-f33748ef8df3?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
-      modifiers: [],
     },
     // Coffee & Drinks
     {
@@ -757,29 +750,6 @@ async function main() {
       price: 4.99,
       imageUrl: "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
-      modifiers: [
-        {
-          id: "size",
-          name: "Size",
-          type: "single",
-          required: true,
-          modifiers: [
-            { id: "small", name: "Small (8 oz)", price: 0, isDefault: true },
-            { id: "large", name: "Large (12 oz)", price: 1.5 },
-          ],
-        },
-        {
-          id: "milk",
-          name: "Milk",
-          type: "single",
-          required: false,
-          modifiers: [
-            { id: "whole", name: "Whole Milk", price: 0, isDefault: true },
-            { id: "oat", name: "Oat Milk", price: 0.75 },
-            { id: "almond", name: "Almond Milk", price: 0.75 },
-          ],
-        },
-      ],
     },
     {
       id: "bella-item-latte",
@@ -789,18 +759,6 @@ async function main() {
       price: 5.49,
       imageUrl: "https://images.unsplash.com/photo-1561882468-9110e03e0f78?w=800&h=600&fit=crop",
       tags: ["vegetarian"],
-      modifiers: [
-        {
-          id: "size",
-          name: "Size",
-          type: "single",
-          required: true,
-          modifiers: [
-            { id: "small", name: "Small (8 oz)", price: 0, isDefault: true },
-            { id: "large", name: "Large (12 oz)", price: 1.5 },
-          ],
-        },
-      ],
     },
     {
       id: "bella-item-drip-coffee",
@@ -810,18 +768,6 @@ async function main() {
       price: 2.99,
       imageUrl: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=800&h=600&fit=crop",
       tags: ["vegetarian", "vegan"],
-      modifiers: [
-        {
-          id: "size",
-          name: "Size",
-          type: "single",
-          required: true,
-          modifiers: [
-            { id: "small", name: "Small (12 oz)", price: 0, isDefault: true },
-            { id: "large", name: "Large (16 oz)", price: 1 },
-          ],
-        },
-      ],
     },
   ];
 
@@ -1058,34 +1004,6 @@ async function main() {
       price: 18.99,
       imageUrl: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop",
       tags: ["vegetarian", "popular"],
-      modifiers: [
-        {
-          id: "size",
-          name: "Size",
-          type: "single",
-          required: true,
-          modifiers: [
-            { id: "size-s", name: "Small (10\")", price: 0, isDefault: true },
-            { id: "size-m", name: "Medium (14\")", price: 4 },
-            { id: "size-l", name: "Large (18\")", price: 8 },
-          ],
-        },
-        {
-          id: "toppings",
-          name: "Extra Toppings",
-          type: "multiple",
-          required: false,
-          allowQuantity: true,
-          maxQuantityPerModifier: 3,
-          modifiers: [
-            { id: "topping-pepperoni", name: "Pepperoni", price: 2 },
-            { id: "topping-mushrooms", name: "Mushrooms", price: 1.5 },
-            { id: "topping-olives", name: "Black Olives", price: 1.5 },
-            { id: "topping-peppers", name: "Bell Peppers", price: 1.5 },
-            { id: "topping-onions", name: "Onions", price: 1 },
-          ],
-        },
-      ],
     },
     {
       id: "item-pepperoni-pizza",
@@ -1095,19 +1013,6 @@ async function main() {
       price: 21.99,
       imageUrl: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop",
       tags: ["popular"],
-      modifiers: [
-        {
-          id: "size",
-          name: "Size",
-          type: "single",
-          required: true,
-          modifiers: [
-            { id: "size-s", name: "Small (10\")", price: 0, isDefault: true },
-            { id: "size-m", name: "Medium (14\")", price: 4 },
-            { id: "size-l", name: "Large (18\")", price: 8 },
-          ],
-        },
-      ],
     },
     {
       id: "item-margherita-pizza",
@@ -1117,19 +1022,6 @@ async function main() {
       price: 19.99,
       imageUrl: "https://images.unsplash.com/photo-1604068549290-dea0e4a305ca?w=400&h=300&fit=crop",
       tags: ["vegetarian"],
-      modifiers: [
-        {
-          id: "size",
-          name: "Size",
-          type: "single",
-          required: true,
-          modifiers: [
-            { id: "size-s", name: "Small (10\")", price: 0, isDefault: true },
-            { id: "size-m", name: "Medium (14\")", price: 4 },
-            { id: "size-l", name: "Large (18\")", price: 8 },
-          ],
-        },
-      ],
     },
     {
       id: "item-supreme-pizza",
@@ -1139,19 +1031,6 @@ async function main() {
       price: 24.99,
       imageUrl: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop",
       tags: [],
-      modifiers: [
-        {
-          id: "size",
-          name: "Size",
-          type: "single",
-          required: true,
-          modifiers: [
-            { id: "size-s", name: "Small (10\")", price: 0, isDefault: true },
-            { id: "size-m", name: "Medium (14\")", price: 4 },
-            { id: "size-l", name: "Large (18\")", price: 8 },
-          ],
-        },
-      ],
     },
     // Pasta
     {
@@ -1162,7 +1041,6 @@ async function main() {
       price: 16.99,
       imageUrl: "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=300&fit=crop",
       tags: [],
-      modifiers: [],
     },
     {
       id: "item-fettuccine-alfredo",
@@ -1172,19 +1050,6 @@ async function main() {
       price: 15.99,
       imageUrl: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=400&h=300&fit=crop",
       tags: ["vegetarian"],
-      modifiers: [
-        {
-          id: "protein",
-          name: "Add Protein",
-          type: "multiple",
-          required: false,
-          modifiers: [
-            { id: "protein-chicken", name: "Grilled Chicken", price: 4 },
-            { id: "protein-shrimp", name: "Shrimp", price: 5 },
-            { id: "protein-meatballs", name: "Meatballs (3)", price: 3 },
-          ],
-        },
-      ],
     },
     {
       id: "item-baked-ziti",
@@ -1194,7 +1059,6 @@ async function main() {
       price: 14.99,
       imageUrl: "https://images.unsplash.com/photo-1629115916087-7e8c114a24ed?w=400&h=300&fit=crop",
       tags: ["vegetarian"],
-      modifiers: [],
     },
     // Sides
     {
@@ -1205,7 +1069,6 @@ async function main() {
       price: 5.99,
       imageUrl: "https://images.unsplash.com/photo-1619531040576-f9416740661b?w=400&h=300&fit=crop",
       tags: ["vegetarian", "popular"],
-      modifiers: [],
     },
     {
       id: "item-mozzarella-sticks",
@@ -1215,7 +1078,6 @@ async function main() {
       price: 7.99,
       imageUrl: "https://images.unsplash.com/photo-1531749668029-2db88e4276c7?w=400&h=300&fit=crop",
       tags: ["vegetarian"],
-      modifiers: [],
     },
     {
       id: "item-caesar-salad",
@@ -1225,31 +1087,6 @@ async function main() {
       price: 8.99,
       imageUrl: "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400&h=300&fit=crop",
       tags: ["vegetarian"],
-      modifiers: [
-        {
-          id: "dressing",
-          name: "Dressing",
-          type: "single",
-          required: true,
-          modifiers: [
-            { id: "dressing-caesar", name: "Caesar", price: 0, isDefault: true },
-            { id: "dressing-ranch", name: "Ranch", price: 0 },
-            { id: "dressing-italian", name: "Italian", price: 0 },
-            { id: "dressing-balsamic", name: "Balsamic Vinaigrette", price: 0 },
-          ],
-        },
-        {
-          id: "extras",
-          name: "Add Extras",
-          type: "multiple",
-          required: false,
-          modifiers: [
-            { id: "extra-chicken", name: "Grilled Chicken", price: 4 },
-            { id: "extra-bacon", name: "Bacon Bits", price: 2 },
-            { id: "extra-avocado", name: "Avocado", price: 2.5 },
-          ],
-        },
-      ],
     },
     // Drinks
     {
@@ -1259,19 +1096,6 @@ async function main() {
       description: "Coca-Cola, Sprite, Fanta, or Lemonade",
       price: 2.99,
       tags: [],
-      modifiers: [
-        {
-          id: "size-drink",
-          name: "Size",
-          type: "single",
-          required: true,
-          modifiers: [
-            { id: "drink-small", name: "Small", price: 0, isDefault: true },
-            { id: "drink-medium", name: "Medium", price: 0.5 },
-            { id: "drink-large", name: "Large", price: 1 },
-          ],
-        },
-      ],
     },
     {
       id: "item-italian-soda",
@@ -1280,19 +1104,6 @@ async function main() {
       description: "Sparkling water with your choice of flavor",
       price: 3.99,
       tags: [],
-      modifiers: [
-        {
-          id: "size-drink",
-          name: "Size",
-          type: "single",
-          required: true,
-          modifiers: [
-            { id: "drink-small", name: "Small", price: 0, isDefault: true },
-            { id: "drink-medium", name: "Medium", price: 0.5 },
-            { id: "drink-large", name: "Large", price: 1 },
-          ],
-        },
-      ],
     },
     {
       id: "item-water",
@@ -1301,7 +1112,6 @@ async function main() {
       description: "Purified spring water",
       price: 1.99,
       tags: [],
-      modifiers: [],
     },
   ];
 
@@ -1315,6 +1125,291 @@ async function main() {
   }
 
   console.log(`Created ${menuItems.length} menu items`);
+
+  // Seed modifier groups, options, and junction records
+  type ModifierOptionSeed = { id: string; name: string; price: number; isDefault?: boolean };
+  type ModifierGroupSeed = { id: string; name: string; required: boolean; minSelect: number; maxSelect: number; allowQuantity?: boolean; maxQuantityPerModifier?: number; options: ModifierOptionSeed[] };
+  const seedModifierData: { tenantId: string; menuItemId: string; groups: ModifierGroupSeed[] }[] = [
+    // ==================== Joe's Pizza modifiers ====================
+    {
+      tenantId: tenant.id,
+      menuItemId: "item-cheese-pizza",
+      groups: [
+        {
+          id: "item-cheese-pizza-size",
+          name: "Size",
+          required: true,
+          minSelect: 1,
+          maxSelect: 1,
+          options: [
+            { id: "item-cheese-pizza-size-small", name: 'Small (10")', price: 0, isDefault: true },
+            { id: "item-cheese-pizza-size-medium", name: 'Medium (14")', price: 4 },
+            { id: "item-cheese-pizza-size-large", name: 'Large (18")', price: 8 },
+          ],
+        },
+        {
+          id: "item-cheese-pizza-toppings",
+          name: "Extra Toppings",
+          required: false,
+          minSelect: 0,
+          maxSelect: 5,
+          allowQuantity: true,
+          maxQuantityPerModifier: 3,
+          options: [
+            { id: "item-cheese-pizza-toppings-pepperoni", name: "Pepperoni", price: 2 },
+            { id: "item-cheese-pizza-toppings-mushrooms", name: "Mushrooms", price: 1.5 },
+            { id: "item-cheese-pizza-toppings-olives", name: "Black Olives", price: 1.5 },
+            { id: "item-cheese-pizza-toppings-peppers", name: "Bell Peppers", price: 1.5 },
+            { id: "item-cheese-pizza-toppings-onions", name: "Onions", price: 1 },
+          ],
+        },
+      ],
+    },
+    {
+      tenantId: tenant.id,
+      menuItemId: "item-pepperoni-pizza",
+      groups: [
+        {
+          id: "item-pepperoni-pizza-size",
+          name: "Size",
+          required: true,
+          minSelect: 1,
+          maxSelect: 1,
+          options: [
+            { id: "item-pepperoni-pizza-size-small", name: 'Small (10")', price: 0, isDefault: true },
+            { id: "item-pepperoni-pizza-size-medium", name: 'Medium (14")', price: 4 },
+            { id: "item-pepperoni-pizza-size-large", name: 'Large (18")', price: 8 },
+          ],
+        },
+      ],
+    },
+    {
+      tenantId: tenant.id,
+      menuItemId: "item-margherita-pizza",
+      groups: [
+        {
+          id: "item-margherita-pizza-size",
+          name: "Size",
+          required: true,
+          minSelect: 1,
+          maxSelect: 1,
+          options: [
+            { id: "item-margherita-pizza-size-small", name: 'Small (10")', price: 0, isDefault: true },
+            { id: "item-margherita-pizza-size-medium", name: 'Medium (14")', price: 4 },
+            { id: "item-margherita-pizza-size-large", name: 'Large (18")', price: 8 },
+          ],
+        },
+      ],
+    },
+    {
+      tenantId: tenant.id,
+      menuItemId: "item-supreme-pizza",
+      groups: [
+        {
+          id: "item-supreme-pizza-size",
+          name: "Size",
+          required: true,
+          minSelect: 1,
+          maxSelect: 1,
+          options: [
+            { id: "item-supreme-pizza-size-small", name: 'Small (10")', price: 0, isDefault: true },
+            { id: "item-supreme-pizza-size-medium", name: 'Medium (14")', price: 4 },
+            { id: "item-supreme-pizza-size-large", name: 'Large (18")', price: 8 },
+          ],
+        },
+      ],
+    },
+    {
+      tenantId: tenant.id,
+      menuItemId: "item-fettuccine-alfredo",
+      groups: [
+        {
+          id: "item-fettuccine-alfredo-protein",
+          name: "Add Protein",
+          required: false,
+          minSelect: 0,
+          maxSelect: 3,
+          options: [
+            { id: "item-fettuccine-alfredo-protein-chicken", name: "Grilled Chicken", price: 4 },
+            { id: "item-fettuccine-alfredo-protein-shrimp", name: "Shrimp", price: 5 },
+            { id: "item-fettuccine-alfredo-protein-meatballs", name: "Meatballs (3)", price: 3 },
+          ],
+        },
+      ],
+    },
+    {
+      tenantId: tenant.id,
+      menuItemId: "item-caesar-salad",
+      groups: [
+        {
+          id: "item-caesar-salad-dressing",
+          name: "Dressing",
+          required: true,
+          minSelect: 1,
+          maxSelect: 1,
+          options: [
+            { id: "item-caesar-salad-dressing-caesar", name: "Caesar", price: 0, isDefault: true },
+            { id: "item-caesar-salad-dressing-ranch", name: "Ranch", price: 0 },
+            { id: "item-caesar-salad-dressing-italian", name: "Italian", price: 0 },
+            { id: "item-caesar-salad-dressing-balsamic", name: "Balsamic Vinaigrette", price: 0 },
+          ],
+        },
+        {
+          id: "item-caesar-salad-extras",
+          name: "Add Extras",
+          required: false,
+          minSelect: 0,
+          maxSelect: 3,
+          options: [
+            { id: "item-caesar-salad-extras-chicken", name: "Grilled Chicken", price: 4 },
+            { id: "item-caesar-salad-extras-bacon", name: "Bacon Bits", price: 2 },
+            { id: "item-caesar-salad-extras-avocado", name: "Avocado", price: 2.5 },
+          ],
+        },
+      ],
+    },
+    {
+      tenantId: tenant.id,
+      menuItemId: "item-fountain-drink",
+      groups: [
+        {
+          id: "item-fountain-drink-size",
+          name: "Size",
+          required: true,
+          minSelect: 1,
+          maxSelect: 1,
+          options: [
+            { id: "item-fountain-drink-size-small", name: "Small", price: 0, isDefault: true },
+            { id: "item-fountain-drink-size-medium", name: "Medium", price: 0.5 },
+            { id: "item-fountain-drink-size-large", name: "Large", price: 1 },
+          ],
+        },
+      ],
+    },
+    {
+      tenantId: tenant.id,
+      menuItemId: "item-italian-soda",
+      groups: [
+        {
+          id: "item-italian-soda-size",
+          name: "Size",
+          required: true,
+          minSelect: 1,
+          maxSelect: 1,
+          options: [
+            { id: "item-italian-soda-size-small", name: "Small", price: 0, isDefault: true },
+            { id: "item-italian-soda-size-medium", name: "Medium", price: 0.5 },
+            { id: "item-italian-soda-size-large", name: "Large", price: 1 },
+          ],
+        },
+      ],
+    },
+    // ==================== Bella's Bakery modifiers ====================
+    {
+      tenantId: bellaTenant.id,
+      menuItemId: "bella-item-cappuccino",
+      groups: [
+        {
+          id: "bella-item-cappuccino-size",
+          name: "Size",
+          required: true,
+          minSelect: 1,
+          maxSelect: 1,
+          options: [
+            { id: "bella-item-cappuccino-size-small", name: "Small (8 oz)", price: 0, isDefault: true },
+            { id: "bella-item-cappuccino-size-large", name: "Large (12 oz)", price: 1.5 },
+          ],
+        },
+        {
+          id: "bella-item-cappuccino-milk",
+          name: "Milk",
+          required: false,
+          minSelect: 0,
+          maxSelect: 1,
+          options: [
+            { id: "bella-item-cappuccino-milk-whole", name: "Whole Milk", price: 0, isDefault: true },
+            { id: "bella-item-cappuccino-milk-oat", name: "Oat Milk", price: 0.75 },
+            { id: "bella-item-cappuccino-milk-almond", name: "Almond Milk", price: 0.75 },
+          ],
+        },
+      ],
+    },
+    {
+      tenantId: bellaTenant.id,
+      menuItemId: "bella-item-latte",
+      groups: [
+        {
+          id: "bella-item-latte-size",
+          name: "Size",
+          required: true,
+          minSelect: 1,
+          maxSelect: 1,
+          options: [
+            { id: "bella-item-latte-size-small", name: "Small (8 oz)", price: 0, isDefault: true },
+            { id: "bella-item-latte-size-large", name: "Large (12 oz)", price: 1.5 },
+          ],
+        },
+        {
+          id: "bella-item-latte-milk",
+          name: "Milk",
+          required: false,
+          minSelect: 0,
+          maxSelect: 1,
+          options: [
+            { id: "bella-item-latte-milk-whole", name: "Whole Milk", price: 0, isDefault: true },
+            { id: "bella-item-latte-milk-oat", name: "Oat Milk", price: 0.75 },
+            { id: "bella-item-latte-milk-almond", name: "Almond Milk", price: 0.75 },
+          ],
+        },
+      ],
+    },
+    {
+      tenantId: bellaTenant.id,
+      menuItemId: "bella-item-drip-coffee",
+      groups: [
+        {
+          id: "bella-item-drip-coffee-size",
+          name: "Size",
+          required: true,
+          minSelect: 1,
+          maxSelect: 1,
+          options: [
+            { id: "bella-item-drip-coffee-size-small", name: "Small (12 oz)", price: 0, isDefault: true },
+            { id: "bella-item-drip-coffee-size-large", name: "Large (16 oz)", price: 1 },
+          ],
+        },
+      ],
+    },
+  ];
+
+  for (const itemMod of seedModifierData) {
+    for (let groupIdx = 0; groupIdx < itemMod.groups.length; groupIdx++) {
+      const group = itemMod.groups[groupIdx];
+
+      await prisma.modifierGroup.upsert({
+        where: { id: group.id },
+        update: { name: group.name, required: group.required, minSelect: group.minSelect, maxSelect: group.maxSelect, allowQuantity: group.allowQuantity ?? false, maxQuantityPerModifier: group.maxQuantityPerModifier ?? 1 },
+        create: { id: group.id, tenantId: itemMod.tenantId, name: group.name, required: group.required, minSelect: group.minSelect, maxSelect: group.maxSelect, allowQuantity: group.allowQuantity ?? false, maxQuantityPerModifier: group.maxQuantityPerModifier ?? 1 },
+      });
+
+      for (let optIdx = 0; optIdx < group.options.length; optIdx++) {
+        const opt = group.options[optIdx];
+        await prisma.modifierOption.upsert({
+          where: { id: opt.id },
+          update: { name: opt.name, price: opt.price, isDefault: opt.isDefault ?? false, sortOrder: optIdx },
+          create: { id: opt.id, tenantId: itemMod.tenantId, groupId: group.id, name: opt.name, price: opt.price, isDefault: opt.isDefault ?? false, isAvailable: true, sortOrder: optIdx },
+        });
+      }
+
+      await prisma.menuItemModifierGroup.upsert({
+        where: { menuItemId_modifierGroupId: { menuItemId: itemMod.menuItemId, modifierGroupId: group.id } },
+        update: { sortOrder: groupIdx },
+        create: { id: `mimg-${group.id}`, menuItemId: itemMod.menuItemId, modifierGroupId: group.id, sortOrder: groupIdx },
+      });
+    }
+  }
+
+  console.log("Created modifier groups and options");
 
   // Create menu category item associations for Joe's Pizza
   const joesCategoryItemLinks = [
