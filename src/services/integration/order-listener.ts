@@ -122,6 +122,7 @@ async function handleOrderPaid(event: OrderPaidEvent): Promise<void> {
       deliveryFee: orderForPush.deliveryFee,
       discount: orderForPush.discount,
       notes: orderForPush.notes ?? undefined,
+      scheduledAt: orderForPush.scheduledAt ?? undefined,
     };
 
     try {
@@ -349,6 +350,7 @@ async function getOrderForPush(
   tipAmount: number;
   deliveryFee: number;
   discount: number;
+  scheduledAt: Date | null;
 } | null> {
   try {
     const { orderService } = await import("@/services/order/order.service");
@@ -365,6 +367,7 @@ async function getOrderForPush(
       tipAmount: Number(order.tipAmount ?? 0),
       deliveryFee: Number(order.deliveryFee ?? 0),
       discount: Number(order.discount ?? 0),
+      scheduledAt: order.scheduledAt ?? null,
     };
   } catch {
     return null;

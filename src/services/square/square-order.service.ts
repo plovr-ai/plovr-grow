@@ -570,6 +570,11 @@ export class SquareOrderService {
       `${input.customerFirstName} ${input.customerLastName}`.trim();
     const squareType = SQUARE_FULFILLMENT_TYPE_BY_ORDER_MODE[input.orderMode];
 
+    const scheduleType = input.scheduledAt ? "SCHEDULED" : "ASAP";
+    const pickupAt = input.scheduledAt
+      ? input.scheduledAt.toISOString()
+      : undefined;
+
     if (input.orderMode === "delivery") {
       if (!input.deliveryAddress) {
         throw new AppError(
@@ -583,7 +588,8 @@ export class SquareOrderService {
         type: squareType,
         state: "PROPOSED",
         deliveryDetails: {
-          scheduleType: "ASAP",
+          scheduleType,
+          deliverAt: pickupAt,
           recipient: {
             displayName,
             phoneNumber: input.customerPhone,
@@ -608,7 +614,8 @@ export class SquareOrderService {
       type: squareType,
       state: "PROPOSED",
       pickupDetails: {
-        scheduleType: "ASAP",
+        scheduleType,
+        pickupAt,
         recipient: {
           displayName,
           phoneNumber: input.customerPhone,
@@ -713,6 +720,7 @@ export class SquareOrderService {
       input.deliveryFee,
       input.discount,
       input.notes ?? "",
+      input.scheduledAt ? input.scheduledAt.toISOString() : "",
       items.join(";"),
     ].join("||");
   }

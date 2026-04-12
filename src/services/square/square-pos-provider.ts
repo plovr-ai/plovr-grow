@@ -64,6 +64,7 @@ class SquarePosProvider implements PosProvider {
       deliveryFee: input.deliveryFee,
       discount: input.discount,
       notes: input.notes,
+      scheduledAt: input.scheduledAt,
     });
 
     return {

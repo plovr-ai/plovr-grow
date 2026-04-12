@@ -77,6 +77,7 @@ export interface PosOrderPushInput {
   deliveryFee: number;
   discount: number;
   notes?: string;
+  scheduledAt?: Date;
 }
 
 export interface PosOrderPushItem {
