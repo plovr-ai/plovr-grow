@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripeService } from "@/services/stripe";
 import { paymentService } from "@/services/payment";
+import { orderService } from "@/services/order";
 import { stripeConnectService } from "@/services/stripe-connect";
 import type { ConnectAccountStatus } from "@/services/stripe-connect/stripe-connect.types";
 
@@ -51,6 +52,17 @@ export async function POST(request: Request) {
           cardBrand: cardDetails?.brand,
           cardLast4: cardDetails?.last4,
         });
+
+        // Update order status to completed
+        const succeededPayment = await paymentService.getPaymentByIntentId(paymentIntent.id);
+        if (succeededPayment?.order) {
+          await orderService.updatePaymentStatus(
+            succeededPayment.order.tenantId,
+            succeededPayment.order.id,
+            "completed",
+            { source: "internal" }
+          );
+        }
         break;
       }
 
@@ -64,6 +76,17 @@ export async function POST(request: Request) {
           failureCode: paymentIntent.last_payment_error?.code,
           failureMessage: paymentIntent.last_payment_error?.message,
         });
+
+        // Update order status to payment_failed
+        const failedPayment = await paymentService.getPaymentByIntentId(paymentIntent.id);
+        if (failedPayment?.order) {
+          await orderService.updatePaymentStatus(
+            failedPayment.order.tenantId,
+            failedPayment.order.id,
+            "payment_failed",
+            { source: "internal" }
+          );
+        }
         break;
       }
 

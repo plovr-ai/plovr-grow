@@ -206,11 +206,43 @@ export class OrderService {
         );
       }
 
-      return createdOrder;
+      // 4. Determine if order is immediately paid:
+      //    - Card payment exists (always pre-verified before this method)
+      //    - OR gift card covers full amount (no card payment needed)
+      const orderTotal = Number(createdOrder.totalAmount);
+      const giftCardCoversAll =
+        !!options?.giftCard && !options.payment && options.giftCard.amount >= orderTotal;
+      const isImmediatelyPaid = !!options?.payment || giftCardCoversAll;
+
+      if (isImmediatelyPaid) {
+        await tx.order.update({
+          where: { id: createdOrder.id },
+          data: { status: "completed", paidAt: new Date() },
+        });
+      }
+
+      return { ...createdOrder, _isImmediatelyPaid: isImmediatelyPaid };
     });
 
-    // Emit event AFTER transaction commits successfully
+    // Emit events AFTER transaction commits successfully
     this.emitOrderCreatedEvent(tenantId, order, input, Number(order.totalAmount));
+
+    if (order._isImmediatelyPaid) {
+      orderEventEmitter.emit("order.paid", {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        merchantId: input.merchantId,
+        tenantId,
+        timestamp: new Date(),
+        status: "completed",
+        previousStatus: "created",
+        customerPhone: input.customerPhone,
+        customerFirstName: input.customerFirstName,
+        customerLastName: input.customerLastName,
+        customerEmail: input.customerEmail,
+        totalAmount: Number(order.totalAmount),
+      });
+    }
 
     return order;
   }
@@ -469,6 +501,11 @@ export class OrderService {
     }
 
     if (status === "completed") {
+      // CAS: skip if already completed (idempotent for webhook retries)
+      if (order.status === "completed") {
+        return;
+      }
+
       await prisma.order.update({
         where: { id: orderId },
         data: { status: "completed", paidAt: new Date() },
@@ -483,6 +520,11 @@ export class OrderService {
         status: "completed",
         previousStatus: order.status as OrderStatus,
         source: options?.source,
+        customerPhone: order.customerPhone,
+        customerFirstName: order.customerFirstName,
+        customerLastName: order.customerLastName,
+        customerEmail: order.customerEmail ?? undefined,
+        totalAmount: Number(order.totalAmount),
       });
       return;
     }
