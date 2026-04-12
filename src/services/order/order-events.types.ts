@@ -12,7 +12,8 @@ export type FulfillmentEventType =
   | "order.fulfillment.confirmed"
   | "order.fulfillment.preparing"
   | "order.fulfillment.ready"
-  | "order.fulfillment.fulfilled";
+  | "order.fulfillment.fulfilled"
+  | "order.fulfillment.canceled";
 
 export type OrderEventType = PaymentEventType | FulfillmentEventType;
 

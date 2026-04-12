@@ -119,6 +119,7 @@ export const FULFILLMENT_STATUS_RANK: Record<string, number> = {
   preparing: 2,
   ready: 3,
   fulfilled: 4,
+  canceled: 5,
 } as const;
 
 /**

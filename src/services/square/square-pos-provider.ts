@@ -1,3 +1,4 @@
+import type { FulfillmentStatus } from "@/types";
 import type {
   PosProvider,
   PosOrderPushInput,
@@ -7,6 +8,10 @@ import type {
 import { squareService } from "./square.service";
 import { squareOrderService } from "./square-order.service";
 import type { SquareOrderPushItem } from "./square.types";
+import {
+  FULFILLMENT_STATUS_MAP,
+  REVERSE_FULFILLMENT_STATUS_MAP,
+} from "./square.types";
 
 /**
  * Square POS provider — thin adapter that delegates to the existing
@@ -87,6 +92,21 @@ class SquarePosProvider implements PosProvider {
       orderId,
       reason
     );
+  }
+
+  mapToInternalStatus(externalStatus: string): FulfillmentStatus | null {
+    // Handle Square cancellation states
+    if (externalStatus === "CANCELED" || externalStatus === "FAILED") {
+      return "canceled";
+    }
+    return (REVERSE_FULFILLMENT_STATUS_MAP[externalStatus] as FulfillmentStatus) ?? null;
+  }
+
+  mapToExternalStatus(internalStatus: FulfillmentStatus): string | null {
+    if (internalStatus === "canceled") {
+      return "CANCELED";
+    }
+    return FULFILLMENT_STATUS_MAP[internalStatus] ?? null;
   }
 }
 

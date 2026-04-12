@@ -337,6 +337,13 @@ describe("SquareWebhookService", () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
+      // PREPARED maps to "ready"; set current to "preparing" so the
+      // state-machine allows the transition (preparing -> ready).
+      mockOrderFindUnique.mockResolvedValue({
+        fulfillmentStatus: "preparing",
+        status: "completed",
+        squareOrderVersion: null,
+      });
 
       await service.handleWebhook(JSON.stringify(orderPayload));
 
@@ -548,18 +555,21 @@ describe("SquareWebhookService", () => {
       expect(mockOrderUpdate).not.toHaveBeenCalled();
     });
 
-    it("should treat unknown current status as -1 rank (always advances)", async () => {
+    it("should skip update when current status is unknown (not in state machine)", async () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
       mockOrderFindUnique.mockResolvedValue({
         fulfillmentStatus: "weird-legacy-value",
         status: "completed",
+        squareOrderVersion: null,
       });
 
       await service.handleWebhook(JSON.stringify(orderPayload));
 
-      expect(mockUpdateFulfillmentStatus).toHaveBeenCalled();
+      // Unknown current status has no valid outgoing transitions, so the
+      // state-machine guard rejects the update.
+      expect(mockUpdateFulfillmentStatus).not.toHaveBeenCalled();
     });
 
     it("should mark order canceled on CANCELED fulfillment state", async () => {
@@ -1313,16 +1323,19 @@ describe("SquareWebhookService", () => {
   });
 
   describe("order.updated handler - no timestamp field", () => {
-    it("should delegate pending status update to OrderService even without timestamp field", async () => {
+    it("should delegate pending->confirmed status update to OrderService even without timestamp field", async () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
-      // Current status is unknown (rank -1) so incoming pending still advances.
+      // Use a valid current status so the state machine allows the transition.
       mockOrderFindUnique.mockResolvedValue({
-        fulfillmentStatus: "legacy-unknown",
+        fulfillmentStatus: "pending",
+        status: "completed",
+        squareOrderVersion: null,
       });
 
-      const proposedPayload = buildPayload({
+      // RESERVED maps to "confirmed"; pending -> confirmed is valid.
+      const reservedPayload = buildPayload({
         type: "order.updated",
         data: {
           type: "order",
@@ -1330,18 +1343,18 @@ describe("SquareWebhookService", () => {
           object: {
             order: {
               id: "sq-order-1",
-              fulfillments: [{ state: "PROPOSED" }],
+              fulfillments: [{ state: "RESERVED" }],
             },
           },
         },
       });
 
-      await service.handleWebhook(JSON.stringify(proposedPayload));
+      await service.handleWebhook(JSON.stringify(reservedPayload));
 
       expect(mockUpdateFulfillmentStatus).toHaveBeenCalledWith(
         TENANT_ID,
         "internal-order-1",
-        "pending",
+        "confirmed",
         expect.objectContaining({ source: "square_webhook" })
       );
     });

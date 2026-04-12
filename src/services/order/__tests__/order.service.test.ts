@@ -1614,7 +1614,9 @@ describe("OrderService", () => {
     });
 
     it("passes source through to event payload", async () => {
-      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
+      // Set current to "preparing" so preparing -> ready is valid
+      const preparingOrder = { ...mockOrder, fulfillmentStatus: "preparing" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(preparingOrder as never);
       vi.mocked(prisma.order.update).mockResolvedValue({} as never);
       const emitSpy = vi.spyOn(orderEventEmitter, "emit");
 
@@ -1629,7 +1631,9 @@ describe("OrderService", () => {
     });
 
     it("sets squareOrderVersion when provided", async () => {
-      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
+      // Set current to "confirmed" so confirmed -> preparing is valid
+      const confirmedOrder = { ...mockOrder, fulfillmentStatus: "confirmed" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(confirmedOrder as never);
       vi.mocked(prisma.order.update).mockResolvedValue({} as never);
 
       await orderService.updateFulfillmentStatus("tenant-1", "order-1", "preparing", {
@@ -1647,7 +1651,8 @@ describe("OrderService", () => {
     });
 
     it("uses empty string when merchantId is null", async () => {
-      const orderNoMerchant = { ...mockOrder, merchantId: null };
+      // Set current to "ready" so ready -> fulfilled is valid
+      const orderNoMerchant = { ...mockOrder, merchantId: null, fulfillmentStatus: "ready" };
       vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(orderNoMerchant as never);
       vi.mocked(prisma.order.update).mockResolvedValue({} as never);
       const emitSpy = vi.spyOn(orderEventEmitter, "emit");

@@ -6,11 +6,12 @@ import prisma from "@/lib/db";
 import type { SquareWebhookPayload } from "./square.types";
 import {
   REVERSE_FULFILLMENT_STATUS_MAP,
-  FULFILLMENT_STATUS_RANK,
   WEBHOOK_EVENT_STATUS,
   WEBHOOK_RETRY_POLICY,
   computeNextRetryAt,
 } from "./square.types";
+import { canTransition } from "@/services/order/fulfillment-state-machine";
+import type { FulfillmentStatus } from "@/types";
 
 const INTEGRATION_TYPE = "POS_SQUARE";
 
@@ -359,30 +360,33 @@ export class SquareWebhookService {
     }
 
     const internalStatus =
-      REVERSE_FULFILLMENT_STATUS_MAP[squareFulfillmentState];
+      REVERSE_FULFILLMENT_STATUS_MAP[squareFulfillmentState] as FulfillmentStatus | undefined;
 
-    // Monotonic guard: ignore reverse-mapped states that would walk the
-    // order back to an earlier stage. The forward map collapses multiple
-    // internal states onto the same Square state (e.g. confirmed + preparing
-    // both become RESERVED), so the reverse map is inherently lossy and can
-    // only be trusted when it advances the order.
+    if (!internalStatus) {
+      await bumpVersionIfNewer();
+      return;
+    }
+
     // Do not resurrect a canceled order via a stale forward-progress webhook.
     if (current.status === "canceled") {
       await bumpVersionIfNewer();
       return;
     }
-    const currentRank = FULFILLMENT_STATUS_RANK[current.fulfillmentStatus] ?? -1;
-    const incomingRank = FULFILLMENT_STATUS_RANK[internalStatus] ?? -1;
-    if (incomingRank < currentRank) {
-      console.log(
-        `[Square Webhook] Ignoring regressive fulfillment state for ${mapping.internalId}: ${current.fulfillmentStatus} → ${internalStatus}`
-      );
+
+    const currentFulfillment = current.fulfillmentStatus as FulfillmentStatus;
+
+    // Same status — nothing to write; avoid clobbering timestamps.
+    if (internalStatus === currentFulfillment) {
       await bumpVersionIfNewer();
       return;
     }
-    if (incomingRank === currentRank) {
-      // Same status — nothing to write; avoid clobbering timestamps. Still
-      // bump the persisted Square version so future stale events are dropped.
+
+    // State-machine guard: only allow legal transitions. Log and skip
+    // illegal ones instead of throwing so the webhook is acknowledged.
+    if (!canTransition(currentFulfillment, internalStatus)) {
+      console.log(
+        `[Square Webhook] Ignoring illegal fulfillment transition for ${mapping.internalId}: ${currentFulfillment} → ${internalStatus}`
+      );
       await bumpVersionIfNewer();
       return;
     }
@@ -391,7 +395,7 @@ export class SquareWebhookService {
     await orderService.updateFulfillmentStatus(
       tenantId,
       mapping.internalId,
-      internalStatus as import("@/types").FulfillmentStatus,
+      internalStatus,
       {
         source: "square_webhook",
         ...(incomingVersion !== null ? { squareOrderVersion: incomingVersion } : {}),

@@ -20,6 +20,7 @@ type EventMap = {
   "order.fulfillment.preparing": FulfillmentStatusChangedEvent;
   "order.fulfillment.ready": FulfillmentStatusChangedEvent;
   "order.fulfillment.fulfilled": FulfillmentStatusChangedEvent;
+  "order.fulfillment.canceled": FulfillmentStatusChangedEvent;
 };
 
 /**
@@ -66,6 +67,7 @@ class OrderEventEmitter {
       "order.fulfillment.preparing",
       "order.fulfillment.ready",
       "order.fulfillment.fulfilled",
+      "order.fulfillment.canceled",
     ];
 
     const unsubscribers = events.map((event) => this.on(event, handler));

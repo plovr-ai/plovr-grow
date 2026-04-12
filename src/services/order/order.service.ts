@@ -18,6 +18,7 @@ import { taxConfigRepository } from "@/repositories/tax-config.repository";
 import type { RoundingMethod } from "@/services/menu/tax-config.types";
 import { orderEventEmitter } from "./order-events";
 import type { OrderEventSource } from "./order-events.types";
+import { assertTransition } from "./fulfillment-state-machine";
 import type { FulfillmentStatus, OrderStatus } from "@/types";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import type {
@@ -396,9 +397,13 @@ export class OrderService {
       events.push({ type: "fulfillment", status: "fulfilled", timestamp: order.fulfilledAt });
     }
 
-    // Cancellation (payment event)
+    // Cancellation — can be both a payment event (order canceled) and
+    // a fulfillment event (fulfillment canceled).
     if (order.cancelledAt) {
       events.push({ type: "payment", status: "canceled", timestamp: order.cancelledAt });
+      if (order.fulfillmentStatus === "canceled") {
+        events.push({ type: "fulfillment", status: "canceled", timestamp: order.cancelledAt });
+      }
     }
 
     // Sort by timestamp
@@ -414,16 +419,18 @@ export class OrderService {
     preparing: "preparingAt",
     ready: "readyAt",
     fulfilled: "fulfilledAt",
+    canceled: "cancelledAt",
   };
 
   private static readonly FULFILLMENT_EVENT_MAP: Record<
     string,
-    "order.fulfillment.confirmed" | "order.fulfillment.preparing" | "order.fulfillment.ready" | "order.fulfillment.fulfilled"
+    "order.fulfillment.confirmed" | "order.fulfillment.preparing" | "order.fulfillment.ready" | "order.fulfillment.fulfilled" | "order.fulfillment.canceled"
   > = {
     confirmed: "order.fulfillment.confirmed",
     preparing: "order.fulfillment.preparing",
     ready: "order.fulfillment.ready",
     fulfilled: "order.fulfillment.fulfilled",
+    canceled: "order.fulfillment.canceled",
   };
 
   /**
@@ -439,6 +446,9 @@ export class OrderService {
     if (!order) {
       throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId });
     }
+
+    // Validate the transition via the state machine
+    assertTransition(order.fulfillmentStatus as FulfillmentStatus, fulfillmentStatus);
 
     const timestampField = OrderService.FULFILLMENT_TIMESTAMP_FIELD[fulfillmentStatus];
     const updateData: Record<string, unknown> = {
