@@ -15,6 +15,10 @@ export interface OrderCompletionData {
   customerLastName?: string;
   customerEmail?: string;
   totalAmount: number;
+  /** Amount paid via gift card — earns 2x loyalty points */
+  giftCardPayment?: number;
+  /** Pre-resolved loyalty member ID (skips phone-based lookup when present) */
+  loyaltyMemberId?: string;
 }
 
 export interface CustomerLoyaltyDashboard {
@@ -55,31 +59,69 @@ export class LoyaltyService {
       tenantId
     );
 
-    // Find or create member
-    const { member } = await loyaltyMemberService.findOrCreateByPhone(
-      tenantId,
-      data.customerPhone,
-      {
-        phone: data.customerPhone,
-        firstName: data.customerFirstName,
-        lastName: data.customerLastName,
-        email: data.customerEmail,
-      }
-    );
+    // Resolve member: use pre-resolved ID if available, otherwise lookup by phone
+    let memberId: string;
+    if (data.loyaltyMemberId) {
+      memberId = data.loyaltyMemberId;
+    } else {
+      const { member } = await loyaltyMemberService.findOrCreateByPhone(
+        tenantId,
+        data.customerPhone,
+        {
+          phone: data.customerPhone,
+          firstName: data.customerFirstName,
+          lastName: data.customerLastName,
+          email: data.customerEmail,
+        }
+      );
+      memberId = member.id;
+    }
 
-    // Award points
-    const result = await pointsService.awardPoints(tenantId, member.id, {
-      merchantId: data.merchantId,
-      orderId,
-      orderAmount: data.totalAmount,
-      pointsPerDollar,
-      description: `Earned from order`,
-    });
+    // Calculate points — gift card portion earns 2x
+    const giftCardPortion = data.giftCardPayment ?? 0;
+    const cashPortion = Math.max(0, data.totalAmount - giftCardPortion);
+    const hasGiftCard = giftCardPortion > 0;
+
+    let result: PointsEarnResult;
+
+    if (hasGiftCard) {
+      const giftCardPoints = Math.floor(giftCardPortion * pointsPerDollar * 2);
+      const cashPoints = Math.floor(cashPortion * pointsPerDollar);
+      const totalPoints = giftCardPoints + cashPoints;
+
+      if (totalPoints <= 0) {
+        return null;
+      }
+
+      // Build description
+      let description = `Earned from order`;
+      if (giftCardPortion > 0 && cashPortion > 0) {
+        description += ` (${giftCardPoints} pts from gift card at 2x, ${cashPoints} pts from cash)`;
+      } else {
+        description += ` (2x bonus on gift card payment)`;
+      }
+
+      result = await pointsService.awardPointsWithCustomAmount(tenantId, memberId, {
+        merchantId: data.merchantId,
+        orderId,
+        points: totalPoints,
+        description,
+      });
+    } else {
+      // Standard points calculation (no gift card)
+      result = await pointsService.awardPoints(tenantId, memberId, {
+        merchantId: data.merchantId,
+        orderId,
+        orderAmount: data.totalAmount,
+        pointsPerDollar,
+        description: `Earned from order`,
+      });
+    }
 
     // Update member order stats
     await loyaltyMemberService.updateOrderStats(
       tenantId,
-      member.id,
+      memberId,
       data.totalAmount
     );
 

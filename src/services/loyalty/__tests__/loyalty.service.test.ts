@@ -27,6 +27,7 @@ vi.mock("../points.service", () => ({
   pointsService: {
     hasEarnedForOrder: vi.fn(),
     awardPoints: vi.fn(),
+    awardPointsWithCustomAmount: vi.fn(),
   },
 }));
 
@@ -183,6 +184,156 @@ describe("LoyaltyService", () => {
           pointsPerDollar: 2.0,
         })
       );
+    });
+
+    it("should use loyaltyMemberId directly when provided (skip phone lookup)", async () => {
+      vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
+      vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(1.0);
+      vi.mocked(pointsService.awardPoints).mockResolvedValue({
+        pointsEarned: 50,
+        newBalance: 150,
+        transactionId: "tx-1",
+      });
+      vi.mocked(loyaltyMemberService.updateOrderStats).mockResolvedValue();
+
+      await service.processOrderCompletion("tenant-1", "order-1", {
+        ...orderData,
+        loyaltyMemberId: "member-42",
+      });
+
+      // Should NOT call findOrCreateByPhone when loyaltyMemberId is provided
+      expect(loyaltyMemberService.findOrCreateByPhone).not.toHaveBeenCalled();
+
+      // Should call awardPoints with the provided memberId
+      expect(pointsService.awardPoints).toHaveBeenCalledWith(
+        "tenant-1",
+        "member-42",
+        expect.objectContaining({
+          orderId: "order-1",
+          orderAmount: 50.0,
+        })
+      );
+    });
+
+    it("should award 2x points for gift card portion (mixed payment)", async () => {
+      vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
+      vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(1.0);
+      vi.mocked(loyaltyMemberService.findOrCreateByPhone).mockResolvedValue({
+        member: mockMember,
+        isNew: false,
+      });
+      vi.mocked(pointsService.awardPointsWithCustomAmount).mockResolvedValue({
+        pointsEarned: 30,
+        newBalance: 130,
+        transactionId: "tx-gc",
+      });
+      vi.mocked(loyaltyMemberService.updateOrderStats).mockResolvedValue();
+
+      const result = await service.processOrderCompletion("tenant-1", "order-1", {
+        ...orderData,
+        totalAmount: 20,
+        giftCardPayment: 10, // 10 gift card + 10 cash
+      });
+
+      expect(result).toEqual({
+        pointsEarned: 30,
+        newBalance: 130,
+        transactionId: "tx-gc",
+      });
+
+      // Should use awardPointsWithCustomAmount, not awardPoints
+      expect(pointsService.awardPointsWithCustomAmount).toHaveBeenCalledWith(
+        "tenant-1",
+        "member-1",
+        expect.objectContaining({
+          points: 30, // floor(10 * 1 * 2) + floor(10 * 1) = 20 + 10 = 30
+          description: expect.stringContaining("2x"),
+        })
+      );
+      expect(pointsService.awardPoints).not.toHaveBeenCalled();
+    });
+
+    it("should award 2x points for gift-card-only payment", async () => {
+      vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
+      vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(1.0);
+      vi.mocked(loyaltyMemberService.findOrCreateByPhone).mockResolvedValue({
+        member: mockMember,
+        isNew: false,
+      });
+      vi.mocked(pointsService.awardPointsWithCustomAmount).mockResolvedValue({
+        pointsEarned: 40,
+        newBalance: 140,
+        transactionId: "tx-gc2",
+      });
+      vi.mocked(loyaltyMemberService.updateOrderStats).mockResolvedValue();
+
+      const result = await service.processOrderCompletion("tenant-1", "order-1", {
+        ...orderData,
+        totalAmount: 20,
+        giftCardPayment: 20, // fully gift card
+      });
+
+      expect(result).toEqual({
+        pointsEarned: 40,
+        newBalance: 140,
+        transactionId: "tx-gc2",
+      });
+
+      expect(pointsService.awardPointsWithCustomAmount).toHaveBeenCalledWith(
+        "tenant-1",
+        "member-1",
+        expect.objectContaining({
+          points: 40, // floor(20 * 1 * 2) = 40
+          description: expect.stringContaining("2x bonus on gift card payment"),
+        })
+      );
+    });
+
+    it("should return null when gift card 2x points total is 0", async () => {
+      vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
+      vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(0);
+      vi.mocked(loyaltyMemberService.findOrCreateByPhone).mockResolvedValue({
+        member: mockMember,
+        isNew: false,
+      });
+
+      const result = await service.processOrderCompletion("tenant-1", "order-1", {
+        ...orderData,
+        totalAmount: 5,
+        giftCardPayment: 5,
+      });
+
+      expect(result).toBeNull();
+      expect(pointsService.awardPointsWithCustomAmount).not.toHaveBeenCalled();
+      expect(pointsService.awardPoints).not.toHaveBeenCalled();
+    });
+
+    it("should use standard awardPoints when no gift card payment", async () => {
+      vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
+      vi.mocked(pointsService.hasEarnedForOrder).mockResolvedValue(false);
+      vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(1.0);
+      vi.mocked(loyaltyMemberService.findOrCreateByPhone).mockResolvedValue({
+        member: mockMember,
+        isNew: false,
+      });
+      vi.mocked(pointsService.awardPoints).mockResolvedValue({
+        pointsEarned: 50,
+        newBalance: 150,
+        transactionId: "tx-cash",
+      });
+      vi.mocked(loyaltyMemberService.updateOrderStats).mockResolvedValue();
+
+      await service.processOrderCompletion("tenant-1", "order-1", {
+        ...orderData,
+        giftCardPayment: 0, // explicitly 0
+      });
+
+      expect(pointsService.awardPoints).toHaveBeenCalled();
+      expect(pointsService.awardPointsWithCustomAmount).not.toHaveBeenCalled();
     });
   });
 

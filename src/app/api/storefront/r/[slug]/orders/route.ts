@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { orderService } from "@/services/order";
 import { merchantService } from "@/services/merchant";
-import { pointsService, loyaltyConfigService } from "@/services/loyalty";
 import { giftCardService } from "@/services/giftcard";
 import { paymentService } from "@/services/payment";
 import { stripeConnectService } from "@/services/stripe-connect";
@@ -241,49 +240,8 @@ export async function POST(
       }
     );
 
-    // Award loyalty points if member is logged in
-    // Gift card payment portion earns DOUBLE points (2x)
-    if (body.loyaltyMemberId) {
-      try {
-        const isEnabled = await loyaltyConfigService.isLoyaltyEnabled(tenantId);
-
-        if (isEnabled) {
-          const pointsPerDollar = await loyaltyConfigService.getPointsPerDollar(tenantId);
-
-          const giftCardPortion = Number(order.giftCardPayment) || 0;
-          const cashPortion = Number(order.cashPayment) || 0;
-
-          // Calculate points with double multiplier for gift card portion
-          const giftCardPoints = Math.floor(giftCardPortion * pointsPerDollar * 2);
-          const cashPoints = Math.floor(cashPortion * pointsPerDollar);
-          const totalPoints = giftCardPoints + cashPoints;
-
-          if (totalPoints > 0) {
-            // Build description
-            let description = `Earned from order #${order.orderNumber}`;
-            if (giftCardPortion > 0 && cashPortion > 0) {
-              description += ` (${giftCardPoints} pts from gift card at 2x, ${cashPoints} pts from cash)`;
-            } else if (giftCardPortion > 0) {
-              description += ` (2x bonus on gift card payment)`;
-            }
-
-            await pointsService.awardPointsWithCustomAmount(
-              tenantId,
-              body.loyaltyMemberId,
-              {
-                merchantId: merchant.id,
-                orderId: order.id,
-                points: totalPoints,
-                description,
-              }
-            );
-          }
-        }
-      } catch (error) {
-        // Log but don't fail the order if points awarding fails
-        console.error("Failed to award loyalty points:", error);
-      }
-    }
+    // Loyalty points are awarded via the order.paid event handler
+    // (see loyalty-event-handler.ts) — no direct award here.
 
     return NextResponse.json(
       {

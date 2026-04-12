@@ -45,6 +45,10 @@ vi.mock("@/services/loyalty", () => ({
   },
 }));
 
+// Note: Loyalty points are now awarded via the order.paid event handler
+// (loyalty-event-handler.ts), NOT directly in this route. Tests below
+// verify the route no longer calls pointsService directly.
+
 vi.mock("@storefront/lib/validations/checkout", () => ({
   checkoutFormSchema: {
     safeParse: vi.fn(),
@@ -503,20 +507,8 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
     expect(json.error).toBe("Payment failed");
   });
 
-  it("should still succeed when loyalty points awarding fails (outside transaction)", async () => {
-    const { loyaltyConfigService, pointsService } = await import("@/services/loyalty");
-
-    vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
-    vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(1);
-    vi.mocked(pointsService.awardPointsWithCustomAmount).mockRejectedValue(
-      new Error("Points service unavailable")
-    );
-
-    vi.mocked(orderService.createMerchantOrderAtomic).mockResolvedValue({
-      ...mockOrder,
-      giftCardPayment: 0,
-      cashPayment: 20,
-    } as never);
+  it("should NOT award loyalty points directly (delegated to event handler)", async () => {
+    const { pointsService } = await import("@/services/loyalty");
 
     const bodyWithLoyalty = {
       ...validBody,
@@ -527,124 +519,12 @@ describe("POST /api/storefront/r/[slug]/orders", () => {
     const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
     const json = await response.json();
 
-    // Order should still succeed even though points failed
+    // Order succeeds
     expect(response.status).toBe(201);
     expect(json.success).toBe(true);
-  });
 
-  it("should not award points when loyalty is not enabled", async () => {
-    const { loyaltyConfigService, pointsService } = await import("@/services/loyalty");
-
-    vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(false);
-
-    vi.mocked(orderService.createMerchantOrderAtomic).mockResolvedValue({
-      ...mockOrder,
-      giftCardPayment: 0,
-      cashPayment: 20,
-    } as never);
-
-    const bodyWithLoyalty = {
-      ...validBody,
-      loyaltyMemberId: "member-1",
-    };
-
-    const request = createRequest(bodyWithLoyalty);
-    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
-    const json = await response.json();
-
-    expect(response.status).toBe(201);
-    expect(json.success).toBe(true);
+    // Points are NOT awarded directly — event handler handles this
     expect(pointsService.awardPointsWithCustomAmount).not.toHaveBeenCalled();
-  });
-
-  it("should not award points when totalPoints is 0", async () => {
-    const { loyaltyConfigService, pointsService } = await import("@/services/loyalty");
-
-    vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
-    vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(0);
-
-    vi.mocked(orderService.createMerchantOrderAtomic).mockResolvedValue({
-      ...mockOrder,
-      giftCardPayment: 0,
-      cashPayment: 0,
-    } as never);
-
-    const bodyWithLoyalty = {
-      ...validBody,
-      loyaltyMemberId: "member-1",
-    };
-
-    const request = createRequest(bodyWithLoyalty);
-    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
-    const json = await response.json();
-
-    expect(response.status).toBe(201);
-    expect(json.success).toBe(true);
-    expect(pointsService.awardPointsWithCustomAmount).not.toHaveBeenCalled();
-  });
-
-  it("should award 2x points for gift card portion and include both in description", async () => {
-    const { loyaltyConfigService, pointsService } = await import("@/services/loyalty");
-
-    vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
-    vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(1);
-
-    vi.mocked(orderService.createMerchantOrderAtomic).mockResolvedValue({
-      ...mockOrder,
-      orderNumber: "20260410-0001",
-      giftCardPayment: 10,
-      cashPayment: 10,
-    } as never);
-
-    const bodyWithLoyalty = {
-      ...validBody,
-      loyaltyMemberId: "member-1",
-    };
-
-    const request = createRequest(bodyWithLoyalty);
-    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
-
-    expect(response.status).toBe(201);
-    expect(pointsService.awardPointsWithCustomAmount).toHaveBeenCalledWith(
-      "tenant-1",
-      "member-1",
-      expect.objectContaining({
-        points: 30, // 10*1*2 + 10*1 = 30
-        description: expect.stringContaining("2x"),
-      })
-    );
-  });
-
-  it("should include 2x bonus description for gift-card-only payment", async () => {
-    const { loyaltyConfigService, pointsService } = await import("@/services/loyalty");
-
-    vi.mocked(loyaltyConfigService.isLoyaltyEnabled).mockResolvedValue(true);
-    vi.mocked(loyaltyConfigService.getPointsPerDollar).mockResolvedValue(1);
-
-    vi.mocked(orderService.createMerchantOrderAtomic).mockResolvedValue({
-      ...mockOrder,
-      orderNumber: "20260410-0002",
-      giftCardPayment: 20,
-      cashPayment: 0,
-    } as never);
-
-    const bodyWithLoyalty = {
-      ...validBody,
-      loyaltyMemberId: "member-1",
-    };
-
-    const request = createRequest(bodyWithLoyalty);
-    const response = await POST(request, { params: Promise.resolve({ slug: "test-merchant" }) });
-
-    expect(response.status).toBe(201);
-    expect(pointsService.awardPointsWithCustomAmount).toHaveBeenCalledWith(
-      "tenant-1",
-      "member-1",
-      expect.objectContaining({
-        points: 40, // 20*1*2 = 40
-        description: expect.stringContaining("2x bonus on gift card payment"),
-      })
-    );
   });
 
   it("should return 400 when payment verification fails with default error", async () => {

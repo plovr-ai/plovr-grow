@@ -248,6 +248,8 @@ export class OrderService {
         customerLastName: input.customerLastName,
         customerEmail: input.customerEmail,
         totalAmount: Number(order.totalAmount),
+        giftCardPayment: Number(order.giftCardPayment) || 0,
+        loyaltyMemberId: input.loyaltyMemberId ?? undefined,
       });
     }
 
@@ -532,6 +534,8 @@ export class OrderService {
         customerLastName: order.customerLastName,
         customerEmail: order.customerEmail ?? undefined,
         totalAmount: Number(order.totalAmount),
+        giftCardPayment: Number(order.giftCardPayment) || 0,
+        loyaltyMemberId: order.loyaltyMemberId ?? undefined,
       });
       return;
     }
