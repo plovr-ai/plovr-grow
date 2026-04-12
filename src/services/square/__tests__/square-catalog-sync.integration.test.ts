@@ -179,6 +179,9 @@ async function seedTestData() {
 
 async function cleanupTestData() {
   // Delete in reverse dependency order
+  await prisma.menuItemModifierGroup.deleteMany({ where: { menuItem: { tenantId: TENANT_ID } } });
+  await prisma.modifierOption.deleteMany({ where: { tenantId: TENANT_ID } });
+  await prisma.modifierGroup.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.menuItemTax.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.menuCategoryItem.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.menuItem.deleteMany({ where: { tenantId: TENANT_ID } });
@@ -195,6 +198,9 @@ async function cleanupTestData() {
 
 async function cleanupCatalogData() {
   // Clean catalog and tax data between tests, but keep tenant+merchant+connection
+  await prisma.menuItemModifierGroup.deleteMany({ where: { menuItem: { tenantId: TENANT_ID } } });
+  await prisma.modifierOption.deleteMany({ where: { tenantId: TENANT_ID } });
+  await prisma.modifierGroup.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.menuItemTax.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.menuCategoryItem.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.menuItem.deleteMany({ where: { tenantId: TENANT_ID } });
