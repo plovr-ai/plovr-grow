@@ -356,6 +356,7 @@ export class OrderService {
     readyAt: Date | null;
     fulfilledAt: Date | null;
     cancelledAt: Date | null;
+    paymentFailedAt: Date | null;
   }): TimelineEvent[] {
     const events: TimelineEvent[] = [];
 
@@ -364,6 +365,10 @@ export class OrderService {
 
     if (order.paidAt) {
       events.push({ type: "payment", status: "completed", timestamp: order.paidAt });
+    }
+
+    if (order.paymentFailedAt) {
+      events.push({ type: "payment", status: "payment_failed", timestamp: order.paymentFailedAt });
     }
 
     // Fulfillment events

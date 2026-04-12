@@ -485,7 +485,7 @@ export class SquareWebhookService {
       }
       await prisma.order.update({
         where: { id: mapping.internalId },
-        data: { status: "payment_failed" },
+        data: { status: "payment_failed", paymentFailedAt: new Date() },
       });
       console.log(
         `[Square Webhook] Order ${mapping.internalId} payment_failed via Square`

@@ -55,6 +55,7 @@ describe("OrdersManagementClient", () => {
       fulfilledAt: null,
       cancelledAt: null,
       cancelReason: null,
+      paymentFailedAt: null,
       squareOrderVersion: null,
       deleted: false,
       merchant: {
