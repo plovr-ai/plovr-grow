@@ -585,9 +585,13 @@ describe("LoyaltySection", () => {
       mockFetch({ success: false, error: "Invalid code" });
 
       const inputs = screen.getAllByLabelText(/Digit \d/);
-      for (let i = 0; i < 6; i++) {
-        fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
-      }
+      // Wrap in act() so React flushes the state update that triggers
+      // the async onVerify callback on the 6th digit.
+      await act(async () => {
+        for (let i = 0; i < 6; i++) {
+          fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
+        }
+      });
 
       await waitFor(() => {
         expect(screen.getByText("Invalid code")).toBeInTheDocument();
