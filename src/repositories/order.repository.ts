@@ -318,14 +318,12 @@ export class OrderRepository {
           tenantId,
           deleted: false,
           status: { not: "canceled" },
-          ...(options?.dateFrom && options?.dateTo
-            ? {
-                createdAt: {
-                  gte: options.dateFrom,
-                  lte: options.dateTo,
-                },
-              }
-            : {}),
+          ...((options?.dateFrom || options?.dateTo) && {
+            createdAt: {
+              ...(options?.dateFrom && { gte: options.dateFrom }),
+              ...(options?.dateTo && { lte: options.dateTo }),
+            },
+          }),
         },
       },
       _sum: {

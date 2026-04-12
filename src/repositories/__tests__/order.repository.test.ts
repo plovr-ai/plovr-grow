@@ -480,7 +480,7 @@ describe("OrderRepository", () => {
           totalPrice: 21.98,
           specialInstructions: "No onions",
           imageUrl: "https://example.com/burger.jpg",
-          taxes: [{ taxConfigId: "tax-1", name: "Sales Tax", rate: 0.08, amount: 1.76 }],
+          taxes: [{ taxConfigId: "tax-1", name: "Sales Tax", rate: 0.08, roundingMethod: "half_up" as const, inclusionType: "additive" as const }],
           selectedModifiers: [
             {
               groupId: "grp-1",
