@@ -1089,7 +1089,7 @@ model WebhookEvent {
   merchant   Merchant              @relation(fields: [merchantId], references: [id])
   connection IntegrationConnection @relation(fields: [connectionId], references: [id])
 
-  @@unique([eventId])
+  @@unique([connectionId, eventId])
   @@index([tenantId, merchantId, eventType])
   @@index([connectionId])
   @@index([status])
