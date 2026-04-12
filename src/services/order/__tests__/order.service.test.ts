@@ -1326,7 +1326,8 @@ describe("OrderService", () => {
     it("should mark card order as immediately paid (status=completed, paidAt set)", async () => {
       const order = await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
         payment: {
-          stripePaymentIntentId: "pi_123",
+          provider: "stripe",
+          providerPaymentId: "pi_123",
           amount: 42.98,
           currency: "USD",
         },
@@ -1345,7 +1346,8 @@ describe("OrderService", () => {
 
       await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
         payment: {
-          stripePaymentIntentId: "pi_123",
+          provider: "stripe",
+          providerPaymentId: "pi_123",
           amount: 42.98,
           currency: "USD",
         },
@@ -1432,7 +1434,8 @@ describe("OrderService", () => {
       const order = await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
         giftCard: { id: "gc-1", amount: 20 },
         payment: {
-          stripePaymentIntentId: "pi_123",
+          provider: "stripe",
+          providerPaymentId: "pi_123",
           amount: 22.98,
           currency: "USD",
         },
@@ -1449,7 +1452,8 @@ describe("OrderService", () => {
 
       await orderService.createMerchantOrderAtomic("tenant-1", mockInput, {
         payment: {
-          stripePaymentIntentId: "pi_123",
+          provider: "stripe",
+          providerPaymentId: "pi_123",
           amount: 42.98,
           currency: "USD",
         },

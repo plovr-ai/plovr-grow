@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
         // Update order status to completed only if payment actually reached succeeded
         // (CAS in handlePaymentSucceeded may have been a no-op if payment was already failed/processed)
-        const succeededPayment = await paymentService.getPaymentByIntentId(paymentIntent.id);
+        const succeededPayment = await paymentService.getPaymentByProviderPaymentId("stripe", paymentIntent.id);
         if (succeededPayment?.order && succeededPayment.status === "succeeded") {
           await orderService.updatePaymentStatus(
             succeededPayment.order.tenantId,
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
         });
 
         // Update order status to payment_failed only if payment actually reached failed
-        const failedPayment = await paymentService.getPaymentByIntentId(paymentIntent.id);
+        const failedPayment = await paymentService.getPaymentByProviderPaymentId("stripe", paymentIntent.id);
         if (failedPayment?.order && failedPayment.status === "failed") {
           await orderService.updatePaymentStatus(
             failedPayment.order.tenantId,

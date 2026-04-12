@@ -12,7 +12,7 @@ vi.mock("@/services/payment", () => ({
   paymentService: {
     handlePaymentSucceeded: vi.fn(),
     handlePaymentFailed: vi.fn(),
-    getPaymentByIntentId: vi.fn(),
+    getPaymentByProviderPaymentId: vi.fn(),
   },
 }));
 
@@ -45,7 +45,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default: getPaymentByIntentId returns a succeeded payment with order info
-    vi.mocked(paymentService.getPaymentByIntentId).mockResolvedValue({
+    vi.mocked(paymentService.getPaymentByProviderPaymentId).mockResolvedValue({
       id: "pay-1",
       status: "succeeded",
       order: { id: "order-1", orderNumber: "ORD-001", tenantId: "tenant-1", merchantId: "merchant-1" },
@@ -457,7 +457,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
       const response = await POST(request);
 
       expect(response.status).toBe(200);
-      expect(paymentService.getPaymentByIntentId).toHaveBeenCalledWith("pi_test_order");
+      expect(paymentService.getPaymentByProviderPaymentId).toHaveBeenCalledWith("stripe", "pi_test_order");
       expect(orderService.updatePaymentStatus).toHaveBeenCalledWith(
         "tenant-1",
         "order-1",
@@ -468,7 +468,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
 
     it("should update order to payment_failed when payment_intent.payment_failed", async () => {
       // Override default to return failed status for this test
-      vi.mocked(paymentService.getPaymentByIntentId).mockResolvedValue({
+      vi.mocked(paymentService.getPaymentByProviderPaymentId).mockResolvedValue({
         id: "pay-1",
         status: "failed",
         order: { id: "order-1", orderNumber: "ORD-001", tenantId: "tenant-1", merchantId: "merchant-1" },
@@ -491,7 +491,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
       const response = await POST(request);
 
       expect(response.status).toBe(200);
-      expect(paymentService.getPaymentByIntentId).toHaveBeenCalledWith("pi_test_fail");
+      expect(paymentService.getPaymentByProviderPaymentId).toHaveBeenCalledWith("stripe", "pi_test_fail");
       expect(orderService.updatePaymentStatus).toHaveBeenCalledWith(
         "tenant-1",
         "order-1",
@@ -501,7 +501,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
     });
 
     it("should skip order update when payment record has no order", async () => {
-      vi.mocked(paymentService.getPaymentByIntentId).mockResolvedValue({
+      vi.mocked(paymentService.getPaymentByProviderPaymentId).mockResolvedValue({
         id: "pay-1",
         order: null,
       } as never);
@@ -526,7 +526,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
     it("should skip order update when payment CAS failed (status still pending/failed)", async () => {
       // Simulates Stripe retry: payment_failed then succeeded, but CAS only does pending->succeeded
       // If payment is still 'failed' after handlePaymentSucceeded CAS no-op, don't complete the order
-      vi.mocked(paymentService.getPaymentByIntentId).mockResolvedValue({
+      vi.mocked(paymentService.getPaymentByProviderPaymentId).mockResolvedValue({
         id: "pay-1",
         status: "failed", // CAS didn't flip because expected "pending" but found "failed"
         order: { id: "order-1", orderNumber: "ORD-001", tenantId: "tenant-1", merchantId: "merchant-1" },
@@ -550,7 +550,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
     });
 
     it("should skip order update when payment record not found", async () => {
-      vi.mocked(paymentService.getPaymentByIntentId).mockResolvedValue(null);
+      vi.mocked(paymentService.getPaymentByProviderPaymentId).mockResolvedValue(null);
 
       const event = {
         type: "payment_intent.succeeded",
