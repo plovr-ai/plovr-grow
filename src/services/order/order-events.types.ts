@@ -16,6 +16,9 @@ export type FulfillmentEventType =
 
 export type OrderEventType = PaymentEventType | FulfillmentEventType;
 
+/** Where the status change originated */
+export type OrderEventSource = "internal" | "square_webhook";
+
 // Base event payload
 export interface OrderEventPayload {
   orderId: string;
@@ -23,6 +26,7 @@ export interface OrderEventPayload {
   merchantId: string;
   tenantId: string;
   timestamp: Date;
+  source?: OrderEventSource;
   metadata?: Record<string, unknown>;
 }
 

@@ -17,6 +17,9 @@ import { calculateOrderPricing, type PricingItem, type TipInput } from "@/lib/pr
 import { taxConfigRepository } from "@/repositories/tax-config.repository";
 import type { RoundingMethod } from "@/services/menu/tax-config.types";
 import { orderEventEmitter } from "./order-events";
+import type { OrderEventSource } from "./order-events.types";
+import type { FulfillmentStatus, OrderStatus } from "@/types";
+import { AppError, ErrorCodes } from "@/lib/errors";
 import type {
   CreateMerchantOrderInput,
   CreateGiftCardOrderInput,
@@ -25,6 +28,11 @@ import type {
   TimelineEvent,
   OrderWithTimeline,
 } from "./order.types";
+
+export interface StatusUpdateOptions {
+  source?: OrderEventSource;
+  squareOrderVersion?: number;
+}
 
 export class OrderService {
   /**
@@ -395,6 +403,160 @@ export class OrderService {
 
     // Sort by timestamp
     return events.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  }
+
+  // ==================== Status Update Methods ====================
+  // Used by webhook handlers and internal callers to update order status
+  // while emitting the appropriate events.
+
+  private static readonly FULFILLMENT_TIMESTAMP_FIELD: Record<string, string> = {
+    confirmed: "confirmedAt",
+    preparing: "preparingAt",
+    ready: "readyAt",
+    fulfilled: "fulfilledAt",
+  };
+
+  private static readonly FULFILLMENT_EVENT_MAP: Record<
+    string,
+    "order.fulfillment.confirmed" | "order.fulfillment.preparing" | "order.fulfillment.ready" | "order.fulfillment.fulfilled"
+  > = {
+    confirmed: "order.fulfillment.confirmed",
+    preparing: "order.fulfillment.preparing",
+    ready: "order.fulfillment.ready",
+    fulfilled: "order.fulfillment.fulfilled",
+  };
+
+  /**
+   * Update fulfillment status and emit the corresponding fulfillment event.
+   */
+  async updateFulfillmentStatus(
+    tenantId: string,
+    orderId: string,
+    fulfillmentStatus: FulfillmentStatus,
+    options?: StatusUpdateOptions
+  ): Promise<void> {
+    const order = await orderRepository.getByIdWithMerchant(tenantId, orderId);
+    if (!order) {
+      throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId });
+    }
+
+    const timestampField = OrderService.FULFILLMENT_TIMESTAMP_FIELD[fulfillmentStatus];
+    const updateData: Record<string, unknown> = {
+      fulfillmentStatus,
+    };
+    if (timestampField) {
+      updateData[timestampField] = new Date();
+    }
+    if (options?.squareOrderVersion !== undefined) {
+      updateData.squareOrderVersion = options.squareOrderVersion;
+    }
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: updateData,
+    });
+
+    const eventType = OrderService.FULFILLMENT_EVENT_MAP[fulfillmentStatus];
+    if (eventType) {
+      orderEventEmitter.emit(eventType, {
+        orderId,
+        orderNumber: order.orderNumber,
+        merchantId: order.merchantId ?? "",
+        tenantId,
+        timestamp: new Date(),
+        fulfillmentStatus,
+        previousFulfillmentStatus: order.fulfillmentStatus as FulfillmentStatus,
+        source: options?.source,
+      });
+    }
+  }
+
+  /**
+   * Update payment status (completed or payment_failed) and emit events.
+   */
+  async updatePaymentStatus(
+    tenantId: string,
+    orderId: string,
+    status: Extract<OrderStatus, "completed" | "payment_failed">,
+    options?: StatusUpdateOptions
+  ): Promise<void> {
+    const order = await orderRepository.getByIdWithMerchant(tenantId, orderId);
+    if (!order) {
+      throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId });
+    }
+
+    if (status === "completed") {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { status: "completed", paidAt: new Date() },
+      });
+
+      orderEventEmitter.emit("order.paid", {
+        orderId,
+        orderNumber: order.orderNumber,
+        merchantId: order.merchantId ?? "",
+        tenantId,
+        timestamp: new Date(),
+        status: "completed",
+        previousStatus: order.status as OrderStatus,
+        source: options?.source,
+      });
+      return;
+    }
+
+    // payment_failed: guard against terminal states
+    if (
+      order.status === "completed" ||
+      order.status === "canceled" ||
+      order.status === "payment_failed"
+    ) {
+      return;
+    }
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { status: "payment_failed", paymentFailedAt: new Date() },
+    });
+  }
+
+  /**
+   * Cancel an order and emit the order.cancelled event.
+   */
+  async cancelOrder(
+    tenantId: string,
+    orderId: string,
+    reason?: string,
+    options?: StatusUpdateOptions
+  ): Promise<void> {
+    const order = await orderRepository.getByIdWithMerchant(tenantId, orderId);
+    if (!order) {
+      throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId });
+    }
+
+    const updateData: Record<string, unknown> = {
+      status: "canceled",
+      cancelledAt: new Date(),
+      cancelReason: reason,
+    };
+    if (options?.squareOrderVersion !== undefined) {
+      updateData.squareOrderVersion = options.squareOrderVersion;
+    }
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: updateData,
+    });
+
+    orderEventEmitter.emit("order.cancelled", {
+      orderId,
+      orderNumber: order.orderNumber,
+      merchantId: order.merchantId ?? "",
+      tenantId,
+      timestamp: new Date(),
+      status: "canceled",
+      cancelReason: reason,
+      source: options?.source,
+    });
   }
 
   // ==================== Tenant Order Management ====================
