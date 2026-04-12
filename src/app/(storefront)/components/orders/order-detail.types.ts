@@ -29,10 +29,6 @@ export interface OrderDetailData {
   totalAmount: number;
   createdAt: Date | string;
   paidAt: Date | string | null;
-  confirmedAt: Date | string | null;
-  preparingAt: Date | string | null;
-  readyAt: Date | string | null;
-  fulfilledAt: Date | string | null;
   cancelledAt: Date | string | null;
   cancelReason: string | null;
   timeline: TimelineEvent[];

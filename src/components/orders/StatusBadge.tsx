@@ -47,6 +47,10 @@ const fulfillmentStatusConfig: Record<FulfillmentStatus, { label: string; classN
     label: "Fulfilled",
     className: "bg-gray-100 text-gray-600 border-gray-300",
   },
+  canceled: {
+    label: "Canceled",
+    className: "bg-red-100 text-red-800 border-red-300",
+  },
 };
 
 interface PaymentStatusBadgeProps {

@@ -102,7 +102,8 @@ export type FulfillmentStatus =
   | "confirmed"     // Merchant accepted the order
   | "preparing"     // Kitchen is preparing
   | "ready"         // Ready for pickup/delivery
-  | "fulfilled";    // Order fulfilled
+  | "fulfilled"     // Order fulfilled
+  | "canceled";     // Fulfillment canceled
 
 export type SalesChannel = "online_order" | "catering" | "giftcard";
 

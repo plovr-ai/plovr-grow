@@ -9,6 +9,7 @@ import { giftCardService } from "@/services/giftcard";
 import { paymentService } from "@/services/payment";
 import { merchantService } from "@/services/merchant";
 import { orderRepository } from "@/repositories/order.repository";
+import { fulfillmentRepository } from "@/repositories/fulfillment.repository";
 import { sequenceRepository } from "@/repositories/sequence.repository";
 import { pointTransactionRepository } from "@/repositories/point-transaction.repository";
 import { generateOrderNumber, generateGiftcardOrderNumber } from "@/lib/utils";
@@ -33,7 +34,6 @@ import type { OrderItemData, SelectedModifier, ItemTaxInfo } from "@/types";
 
 export interface StatusUpdateOptions {
   source?: OrderEventSource;
-  squareOrderVersion?: number;
 }
 
 /**
@@ -101,42 +101,57 @@ export class OrderService {
 
     const salesChannel = input.salesChannel ?? "online_order";
 
-    // Create the order in database (dual-write: JSON snapshot + structured OrderItem rows)
-    const order = await orderRepository.create(
-      tenantId,
-      merchantId,
-      {
-        orderNumber,
-        customerFirstName: input.customerFirstName,
-        customerLastName: input.customerLastName,
-        customerPhone: input.customerPhone,
-        customerEmail: input.customerEmail ?? null,
-        orderMode: input.orderMode,
-        salesChannel,
-        status: "created",
-        fulfillmentStatus: "pending",
-        items: input.items as unknown as Prisma.InputJsonValue,
-        subtotal: calculation.subtotal,
-        taxAmount: calculation.taxAmount,
-        tipAmount: calculation.tipAmount,
-        deliveryFee: calculation.deliveryFee,
-        discount: calculation.discount,
-        giftCardPayment: Math.round(giftCardPayment * 100) / 100,
-        cashPayment: Math.round(cashPayment * 100) / 100,
-        totalAmount: calculation.totalAmount,
-        notes: input.notes ?? null,
-        deliveryAddress: input.deliveryAddress
-          ? (input.deliveryAddress as unknown as Prisma.InputJsonValue)
-          : Prisma.JsonNull,
-        scheduledAt: input.scheduledAt ?? null,
-      },
-      input.loyaltyMemberId,
-      tx,
-      input.items
-    );
+    // Create the order + fulfillment in database (dual-write: JSON snapshot + structured OrderItem rows)
+    const createOrderAndFulfillment = async (dbClient?: DbClient) => {
+      const order = await orderRepository.create(
+        tenantId,
+        merchantId,
+        {
+          orderNumber,
+          customerFirstName: input.customerFirstName,
+          customerLastName: input.customerLastName,
+          customerPhone: input.customerPhone,
+          customerEmail: input.customerEmail ?? null,
+          orderMode: input.orderMode,
+          salesChannel,
+          status: "created",
+          fulfillmentStatus: "pending",
+          items: input.items as unknown as Prisma.InputJsonValue,
+          subtotal: calculation.subtotal,
+          taxAmount: calculation.taxAmount,
+          tipAmount: calculation.tipAmount,
+          deliveryFee: calculation.deliveryFee,
+          discount: calculation.discount,
+          giftCardPayment: Math.round(giftCardPayment * 100) / 100,
+          cashPayment: Math.round(cashPayment * 100) / 100,
+          totalAmount: calculation.totalAmount,
+          notes: input.notes ?? null,
+          deliveryAddress: input.deliveryAddress
+            ? (input.deliveryAddress as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+          scheduledAt: input.scheduledAt ?? null,
+        },
+        input.loyaltyMemberId,
+        dbClient,
+        input.items
+      );
 
-    // Emit order created event (only when not inside a transaction —
-    // callers using transactions should emit after commit)
+      // Create fulfillment record alongside the order
+      await fulfillmentRepository.create(
+        tenantId,
+        { orderId: order.id, merchantId },
+        dbClient
+      );
+
+      return order;
+    };
+
+    // If caller provided a tx, use it; otherwise wrap in a transaction
+    const order = tx
+      ? await createOrderAndFulfillment(tx)
+      : await prisma.$transaction(async (txClient) => createOrderAndFulfillment(txClient));
+
+    // Emit order created event (only when not inside a caller-provided transaction)
     if (!tx) {
       this.emitOrderCreatedEvent(tenantId, order, input, calculation.totalAmount);
     }
@@ -363,7 +378,8 @@ export class OrderService {
   }
 
   /**
-   * Get order with timeline for Order Detail page
+   * Get order with timeline for Order Detail page.
+   * Timeline is built from FulfillmentStatusLog + payment timestamp fields.
    */
   async getOrderWithTimeline(
     tenantId: string,
@@ -372,7 +388,7 @@ export class OrderService {
     const order = await orderRepository.getByIdWithMerchant(tenantId, orderId);
     if (!order) return null;
 
-    const timeline = this.buildTimeline(order);
+    const timeline = await this.buildTimeline(tenantId, orderId, order);
 
     // Map structured OrderItem rows to OrderItemData[]
     const items: OrderItemData[] = (order.orderItems ?? []).map(mapOrderItemToData);
@@ -386,24 +402,21 @@ export class OrderService {
   }
 
   /**
-   * Build timeline from order timestamp fields
-   * Includes both payment events and fulfillment events
+   * Build timeline from FulfillmentStatusLog + order payment timestamps.
    */
-  private buildTimeline(order: {
-    status: string;
-    fulfillmentStatus: string;
-    createdAt: Date;
-    paidAt: Date | null;
-    confirmedAt: Date | null;
-    preparingAt: Date | null;
-    readyAt: Date | null;
-    fulfilledAt: Date | null;
-    cancelledAt: Date | null;
-    paymentFailedAt: Date | null;
-  }): TimelineEvent[] {
+  private async buildTimeline(
+    tenantId: string,
+    orderId: string,
+    order: {
+      createdAt: Date;
+      paidAt: Date | null;
+      cancelledAt: Date | null;
+      paymentFailedAt: Date | null;
+    }
+  ): Promise<TimelineEvent[]> {
     const events: TimelineEvent[] = [];
 
-    // Payment events
+    // Payment events from Order timestamps
     events.push({ type: "payment", status: "created", timestamp: order.createdAt });
 
     if (order.paidAt) {
@@ -414,26 +427,21 @@ export class OrderService {
       events.push({ type: "payment", status: "payment_failed", timestamp: order.paymentFailedAt });
     }
 
-    // Fulfillment events
-    if (order.confirmedAt) {
-      events.push({ type: "fulfillment", status: "confirmed", timestamp: order.confirmedAt });
-    }
-
-    if (order.preparingAt) {
-      events.push({ type: "fulfillment", status: "preparing", timestamp: order.preparingAt });
-    }
-
-    if (order.readyAt) {
-      events.push({ type: "fulfillment", status: "ready", timestamp: order.readyAt });
-    }
-
-    if (order.fulfilledAt) {
-      events.push({ type: "fulfillment", status: "fulfilled", timestamp: order.fulfilledAt });
-    }
-
-    // Cancellation (payment event)
     if (order.cancelledAt) {
       events.push({ type: "payment", status: "canceled", timestamp: order.cancelledAt });
+    }
+
+    // Fulfillment events from FulfillmentStatusLog
+    const fulfillment = await fulfillmentRepository.getByOrderId(tenantId, orderId);
+    if (fulfillment) {
+      const statusLogs = await fulfillmentRepository.getStatusHistory(tenantId, fulfillment.id);
+      for (const log of statusLogs) {
+        events.push({
+          type: "fulfillment",
+          status: log.toStatus as FulfillmentStatus,
+          timestamp: log.createdAt,
+        });
+      }
     }
 
     // Sort by timestamp
@@ -441,70 +449,8 @@ export class OrderService {
   }
 
   // ==================== Status Update Methods ====================
-  // Used by webhook handlers and internal callers to update order status
-  // while emitting the appropriate events.
-
-  private static readonly FULFILLMENT_TIMESTAMP_FIELD: Record<string, string> = {
-    confirmed: "confirmedAt",
-    preparing: "preparingAt",
-    ready: "readyAt",
-    fulfilled: "fulfilledAt",
-  };
-
-  private static readonly FULFILLMENT_EVENT_MAP: Record<
-    string,
-    "order.fulfillment.confirmed" | "order.fulfillment.preparing" | "order.fulfillment.ready" | "order.fulfillment.fulfilled"
-  > = {
-    confirmed: "order.fulfillment.confirmed",
-    preparing: "order.fulfillment.preparing",
-    ready: "order.fulfillment.ready",
-    fulfilled: "order.fulfillment.fulfilled",
-  };
-
-  /**
-   * Update fulfillment status and emit the corresponding fulfillment event.
-   */
-  async updateFulfillmentStatus(
-    tenantId: string,
-    orderId: string,
-    fulfillmentStatus: FulfillmentStatus,
-    options?: StatusUpdateOptions
-  ): Promise<void> {
-    const order = await orderRepository.getByIdWithMerchant(tenantId, orderId);
-    if (!order) {
-      throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId });
-    }
-
-    const timestampField = OrderService.FULFILLMENT_TIMESTAMP_FIELD[fulfillmentStatus];
-    const updateData: Record<string, unknown> = {
-      fulfillmentStatus,
-    };
-    if (timestampField) {
-      updateData[timestampField] = new Date();
-    }
-    if (options?.squareOrderVersion !== undefined) {
-      updateData.squareOrderVersion = options.squareOrderVersion;
-    }
-
-    await prisma.order.update({
-      where: { id: orderId },
-      data: updateData,
-    });
-
-    const eventType = OrderService.FULFILLMENT_EVENT_MAP[fulfillmentStatus];
-    if (eventType) {
-      orderEventEmitter.emit(eventType, {
-        orderId,
-        orderNumber: order.orderNumber,
-        merchantId: order.merchantId ?? "",
-        tenantId,
-        timestamp: new Date(),
-        fulfillmentStatus,
-        previousFulfillmentStatus: order.fulfillmentStatus as FulfillmentStatus,
-        source: options?.source,
-      });
-    }
-  }
+  // Fulfillment status updates are handled by FulfillmentService.
+  // Only payment-related status updates remain here.
 
   /**
    * Update payment status (completed or payment_failed) and emit events.
@@ -572,18 +518,13 @@ export class OrderService {
       throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId });
     }
 
-    const updateData: Record<string, unknown> = {
-      status: "canceled",
-      cancelledAt: new Date(),
-      cancelReason: reason,
-    };
-    if (options?.squareOrderVersion !== undefined) {
-      updateData.squareOrderVersion = options.squareOrderVersion;
-    }
-
     await prisma.order.update({
       where: { id: orderId },
-      data: updateData,
+      data: {
+        status: "canceled",
+        cancelledAt: new Date(),
+        cancelReason: reason,
+      },
     });
 
     orderEventEmitter.emit("order.cancelled", {

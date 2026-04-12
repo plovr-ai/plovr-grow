@@ -12,12 +12,13 @@ export type FulfillmentEventType =
   | "order.fulfillment.confirmed"
   | "order.fulfillment.preparing"
   | "order.fulfillment.ready"
-  | "order.fulfillment.fulfilled";
+  | "order.fulfillment.fulfilled"
+  | "order.fulfillment.canceled";
 
 export type OrderEventType = PaymentEventType | FulfillmentEventType;
 
 /** Where the status change originated */
-export type OrderEventSource = "internal" | "square_webhook";
+export type OrderEventSource = "internal" | "square_webhook" | "toast_webhook" | "manual";
 
 // Base event payload
 export interface OrderEventPayload {
@@ -39,6 +40,7 @@ export interface PaymentStatusChangedEvent extends OrderEventPayload {
 
 // Fulfillment status change event
 export interface FulfillmentStatusChangedEvent extends OrderEventPayload {
+  fulfillmentId: string;
   fulfillmentStatus: FulfillmentStatus;
   previousFulfillmentStatus?: FulfillmentStatus;
 }

@@ -37,10 +37,6 @@ export interface DashboardOrderDetailData {
   totalAmount: number;
   createdAt: Date | string;
   paidAt: Date | string | null;
-  confirmedAt: Date | string | null;
-  preparingAt: Date | string | null;
-  readyAt: Date | string | null;
-  fulfilledAt: Date | string | null;
   cancelledAt: Date | string | null;
   cancelReason: string | null;
   timeline: TimelineEvent[];
@@ -89,6 +85,7 @@ const FULFILLMENT_ORDER: Record<FulfillmentStatus, number> = {
   preparing: 2,
   ready: 3,
   fulfilled: 4,
+  canceled: -1,
 };
 
 function OrderStatusProgress({
