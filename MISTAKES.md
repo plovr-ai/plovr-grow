@@ -15,3 +15,19 @@ When adding new tables with FK constraints on existing tables, always search for
 After adding new FK-constrained tables, grep for `deleteMany` calls on the parent table in integration tests and update cleanup order.
 
 ---
+
+## [163] Migration used VARCHAR(20) instead of Prisma default VARCHAR(191)
+
+**Date**: 2026-04-12
+**Category**: convention-violation
+
+### What went wrong
+The migration SQL used `VARCHAR(20)` for the `payment_type` column, but Prisma maps `String` to `VARCHAR(191)` by default in MySQL. This caused the `prisma migrate diff` CI check to detect drift between migrations and schema.
+
+### Correct approach
+Always use `VARCHAR(191)` in migration SQL for Prisma `String` fields (without `@db.VarChar()` annotation). Check existing migrations (e.g., `init` migration) for the column type pattern used by other similar fields.
+
+### How to avoid
+Before writing migration SQL, check how Prisma maps the field type by looking at the init migration for similar columns.
+
+---
