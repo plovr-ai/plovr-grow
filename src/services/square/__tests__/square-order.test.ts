@@ -1828,5 +1828,102 @@ describe("SquareOrderService", () => {
       expect(parts[3]).toHaveLength(4);
       expect(parts[4]).toHaveLength(12);
     });
+
+    it("should differ when scheduledAt is provided vs absent", () => {
+      const a = service.generateIdempotencyKey("t1", "m1", baseInput);
+      const b = service.generateIdempotencyKey("t1", "m1", {
+        ...baseInput,
+        scheduledAt: new Date("2026-06-15T18:30:00Z"),
+      });
+      expect(a).not.toBe(b);
+    });
+  });
+
+  // ==================== scheduled pickup (#106) ====================
+
+  describe("createOrder - scheduled pickup (#106)", () => {
+    beforeEach(() => {
+      mockGetIdMappingsByInternalIds.mockResolvedValue([]);
+      mockCreate.mockResolvedValue({
+        order: { id: "sq-order-sched", version: 1 },
+      });
+    });
+
+    it("should set scheduleType ASAP and omit pickupAt when scheduledAt is absent", async () => {
+      await service.createOrder(TENANT_ID, MERCHANT_ID, {
+        ...sampleInput,
+        orderMode: "pickup",
+      });
+
+      const fulfillment = mockCreate.mock.calls[0][0].order.fulfillments[0];
+      expect(fulfillment.pickupDetails.scheduleType).toBe("ASAP");
+      expect(fulfillment.pickupDetails.pickupAt).toBeUndefined();
+    });
+
+    it("should set scheduleType SCHEDULED and pickupAt when scheduledAt is provided", async () => {
+      const scheduledTime = new Date("2026-06-15T18:30:00.000Z");
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, {
+        ...sampleInput,
+        orderMode: "pickup",
+        scheduledAt: scheduledTime,
+      });
+
+      const fulfillment = mockCreate.mock.calls[0][0].order.fulfillments[0];
+      expect(fulfillment.pickupDetails.scheduleType).toBe("SCHEDULED");
+      expect(fulfillment.pickupDetails.pickupAt).toBe("2026-06-15T18:30:00.000Z");
+    });
+
+    it("should set scheduleType SCHEDULED and deliverAt for delivery orders", async () => {
+      const scheduledTime = new Date("2026-06-15T19:00:00.000Z");
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, {
+        ...sampleInput,
+        orderMode: "delivery",
+        scheduledAt: scheduledTime,
+        deliveryAddress: {
+          street: "123 Main St",
+          city: "San Francisco",
+          state: "CA",
+          zipCode: "94103",
+        },
+      });
+
+      const fulfillment = mockCreate.mock.calls[0][0].order.fulfillments[0];
+      expect(fulfillment.deliveryDetails.scheduleType).toBe("SCHEDULED");
+      expect(fulfillment.deliveryDetails.deliverAt).toBe("2026-06-15T19:00:00.000Z");
+    });
+
+    it("should set scheduleType ASAP for delivery orders without scheduledAt", async () => {
+      await service.createOrder(TENANT_ID, MERCHANT_ID, {
+        ...sampleInput,
+        orderMode: "delivery",
+        deliveryAddress: {
+          street: "123 Main St",
+          city: "San Francisco",
+          state: "CA",
+          zipCode: "94103",
+        },
+      });
+
+      const fulfillment = mockCreate.mock.calls[0][0].order.fulfillments[0];
+      expect(fulfillment.deliveryDetails.scheduleType).toBe("ASAP");
+      expect(fulfillment.deliveryDetails.deliverAt).toBeUndefined();
+    });
+
+    it("should set scheduleType SCHEDULED for dine_in with scheduledAt", async () => {
+      const scheduledTime = new Date("2026-06-15T20:00:00.000Z");
+
+      await service.createOrder(TENANT_ID, MERCHANT_ID, {
+        ...sampleInput,
+        orderMode: "dine_in",
+        scheduledAt: scheduledTime,
+      });
+
+      const fulfillment = mockCreate.mock.calls[0][0].order.fulfillments[0];
+      expect(fulfillment.type).toBe("PICKUP");
+      expect(fulfillment.pickupDetails.scheduleType).toBe("SCHEDULED");
+      expect(fulfillment.pickupDetails.pickupAt).toBe("2026-06-15T20:00:00.000Z");
+    });
   });
 });

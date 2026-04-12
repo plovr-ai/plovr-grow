@@ -55,6 +55,7 @@ export interface SquareOrderPushInput {
   deliveryFee: number;
   discount: number;
   notes?: string;
+  scheduledAt?: Date;
 }
 
 /**
