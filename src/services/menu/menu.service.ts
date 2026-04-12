@@ -278,7 +278,6 @@ export class MenuService {
             price: fi.menuItem.price,
             imageUrl: fi.menuItem.imageUrl,
             status: fi.menuItem.status,
-            modifiers: fi.menuItem.modifiers,
             nutrition: fi.menuItem.nutrition,
             tags: fi.menuItem.tags,
             createdAt: new Date(),
