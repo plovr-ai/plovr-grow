@@ -1,2 +1,2 @@
 -- RenameColumn
-ALTER TABLE `Order` RENAME COLUMN `cash_payment` TO `balance_due`;
+ALTER TABLE `orders` RENAME COLUMN `cash_payment` TO `balance_due`;
