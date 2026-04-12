@@ -69,6 +69,18 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+const mockUpdateFulfillmentStatus = vi.fn();
+const mockUpdatePaymentStatus = vi.fn();
+const mockCancelOrder = vi.fn();
+
+vi.mock("@/services/order/order.service", () => ({
+  orderService: {
+    updateFulfillmentStatus: (...args: unknown[]) => mockUpdateFulfillmentStatus(...args),
+    updatePaymentStatus: (...args: unknown[]) => mockUpdatePaymentStatus(...args),
+    cancelOrder: (...args: unknown[]) => mockCancelOrder(...args),
+  },
+}));
+
 import { SquareWebhookService } from "../square-webhook.service";
 
 const TENANT_ID = "tenant-1";
@@ -134,6 +146,9 @@ describe("SquareWebhookService", () => {
       status: "completed",
       squareOrderVersion: null,
     });
+    mockUpdateFulfillmentStatus.mockResolvedValue(undefined);
+    mockUpdatePaymentStatus.mockResolvedValue(undefined);
+    mockCancelOrder.mockResolvedValue(undefined);
   });
 
   // ==================== verifySignature ====================
@@ -330,13 +345,12 @@ describe("SquareWebhookService", () => {
         "SQUARE",
         "sq-order-1"
       );
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "internal-order-1" },
-        data: expect.objectContaining({
-          fulfillmentStatus: "ready",
-          readyAt: expect.any(Date),
-        }),
-      });
+      expect(mockUpdateFulfillmentStatus).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "ready",
+        expect.objectContaining({ source: "square_webhook" })
+      );
     });
 
     it("should skip when no mapping found for order", async () => {
@@ -344,7 +358,7 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(orderPayload));
 
-      expect(mockOrderUpdate).not.toHaveBeenCalled();
+      expect(mockUpdateFulfillmentStatus).not.toHaveBeenCalled();
       expect(mockUpdateWebhookEventStatus).toHaveBeenCalledWith(
         "we-1",
         "processed"
@@ -515,13 +529,12 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(reservedPayload));
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "internal-order-1" },
-        data: expect.objectContaining({
-          fulfillmentStatus: "confirmed",
-          confirmedAt: expect.any(Date),
-        }),
-      });
+      expect(mockUpdateFulfillmentStatus).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "confirmed",
+        expect.objectContaining({ source: "square_webhook" })
+      );
     });
 
     it("should skip when internal order row is missing", async () => {
@@ -546,7 +559,7 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(orderPayload));
 
-      expect(mockOrderUpdate).toHaveBeenCalled();
+      expect(mockUpdateFulfillmentStatus).toHaveBeenCalled();
     });
 
     it("should mark order canceled on CANCELED fulfillment state", async () => {
@@ -576,14 +589,12 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(canceledPayload));
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "internal-order-1" },
-        data: {
-          status: "canceled",
-          cancelledAt: expect.any(Date),
-          cancelReason: "Customer no-show",
-        },
-      });
+      expect(mockCancelOrder).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "Customer no-show",
+        expect.objectContaining({ source: "square_webhook" })
+      );
     });
 
     it("should default cancel reason when pickup_details.cancel_reason missing", async () => {
@@ -608,13 +619,12 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(canceledPayload));
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "internal-order-1" },
-        data: expect.objectContaining({
-          status: "canceled",
-          cancelReason: "Canceled on Square POS",
-        }),
-      });
+      expect(mockCancelOrder).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "Canceled on Square POS",
+        expect.objectContaining({ source: "square_webhook" })
+      );
     });
 
     it("should mark order canceled on FAILED fulfillment state", async () => {
@@ -639,13 +649,12 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(failedPayload));
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "internal-order-1" },
-        data: expect.objectContaining({
-          status: "canceled",
-          cancelReason: "Fulfillment failed on Square",
-        }),
-      });
+      expect(mockCancelOrder).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "Fulfillment failed on Square",
+        expect.objectContaining({ source: "square_webhook" })
+      );
     });
 
     it("should honor cancellation even when order was already ready (overrides rank)", async () => {
@@ -673,10 +682,12 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(canceledPayload));
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "internal-order-1" },
-        data: expect.objectContaining({ status: "canceled" }),
-      });
+      expect(mockCancelOrder).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "Canceled on Square POS",
+        expect.objectContaining({ source: "square_webhook" })
+      );
     });
 
     it("should be idempotent: no write when order already canceled", async () => {
@@ -701,7 +712,7 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(canceledPayload));
 
-      expect(mockOrderUpdate).not.toHaveBeenCalled();
+      expect(mockCancelOrder).not.toHaveBeenCalled();
     });
 
     it("should skip CANCELED when internal order row is missing", async () => {
@@ -726,7 +737,7 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(canceledPayload));
 
-      expect(mockOrderUpdate).not.toHaveBeenCalled();
+      expect(mockCancelOrder).not.toHaveBeenCalled();
     });
 
     it("should not resurrect a canceled order via forward-progress webhook", async () => {
@@ -834,13 +845,15 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(freshPayload));
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "internal-order-1" },
-        data: expect.objectContaining({
-          fulfillmentStatus: "ready",
+      expect(mockUpdateFulfillmentStatus).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "ready",
+        expect.objectContaining({
+          source: "square_webhook",
           squareOrderVersion: 8,
-        }),
-      });
+        })
+      );
     });
 
     it("should bump stored version even on equal-rank no-op when incoming version is newer", async () => {
@@ -890,10 +903,12 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(orderPayload));
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "internal-order-1" },
-        data: expect.objectContaining({ fulfillmentStatus: "ready" }),
-      });
+      expect(mockUpdateFulfillmentStatus).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "ready",
+        expect.objectContaining({ source: "square_webhook" })
+      );
     });
 
     it("should accept any valid version when stored version is null", async () => {
@@ -923,13 +938,15 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(payloadWithVersion));
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "internal-order-1" },
-        data: expect.objectContaining({
-          fulfillmentStatus: "ready",
+      expect(mockUpdateFulfillmentStatus).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "ready",
+        expect.objectContaining({
+          source: "square_webhook",
           squareOrderVersion: 2,
-        }),
-      });
+        })
+      );
     });
 
     it("should apply CANCELED with version bump", async () => {
@@ -959,13 +976,15 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(cancelPayload));
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "internal-order-1" },
-        data: expect.objectContaining({
-          status: "canceled",
+      expect(mockCancelOrder).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "Canceled on Square POS",
+        expect.objectContaining({
+          source: "square_webhook",
           squareOrderVersion: 4,
-        }),
-      });
+        })
+      );
     });
 
     it("should drop stale CANCELED webhook", async () => {
@@ -1131,20 +1150,18 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(paymentPayload));
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "internal-order-1" },
-        data: expect.objectContaining({
-          status: "completed",
-          paidAt: expect.any(Date),
-        }),
-      });
+      expect(mockUpdatePaymentStatus).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "completed",
+        expect.objectContaining({ source: "square_webhook" })
+      );
     });
 
     it("should mark order as payment_failed when payment is FAILED (not canceled, #111)", async () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({ status: "created" });
 
       const failedPayload = buildPayload({
         type: "payment.completed",
@@ -1163,22 +1180,21 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(failedPayload));
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "internal-order-1" },
-        data: { status: "payment_failed", paymentFailedAt: expect.any(Date) },
-      });
-      // Crucially, we do NOT write cancellation fields — order cancel and
-      // payment failure are semantically distinct (#111).
-      const call = mockOrderUpdate.mock.calls[0][0];
-      expect(call.data.cancelledAt).toBeUndefined();
-      expect(call.data.cancelReason).toBeUndefined();
+      expect(mockUpdatePaymentStatus).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "payment_failed",
+        expect.objectContaining({ source: "square_webhook" })
+      );
     });
 
-    it("should NOT downgrade a completed order into payment_failed (clobber guard)", async () => {
+    it("should delegate payment_failed terminal-state guard to OrderService", async () => {
+      // Terminal state guards (completed, canceled, payment_failed) are now
+      // handled inside OrderService.updatePaymentStatus. The webhook handler
+      // simply delegates the call.
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({ status: "completed" });
 
       const failedPayload = buildPayload({
         type: "payment.completed",
@@ -1197,85 +1213,12 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(failedPayload));
 
-      expect(mockOrderUpdate).not.toHaveBeenCalled();
-    });
-
-    it("should NOT downgrade a canceled order into payment_failed (clobber guard)", async () => {
-      mockGetIdMappingByExternalId.mockResolvedValue({
-        internalId: "internal-order-1",
-      });
-      mockOrderFindUnique.mockResolvedValue({ status: "canceled" });
-
-      const failedPayload = buildPayload({
-        type: "payment.completed",
-        data: {
-          type: "payment",
-          id: "sq-payment-1",
-          object: {
-            payment: {
-              id: "sq-payment-1",
-              order_id: "sq-order-1",
-              status: "FAILED",
-            },
-          },
-        },
-      });
-
-      await service.handleWebhook(JSON.stringify(failedPayload));
-
-      expect(mockOrderUpdate).not.toHaveBeenCalled();
-    });
-
-    it("should be idempotent when already payment_failed", async () => {
-      mockGetIdMappingByExternalId.mockResolvedValue({
-        internalId: "internal-order-1",
-      });
-      mockOrderFindUnique.mockResolvedValue({ status: "payment_failed" });
-
-      const failedPayload = buildPayload({
-        type: "payment.completed",
-        data: {
-          type: "payment",
-          id: "sq-payment-1",
-          object: {
-            payment: {
-              id: "sq-payment-1",
-              order_id: "sq-order-1",
-              status: "FAILED",
-            },
-          },
-        },
-      });
-
-      await service.handleWebhook(JSON.stringify(failedPayload));
-
-      expect(mockOrderUpdate).not.toHaveBeenCalled();
-    });
-
-    it("should skip payment_failed when order row is missing", async () => {
-      mockGetIdMappingByExternalId.mockResolvedValue({
-        internalId: "internal-order-1",
-      });
-      mockOrderFindUnique.mockResolvedValue(null);
-
-      const failedPayload = buildPayload({
-        type: "payment.completed",
-        data: {
-          type: "payment",
-          id: "sq-payment-1",
-          object: {
-            payment: {
-              id: "sq-payment-1",
-              order_id: "sq-order-1",
-              status: "FAILED",
-            },
-          },
-        },
-      });
-
-      await service.handleWebhook(JSON.stringify(failedPayload));
-
-      expect(mockOrderUpdate).not.toHaveBeenCalled();
+      expect(mockUpdatePaymentStatus).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "payment_failed",
+        expect.objectContaining({ source: "square_webhook" })
+      );
     });
 
     it("should skip when no order_id in payment event", async () => {
@@ -1296,7 +1239,7 @@ describe("SquareWebhookService", () => {
       await service.handleWebhook(JSON.stringify(noOrderPayload));
 
       expect(mockGetIdMappingByExternalId).not.toHaveBeenCalled();
-      expect(mockOrderUpdate).not.toHaveBeenCalled();
+      expect(mockUpdatePaymentStatus).not.toHaveBeenCalled();
     });
 
     it("should skip when no mapping found for order", async () => {
@@ -1304,7 +1247,7 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(paymentPayload));
 
-      expect(mockOrderUpdate).not.toHaveBeenCalled();
+      expect(mockUpdatePaymentStatus).not.toHaveBeenCalled();
       expect(mockUpdateWebhookEventStatus).toHaveBeenCalledWith(
         "we-1",
         "processed"
@@ -1333,7 +1276,7 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(pendingPayload));
 
-      expect(mockOrderUpdate).not.toHaveBeenCalled();
+      expect(mockUpdatePaymentStatus).not.toHaveBeenCalled();
     });
   });
 
@@ -1370,7 +1313,7 @@ describe("SquareWebhookService", () => {
   });
 
   describe("order.updated handler - no timestamp field", () => {
-    it("should not set timestamp field when status has no corresponding timestamp", async () => {
+    it("should delegate pending status update to OrderService even without timestamp field", async () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
@@ -1395,10 +1338,12 @@ describe("SquareWebhookService", () => {
 
       await service.handleWebhook(JSON.stringify(proposedPayload));
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "internal-order-1" },
-        data: { fulfillmentStatus: "pending" },
-      });
+      expect(mockUpdateFulfillmentStatus).toHaveBeenCalledWith(
+        TENANT_ID,
+        "internal-order-1",
+        "pending",
+        expect.objectContaining({ source: "square_webhook" })
+      );
     });
   });
 

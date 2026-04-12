@@ -373,6 +373,59 @@ describe("order-listener: handleOrderCancelled", () => {
   });
 });
 
+describe("order-listener: loop prevention", () => {
+  beforeEach(() => {
+    mockGetActivePosConnection.mockReset();
+    mockPushOrder.mockReset();
+    mockUpdateFulfillment.mockReset();
+    mockCancelOrder.mockReset();
+    mockGetOrder.mockReset();
+  });
+
+  it("handleOrderPaid skips push when source is square_webhook", async () => {
+    const handler = await getHandler();
+    await handler({ ...makeEvent(), source: "square_webhook" });
+
+    expect(mockGetOrder).not.toHaveBeenCalled();
+    expect(mockPushOrder).not.toHaveBeenCalled();
+  });
+
+  it("handleFulfillmentChanged skips push when source is square_webhook", async () => {
+    const handler = getHandlerByEvent<FulfillmentStatusChangedEvent>(
+      "order.fulfillment.ready"
+    );
+    await handler({
+      orderId: "order-1",
+      orderNumber: "ORD-001",
+      merchantId: MERCHANT_ID,
+      tenantId: TENANT_ID,
+      timestamp: new Date(),
+      fulfillmentStatus: "ready",
+      source: "square_webhook",
+    });
+
+    expect(mockGetActivePosConnection).not.toHaveBeenCalled();
+    expect(mockUpdateFulfillment).not.toHaveBeenCalled();
+  });
+
+  it("handleOrderCancelled skips push when source is square_webhook", async () => {
+    const handler = getHandlerByEvent<OrderCancelledEvent>("order.cancelled");
+    await handler({
+      orderId: "order-1",
+      orderNumber: "ORD-001",
+      merchantId: MERCHANT_ID,
+      tenantId: TENANT_ID,
+      timestamp: new Date(),
+      status: "canceled",
+      cancelReason: "Canceled on Square POS",
+      source: "square_webhook",
+    });
+
+    expect(mockGetActivePosConnection).not.toHaveBeenCalled();
+    expect(mockCancelOrder).not.toHaveBeenCalled();
+  });
+});
+
 describe("order-listener: misc coverage", () => {
   beforeEach(() => {
     mockGetActivePosConnection.mockReset();

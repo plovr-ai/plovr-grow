@@ -46,6 +46,10 @@ export function registerOrderEventHandlers(): void {
  */
 async function handleOrderPaid(event: OrderPaidEvent): Promise<void> {
   try {
+    // Loop prevention: events originating from a Square webhook must not be
+    // pushed back to Square, otherwise we'd create an infinite cycle.
+    if (event.source === "square_webhook") return;
+
     // Gift card orders are virtual products with no merchantId — they must
     // never be pushed to a POS (no location, no catalog mapping).
     if (!event.merchantId) {
@@ -133,6 +137,8 @@ async function handleFulfillmentChanged(
   event: FulfillmentStatusChangedEvent
 ): Promise<void> {
   try {
+    if (event.source === "square_webhook") return;
+
     const connection = await findActivePosConnection(
       event.tenantId,
       event.merchantId
@@ -170,6 +176,8 @@ async function handleOrderCancelled(
   event: OrderCancelledEvent
 ): Promise<void> {
   try {
+    if (event.source === "square_webhook") return;
+
     const connection = await findActivePosConnection(
       event.tenantId,
       event.merchantId
