@@ -279,8 +279,8 @@ export class SquareWebhookService {
       squareOrderId
     );
     if (!mapping) {
-      console.log(
-        `[Square Webhook] No mapping for Square order: ${squareOrderId}, skipping`
+      console.warn(
+        `[Square Webhook] MAPPING_MISS: No ExternalIdMapping for Square order ${squareOrderId} (tenant: ${tenantId}, event: order.updated). This order may not have been pushed from plovr.`
       );
       return;
     }
@@ -444,8 +444,8 @@ export class SquareWebhookService {
       squareOrderId
     );
     if (!mapping) {
-      console.log(
-        `[Square Webhook] No mapping for Square order: ${squareOrderId}, skipping`
+      console.warn(
+        `[Square Webhook] MAPPING_MISS: No ExternalIdMapping for Square order ${squareOrderId} (tenant: ${tenantId}, event: payment). This order may not have been pushed from plovr.`
       );
       return;
     }
