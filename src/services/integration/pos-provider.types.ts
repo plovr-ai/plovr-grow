@@ -1,4 +1,4 @@
-import type { OrderMode, DeliveryAddress } from "@/types";
+import type { OrderMode, DeliveryAddress, FulfillmentStatus } from "@/types";
 
 /**
  * POS Provider interface — abstraction for multi-POS extensibility.
@@ -38,6 +38,18 @@ export interface PosProvider {
     orderId: string,
     reason?: string
   ): Promise<void>;
+
+  /**
+   * Map an external POS fulfillment status to the internal FulfillmentStatus.
+   * Returns `null` when the external status has no meaningful internal equivalent.
+   */
+  mapToInternalStatus(externalStatus: string): FulfillmentStatus | null;
+
+  /**
+   * Map an internal FulfillmentStatus to the external POS status string.
+   * Returns `null` when there is no external equivalent.
+   */
+  mapToExternalStatus(internalStatus: FulfillmentStatus): string | null;
 }
 
 // ==================== Catalog Sync ====================

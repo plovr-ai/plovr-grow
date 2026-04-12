@@ -19,7 +19,7 @@ vi.mock("@/repositories/integration.repository", () => ({
 const mockPushOrder = vi.fn();
 const mockUpdateFulfillment = vi.fn();
 const mockCancelOrder = vi.fn();
-const mockGetProvider = vi.fn(() => ({
+const mockGetProvider = vi.fn((_type: string) => ({
   pushOrder: (...args: unknown[]) => mockPushOrder(...args),
   updateFulfillment: (...args: unknown[]) =>
     mockUpdateFulfillment(...args),
@@ -27,7 +27,7 @@ const mockGetProvider = vi.fn(() => ({
 }));
 vi.mock("../pos-provider-registry", () => ({
   posProviderRegistry: {
-    getProvider: (...args: unknown[]) => mockGetProvider(...args),
+    getProvider: (type: string) => mockGetProvider(type),
   },
 }));
 
@@ -294,6 +294,7 @@ describe("order-listener: handleFulfillmentChanged", () => {
       merchantId: MERCHANT_ID,
       tenantId: TENANT_ID,
       timestamp: new Date(),
+      fulfillmentId: "test-fulfillment-id",
       fulfillmentStatus: "ready",
     };
   }
@@ -477,6 +478,7 @@ describe("order-listener: retry record creation", () => {
       merchantId: MERCHANT_ID,
       tenantId: TENANT_ID,
       timestamp: new Date(),
+      fulfillmentId: "test-fulfillment-id",
       fulfillmentStatus: "ready",
     });
 
@@ -547,6 +549,7 @@ describe("order-listener: retry record creation", () => {
       merchantId: MERCHANT_ID,
       tenantId: TENANT_ID,
       timestamp: new Date(),
+      fulfillmentId: "test-fulfillment-id",
       fulfillmentStatus: "ready",
     });
 
@@ -574,6 +577,7 @@ describe("order-listener: retry record creation", () => {
         merchantId: MERCHANT_ID,
         tenantId: TENANT_ID,
         timestamp: new Date(),
+        fulfillmentId: "test-fulfillment-id",
         fulfillmentStatus: "ready",
       })
     ).resolves.toBeUndefined();
@@ -732,6 +736,7 @@ describe("order-listener: retry record creation", () => {
         merchantId: MERCHANT_ID,
         tenantId: TENANT_ID,
         timestamp: new Date(),
+        fulfillmentId: "test-fulfillment-id",
         fulfillmentStatus: "ready",
       })
     ).resolves.toBeUndefined();
@@ -820,6 +825,7 @@ describe("order-listener: loop prevention", () => {
       merchantId: MERCHANT_ID,
       tenantId: TENANT_ID,
       timestamp: new Date(),
+      fulfillmentId: "test-fulfillment-id",
       fulfillmentStatus: "ready",
       source: "square_webhook",
     });
@@ -989,6 +995,7 @@ describe("order-listener: misc coverage", () => {
         merchantId: MERCHANT_ID,
         tenantId: TENANT_ID,
         timestamp: new Date(),
+        fulfillmentId: "test-fulfillment-id",
         fulfillmentStatus: "ready",
       })
     ).resolves.toBeUndefined();

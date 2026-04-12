@@ -85,10 +85,6 @@ const mockOrder = {
   totalAmount: 39.53,
   createdAt: new Date("2024-01-15T10:30:00Z"),
   paidAt: new Date("2024-01-15T10:32:00Z"),
-  confirmedAt: new Date("2024-01-15T10:35:00Z"),
-  preparingAt: null,
-  readyAt: null,
-  fulfilledAt: null,
   cancelledAt: null,
   cancelReason: null,
   timeline: [

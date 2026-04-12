@@ -56,11 +56,19 @@ const mockOrderUpdate = vi.fn().mockResolvedValue({});
 const mockOrderFindUnique = vi
   .fn()
   .mockResolvedValue({ squareOrderVersion: null });
+const mockOrderFulfillmentFindFirst = vi
+  .fn()
+  .mockResolvedValue({ id: "ful-1", externalVersion: null });
+const mockOrderFulfillmentUpdate = vi.fn().mockResolvedValue({});
 vi.mock("@/lib/db", () => ({
   default: {
     order: {
       update: (...args: unknown[]) => mockOrderUpdate(...args),
       findUnique: (...args: unknown[]) => mockOrderFindUnique(...args),
+    },
+    orderFulfillment: {
+      findFirst: (...args: unknown[]) => mockOrderFulfillmentFindFirst(...args),
+      update: (...args: unknown[]) => mockOrderFulfillmentUpdate(...args),
     },
   },
 }));
@@ -442,8 +450,8 @@ describe("SquareOrderService", () => {
       mockUpdate.mockResolvedValue({
         order: { id: "sq-order-1", version: 6 },
       });
-      mockOrderFindUnique.mockResolvedValue({ squareOrderVersion: 5 });
-      mockOrderUpdate.mockClear();
+      mockOrderFulfillmentFindFirst.mockResolvedValue({ id: "ful-1", externalVersion: 5 });
+      mockOrderFulfillmentUpdate.mockClear();
 
       await service.updateOrderStatus(
         TENANT_ID,
@@ -452,9 +460,9 @@ describe("SquareOrderService", () => {
         "ready"
       );
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "order-1" },
-        data: { squareOrderVersion: 6 },
+      expect(mockOrderFulfillmentUpdate).toHaveBeenCalledWith({
+        where: { id: "ful-1" },
+        data: { externalVersion: 6 },
       });
     });
   });
@@ -546,14 +554,14 @@ describe("SquareOrderService", () => {
       mockUpdate.mockResolvedValue({
         order: { id: "sq-order-1", version: 8 },
       });
-      mockOrderFindUnique.mockResolvedValue({ squareOrderVersion: 7 });
-      mockOrderUpdate.mockClear();
+      mockOrderFulfillmentFindFirst.mockResolvedValue({ id: "ful-1", externalVersion: 7 });
+      mockOrderFulfillmentUpdate.mockClear();
 
       await service.cancelOrder(TENANT_ID, MERCHANT_ID, "order-1", "nope");
 
-      expect(mockOrderUpdate).toHaveBeenCalledWith({
-        where: { id: "order-1" },
-        data: { squareOrderVersion: 8 },
+      expect(mockOrderFulfillmentUpdate).toHaveBeenCalledWith({
+        where: { id: "ful-1" },
+        data: { externalVersion: 8 },
       });
     });
 

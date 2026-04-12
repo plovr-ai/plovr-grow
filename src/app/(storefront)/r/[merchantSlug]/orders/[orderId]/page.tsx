@@ -72,10 +72,6 @@ export default async function OrderDetailPage({ params }: PageProps) {
     totalAmount: Number(order.totalAmount),
     createdAt: order.createdAt,
     paidAt: order.paidAt,
-    confirmedAt: order.confirmedAt,
-    preparingAt: order.preparingAt,
-    readyAt: order.readyAt,
-    fulfilledAt: order.fulfilledAt,
     cancelledAt: order.cancelledAt,
     cancelReason: order.cancelReason,
     timeline: order.timeline.map((event) => ({

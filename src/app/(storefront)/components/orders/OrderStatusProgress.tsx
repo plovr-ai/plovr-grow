@@ -27,6 +27,7 @@ const FULFILLMENT_ORDER: Record<FulfillmentStatus, number> = {
   preparing: 2,
   ready: 3,
   fulfilled: 4,
+  canceled: -1,
 };
 
 export function OrderStatusProgress({ paymentStatus, fulfillmentStatus, orderMode }: Props) {

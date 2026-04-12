@@ -328,6 +328,11 @@ export class SquareOrderService {
    * the webhook stale-guard (#109) can reject any echo that predates it.
    * Only advances forward; never writes a lower (or missing) version.
    */
+  /**
+   * Persist the Square order version on the OrderFulfillment record.
+   * Used for optimistic concurrency control — webhook handlers compare
+   * incoming versions against the stored value to detect stale events.
+   */
   private async persistSquareOrderVersion(
     orderId: string,
     version: number | bigint | undefined | null
@@ -335,18 +340,20 @@ export class SquareOrderService {
     if (version === undefined || version === null) return;
     const numericVersion = Number(version);
     if (!Number.isFinite(numericVersion)) return;
-    const current = await prisma.order.findUnique({
-      where: { id: orderId },
-      select: { squareOrderVersion: true },
+
+    // Find the fulfillment for this order and bump its externalVersion
+    const fulfillment = await prisma.orderFulfillment.findFirst({
+      where: { orderId },
+      select: { id: true, externalVersion: true },
     });
     if (
-      current &&
-      (current.squareOrderVersion === null ||
-        numericVersion > current.squareOrderVersion)
+      fulfillment &&
+      (fulfillment.externalVersion === null ||
+        numericVersion > fulfillment.externalVersion)
     ) {
-      await prisma.order.update({
-        where: { id: orderId },
-        data: { squareOrderVersion: numericVersion },
+      await prisma.orderFulfillment.update({
+        where: { id: fulfillment.id },
+        data: { externalVersion: numericVersion },
       });
     }
   }

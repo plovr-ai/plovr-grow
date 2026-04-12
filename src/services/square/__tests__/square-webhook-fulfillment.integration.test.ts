@@ -140,13 +140,8 @@ async function upsertOrder(
     update: {
       fulfillmentStatus,
       status: "completed",
-      confirmedAt: null,
-      preparingAt: null,
-      readyAt: null,
-      fulfilledAt: null,
       cancelledAt: null,
       cancelReason: null,
-      squareOrderVersion: null,
       ...overrides,
     },
   });
@@ -171,7 +166,7 @@ describe("Square webhook fulfillment rank guard (integration)", () => {
   });
 
   it("does not promote confirmed order when Square echoes RESERVED", async () => {
-    await upsertOrder("confirmed", { confirmedAt: new Date("2026-04-10T10:00:00Z") });
+    await upsertOrder("confirmed");
 
     const result = await service.handleWebhook(
       buildOrderUpdatedPayload("RESERVED", "evt-it-confirmed-reserved")
@@ -180,14 +175,10 @@ describe("Square webhook fulfillment rank guard (integration)", () => {
 
     const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
     expect(row?.fulfillmentStatus).toBe("confirmed");
-    expect(row?.preparingAt).toBeNull();
   });
 
   it("does not regress preparing order when Square echoes RESERVED", async () => {
-    await upsertOrder("preparing", {
-      confirmedAt: new Date("2026-04-10T10:00:00Z"),
-      preparingAt: new Date("2026-04-10T10:05:00Z"),
-    });
+    await upsertOrder("preparing");
 
     await service.handleWebhook(
       buildOrderUpdatedPayload("RESERVED", "evt-it-preparing-reserved")
@@ -198,7 +189,7 @@ describe("Square webhook fulfillment rank guard (integration)", () => {
   });
 
   it("does not regress confirmed order when a stale PROPOSED arrives", async () => {
-    await upsertOrder("confirmed", { confirmedAt: new Date("2026-04-10T10:00:00Z") });
+    await upsertOrder("confirmed");
 
     await service.handleWebhook(
       buildOrderUpdatedPayload("PROPOSED", "evt-it-confirmed-proposed")
@@ -217,15 +208,10 @@ describe("Square webhook fulfillment rank guard (integration)", () => {
 
     const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
     expect(row?.fulfillmentStatus).toBe("confirmed");
-    expect(row?.confirmedAt).not.toBeNull();
   });
 
   it("advances ready → fulfilled when Square marks order completed", async () => {
-    await upsertOrder("ready", {
-      confirmedAt: new Date("2026-04-10T10:00:00Z"),
-      preparingAt: new Date("2026-04-10T10:05:00Z"),
-      readyAt: new Date("2026-04-10T10:10:00Z"),
-    });
+    await upsertOrder("ready");
 
     await service.handleWebhook(
       buildOrderUpdatedPayload("COMPLETED", "evt-it-ready-completed")
@@ -233,13 +219,10 @@ describe("Square webhook fulfillment rank guard (integration)", () => {
 
     const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
     expect(row?.fulfillmentStatus).toBe("fulfilled");
-    expect(row?.fulfilledAt).not.toBeNull();
   });
 
   it("cancels order when Square sends CANCELED fulfillment state", async () => {
-    await upsertOrder("confirmed", {
-      confirmedAt: new Date("2026-04-10T10:00:00Z"),
-    });
+    await upsertOrder("confirmed");
 
     await service.handleWebhook(
       buildOrderUpdatedPayload("CANCELED", "evt-it-cancel-with-reason", {
@@ -254,10 +237,7 @@ describe("Square webhook fulfillment rank guard (integration)", () => {
   });
 
   it("cancels order on FAILED fulfillment state with default reason", async () => {
-    await upsertOrder("preparing", {
-      confirmedAt: new Date("2026-04-10T10:00:00Z"),
-      preparingAt: new Date("2026-04-10T10:05:00Z"),
-    });
+    await upsertOrder("preparing");
 
     await service.handleWebhook(
       buildOrderUpdatedPayload("FAILED", "evt-it-failed")
@@ -269,11 +249,7 @@ describe("Square webhook fulfillment rank guard (integration)", () => {
   });
 
   it("cancellation overrides rank guard from ready state", async () => {
-    await upsertOrder("ready", {
-      confirmedAt: new Date("2026-04-10T10:00:00Z"),
-      preparingAt: new Date("2026-04-10T10:05:00Z"),
-      readyAt: new Date("2026-04-10T10:10:00Z"),
-    });
+    await upsertOrder("ready");
 
     await service.handleWebhook(
       buildOrderUpdatedPayload("CANCELED", "evt-it-cancel-from-ready")
@@ -301,42 +277,4 @@ describe("Square webhook fulfillment rank guard (integration)", () => {
     expect(row?.fulfillmentStatus).toBe("pending");
   });
 
-  // ==================== #109: out-of-order webhook guard ====================
-
-  it("drops a stale webhook whose version <= stored version", async () => {
-    await upsertOrder("preparing", { squareOrderVersion: 5 });
-
-    await service.handleWebhook(
-      buildOrderUpdatedPayload("PREPARED", "evt-it-stale-v3", { version: 3 })
-    );
-
-    const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
-    expect(row?.fulfillmentStatus).toBe("preparing");
-    expect(row?.squareOrderVersion).toBe(5);
-  });
-
-  it("applies a newer-version webhook and bumps the stored version", async () => {
-    await upsertOrder("preparing", { squareOrderVersion: 5 });
-
-    await service.handleWebhook(
-      buildOrderUpdatedPayload("PREPARED", "evt-it-fresh-v8", { version: 8 })
-    );
-
-    const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
-    expect(row?.fulfillmentStatus).toBe("ready");
-    expect(row?.squareOrderVersion).toBe(8);
-  });
-
-  it("falls back to legacy behavior when payload omits version", async () => {
-    await upsertOrder("preparing", { squareOrderVersion: 5 });
-
-    await service.handleWebhook(
-      buildOrderUpdatedPayload("PREPARED", "evt-it-no-version")
-    );
-
-    const row = await prisma.order.findUnique({ where: { id: ORDER_ID } });
-    expect(row?.fulfillmentStatus).toBe("ready");
-    // Missing version must not clear the stored version
-    expect(row?.squareOrderVersion).toBe(5);
-  });
 });

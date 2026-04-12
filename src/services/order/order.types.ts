@@ -36,12 +36,9 @@ export interface OrderData {
   deliveryAddress: DeliveryAddress | unknown | null;
   scheduledAt: Date | null;
   paidAt: Date | null;               // When payment completed
-  confirmedAt: Date | null;          // When merchant confirmed
-  preparingAt: Date | null;          // When started preparing
-  readyAt: Date | null;              // When ready for pickup/delivery
-  fulfilledAt: Date | null;          // When fulfilled
   cancelledAt: Date | null;
   cancelReason: string | null;
+  paymentFailedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

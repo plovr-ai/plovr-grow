@@ -5,10 +5,18 @@ import type { OrderStatus, FulfillmentStatus } from "@/types";
 
 // Mock dependencies
 vi.mock("@/lib/db", () => {
+  const mockTx = {
+    orderFulfillment: {
+      create: vi.fn().mockResolvedValue({ id: "ful-1", status: "pending" }),
+    },
+  };
   const mockPrisma = {
-    $transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(Symbol("tx"))),
+    $transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(mockTx)),
     order: {
       update: vi.fn(),
+    },
+    orderFulfillment: {
+      create: vi.fn().mockResolvedValue({ id: "ful-1", status: "pending" }),
     },
   };
   return { default: mockPrisma, prisma: mockPrisma };
@@ -21,6 +29,14 @@ vi.mock("@/repositories/order.repository", () => ({
     getTenantOrders: vi.fn(),
     getOrdersByLoyaltyMember: vi.fn(),
     updateLoyaltyMemberId: vi.fn(),
+  },
+}));
+
+vi.mock("@/repositories/fulfillment.repository", () => ({
+  fulfillmentRepository: {
+    create: vi.fn().mockResolvedValue({ id: "ful-1", status: "pending" }),
+    getByOrderId: vi.fn(),
+    getStatusHistory: vi.fn(),
   },
 }));
 
@@ -75,6 +91,7 @@ vi.mock("@/repositories/tax-config.repository", () => ({
 
 // Import mocked modules
 import { orderRepository } from "@/repositories/order.repository";
+import { fulfillmentRepository } from "@/repositories/fulfillment.repository";
 import { sequenceRepository } from "@/repositories/sequence.repository";
 import { taxConfigRepository } from "@/repositories/tax-config.repository";
 import { pointTransactionRepository } from "@/repositories/point-transaction.repository";
@@ -192,7 +209,7 @@ describe("OrderService", () => {
           fulfillmentStatus: "pending",
         }),
         undefined, // loyaltyMemberId
-        undefined, // tx
+        expect.anything(), // tx (from $transaction)
         mockInput.items
       );
 
@@ -245,7 +262,7 @@ describe("OrderService", () => {
           fulfillmentStatus: "pending",
         }),
         "loyalty-member-123",
-        undefined, // tx
+        expect.anything(), // tx (from $transaction)
         inputWithLoyalty.items
       );
 
@@ -322,7 +339,7 @@ describe("OrderService", () => {
           deliveryAddress: deliveryInput.deliveryAddress,
         }),
         undefined,
-        undefined, // tx
+        expect.anything(), // tx (from $transaction)
         deliveryInput.items
       );
     });
@@ -357,7 +374,7 @@ describe("OrderService", () => {
           cashPayment: expect.any(Number),
         }),
         undefined,
-        undefined, // tx
+        expect.anything(), // tx (from $transaction)
         inputWithGiftCard.items
       );
     });
@@ -372,7 +389,7 @@ describe("OrderService", () => {
           salesChannel: "online_order",
         }),
         undefined,
-        undefined, // tx
+        expect.anything(), // tx (from $transaction)
         mockInput.items
       );
     });
@@ -392,7 +409,7 @@ describe("OrderService", () => {
           notes: "No onions please",
         }),
         undefined,
-        undefined, // tx
+        expect.anything(), // tx (from $transaction)
         inputWithNotes.items
       );
     });
@@ -413,7 +430,7 @@ describe("OrderService", () => {
           scheduledAt: scheduledTime,
         }),
         undefined,
-        undefined, // tx
+        expect.anything(), // tx (from $transaction)
         inputWithSchedule.items
       );
     });
@@ -1335,12 +1352,21 @@ describe("OrderService", () => {
         fulfillmentStatus: "fulfilled",
         createdAt: now,
         paidAt,
-        confirmedAt,
-        preparingAt,
-        readyAt,
-        fulfilledAt,
         cancelledAt: null,
+        paymentFailedAt: null,
       } as never);
+
+      vi.mocked(fulfillmentRepository.getByOrderId).mockResolvedValue({
+        id: "ful-1",
+        status: "fulfilled",
+      } as never);
+
+      vi.mocked(fulfillmentRepository.getStatusHistory).mockResolvedValue([
+        { id: "log-1", fromStatus: "pending", toStatus: "confirmed", source: "dashboard", actorId: null, metadata: null, createdAt: confirmedAt },
+        { id: "log-2", fromStatus: "confirmed", toStatus: "preparing", source: "dashboard", actorId: null, metadata: null, createdAt: preparingAt },
+        { id: "log-3", fromStatus: "preparing", toStatus: "ready", source: "dashboard", actorId: null, metadata: null, createdAt: readyAt },
+        { id: "log-4", fromStatus: "ready", toStatus: "fulfilled", source: "dashboard", actorId: null, metadata: null, createdAt: fulfilledAt },
+      ] as never);
 
       vi.mocked(pointTransactionRepository.getByOrderId).mockResolvedValue(null);
 
@@ -1366,12 +1392,11 @@ describe("OrderService", () => {
         fulfillmentStatus: "pending",
         createdAt: now,
         paidAt: null,
-        confirmedAt: null,
-        preparingAt: null,
-        readyAt: null,
-        fulfilledAt: null,
         cancelledAt,
+        paymentFailedAt: null,
       } as never);
+
+      vi.mocked(fulfillmentRepository.getByOrderId).mockResolvedValue(null);
 
       vi.mocked(pointTransactionRepository.getByOrderId).mockResolvedValue(null);
 
@@ -1388,12 +1413,11 @@ describe("OrderService", () => {
         fulfillmentStatus: "fulfilled",
         createdAt: now,
         paidAt: new Date("2026-04-10T12:01:00Z"),
-        confirmedAt: null,
-        preparingAt: null,
-        readyAt: null,
-        fulfilledAt: null,
         cancelledAt: null,
+        paymentFailedAt: null,
       } as never);
+
+      vi.mocked(fulfillmentRepository.getByOrderId).mockResolvedValue(null);
 
       vi.mocked(pointTransactionRepository.getByOrderId).mockResolvedValue({
         id: "pt-1",
@@ -1413,12 +1437,11 @@ describe("OrderService", () => {
         fulfillmentStatus: "fulfilled",
         createdAt: now,
         paidAt: null,
-        confirmedAt: null,
-        preparingAt: null,
-        readyAt: null,
-        fulfilledAt: null,
         cancelledAt: null,
+        paymentFailedAt: null,
       } as never);
+
+      vi.mocked(fulfillmentRepository.getByOrderId).mockResolvedValue(null);
 
       vi.mocked(pointTransactionRepository.getByOrderId).mockResolvedValue({
         id: "pt-1",
@@ -1440,13 +1463,11 @@ describe("OrderService", () => {
         fulfillmentStatus: "pending",
         createdAt: now,
         paidAt: null,
-        confirmedAt: null,
-        preparingAt: null,
-        readyAt: null,
-        fulfilledAt: null,
         cancelledAt: null,
         paymentFailedAt,
       } as never);
+
+      vi.mocked(fulfillmentRepository.getByOrderId).mockResolvedValue(null);
 
       vi.mocked(pointTransactionRepository.getByOrderId).mockResolvedValue(null);
 
@@ -1471,12 +1492,11 @@ describe("OrderService", () => {
         fulfillmentStatus: "pending",
         createdAt: now,
         paidAt,
-        confirmedAt: null,
-        preparingAt: null,
-        readyAt: null,
-        fulfilledAt: null,
         cancelledAt,
+        paymentFailedAt: null,
       } as never);
+
+      vi.mocked(fulfillmentRepository.getByOrderId).mockResolvedValue(null);
 
       vi.mocked(pointTransactionRepository.getByOrderId).mockResolvedValue(null);
 
@@ -1595,114 +1615,8 @@ describe("OrderService", () => {
     });
   });
 
-  // ==================== updateFulfillmentStatus ====================
-
-  describe("updateFulfillmentStatus()", () => {
-    const mockOrder = {
-      id: "order-1",
-      orderNumber: "ORD-001",
-      merchantId: "merchant-1",
-      tenantId: "tenant-1",
-      fulfillmentStatus: "pending",
-      status: "completed",
-      merchant: { id: "merchant-1", name: "M", slug: "m", timezone: "UTC" },
-    };
-
-    it("updates fulfillment status and emits event", async () => {
-      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
-      const emitSpy = vi.spyOn(orderEventEmitter, "emit");
-
-      await orderService.updateFulfillmentStatus("tenant-1", "order-1", "confirmed");
-
-      expect(prisma.order.update).toHaveBeenCalledWith({
-        where: { id: "order-1" },
-        data: expect.objectContaining({
-          fulfillmentStatus: "confirmed",
-          confirmedAt: expect.any(Date),
-        }),
-      });
-      expect(emitSpy).toHaveBeenCalledWith(
-        "order.fulfillment.confirmed",
-        expect.objectContaining({
-          orderId: "order-1",
-          fulfillmentStatus: "confirmed",
-          previousFulfillmentStatus: "pending",
-        })
-      );
-    });
-
-    it("passes source through to event payload", async () => {
-      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
-      const emitSpy = vi.spyOn(orderEventEmitter, "emit");
-
-      await orderService.updateFulfillmentStatus("tenant-1", "order-1", "ready", {
-        source: "square_webhook",
-      });
-
-      expect(emitSpy).toHaveBeenCalledWith(
-        "order.fulfillment.ready",
-        expect.objectContaining({ source: "square_webhook" })
-      );
-    });
-
-    it("sets squareOrderVersion when provided", async () => {
-      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
-
-      await orderService.updateFulfillmentStatus("tenant-1", "order-1", "preparing", {
-        squareOrderVersion: 5,
-      });
-
-      expect(prisma.order.update).toHaveBeenCalledWith({
-        where: { id: "order-1" },
-        data: expect.objectContaining({
-          fulfillmentStatus: "preparing",
-          preparingAt: expect.any(Date),
-          squareOrderVersion: 5,
-        }),
-      });
-    });
-
-    it("uses empty string when merchantId is null", async () => {
-      const orderNoMerchant = { ...mockOrder, merchantId: null };
-      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(orderNoMerchant as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
-      const emitSpy = vi.spyOn(orderEventEmitter, "emit");
-
-      await orderService.updateFulfillmentStatus("tenant-1", "order-1", "fulfilled");
-
-      expect(emitSpy).toHaveBeenCalledWith(
-        "order.fulfillment.fulfilled",
-        expect.objectContaining({ merchantId: "" })
-      );
-    });
-
-    it("throws ORDER_NOT_FOUND when order does not exist", async () => {
-      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(null);
-
-      await expect(
-        orderService.updateFulfillmentStatus("tenant-1", "order-missing", "confirmed")
-      ).rejects.toThrow("ORDER_NOT_FOUND");
-    });
-
-    it("skips timestamp and event when status has no mapping (pending)", async () => {
-      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
-      const emitSpy = vi.spyOn(orderEventEmitter, "emit");
-
-      await orderService.updateFulfillmentStatus("tenant-1", "order-1", "pending");
-
-      // Should update only fulfillmentStatus — no timestamp field
-      expect(prisma.order.update).toHaveBeenCalledWith({
-        where: { id: "order-1" },
-        data: { fulfillmentStatus: "pending" },
-      });
-      // Should NOT emit any event since "pending" has no event mapping
-      expect(emitSpy).not.toHaveBeenCalled();
-    });
-  });
+  // updateFulfillmentStatus tests removed — fulfillment status updates
+  // are now handled by FulfillmentService (see fulfillment.service.test.ts)
 
   // ==================== updatePaymentStatus ====================
 
@@ -1830,7 +1744,6 @@ describe("OrderService", () => {
 
       await orderService.cancelOrder("tenant-1", "order-1", "Customer request", {
         source: "square_webhook",
-        squareOrderVersion: 3,
       });
 
       expect(prisma.order.update).toHaveBeenCalledWith({
@@ -1839,7 +1752,6 @@ describe("OrderService", () => {
           status: "canceled",
           cancelledAt: expect.any(Date),
           cancelReason: "Customer request",
-          squareOrderVersion: 3,
         }),
       });
       expect(emitSpy).toHaveBeenCalledWith(
@@ -1851,16 +1763,6 @@ describe("OrderService", () => {
           source: "square_webhook",
         })
       );
-    });
-
-    it("cancels without squareOrderVersion when options not provided", async () => {
-      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
-
-      await orderService.cancelOrder("tenant-1", "order-1", "test");
-
-      const updateCall = vi.mocked(prisma.order.update).mock.calls[0][0];
-      expect((updateCall.data as Record<string, unknown>).squareOrderVersion).toBeUndefined();
     });
 
     it("uses empty string when merchantId is null", async () => {
