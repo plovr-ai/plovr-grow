@@ -67,21 +67,20 @@ export class FulfillmentService {
       }
     );
 
-    // Emit event after successful write
+    // Emit event after successful write — every reachable toStatus
+    // has an event mapping (you can't transition TO "pending")
     const eventType = FULFILLMENT_EVENT_MAP[toStatus];
-    if (eventType) {
-      orderEventEmitter.emit(eventType, {
-        orderId,
-        orderNumber: "", // Caller should provide if needed; keeping lean
-        merchantId: fulfillment.merchantId,
-        tenantId,
-        timestamp: new Date(),
-        fulfillmentId: fulfillment.id,
-        fulfillmentStatus: toStatus,
-        previousFulfillmentStatus: fromStatus,
-        source: input.source as OrderEventSource,
-      });
-    }
+    orderEventEmitter.emit(eventType, {
+      orderId,
+      orderNumber: "",
+      merchantId: fulfillment.merchantId,
+      tenantId,
+      timestamp: new Date(),
+      fulfillmentId: fulfillment.id,
+      fulfillmentStatus: toStatus,
+      previousFulfillmentStatus: fromStatus,
+      source: input.source as OrderEventSource,
+    });
   }
 
   /**
@@ -118,19 +117,17 @@ export class FulfillmentService {
     );
 
     const eventType = FULFILLMENT_EVENT_MAP[toStatus];
-    if (eventType) {
-      orderEventEmitter.emit(eventType, {
-        orderId: fulfillment.orderId,
-        orderNumber: "",
-        merchantId: fulfillment.merchantId,
-        tenantId,
-        timestamp: new Date(),
-        fulfillmentId,
-        fulfillmentStatus: toStatus,
-        previousFulfillmentStatus: fromStatus,
-        source: input.source as OrderEventSource,
-      });
-    }
+    orderEventEmitter.emit(eventType, {
+      orderId: fulfillment.orderId,
+      orderNumber: "",
+      merchantId: fulfillment.merchantId,
+      tenantId,
+      timestamp: new Date(),
+      fulfillmentId,
+      fulfillmentStatus: toStatus,
+      previousFulfillmentStatus: fromStatus,
+      source: input.source as OrderEventSource,
+    });
   }
 
   /**
