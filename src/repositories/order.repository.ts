@@ -1,8 +1,39 @@
 import prisma from "@/lib/db";
 import type { DbClient } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
-import type { OrderStatus, FulfillmentStatus, OrderMode, SalesChannel } from "@/types";
+import { Prisma } from "@prisma/client";
+import type { OrderStatus, FulfillmentStatus, OrderMode, SalesChannel, OrderItemData } from "@/types";
 import { generateEntityId } from "@/lib/id";
+
+/** OrderItem with nested modifiers, as returned by repository queries */
+export interface OrderItemWithModifiers {
+  id: string;
+  orderId: string;
+  menuItemId: string;
+  name: string;
+  unitPrice: Prisma.Decimal;
+  quantity: number;
+  totalPrice: Prisma.Decimal;
+  notes: string | null;
+  imageUrl: string | null;
+  taxes: Prisma.JsonValue;
+  sortOrder: number;
+  deleted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  modifiers: {
+    id: string;
+    orderItemId: string;
+    modifierGroupId: string;
+    modifierOptionId: string;
+    groupName: string;
+    name: string;
+    price: Prisma.Decimal;
+    quantity: number;
+    deleted: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
+}
 
 export class OrderRepository {
   /**
@@ -11,9 +42,10 @@ export class OrderRepository {
   async create(
     tenantId: string,
     merchantId: string | null,
-    data: Omit<Prisma.OrderCreateInput, "tenant" | "merchant" | "loyaltyMember" | "id">,
+    data: Omit<Prisma.OrderCreateInput, "tenant" | "merchant" | "loyaltyMember" | "id" | "orderItems">,
     loyaltyMemberId?: string,
-    tx?: DbClient
+    tx?: DbClient,
+    orderItems?: OrderItemData[]
   ) {
     const db = tx ?? prisma;
     return db.order.create({
@@ -24,6 +56,35 @@ export class OrderRepository {
         ...(merchantId && { merchant: { connect: { id: merchantId } } }),
         ...(loyaltyMemberId && {
           loyaltyMember: { connect: { id: loyaltyMemberId } },
+        }),
+        ...(orderItems && orderItems.length > 0 && {
+          orderItems: {
+            create: orderItems.map((item, index) => ({
+              id: generateEntityId(),
+              menuItemId: item.menuItemId,
+              name: item.name,
+              unitPrice: item.price,
+              quantity: item.quantity,
+              totalPrice: item.totalPrice,
+              notes: item.specialInstructions ?? null,
+              imageUrl: item.imageUrl ?? null,
+              taxes: item.taxes ? (item.taxes as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
+              sortOrder: index,
+              ...(item.selectedModifiers.length > 0 && {
+                modifiers: {
+                  create: item.selectedModifiers.map((mod) => ({
+                    id: generateEntityId(),
+                    modifierGroupId: mod.groupId,
+                    modifierOptionId: mod.modifierId,
+                    groupName: mod.groupName,
+                    name: mod.modifierName,
+                    price: mod.price,
+                    quantity: mod.quantity,
+                  })),
+                },
+              }),
+            })),
+          },
         }),
       },
     });
@@ -46,6 +107,15 @@ export class OrderRepository {
             name: true,
             slug: true,
             timezone: true,
+          },
+        },
+        orderItems: {
+          where: { deleted: false },
+          orderBy: { sortOrder: "asc" },
+          include: {
+            modifiers: {
+              where: { deleted: false },
+            },
           },
         },
       },
@@ -212,6 +282,61 @@ export class OrderRepository {
       page,
       pageSize,
       totalPages: Math.ceil(total / pageSize),
+    };
+  }
+  /**
+   * Get structured order items with modifiers for an order
+   */
+  async getOrderItems(orderId: string): Promise<OrderItemWithModifiers[]> {
+    return prisma.orderItem.findMany({
+      where: {
+        orderId,
+        deleted: false,
+      },
+      orderBy: { sortOrder: "asc" },
+      include: {
+        modifiers: {
+          where: { deleted: false },
+        },
+      },
+    });
+  }
+
+  /**
+   * Get aggregated sales data for a specific menu item
+   */
+  async getItemSalesByMenuItemId(
+    tenantId: string,
+    menuItemId: string,
+    options?: { dateFrom?: Date; dateTo?: Date }
+  ): Promise<{ totalQuantity: number; totalRevenue: Prisma.Decimal }> {
+    const result = await prisma.orderItem.aggregate({
+      where: {
+        menuItemId,
+        deleted: false,
+        order: {
+          tenantId,
+          deleted: false,
+          status: { not: "canceled" },
+          ...(options?.dateFrom && options?.dateTo
+            ? {
+                createdAt: {
+                  gte: options.dateFrom,
+                  lte: options.dateTo,
+                },
+              }
+            : {}),
+        },
+      },
+      _sum: {
+        quantity: true,
+        totalPrice: true,
+      },
+    });
+
+    return {
+      totalQuantity: result._sum.quantity ?? 0,
+      totalRevenue: result._sum.totalPrice ?? new Prisma.Decimal(0),
     };
   }
 }

@@ -300,6 +300,7 @@ model Order {
   giftCardPurchase    GiftCard?             @relation("GiftCardPurchase")
   giftCardRedemptions GiftCardTransaction[] @relation("GiftCardRedemption")
   payments            Payment[]
+  orderItems          OrderItem[]
 
   @@unique([tenantId, orderNumber])
   @@index([merchantId])
@@ -310,6 +311,47 @@ model Order {
   @@index([tenantId, fulfillmentStatus])
   @@index([tenantId, salesChannel])
   @@map("orders")
+}
+
+model OrderItem {
+  id         String              @id
+  orderId    String              @map("order_id")
+  menuItemId String              @map("menu_item_id")
+  name       String
+  unitPrice  Decimal             @map("unit_price") @db.Decimal(10, 2)
+  quantity   Int
+  totalPrice Decimal             @map("total_price") @db.Decimal(10, 2)
+  notes      String?             @db.Text
+  imageUrl   String?             @map("image_url")
+  taxes      Json?
+  sortOrder  Int                 @default(0) @map("sort_order")
+  deleted    Boolean             @default(false)
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+  order      Order               @relation(fields: [orderId], references: [id])
+  modifiers  OrderItemModifier[]
+
+  @@index([orderId])
+  @@index([menuItemId])
+  @@map("order_items")
+}
+
+model OrderItemModifier {
+  id               String    @id
+  orderItemId      String    @map("order_item_id")
+  modifierGroupId  String    @map("modifier_group_id")
+  modifierOptionId String    @map("modifier_option_id")
+  groupName        String    @map("group_name")
+  name             String
+  price            Decimal   @db.Decimal(10, 2)
+  quantity         Int       @default(1)
+  deleted          Boolean   @default(false)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  orderItem        OrderItem @relation(fields: [orderItemId], references: [id])
+
+  @@index([orderItemId])
+  @@map("order_item_modifiers")
 }
 
 model User {

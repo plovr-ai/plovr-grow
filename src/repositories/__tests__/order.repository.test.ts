@@ -1,15 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Prisma } from "@prisma/client";
 import { OrderRepository } from "../order.repository";
 
 // Mock Prisma client
 vi.mock("@/lib/db", () => ({
   default: {
     order: {
+      create: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
       count: vi.fn(),
     },
+    orderItem: {
+      findMany: vi.fn(),
+      aggregate: vi.fn(),
+    },
   },
 }));
+
+vi.mock("@/lib/id", () => {
+  let counter = 0;
+  return {
+    generateEntityId: vi.fn(() => `mock-id-${++counter}`),
+  };
+});
 
 import prisma from "@/lib/db";
 
@@ -449,6 +463,342 @@ describe("OrderRepository", () => {
           },
         })
       );
+    });
+  });
+
+  describe("create (dual-write with orderItems)", () => {
+    it("should create order with nested orderItems and modifiers", async () => {
+      const mockOrder = { id: "mock-id-1", orderNumber: "#001" };
+      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as never);
+
+      const orderItems = [
+        {
+          menuItemId: "item-1",
+          name: "Burger",
+          price: 10.99,
+          quantity: 2,
+          totalPrice: 21.98,
+          specialInstructions: "No onions",
+          imageUrl: "https://example.com/burger.jpg",
+          taxes: [{ taxConfigId: "tax-1", name: "Sales Tax", rate: 0.08, amount: 1.76 }],
+          selectedModifiers: [
+            {
+              groupId: "grp-1",
+              groupName: "Extras",
+              modifierId: "mod-1",
+              modifierName: "Cheese",
+              price: 1.5,
+              quantity: 1,
+            },
+          ],
+        },
+      ];
+
+      await repository.create(
+        "tenant-1",
+        "merchant-1",
+        {
+          orderNumber: "#001",
+          customerFirstName: "John",
+          customerLastName: "Doe",
+          customerPhone: "555-1234",
+          customerEmail: null,
+          orderMode: "pickup",
+          salesChannel: "online_order",
+          status: "created",
+          fulfillmentStatus: "pending",
+          items: orderItems as unknown as Prisma.InputJsonValue,
+          subtotal: 21.98,
+          taxAmount: 1.76,
+          tipAmount: 0,
+          deliveryFee: 0,
+          discount: 0,
+          giftCardPayment: 0,
+          cashPayment: 21.98,
+          totalAmount: 23.74,
+          notes: null,
+          deliveryAddress: Prisma.JsonNull,
+          scheduledAt: null,
+        },
+        undefined,
+        undefined,
+        orderItems
+      );
+
+      expect(prisma.order.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          orderItems: {
+            create: [
+              expect.objectContaining({
+                menuItemId: "item-1",
+                name: "Burger",
+                unitPrice: 10.99,
+                quantity: 2,
+                totalPrice: 21.98,
+                notes: "No onions",
+                imageUrl: "https://example.com/burger.jpg",
+                sortOrder: 0,
+                modifiers: {
+                  create: [
+                    expect.objectContaining({
+                      modifierGroupId: "grp-1",
+                      modifierOptionId: "mod-1",
+                      groupName: "Extras",
+                      name: "Cheese",
+                      price: 1.5,
+                      quantity: 1,
+                    }),
+                  ],
+                },
+              }),
+            ],
+          },
+        }),
+      });
+    });
+
+    it("should create order without orderItems when not provided", async () => {
+      const mockOrder = { id: "mock-id-1", orderNumber: "#002" };
+      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as never);
+
+      await repository.create(
+        "tenant-1",
+        "merchant-1",
+        {
+          orderNumber: "#002",
+          customerFirstName: "Jane",
+          customerLastName: "Smith",
+          customerPhone: "555-5678",
+          customerEmail: null,
+          orderMode: "pickup",
+          salesChannel: "online_order",
+          status: "created",
+          fulfillmentStatus: "pending",
+          items: [] as unknown as Prisma.InputJsonValue,
+          subtotal: 0,
+          taxAmount: 0,
+          tipAmount: 0,
+          deliveryFee: 0,
+          discount: 0,
+          giftCardPayment: 0,
+          cashPayment: 0,
+          totalAmount: 0,
+          notes: null,
+          deliveryAddress: Prisma.JsonNull,
+          scheduledAt: null,
+        }
+      );
+
+      const callArgs = vi.mocked(prisma.order.create).mock.calls[0]?.[0];
+      expect(callArgs?.data).not.toHaveProperty("orderItems");
+    });
+
+    it("should skip modifiers create when item has no selected modifiers", async () => {
+      const mockOrder = { id: "mock-id-1", orderNumber: "#003" };
+      vi.mocked(prisma.order.create).mockResolvedValue(mockOrder as never);
+
+      const orderItems = [
+        {
+          menuItemId: "item-1",
+          name: "Fries",
+          price: 4.99,
+          quantity: 1,
+          totalPrice: 4.99,
+          selectedModifiers: [],
+        },
+      ];
+
+      await repository.create(
+        "tenant-1",
+        "merchant-1",
+        {
+          orderNumber: "#003",
+          customerFirstName: "Test",
+          customerLastName: "User",
+          customerPhone: "555-0000",
+          customerEmail: null,
+          orderMode: "pickup",
+          salesChannel: "online_order",
+          status: "created",
+          fulfillmentStatus: "pending",
+          items: orderItems as unknown as Prisma.InputJsonValue,
+          subtotal: 4.99,
+          taxAmount: 0,
+          tipAmount: 0,
+          deliveryFee: 0,
+          discount: 0,
+          giftCardPayment: 0,
+          cashPayment: 4.99,
+          totalAmount: 4.99,
+          notes: null,
+          deliveryAddress: Prisma.JsonNull,
+          scheduledAt: null,
+        },
+        undefined,
+        undefined,
+        orderItems
+      );
+
+      const callArgs = vi.mocked(prisma.order.create).mock.calls[0]?.[0];
+      const createdItems = (callArgs?.data as Record<string, unknown>).orderItems as {
+        create: Record<string, unknown>[];
+      };
+      expect(createdItems.create[0]).not.toHaveProperty("modifiers");
+    });
+  });
+
+  describe("getOrderItems", () => {
+    it("should return order items with modifiers for an order", async () => {
+      const mockItems = [
+        {
+          id: "oi-1",
+          orderId: "order-1",
+          menuItemId: "item-1",
+          name: "Burger",
+          unitPrice: new Prisma.Decimal("10.99"),
+          quantity: 2,
+          totalPrice: new Prisma.Decimal("21.98"),
+          notes: null,
+          imageUrl: null,
+          taxes: null,
+          sortOrder: 0,
+          deleted: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          modifiers: [
+            {
+              id: "oim-1",
+              orderItemId: "oi-1",
+              modifierGroupId: "grp-1",
+              modifierOptionId: "mod-1",
+              groupName: "Extras",
+              name: "Cheese",
+              price: new Prisma.Decimal("1.50"),
+              quantity: 1,
+              deleted: false,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          ],
+        },
+      ];
+
+      vi.mocked(prisma.orderItem.findMany).mockResolvedValue(mockItems as never);
+
+      const result = await repository.getOrderItems("order-1");
+
+      expect(prisma.orderItem.findMany).toHaveBeenCalledWith({
+        where: {
+          orderId: "order-1",
+          deleted: false,
+        },
+        orderBy: { sortOrder: "asc" },
+        include: {
+          modifiers: {
+            where: { deleted: false },
+          },
+        },
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe("Burger");
+      expect(result[0].modifiers).toHaveLength(1);
+      expect(result[0].modifiers[0].name).toBe("Cheese");
+    });
+  });
+
+  describe("getItemSalesByMenuItemId", () => {
+    it("should return aggregated sales data for a menu item", async () => {
+      vi.mocked(prisma.orderItem.aggregate).mockResolvedValue({
+        _sum: {
+          quantity: 42,
+          totalPrice: new Prisma.Decimal("419.58"),
+        },
+        _count: { _all: 0 },
+        _avg: {},
+        _min: {},
+        _max: {},
+      } as never);
+
+      const result = await repository.getItemSalesByMenuItemId(
+        "tenant-1",
+        "item-1"
+      );
+
+      expect(prisma.orderItem.aggregate).toHaveBeenCalledWith({
+        where: {
+          menuItemId: "item-1",
+          deleted: false,
+          order: {
+            tenantId: "tenant-1",
+            deleted: false,
+            status: { not: "canceled" },
+          },
+        },
+        _sum: {
+          quantity: true,
+          totalPrice: true,
+        },
+      });
+
+      expect(result.totalQuantity).toBe(42);
+      expect(result.totalRevenue.toString()).toBe("419.58");
+    });
+
+    it("should filter by date range when provided", async () => {
+      vi.mocked(prisma.orderItem.aggregate).mockResolvedValue({
+        _sum: { quantity: 10, totalPrice: new Prisma.Decimal("99.90") },
+        _count: { _all: 0 },
+        _avg: {},
+        _min: {},
+        _max: {},
+      } as never);
+
+      const dateFrom = new Date("2024-01-01");
+      const dateTo = new Date("2024-01-31");
+
+      await repository.getItemSalesByMenuItemId("tenant-1", "item-1", {
+        dateFrom,
+        dateTo,
+      });
+
+      expect(prisma.orderItem.aggregate).toHaveBeenCalledWith({
+        where: {
+          menuItemId: "item-1",
+          deleted: false,
+          order: {
+            tenantId: "tenant-1",
+            deleted: false,
+            status: { not: "canceled" },
+            createdAt: {
+              gte: dateFrom,
+              lte: dateTo,
+            },
+          },
+        },
+        _sum: {
+          quantity: true,
+          totalPrice: true,
+        },
+      });
+    });
+
+    it("should return zero values when no sales exist", async () => {
+      vi.mocked(prisma.orderItem.aggregate).mockResolvedValue({
+        _sum: { quantity: null, totalPrice: null },
+        _count: { _all: 0 },
+        _avg: {},
+        _min: {},
+        _max: {},
+      } as never);
+
+      const result = await repository.getItemSalesByMenuItemId(
+        "tenant-1",
+        "nonexistent-item"
+      );
+
+      expect(result.totalQuantity).toBe(0);
+      expect(result.totalRevenue.toString()).toBe("0");
     });
   });
 });
