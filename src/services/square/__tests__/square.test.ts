@@ -679,6 +679,152 @@ describe("SquareService", () => {
     });
   });
 
+  describe("syncCatalog() - modifier table persistence", () => {
+    it("should create ModifierOption external ID mappings for multi-variation items", async () => {
+      vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(makeConnection());
+      vi.mocked(squareCatalogService.mapToMenuModels).mockReturnValueOnce({
+        categories: [{ externalId: "sq-cat-1", name: "Burgers", sortOrder: 0 }],
+        items: [
+          {
+            externalId: "sq-item-1",
+            name: "Classic Burger",
+            description: null,
+            price: 10.0,
+            imageUrl: null,
+            taxExternalIds: [],
+            modifiers: {
+              groups: [
+                {
+                  name: "Size",
+                  required: true,
+                  minSelect: 1,
+                  maxSelect: 1,
+                  options: [
+                    { name: "Regular", price: 0, externalId: "sq-var-r", isDefault: true, ordinal: 0 },
+                    { name: "Large", price: 3, externalId: "sq-var-l", isDefault: false, ordinal: 1 },
+                  ],
+                },
+              ],
+            },
+            categoryExternalIds: ["sq-cat-1"],
+            variationMappings: [
+              { externalId: "sq-var-r", name: "Regular", groupId: "grp-1", optionId: "opt-r" },
+              { externalId: "sq-var-l", name: "Large", groupId: "grp-1", optionId: "opt-l" },
+            ],
+          },
+        ],
+        taxes: [],
+        stats: createEmptyCatalogSyncStats(),
+      });
+
+      const result = await service.syncCatalog("t1", "m1");
+
+      expect(result.objectsSynced).toBe(2); // 1 category + 1 item
+      // Verify ModifierOption mappings were created for variations with groupId/optionId
+      expect(integrationRepository.upsertIdMapping).toHaveBeenCalledWith(
+        "t1",
+        expect.objectContaining({
+          internalType: "ModifierOption",
+          internalId: "opt-r",
+          externalType: "ITEM_VARIATION",
+          externalId: "sq-var-r",
+        }),
+        expect.anything()
+      );
+    });
+
+    it("should reuse existing ModifierOption group when mapping found", async () => {
+      vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(makeConnection());
+      // Return an existing ModifierOption mapping for the first option's external ID
+      vi.mocked(integrationRepository.getIdMappingByExternalId).mockImplementation(
+        async (_tenantId, _source, externalId) => {
+          if (externalId === "sq-mod-existing") {
+            return {
+              id: "map-1",
+              tenantId: "t1",
+              internalType: "ModifierOption",
+              internalId: "existing-opt-id",
+              externalSource: "SQUARE",
+              externalType: "MODIFIER",
+              externalId: "sq-mod-existing",
+              externalVersion: null,
+              deleted: false,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+          }
+          return null;
+        }
+      );
+
+      // Mock finding the existing option's group
+      const prisma = (await import("@/lib/db")).default;
+      const mockTx = (prisma.$transaction as ReturnType<typeof vi.fn>).mock.calls.length > 0
+        ? undefined
+        : undefined;
+      // Access the modifierOption mock through the transaction
+      vi.mocked(prisma.$transaction).mockImplementationOnce(
+        (async (fn: (tx: Record<string, unknown>) => unknown) => {
+          const tx = {
+            menu: { findFirst: vi.fn(() => ({ id: "menu-1" })), create: vi.fn() },
+            menuCategory: { upsert: vi.fn() },
+            menuItem: { upsert: vi.fn() },
+            menuCategoryItem: { upsert: vi.fn() },
+            taxConfig: { upsert: vi.fn() },
+            merchantTaxRate: { upsert: vi.fn() },
+            modifierGroup: { upsert: vi.fn() },
+            modifierOption: {
+              upsert: vi.fn(),
+              findUnique: vi.fn().mockResolvedValue({ groupId: "existing-grp-id" }),
+            },
+            menuItemModifierGroup: {
+              create: vi.fn(),
+              deleteMany: vi.fn(),
+            },
+          };
+          return fn(tx);
+        }) as never
+      );
+
+      vi.mocked(squareCatalogService.mapToMenuModels).mockReturnValueOnce({
+        categories: [],
+        items: [
+          {
+            externalId: "sq-item-1",
+            name: "Soup",
+            description: null,
+            price: 5.0,
+            imageUrl: null,
+            taxExternalIds: [],
+            modifiers: {
+              groups: [
+                {
+                  name: "Add-ons",
+                  required: false,
+                  minSelect: 0,
+                  maxSelect: 2,
+                  options: [
+                    { name: "Bread", price: 1.5, externalId: "sq-mod-existing", isDefault: false, ordinal: 0 },
+                  ],
+                },
+              ],
+            },
+            categoryExternalIds: [],
+            variationMappings: [{ externalId: "sq-var-1", name: "Regular" }],
+          },
+        ],
+        taxes: [],
+        stats: createEmptyCatalogSyncStats(),
+      });
+
+      const result = await service.syncCatalog("t1", "m1");
+
+      expect(result.objectsSynced).toBe(1); // 1 item
+      // Reset mock
+      vi.mocked(integrationRepository.getIdMappingByExternalId).mockResolvedValue(null);
+    });
+  });
+
   describe("syncCatalog() - error edge cases", () => {
     it("should handle non-Error thrown during sync", async () => {
       vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce({
