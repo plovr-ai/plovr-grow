@@ -18,6 +18,7 @@ import type {
   OrderMode,
   SalesChannel,
 } from "@/types";
+import { mapOrderItemToData } from "@/services/order/order.service";
 
 let isRegistered = false;
 
@@ -344,7 +345,7 @@ async function getOrderForPush(
     const order = await orderService.getOrder(tenantId, orderId);
     if (!order) return null;
     return {
-      items: order.items as unknown as OrderItemData[],
+      items: (order.orderItems ?? []).map(mapOrderItemToData),
       salesChannel: order.salesChannel as SalesChannel,
       orderMode: order.orderMode as OrderMode,
       deliveryAddress:

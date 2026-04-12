@@ -28,10 +28,39 @@ import type {
   TimelineEvent,
   OrderWithTimeline,
 } from "./order.types";
+import type { OrderItemWithModifiers } from "@/repositories/order.repository";
+import type { OrderItemData, SelectedModifier, ItemTaxInfo } from "@/types";
 
 export interface StatusUpdateOptions {
   source?: OrderEventSource;
   squareOrderVersion?: number;
+}
+
+/**
+ * Convert a Prisma OrderItem (with modifiers) to the application-level OrderItemData.
+ * Handles Decimal → number conversion and field name mapping.
+ */
+export function mapOrderItemToData(item: OrderItemWithModifiers): OrderItemData {
+  const selectedModifiers: SelectedModifier[] = item.modifiers.map((mod) => ({
+    groupId: mod.modifierGroupId,
+    groupName: mod.groupName,
+    modifierId: mod.modifierOptionId,
+    modifierName: mod.name,
+    price: Number(mod.price),
+    quantity: mod.quantity,
+  }));
+
+  return {
+    menuItemId: item.menuItemId,
+    name: item.name,
+    price: Number(item.unitPrice),
+    quantity: item.quantity,
+    selectedModifiers,
+    specialInstructions: item.notes ?? undefined,
+    totalPrice: Number(item.totalPrice),
+    taxes: (item.taxes as ItemTaxInfo[] | null) ?? undefined,
+    imageUrl: item.imageUrl,
+  };
 }
 
 export class OrderService {
@@ -345,12 +374,15 @@ export class OrderService {
 
     const timeline = this.buildTimeline(order);
 
+    // Map structured OrderItem rows to OrderItemData[]
+    const items: OrderItemData[] = (order.orderItems ?? []).map(mapOrderItemToData);
+
     // Fetch points earned for this order (if any)
     const pointTransaction = await pointTransactionRepository.getByOrderId(tenantId, orderId);
     const pointsEarned =
       pointTransaction && pointTransaction.type === "earn" ? pointTransaction.points : undefined;
 
-    return { ...order, timeline, pointsEarned };
+    return { ...order, items, timeline, pointsEarned };
   }
 
   /**
