@@ -120,7 +120,6 @@ model MenuItem {
   price         Decimal            @db.Decimal(10, 2)
   imageUrl      String?            @map("image_url")
   status        String             @default("active")
-  modifiers     Json?
   nutrition     Json?
   tags          Json?
   deleted       Boolean            @default(false)
