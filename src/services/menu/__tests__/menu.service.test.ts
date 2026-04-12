@@ -1080,7 +1080,6 @@ describe("MenuService", () => {
         description: "Desc",
         price: 9.99,
         imageUrl: "https://example.com/img.jpg",
-        modifiers: [{ id: "mg-size", name: "Size", type: "single", required: true, modifiers: [{ id: "mod-small", name: "Small", price: 0 }] }],
         tags: ["vegan"],
       });
       expect(menuCategoryItemRepository.getNextSortOrder).toHaveBeenCalledTimes(2);
@@ -1105,7 +1104,6 @@ describe("MenuService", () => {
         description: undefined,
         price: 5.99,
         imageUrl: undefined,
-        modifiers: null,
         tags: null,
       });
     });
@@ -1139,6 +1137,25 @@ describe("MenuService", () => {
       // Verify item was created
       expect(menuRepository.createItem).toHaveBeenCalledTimes(1);
       // syncModifierGroupsToTables is called internally and uses the mocked prisma
+    });
+
+    it("should not pass modifiers JSON to repository on create", async () => {
+      vi.mocked(menuRepository.createItem).mockResolvedValue({
+        id: "new-item", tenantId: "tenant-1", name: "Test", price: new Prisma.Decimal(10),
+      } as never);
+      vi.mocked(menuCategoryItemRepository.getNextSortOrder).mockResolvedValue(0);
+      vi.mocked(menuCategoryItemRepository.linkItemToCategory).mockResolvedValue({} as never);
+      const syncSpy = vi.spyOn(menuService, "syncModifierGroups").mockResolvedValue();
+
+      await menuService.createMenuItem("tenant-1", {
+        categoryIds: ["cat-1"], name: "Test Item", price: 10,
+        modifierGroups: [{ id: "g1", name: "Size", type: "single", required: true, modifiers: [{ id: "o1", name: "S", price: 0 }] }],
+      });
+
+      const createCall = vi.mocked(menuRepository.createItem).mock.calls[0];
+      expect(createCall[1]).not.toHaveProperty("modifiers");
+      expect(syncSpy).toHaveBeenCalledWith("tenant-1", "new-item", expect.any(Array));
+      syncSpy.mockRestore();
     });
   });
 
@@ -1178,7 +1195,6 @@ describe("MenuService", () => {
         price: 20,
         imageUrl: "https://example.com/new.jpg",
         status: "out_of_stock",
-        modifiers: [],
         tags: ["new-tag"],
       });
       expect(menuCategoryItemRepository.setItemCategories).toHaveBeenCalledWith(
