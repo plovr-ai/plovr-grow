@@ -24,6 +24,23 @@ vi.mock("../square-oauth.service", () => ({
   },
 }));
 
+const emptyCatalogStats = {
+  itemsMapped: 0,
+  itemsCreated: 0,
+  itemsUpdated: 0,
+  itemsSkipped: 0,
+  variationsAsOptions: 0,
+  modifierListsFlattened: 0,
+  categoriesFlattened: 0,
+  locationOverridesDropped: 0,
+  imagesDropped: 0,
+  taxesInclusive: 0,
+  taxesAdditive: 0,
+  discountsSkipped: 0,
+  pricingRulesSkipped: 0,
+  warnings: [],
+};
+
 vi.mock("../square-catalog.service", () => ({
   squareCatalogService: {
     fetchFullCatalog: vi.fn(() => ({
@@ -31,27 +48,21 @@ vi.mock("../square-catalog.service", () => ({
       items: [],
       modifierLists: [],
       taxes: [],
+      images: [],
+    })),
+    fetchIncrementalCatalog: vi.fn(() => ({
+      categories: [],
+      items: [],
+      modifierLists: [],
+      taxes: [],
+      images: [],
+      deletedIds: [],
     })),
     mapToMenuModels: vi.fn(() => ({
       categories: [],
       items: [],
       taxes: [],
-      stats: {
-        itemsMapped: 0,
-        itemsCreated: 0,
-        itemsUpdated: 0,
-        itemsSkipped: 0,
-        variationsAsOptions: 0,
-        modifierListsFlattened: 0,
-        categoriesFlattened: 0,
-        locationOverridesDropped: 0,
-        imagesDropped: 0,
-        taxesInclusive: 0,
-        taxesAdditive: 0,
-        discountsSkipped: 0,
-        pricingRulesSkipped: 0,
-        warnings: [],
-      },
+      stats: { ...emptyCatalogStats },
     })),
   },
 }));
@@ -78,6 +89,7 @@ vi.mock("@/repositories/integration.repository", () => ({
     getRunningSync: vi.fn(() => null),
     upsertIdMapping: vi.fn(),
     getIdMappingByExternalId: vi.fn(() => null),
+    getLastSuccessfulSyncCursor: vi.fn(() => null),
   },
 }));
 
@@ -92,10 +104,10 @@ vi.mock("@/lib/db", () => {
     },
     // Data transaction fields
     menu: { findFirst: vi.fn(() => ({ id: "menu-1" })), create: vi.fn() },
-    menuCategory: { upsert: vi.fn() },
-    menuItem: { upsert: vi.fn() },
+    menuCategory: { upsert: vi.fn(), updateMany: vi.fn() },
+    menuItem: { upsert: vi.fn(), updateMany: vi.fn() },
     menuCategoryItem: { upsert: vi.fn() },
-    taxConfig: { upsert: vi.fn() },
+    taxConfig: { upsert: vi.fn(), updateMany: vi.fn() },
     merchantTaxRate: { upsert: vi.fn() },
     modifierGroup: { upsert: vi.fn() },
     modifierOption: {
@@ -105,6 +117,9 @@ vi.mock("@/lib/db", () => {
     menuItemModifierGroup: {
       create: vi.fn(),
       deleteMany: vi.fn(),
+    },
+    externalIdMapping: {
+      updateMany: vi.fn(),
     },
   };
   return {
@@ -145,6 +160,9 @@ const { __mockTx } = await import("@/lib/db") as unknown as {
   __mockTx: {
     integrationSyncRecord: { findFirst: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
     menu: { findFirst: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
+    menuCategory: { upsert: ReturnType<typeof vi.fn> };
+    menuItem: { upsert: ReturnType<typeof vi.fn>; updateMany: ReturnType<typeof vi.fn> };
+    externalIdMapping: { updateMany: ReturnType<typeof vi.fn> };
   };
 };
 
@@ -883,6 +901,131 @@ describe("SquareService", () => {
       await expect(
         service.cancelOrder("t1", "m1", "order-1")
       ).rejects.toMatchObject({ code: "INTEGRATION_NOT_CONNECTED" });
+    });
+  });
+
+  describe("syncCatalog() - incremental mode", () => {
+    it("should fall back to full sync when no previous cursor exists", async () => {
+      vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(makeConnection());
+      vi.mocked(integrationRepository.getLastSuccessfulSyncCursor).mockResolvedValueOnce(null);
+
+      const result = await service.syncCatalog("t1", "m1", true);
+
+      expect(result.objectsSynced).toBe(0);
+      expect(squareCatalogService.fetchFullCatalog).toHaveBeenCalledWith("access-123");
+      expect(squareCatalogService.fetchIncrementalCatalog).not.toHaveBeenCalled();
+    });
+
+    it("should use incremental fetch when previous cursor exists", async () => {
+      vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(makeConnection());
+      vi.mocked(integrationRepository.getLastSuccessfulSyncCursor).mockResolvedValueOnce(
+        "2026-04-01T00:00:00.000Z"
+      );
+
+      const result = await service.syncCatalog("t1", "m1", true);
+
+      expect(result.objectsSynced).toBe(0);
+      expect(squareCatalogService.fetchIncrementalCatalog).toHaveBeenCalledWith(
+        "access-123",
+        "2026-04-01T00:00:00.000Z"
+      );
+      expect(squareCatalogService.fetchFullCatalog).not.toHaveBeenCalled();
+    });
+
+    it("should fall back to full sync when incremental fetch fails", async () => {
+      vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(makeConnection());
+      vi.mocked(integrationRepository.getLastSuccessfulSyncCursor).mockResolvedValueOnce(
+        "2026-04-01T00:00:00.000Z"
+      );
+      vi.mocked(squareCatalogService.fetchIncrementalCatalog).mockRejectedValueOnce(
+        new Error("Square search API error")
+      );
+
+      const result = await service.syncCatalog("t1", "m1", true);
+
+      expect(result.objectsSynced).toBe(0);
+      // Should have fallen back to full
+      expect(squareCatalogService.fetchFullCatalog).toHaveBeenCalledWith("access-123");
+    });
+
+    it("should store cursor timestamp on successful sync", async () => {
+      vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(makeConnection());
+
+      await service.syncCatalog("t1", "m1");
+
+      expect(integrationRepository.updateSyncRecord).toHaveBeenCalledWith(
+        "sync-1",
+        expect.objectContaining({
+          status: "success",
+          cursor: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+        }),
+        expect.anything()
+      );
+    });
+
+    it("should soft-delete mapped objects when deletedIds returned from incremental sync", async () => {
+      vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(makeConnection());
+      vi.mocked(integrationRepository.getLastSuccessfulSyncCursor).mockResolvedValueOnce(
+        "2026-04-01T00:00:00.000Z"
+      );
+      vi.mocked(squareCatalogService.fetchIncrementalCatalog).mockResolvedValueOnce({
+        categories: [],
+        items: [],
+        modifierLists: [],
+        taxes: [],
+        images: [],
+        deletedIds: ["sq-cat-deleted", "sq-item-deleted"],
+      });
+      // Mock the ID mapping lookups for deleted objects
+      vi.mocked(integrationRepository.getIdMappingByExternalId)
+        .mockResolvedValueOnce({
+          id: "map-1",
+          tenantId: "t1",
+          internalType: "MenuCategory",
+          internalId: "internal-cat-1",
+          externalSource: "SQUARE",
+          externalType: "CATEGORY",
+          externalId: "sq-cat-deleted",
+          externalVersion: null,
+          deleted: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .mockResolvedValueOnce({
+          id: "map-2",
+          tenantId: "t1",
+          internalType: "MenuItem",
+          internalId: "internal-item-1",
+          externalSource: "SQUARE",
+          externalType: "ITEM",
+          externalId: "sq-item-deleted",
+          externalVersion: null,
+          deleted: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+      const result = await service.syncCatalog("t1", "m1", true);
+
+      expect(result.objectsSynced).toBe(0);
+      expect(__mockTx.menuCategory.upsert).not.toHaveBeenCalled();
+      // Verify soft-delete was called on the externalIdMapping
+      expect(__mockTx.externalIdMapping.updateMany).toHaveBeenCalledTimes(2);
+    });
+
+    it("should use CATALOG_INCREMENTAL sync type for incremental sync", async () => {
+      vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(makeConnection());
+      vi.mocked(integrationRepository.getLastSuccessfulSyncCursor).mockResolvedValueOnce(
+        "2026-04-01T00:00:00.000Z"
+      );
+
+      await service.syncCatalog("t1", "m1", true);
+
+      expect(__mockTx.integrationSyncRecord.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          syncType: "CATALOG_INCREMENTAL",
+        }),
+      });
     });
   });
 });
