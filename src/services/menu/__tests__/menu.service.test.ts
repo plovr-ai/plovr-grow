@@ -1659,7 +1659,7 @@ describe("MenuService", () => {
       expect(modGroups[0].modifiers).toEqual([]);
     });
 
-    it("should fall back to JSON modifiers when relational data is empty", async () => {
+    it("should return empty array when only JSON modifiers exist (no relational data)", async () => {
       const categoriesWithJsonOnly = [
         {
           id: "cat-1",
@@ -1706,9 +1706,7 @@ describe("MenuService", () => {
       const result = await menuService.getMenuForDashboard("tenant-1");
 
       const modGroups = result.categories[0].menuItems[0].modifierGroups;
-      expect(modGroups).toHaveLength(1);
-      expect(modGroups[0].id).toBe("json-size");
-      expect(modGroups[0].name).toBe("Size (JSON)");
+      expect(modGroups).toEqual([]);
     });
   });
 
