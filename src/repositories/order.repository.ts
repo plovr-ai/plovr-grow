@@ -42,7 +42,7 @@ export class OrderRepository {
   async create(
     tenantId: string,
     merchantId: string | null,
-    data: Omit<Prisma.OrderCreateInput, "tenant" | "merchant" | "loyaltyMember" | "id" | "orderItems">,
+    data: Omit<Prisma.OrderCreateInput, "tenant" | "merchant" | "loyaltyMember" | "id" | "orderItems" | "items">,
     loyaltyMemberId?: string,
     tx?: DbClient,
     orderItems?: OrderItemData[]
@@ -195,6 +195,15 @@ export class OrderRepository {
               name: true,
               slug: true,
               timezone: true,
+            },
+          },
+          orderItems: {
+            where: { deleted: false },
+            orderBy: { sortOrder: "asc" },
+            include: {
+              modifiers: {
+                where: { deleted: false },
+              },
             },
           },
         },

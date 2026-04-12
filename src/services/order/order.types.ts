@@ -23,7 +23,7 @@ export interface OrderData {
   salesChannel: string;
   status: string;                    // Payment status
   fulfillmentStatus: string;         // Fulfillment status
-  items: OrderItemData[] | unknown;
+  items: OrderItemData[];
   subtotal: number | unknown;
   taxAmount: number | unknown;
   tipAmount: number | unknown;

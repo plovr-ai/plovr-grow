@@ -5,7 +5,6 @@ import { merchantService } from "@/services/merchant";
 import { menuService } from "@/services/menu";
 import { OrderDetailClient } from "@storefront/components/orders";
 import type { OrderDetailData } from "@storefront/components/orders";
-import type { OrderItemData } from "@/types";
 
 interface PageProps {
   params: Promise<{ merchantSlug: string; orderId: string }>;
@@ -39,8 +38,8 @@ export default async function OrderDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Get order items (already mapped from structured OrderItem rows by the service)
-  const items = order.items as OrderItemData[];
+  // Get order items (mapped from structured OrderItem rows by the service)
+  const items = order.items;
   const menuItemIds = items.map((item) => item.menuItemId);
   const menuItems = await menuService.getMenuItemsByIds(tenantId, merchant.id, menuItemIds);
 

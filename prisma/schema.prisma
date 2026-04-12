@@ -270,7 +270,7 @@ model Order {
   salesChannel        String                @default("online_order") @map("sales_channel")
   status              String                @default("created")
   fulfillmentStatus   String                @default("pending") @map("fulfillment_status")
-  items               Json
+  items               Json?
   subtotal            Decimal               @db.Decimal(10, 2)
   taxAmount           Decimal               @map("tax_amount") @db.Decimal(10, 2)
   tipAmount           Decimal               @default(0.00) @map("tip_amount") @db.Decimal(10, 2)

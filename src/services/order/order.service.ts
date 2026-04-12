@@ -101,7 +101,7 @@ export class OrderService {
 
     const salesChannel = input.salesChannel ?? "online_order";
 
-    // Create the order + fulfillment in database (dual-write: JSON snapshot + structured OrderItem rows)
+    // Create the order + fulfillment in database with structured OrderItem rows
     const createOrderAndFulfillment = async (dbClient?: DbClient) => {
       const order = await orderRepository.create(
         tenantId,
@@ -116,7 +116,6 @@ export class OrderService {
           salesChannel,
           status: "created",
           fulfillmentStatus: "pending",
-          items: input.items as unknown as Prisma.InputJsonValue,
           subtotal: calculation.subtotal,
           taxAmount: calculation.taxAmount,
           tipAmount: calculation.tipAmount,
@@ -263,7 +262,7 @@ export class OrderService {
     const sequence = await sequenceRepository.getNextGiftCardOrderSequence(tenantId, dateStr);
     const orderNumber = generateGiftcardOrderNumber(sequence);
 
-    // Create the order in database (dual-write: JSON snapshot + structured OrderItem rows)
+    // Create the order in database with structured OrderItem rows
     const order = await orderRepository.create(
       tenantId,
       null, // No merchant for gift card orders
@@ -277,7 +276,6 @@ export class OrderService {
         salesChannel: "giftcard",
         status: "created",
         fulfillmentStatus: "pending",
-        items: input.items as unknown as Prisma.InputJsonValue,
         subtotal: totalAmount,
         taxAmount: 0,
         tipAmount: 0,
