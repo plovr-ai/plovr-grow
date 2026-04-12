@@ -301,42 +301,6 @@ export class OrderRepository {
       },
     });
   }
-
-  /**
-   * Get aggregated sales data for a specific menu item
-   */
-  async getItemSalesByMenuItemId(
-    tenantId: string,
-    menuItemId: string,
-    options?: { dateFrom?: Date; dateTo?: Date }
-  ): Promise<{ totalQuantity: number; totalRevenue: Prisma.Decimal }> {
-    const result = await prisma.orderItem.aggregate({
-      where: {
-        menuItemId,
-        deleted: false,
-        order: {
-          tenantId,
-          deleted: false,
-          status: { not: "canceled" },
-          ...((options?.dateFrom || options?.dateTo) && {
-            createdAt: {
-              ...(options?.dateFrom && { gte: options.dateFrom }),
-              ...(options?.dateTo && { lte: options.dateTo }),
-            },
-          }),
-        },
-      },
-      _sum: {
-        quantity: true,
-        totalPrice: true,
-      },
-    });
-
-    return {
-      totalQuantity: result._sum.quantity ?? 0,
-      totalRevenue: result._sum.totalPrice ?? new Prisma.Decimal(0),
-    };
-  }
 }
 
 export const orderRepository = new OrderRepository();
