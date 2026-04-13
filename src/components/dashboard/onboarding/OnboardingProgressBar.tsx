@@ -15,7 +15,7 @@ export function OnboardingProgressBar({ finished, total }: OnboardingProgressBar
     <div className="flex items-center gap-3">
       <div className="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden">
         <div
-          className="h-full rounded-full bg-theme-primary transition-all duration-500 ease-out"
+          className="h-full rounded-full bg-gray-900 transition-all duration-500 ease-out"
           style={{ width: `${percentage}%` }}
         />
       </div>

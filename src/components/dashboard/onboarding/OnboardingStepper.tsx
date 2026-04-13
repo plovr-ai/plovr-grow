@@ -42,14 +42,14 @@ export function OnboardingStepper({ steps, activeStep, onStepClick }: Onboarding
                 disabled={isLocked}
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
                   isCompleted
-                    ? "border-green-500 bg-green-500 text-white cursor-pointer"
+                    ? "border-emerald-700 bg-emerald-700 text-white cursor-pointer"
                     : isSkipped
                       ? "border-gray-300 bg-gray-300 text-white cursor-pointer"
                       : isActive
-                        ? "border-theme-primary bg-theme-primary text-theme-primary-foreground cursor-pointer"
+                        ? "border-gray-900 bg-gray-900 text-white cursor-pointer"
                         : isLocked
                           ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
-                          : "border-theme-primary bg-white text-theme-primary cursor-pointer"
+                          : "border-gray-900 bg-white text-gray-900 cursor-pointer"
                 }`}
                 aria-label={t(`steps.${stepId}.title`)}
                 aria-current={isActive ? "step" : undefined}
@@ -67,9 +67,9 @@ export function OnboardingStepper({ steps, activeStep, onStepClick }: Onboarding
               <span
                 className={`mt-2 text-xs font-medium text-center max-w-[80px] leading-tight ${
                   isCompleted
-                    ? "text-green-700"
+                    ? "text-emerald-800"
                     : isActive
-                      ? "text-theme-primary-hover"
+                      ? "text-gray-900"
                       : isLocked
                         ? "text-gray-400"
                         : "text-gray-600"
@@ -84,7 +84,7 @@ export function OnboardingStepper({ steps, activeStep, onStepClick }: Onboarding
               <div className="flex-1 pt-5 px-2">
                 <div
                   className={`h-0.5 w-full ${
-                    isCompleted || isSkipped ? "bg-green-400" : "bg-gray-200"
+                    isCompleted || isSkipped ? "bg-emerald-600" : "bg-gray-200"
                   }`}
                 />
               </div>

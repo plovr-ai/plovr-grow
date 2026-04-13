@@ -31,13 +31,13 @@ export function WebsiteStep({ status }: WebsiteStepProps) {
   if (status === "completed") {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-green-700">{t("completedDescription")}</p>
+        <p className="text-sm text-emerald-800">{t("completedDescription")}</p>
         {tenant.slug && (
           <a
             href={`/${tenant.slug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
           >
             {t("completedAction")}
             <ExternalLink className="h-4 w-4" />
@@ -85,7 +85,7 @@ export function WebsiteStep({ status }: WebsiteStepProps) {
       <p className="text-sm text-gray-500">{t("pendingEffect")}</p>
 
       {progress ? (
-        <div className="flex items-center gap-2 text-sm text-theme-primary">
+        <div className="flex items-center gap-2 text-sm text-gray-900">
           <Loader2 className="h-4 w-4 animate-spin" />
           {progress}
         </div>
@@ -97,7 +97,7 @@ export function WebsiteStep({ status }: WebsiteStepProps) {
             <button
               type="button"
               onClick={() => setSelectedPlace(null)}
-              className="mt-1 text-sm text-theme-primary hover:text-theme-primary-hover underline"
+              className="mt-1 text-sm text-gray-900 hover:text-gray-700 underline"
             >
               {t("changePlace")}
             </button>
@@ -105,7 +105,7 @@ export function WebsiteStep({ status }: WebsiteStepProps) {
           <button
             type="button"
             onClick={handleGenerate}
-            className="w-full rounded-lg bg-theme-primary px-4 py-2 text-sm font-medium text-theme-primary-foreground hover:bg-theme-primary-hover"
+            className="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
           >
             {t("generateAction")}
           </button>
