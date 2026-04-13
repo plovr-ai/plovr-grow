@@ -362,6 +362,7 @@
     "expand": "View details",
     "lockedHint": "Complete Step 1 to unlock",
     "skipButton": "Skip for now",
+    "progressLabel": "{finished} of {total} complete",
     "steps": {
       "website": {
         "title": "Launch Your Website",
