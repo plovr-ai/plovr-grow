@@ -796,7 +796,17 @@ describe("Order Flow E2E (integration)", () => {
     it("creates IntegrationSyncRecord with status=failed when push fails", async () => {
       setupOrderCreationMocks(4);
 
-      // Create a new order
+      // Make pushOrder always reject — must be set BEFORE any handler fires
+      // because createMerchantOrderAtomic emits order.paid which may reach
+      // lingering listeners from prior tests.
+      mockPushOrder.mockRejectedValue(new Error("Square API timeout"));
+
+      // Register handlers first so the order.paid event from
+      // createMerchantOrderAtomic flows through the push path.
+      unregisterOrderEventHandlers();
+      registerOrderEventHandlers();
+
+      // Create a new order — emits order.paid → handler tries push → fails
       const order = await orderService.createMerchantOrderAtomic(
         TENANT_ID,
         makeOrderInput(),
@@ -810,31 +820,8 @@ describe("Order Flow E2E (integration)", () => {
         }
       );
 
-      // Mock pushOrder to throw
-      mockPushOrder.mockRejectedValueOnce(new Error("Square API timeout"));
-
-      // Register the order-listener handlers
-      unregisterOrderEventHandlers();
-      registerOrderEventHandlers();
-
-      // Manually invoke handleOrderPaid by emitting the event
-      // The order-listener will try to push and fail, creating a retry record
-      orderEventEmitter.emit("order.paid", {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        merchantId: MERCHANT_ID,
-        tenantId: TENANT_ID,
-        timestamp: new Date(),
-        status: "completed",
-        previousStatus: "created",
-        customerPhone: "555-0199",
-        customerFirstName: "E2E",
-        customerLastName: "Tester",
-        totalAmount: 12.99,
-      });
-
-      // Wait for the setTimeout(0) in event emitter + async handler to complete
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Wait for the async event handler to complete (setTimeout(0) + async IO)
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Verify IntegrationSyncRecord was created with status=failed
       const syncRecords = await prisma.integrationSyncRecord.findMany({
@@ -847,10 +834,18 @@ describe("Order Flow E2E (integration)", () => {
       });
 
       expect(syncRecords.length).toBeGreaterThanOrEqual(1);
-      const record = syncRecords[0];
-      expect(record.syncType).toBe("ORDER_PUSH");
-      expect(record.errorMessage).toContain("Square API timeout");
+      const latestRecord = syncRecords[0];
+      expect(latestRecord.syncType).toBe("ORDER_PUSH");
+      // The retry record stores the error from the push payload, not the
+      // pushOrder error directly — order-listener wraps it via
+      // createFailedSyncRecordForRetry which stores the error message.
+      expect(latestRecord.errorMessage).toContain("Square API timeout");
 
+      // Verify the order itself is still completed (push failure doesn't affect order)
+      const dbOrder = await prisma.order.findUnique({ where: { id: order.id } });
+      expect(dbOrder!.status).toBe("completed");
+
+      mockPushOrder.mockReset();
       unregisterOrderEventHandlers();
     });
   });
