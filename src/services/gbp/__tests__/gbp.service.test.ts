@@ -138,6 +138,30 @@ describe("GbpService", () => {
       expect(result.returnUrl).toBe("http://example.com");
       expect(result.accounts).toHaveLength(1);
     });
+
+    it("should store connection without account info when listAccounts fails", async () => {
+      mockGbpLocation.listAccounts.mockRejectedValue(
+        new Error("GBP API quota exceeded")
+      );
+
+      const result = await service.handleOAuthCallback(
+        "code-abc",
+        "state-xyz"
+      );
+
+      expect(mockIntegrationRepo.upsertConnection).toHaveBeenCalledWith(
+        "t1",
+        "m1",
+        expect.objectContaining({
+          type: "LISTING_GBP",
+          externalAccountId: undefined,
+          accessToken: "access-123",
+          refreshToken: "refresh-456",
+        })
+      );
+      expect(result.returnUrl).toBe("http://example.com");
+      expect(result.accounts).toHaveLength(0);
+    });
   });
 
   describe("getConnectionStatus()", () => {
