@@ -94,6 +94,8 @@ describe("GeneratorService", () => {
       businessHours: { monday: { open: "11:00", close: "22:00", closed: false } },
       photoReferences: ["places/abc/photos/photo1"],
       reviews: [{ author: "John", rating: 5, text: "Great!", relativeTime: "1 month ago" }],
+      primaryType: "pizza_restaurant",
+      types: ["pizza_restaurant", "restaurant", "food"],
     };
 
     it("runs the full generation pipeline successfully", async () => {
@@ -166,6 +168,34 @@ describe("GeneratorService", () => {
 
       await service.generate("gen1");
       expect(generatorRepository.markFailed).toHaveBeenCalledWith("gen1", "API timeout");
+    });
+
+    it("assigns websiteTemplate based on primaryType from PlaceDetails", async () => {
+      const cafePlaceDetails: PlaceDetails = {
+        ...mockPlaceDetails,
+        name: "Sunny Cafe",
+        primaryType: "cafe",
+        types: ["cafe", "restaurant", "food"],
+      };
+
+      vi.mocked(generatorRepository.getById).mockResolvedValue({
+        id: "gen1", placeId: "ChIJ_cafe", placeName: "Sunny Cafe",
+      } as never);
+      mockGetPlaceDetails.mockResolvedValue(cafePlaceDetails);
+      vi.mocked(tenantService.createTenantWithMerchant).mockResolvedValue({
+        tenant: { id: "tenant-cafe", slug: "sunny-cafe", name: "Sunny Cafe" } as never,
+        merchant: { id: "merchant-cafe", slug: "sunny-cafe", name: "Sunny Cafe", tenantId: "tenant-cafe" } as never,
+      });
+
+      await service.generate("gen1");
+
+      expect(tenantService.createTenantWithMerchant).toHaveBeenCalledWith(
+        expect.objectContaining({
+          settings: expect.objectContaining({
+            websiteTemplate: "cafe_bakery",
+          }),
+        })
+      );
     });
   });
 

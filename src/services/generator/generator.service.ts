@@ -1,5 +1,6 @@
 import { generatorRepository } from "@/repositories/generator.repository";
 import { tenantService } from "@/services/tenant/tenant.service";
+import { resolveTemplate } from "@/types/website-template";
 import { GooglePlacesClient } from "./google-places.client";
 import type { PlaceDetails } from "./google-places.client";
 import type {
@@ -61,8 +62,11 @@ export class GeneratorService {
       text: r.text,
     }));
 
+    const websiteTemplate = resolveTemplate(details.primaryType, details.types);
+
     const tenantSettings = {
       themePreset: "blue",
+      websiteTemplate,
       website: { tagline: "", heroImage: "", socialLinks: [], reviews },
     };
 
