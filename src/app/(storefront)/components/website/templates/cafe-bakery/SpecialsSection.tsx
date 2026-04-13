@@ -1,8 +1,10 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { FeaturedItem } from "@/types/website";
 
 interface SpecialsSectionProps {
   items: FeaturedItem[];
+  menuLink: string;
   currency: string;
   locale: string;
 }
@@ -16,6 +18,7 @@ function formatPrice(price: number, currency: string, locale: string): string {
 
 export function SpecialsSection({
   items,
+  menuLink,
   currency,
   locale,
 }: SpecialsSectionProps) {
@@ -68,6 +71,15 @@ export function SpecialsSection({
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="text-center mt-16">
+          <Link
+            href={menuLink}
+            className="inline-block bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-foreground px-8 py-3 rounded-full font-medium transition-colors"
+          >
+            View Full Menu
+          </Link>
         </div>
       </div>
     </section>
