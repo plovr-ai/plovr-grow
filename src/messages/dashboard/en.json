@@ -236,7 +236,9 @@
     "paymentMarkedSuccess": "Payment confirmed successfully",
     "actions": {
       "markAsPaid": "Mark as Paid",
-      "markAsPaidConfirm": "Confirm that payment has been received for this order?"
+      "markAsPaidConfirm": "Confirm that payment has been received for this order?",
+      "markPaidFailed": "Failed to mark order as paid",
+      "markPaidError": "An error occurred"
     }
   },
   "loyalty": {
