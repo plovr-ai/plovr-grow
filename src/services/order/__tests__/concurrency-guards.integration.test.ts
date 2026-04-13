@@ -112,6 +112,7 @@ vi.mock("@/lib/db", () => ({
 import { orderService } from "@/services/order/order.service";
 import { orderEventEmitter } from "@/services/order/order-events";
 import { fulfillmentService } from "@/services/order/fulfillment.service";
+import { fulfillmentRepository } from "@/repositories/fulfillment.repository";
 import type { CreateMerchantOrderInput } from "@/services/order/order.types";
 
 // ---------------------------------------------------------------------------
@@ -279,28 +280,30 @@ describe("P1 Concurrency Guards (integration)", () => {
   // 1. Fulfillment optimistic locking (CAS on status)
   // =========================================================================
   describe("Fulfillment optimistic locking", () => {
-    it("throws CONCURRENT_CONFLICT when status changed between read and write", async () => {
+    it("throws CONCURRENT_CONFLICT when DB status differs from expected fromStatus", async () => {
       const orderId = await createPaidOrder();
 
-      // Verify initial state
       const fulfillment = await prisma.orderFulfillment.findFirst({ where: { orderId } });
       expect(fulfillment!.status).toBe("pending");
 
-      // Simulate a concurrent request winning: directly advance the DB state
-      // from 'pending' to 'confirmed' — as if another request completed first
+      // Simulate a concurrent request winning: advance DB from pending → confirmed
       await prisma.orderFulfillment.update({
         where: { id: fulfillment!.id },
         data: { status: "confirmed" },
       });
 
-      // Now try to transition from 'pending' → 'confirmed' via the service.
-      // The service read 'pending' earlier, but the DB is now 'confirmed'.
-      // The CAS WHERE status='pending' should fail with count=0.
+      // Call repository directly with stale fromStatus='pending'.
+      // This simulates the exact race: service read 'pending', but DB is now
+      // 'confirmed'. The CAS WHERE status='pending' returns count=0.
       await expect(
-        fulfillmentService.transitionStatus(TENANT_ID, orderId, {
-          fulfillmentStatus: "confirmed",
-          source: "internal",
-        })
+        fulfillmentRepository.transitionStatus(
+          TENANT_ID,
+          fulfillment!.id,
+          orderId,
+          "pending",    // stale fromStatus
+          "confirmed",  // toStatus
+          "internal"
+        )
       ).rejects.toThrow("FULFILLMENT_CONCURRENT_CONFLICT");
 
       // DB should remain at 'confirmed' (the winning request's state)
@@ -324,14 +327,17 @@ describe("P1 Concurrency Guards (integration)", () => {
         data: { status: "preparing" },
       });
 
-      // A stale request tries to write 'confirmed' (which would be a regression)
-      // Even though the state machine would allow pending→confirmed,
-      // the CAS fails because DB status is 'preparing', not 'pending'
+      // A stale request tries to write 'confirmed' with fromStatus='pending'
+      // CAS fails because DB status is 'preparing', not 'pending'
       await expect(
-        fulfillmentService.transitionStatus(TENANT_ID, orderId, {
-          fulfillmentStatus: "confirmed",
-          source: "internal",
-        })
+        fulfillmentRepository.transitionStatus(
+          TENANT_ID,
+          fulfillment!.id,
+          orderId,
+          "pending",    // stale fromStatus
+          "confirmed",  // toStatus
+          "internal"
+        )
       ).rejects.toThrow("FULFILLMENT_CONCURRENT_CONFLICT");
 
       // DB should remain at 'preparing'
