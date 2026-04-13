@@ -266,7 +266,7 @@ describe("SquareOrderService", () => {
       expect(createCall.order.serviceCharges[0]).toMatchObject({
         uid: "tip",
         name: "Tip",
-        type: "AUTO_GRATUITY",
+        type: "CUSTOM",
         calculationPhase: "TOTAL_PHASE",
         taxable: false,
       });
@@ -577,7 +577,7 @@ describe("SquareOrderService", () => {
       expect(createCall.order.serviceCharges[0]).toMatchObject({
         uid: "tip",
         name: "Tip",
-        type: "AUTO_GRATUITY",
+        type: "CUSTOM",
         calculationPhase: "TOTAL_PHASE",
         taxable: false,
       });
