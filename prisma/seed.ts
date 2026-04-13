@@ -89,6 +89,7 @@ async function main() {
     defaultCurrency: "USD",
     defaultLocale: "en-US",
     defaultTimezone: "America/New_York",
+    websiteTemplate: "fast_casual",
     website: {
       tagline: "Authentic New York Style Pizza Since 1985",
       heroImage: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=1920&h=1080&fit=crop",
@@ -496,6 +497,7 @@ async function main() {
     defaultCurrency: "USD",
     defaultLocale: "en-US",
     defaultTimezone: "America/Los_Angeles",
+    websiteTemplate: "cafe_bakery",
     website: {
       tagline: "Artisan Breads & Pastries Since 2010",
       heroImage: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=1920&h=1080&fit=crop",
@@ -1503,10 +1505,365 @@ async function main() {
 
   console.log("Associated menu items with tax configs");
 
-  // ==================== Users for Joe's Pizza and Bella's Bakery ====================
-  console.log("\nCreating users for Joe's Pizza and Bella's Bakery...");
+  // ==================== Template Demo: The Capital Grille (Fine Dining) ====================
+  console.log("\nCreating The Capital Grille (fine_dining template)...");
 
-  const joesPasswordHash = await bcrypt.hash("test123", 10);
+  const capitalGrilleSettings = {
+    defaultCurrency: "USD",
+    defaultLocale: "en-US",
+    defaultTimezone: "America/New_York",
+    websiteTemplate: "fine_dining",
+    themePreset: "purple",
+    website: {
+      tagline: "An Exceptional Fine Dining Experience",
+      heroImage: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1920&h=1080&fit=crop",
+      socialLinks: [
+        { platform: "facebook", url: "https://facebook.com/capitalgrille" },
+        { platform: "instagram", url: "https://instagram.com/capitalgrille" },
+      ],
+      reviews: [
+        {
+          id: "cg-review-1",
+          customerName: "Robert H.",
+          rating: 5,
+          content: "Impeccable service and the finest dry-aged steaks I've ever had. The wine pairing was exceptional. A truly memorable evening.",
+          date: "2024-02-15",
+          source: "google",
+        },
+        {
+          id: "cg-review-2",
+          customerName: "Catherine W.",
+          rating: 5,
+          content: "The ambiance is unmatched. Every dish was a work of art. The lobster bisque and filet mignon were outstanding.",
+          date: "2024-02-10",
+          source: "yelp",
+        },
+        {
+          id: "cg-review-3",
+          customerName: "Jonathan P.",
+          rating: 5,
+          content: "Perfect for special occasions. The sommelier's recommendations were spot-on and the service was attentive without being intrusive.",
+          date: "2024-02-05",
+          source: "google",
+        },
+      ],
+    },
+  };
+
+  const capitalGrilleTenant = await prisma.tenant.upsert({
+    where: { id: "tenant-capital-grille" },
+    update: { settings: capitalGrilleSettings },
+    create: {
+      id: "tenant-capital-grille",
+      slug: "capital-grille",
+      name: "The Capital Grille",
+      description: "An exceptional fine dining experience featuring dry-aged steaks and fresh seafood",
+      logoUrl: "https://images.unsplash.com/photo-1550966871-3ed3cdb51f3a?w=200&h=200&fit=crop",
+      websiteUrl: "https://capitalgrille.com",
+      supportEmail: "info@capitalgrille.com",
+      supportPhone: "(212) 555-0300",
+      currency: "USD",
+      locale: "en-US",
+      timezone: "America/New_York",
+      subscriptionPlan: "free",
+      subscriptionStatus: "active",
+      settings: capitalGrilleSettings,
+    },
+  });
+
+  console.log(`Created tenant: ${capitalGrilleTenant.name}`);
+
+  const capitalGrilleMerchant = await prisma.merchant.upsert({
+    where: { slug: "capital-grille-manhattan" },
+    update: {},
+    create: {
+      id: "merchant-capital-grille-manhattan",
+      tenantId: capitalGrilleTenant.id,
+      slug: "capital-grille-manhattan",
+      name: "The Capital Grille - Manhattan",
+      description: "Our flagship location on Madison Avenue",
+      address: "155 E 42nd St",
+      city: "New York",
+      state: "NY",
+      zipCode: "10017",
+      country: "US",
+      phone: "(212) 555-0300",
+      email: "manhattan@capitalgrille.com",
+      logoUrl: "https://images.unsplash.com/photo-1550966871-3ed3cdb51f3a?w=200&h=200&fit=crop",
+      bannerUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1920&h=600&fit=crop",
+      timezone: "America/New_York",
+      currency: "USD",
+      locale: "en-US",
+      businessHours: {
+        mon: { open: "17:00", close: "23:00" },
+        tue: { open: "17:00", close: "23:00" },
+        wed: { open: "17:00", close: "23:00" },
+        thu: { open: "17:00", close: "23:00" },
+        fri: { open: "17:00", close: "00:00" },
+        sat: { open: "16:00", close: "00:00" },
+        sun: { open: "16:00", close: "22:00" },
+      },
+      settings: {
+        accepts_pickup: false,
+        accepts_delivery: false,
+        estimated_prep_time: 45,
+        tip_config: {
+          mode: "percentage",
+          tiers: [0.18, 0.2, 0.25],
+          allowCustom: true,
+        },
+        fee_config: { fees: [] },
+      },
+    },
+  });
+
+  console.log(`Created merchant: ${capitalGrilleMerchant.name}`);
+
+  // ==================== Template Demo: The Neighborhood Kitchen (Casual) ====================
+  console.log("\nCreating The Neighborhood Kitchen (casual template)...");
+
+  const neighborhoodSettings = {
+    defaultCurrency: "USD",
+    defaultLocale: "en-US",
+    defaultTimezone: "America/Chicago",
+    websiteTemplate: "casual",
+    themePreset: "green",
+    website: {
+      tagline: "Family-Style Comfort Food Made Fresh Daily",
+      heroImage: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1920&h=1080&fit=crop",
+      socialLinks: [
+        { platform: "facebook", url: "https://facebook.com/neighborhoodkitchen" },
+        { platform: "instagram", url: "https://instagram.com/neighborhoodkitchen" },
+        { platform: "yelp", url: "https://yelp.com/biz/neighborhood-kitchen" },
+      ],
+      reviews: [
+        {
+          id: "nk-review-1",
+          customerName: "Maria G.",
+          rating: 5,
+          content: "This place feels like home! The meatloaf is just like my grandmother used to make. Great portions and even better prices.",
+          date: "2024-01-20",
+          source: "google",
+        },
+        {
+          id: "nk-review-2",
+          customerName: "Tom B.",
+          rating: 5,
+          content: "Perfect family dinner spot. Kids loved the mac and cheese, and the fried chicken is the best in town. Will be back!",
+          date: "2024-01-18",
+          source: "yelp",
+        },
+        {
+          id: "nk-review-3",
+          customerName: "Amy R.",
+          rating: 5,
+          content: "Warm atmosphere, friendly staff, and generous portions. The homemade pies are a must-try. A real neighborhood gem!",
+          date: "2024-01-15",
+          source: "google",
+        },
+      ],
+    },
+  };
+
+  const neighborhoodTenant = await prisma.tenant.upsert({
+    where: { id: "tenant-neighborhood-kitchen" },
+    update: { settings: neighborhoodSettings },
+    create: {
+      id: "tenant-neighborhood-kitchen",
+      slug: "neighborhood-kitchen",
+      name: "The Neighborhood Kitchen",
+      description: "Family-style comfort food made fresh daily with locally sourced ingredients",
+      logoUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&h=200&fit=crop",
+      websiteUrl: "https://neighborhoodkitchen.com",
+      supportEmail: "hello@neighborhoodkitchen.com",
+      supportPhone: "(312) 555-0400",
+      currency: "USD",
+      locale: "en-US",
+      timezone: "America/Chicago",
+      subscriptionPlan: "free",
+      subscriptionStatus: "active",
+      settings: neighborhoodSettings,
+    },
+  });
+
+  console.log(`Created tenant: ${neighborhoodTenant.name}`);
+
+  const neighborhoodMerchant = await prisma.merchant.upsert({
+    where: { slug: "neighborhood-kitchen-lincoln-park" },
+    update: {},
+    create: {
+      id: "merchant-neighborhood-lincoln-park",
+      tenantId: neighborhoodTenant.id,
+      slug: "neighborhood-kitchen-lincoln-park",
+      name: "The Neighborhood Kitchen - Lincoln Park",
+      description: "Our cozy Lincoln Park location",
+      address: "2345 N Lincoln Ave",
+      city: "Chicago",
+      state: "IL",
+      zipCode: "60614",
+      country: "US",
+      phone: "(312) 555-0400",
+      email: "lincolnpark@neighborhoodkitchen.com",
+      logoUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&h=200&fit=crop",
+      bannerUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1920&h=600&fit=crop",
+      timezone: "America/Chicago",
+      currency: "USD",
+      locale: "en-US",
+      businessHours: {
+        mon: { open: "11:00", close: "21:00" },
+        tue: { open: "11:00", close: "21:00" },
+        wed: { open: "11:00", close: "21:00" },
+        thu: { open: "11:00", close: "21:00" },
+        fri: { open: "11:00", close: "22:00" },
+        sat: { open: "10:00", close: "22:00" },
+        sun: { open: "10:00", close: "21:00" },
+      },
+      settings: {
+        accepts_pickup: true,
+        accepts_delivery: true,
+        delivery_radius: 5,
+        minimum_order_amount: 20,
+        estimated_prep_time: 25,
+        tip_config: {
+          mode: "percentage",
+          tiers: [0.15, 0.18, 0.2],
+          allowCustom: true,
+        },
+        fee_config: {
+          fees: [
+            {
+              id: "service-fee",
+              name: "service_fee",
+              displayName: "Service Fee",
+              type: "percentage",
+              value: 0.03,
+            },
+          ],
+        },
+      },
+    },
+  });
+
+  console.log(`Created merchant: ${neighborhoodMerchant.name}`);
+
+  // ==================== Template Demo: The Velvet Lounge (Bar & Lounge) ====================
+  console.log("\nCreating The Velvet Lounge (bar_lounge template)...");
+
+  const velvetLoungeSettings = {
+    defaultCurrency: "USD",
+    defaultLocale: "en-US",
+    defaultTimezone: "America/Los_Angeles",
+    websiteTemplate: "bar_lounge",
+    themePreset: "red",
+    website: {
+      tagline: "Craft Cocktails & Late Night Bites",
+      heroImage: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=1920&h=1080&fit=crop",
+      socialLinks: [
+        { platform: "facebook", url: "https://facebook.com/velvetlounge" },
+        { platform: "instagram", url: "https://instagram.com/velvetlounge" },
+      ],
+      reviews: [
+        {
+          id: "vl-review-1",
+          customerName: "Alex D.",
+          rating: 5,
+          content: "Best cocktail bar in LA! The mixologists are true artists. The smoky old fashioned is a must-try. Incredible atmosphere.",
+          date: "2024-02-20",
+          source: "google",
+        },
+        {
+          id: "vl-review-2",
+          customerName: "Nicole F.",
+          rating: 5,
+          content: "Amazing vibe and even better drinks. The speakeasy feel is authentic, not gimmicky. Late night food menu is surprisingly good.",
+          date: "2024-02-18",
+          source: "yelp",
+        },
+        {
+          id: "vl-review-3",
+          customerName: "Marcus J.",
+          rating: 5,
+          content: "Perfect spot for date night. Live jazz on Fridays, craft cocktails, and the dim lighting creates an unforgettable mood.",
+          date: "2024-02-14",
+          source: "google",
+        },
+      ],
+    },
+  };
+
+  const velvetLoungeTenant = await prisma.tenant.upsert({
+    where: { id: "tenant-velvet-lounge" },
+    update: { settings: velvetLoungeSettings },
+    create: {
+      id: "tenant-velvet-lounge",
+      slug: "velvet-lounge",
+      name: "The Velvet Lounge",
+      description: "Craft cocktails and late night bites in an intimate speakeasy setting",
+      logoUrl: "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?w=200&h=200&fit=crop",
+      websiteUrl: "https://velvetlounge.com",
+      supportEmail: "info@velvetlounge.com",
+      supportPhone: "(323) 555-0500",
+      currency: "USD",
+      locale: "en-US",
+      timezone: "America/Los_Angeles",
+      subscriptionPlan: "free",
+      subscriptionStatus: "active",
+      settings: velvetLoungeSettings,
+    },
+  });
+
+  console.log(`Created tenant: ${velvetLoungeTenant.name}`);
+
+  const velvetLoungeMerchant = await prisma.merchant.upsert({
+    where: { slug: "velvet-lounge-hollywood" },
+    update: {},
+    create: {
+      id: "merchant-velvet-lounge-hollywood",
+      tenantId: velvetLoungeTenant.id,
+      slug: "velvet-lounge-hollywood",
+      name: "The Velvet Lounge - Hollywood",
+      description: "Our flagship speakeasy on Sunset Boulevard",
+      address: "8765 Sunset Blvd",
+      city: "Los Angeles",
+      state: "CA",
+      zipCode: "90069",
+      country: "US",
+      phone: "(323) 555-0500",
+      email: "hollywood@velvetlounge.com",
+      logoUrl: "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?w=200&h=200&fit=crop",
+      bannerUrl: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=1920&h=600&fit=crop",
+      timezone: "America/Los_Angeles",
+      currency: "USD",
+      locale: "en-US",
+      businessHours: {
+        mon: { open: "17:00", close: "02:00" },
+        tue: { open: "17:00", close: "02:00" },
+        wed: { open: "17:00", close: "02:00" },
+        thu: { open: "17:00", close: "02:00" },
+        fri: { open: "16:00", close: "03:00" },
+        sat: { open: "16:00", close: "03:00" },
+        sun: { closed: true },
+      },
+      settings: {
+        accepts_pickup: false,
+        accepts_delivery: false,
+        estimated_prep_time: 15,
+        tip_config: {
+          mode: "percentage",
+          tiers: [0.18, 0.2, 0.25],
+          allowCustom: true,
+        },
+        fee_config: { fees: [] },
+      },
+    },
+  });
+
+  console.log(`Created merchant: ${velvetLoungeMerchant.name}`);
+
+  // ==================== Users for All Tenants ====================
+  console.log("\nCreating users for all tenants...");
+
+  const sharedPasswordHash = await bcrypt.hash("test123", 10);
 
   const joesUser = await prisma.user.upsert({
     where: {
@@ -1520,7 +1877,7 @@ async function main() {
       id: "user-joes-pizza-owner",
       tenantId: tenant.id,
       email: "joe@joespizza.com",
-      passwordHash: joesPasswordHash,
+      passwordHash: sharedPasswordHash,
       name: "Joe Smith",
       role: "owner",
       status: "active",
@@ -1528,8 +1885,6 @@ async function main() {
   });
 
   console.log(`Created Joe's Pizza user: ${joesUser.email}`);
-
-  const bellaPasswordHash = await bcrypt.hash("test123", 10);
 
   const bellaUser = await prisma.user.upsert({
     where: {
@@ -1543,7 +1898,7 @@ async function main() {
       id: "user-bellas-bakery-owner",
       tenantId: bellaTenant.id,
       email: "bella@bellasbakery.com",
-      passwordHash: bellaPasswordHash,
+      passwordHash: sharedPasswordHash,
       name: "Bella Martinez",
       role: "owner",
       status: "active",
@@ -1551,6 +1906,69 @@ async function main() {
   });
 
   console.log(`Created Bella's Bakery user: ${bellaUser.email}`);
+
+  const capitalGrilleUser = await prisma.user.upsert({
+    where: {
+      tenantId_email: {
+        tenantId: capitalGrilleTenant.id,
+        email: "chef@capitalgrille.com",
+      },
+    },
+    update: {},
+    create: {
+      id: "user-capital-grille-owner",
+      tenantId: capitalGrilleTenant.id,
+      email: "chef@capitalgrille.com",
+      passwordHash: sharedPasswordHash,
+      name: "Richard Laurent",
+      role: "owner",
+      status: "active",
+    },
+  });
+
+  console.log(`Created Capital Grille user: ${capitalGrilleUser.email}`);
+
+  const neighborhoodUser = await prisma.user.upsert({
+    where: {
+      tenantId_email: {
+        tenantId: neighborhoodTenant.id,
+        email: "mike@neighborhoodkitchen.com",
+      },
+    },
+    update: {},
+    create: {
+      id: "user-neighborhood-kitchen-owner",
+      tenantId: neighborhoodTenant.id,
+      email: "mike@neighborhoodkitchen.com",
+      passwordHash: sharedPasswordHash,
+      name: "Mike Johnson",
+      role: "owner",
+      status: "active",
+    },
+  });
+
+  console.log(`Created Neighborhood Kitchen user: ${neighborhoodUser.email}`);
+
+  const velvetLoungeUser = await prisma.user.upsert({
+    where: {
+      tenantId_email: {
+        tenantId: velvetLoungeTenant.id,
+        email: "owner@velvetlounge.com",
+      },
+    },
+    update: {},
+    create: {
+      id: "user-velvet-lounge-owner",
+      tenantId: velvetLoungeTenant.id,
+      email: "owner@velvetlounge.com",
+      passwordHash: sharedPasswordHash,
+      name: "Diana Chen",
+      role: "owner",
+      status: "active",
+    },
+  });
+
+  console.log(`Created Velvet Lounge user: ${velvetLoungeUser.email}`);
 
   // ==================== Onboarding Test Account ====================
   console.log("\nCreating onboarding test account...");
@@ -1602,9 +2020,6 @@ async function main() {
   console.log(`Created onboarding merchant: ${onboardingMerchant.name}`);
 
   // Create test user for login (password: "test123")
-  // Password hash for "test123" using bcrypt
-  const passwordHash = await bcrypt.hash("test123", 10);
-
   const onboardingUser = await prisma.user.upsert({
     where: {
       tenantId_email: {
@@ -1617,7 +2032,7 @@ async function main() {
       id: "user-onboarding-test",
       tenantId: onboardingTenant.id,
       email: "test@example.com",
-      passwordHash: passwordHash,
+      passwordHash: sharedPasswordHash,
       name: "Onboarding Test User",
       role: "owner",
       status: "active",
@@ -1626,11 +2041,18 @@ async function main() {
 
   console.log(`Created onboarding test user: ${onboardingUser.email}`);
   console.log("\n✅ All accounts ready!");
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("Joe's Pizza:      joe@joespizza.com / test123");
-  console.log("Bella's Bakery:   bella@bellasbakery.com / test123");
-  console.log("Onboarding Test:  test@example.com / test123");
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("Template       | Tenant                    | Slug                         | Email / Password");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("fast_casual    | Joe's Pizza               | /joes-pizza                  | joe@joespizza.com");
+  console.log("cafe_bakery    | Bella's Bakery            | /bellas-bakery               | bella@bellasbakery.com");
+  console.log("fine_dining    | The Capital Grille        | /capital-grille              | chef@capitalgrille.com");
+  console.log("casual         | The Neighborhood Kitchen  | /neighborhood-kitchen        | mike@neighborhoodkitchen.com");
+  console.log("bar_lounge     | The Velvet Lounge         | /velvet-lounge               | owner@velvetlounge.com");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("(onboarding)   | New Restaurant            | /onboarding-test             | test@example.com");
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("All passwords: test123\n");
 
   // Sync loyalty member stats from historical orders
   await syncLoyaltyMemberStats();
