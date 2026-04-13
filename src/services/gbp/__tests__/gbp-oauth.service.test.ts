@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GbpOAuthService } from "../gbp-oauth.service";
 import { AppError } from "@/lib/errors";
 
+vi.mock("@/lib/proxy", () => ({
+  getProxyDispatcher: vi.fn(() => undefined),
+}));
+
 vi.mock("../gbp.config", () => ({
   gbpConfig: {
     clientId: "test-client-id",
@@ -131,6 +135,33 @@ describe("GbpOAuthService", () => {
   });
 
   describe("exchangeCode()", () => {
+    it("should pass dispatcher to fetch when proxy is configured", async () => {
+      const { getProxyDispatcher } = await import("@/lib/proxy");
+      const fakeDispatcher = { fake: true };
+      vi.mocked(getProxyDispatcher).mockReturnValue(fakeDispatcher as never);
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: "access-123",
+            refresh_token: "refresh-456",
+            expires_in: 3600,
+          }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await service.exchangeCode("auth-code-abc");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://oauth2.googleapis.com/token",
+        expect.objectContaining({ dispatcher: fakeDispatcher })
+      );
+
+      vi.mocked(getProxyDispatcher).mockReturnValue(undefined);
+      vi.unstubAllGlobals();
+    });
+
     it("should call Google token endpoint and return token response", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -176,6 +207,33 @@ describe("GbpOAuthService", () => {
   });
 
   describe("refreshToken()", () => {
+    it("should pass dispatcher to fetch when proxy is configured", async () => {
+      const { getProxyDispatcher } = await import("@/lib/proxy");
+      const fakeDispatcher = { fake: true };
+      vi.mocked(getProxyDispatcher).mockReturnValue(fakeDispatcher as never);
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: "new-access-789",
+            refresh_token: "new-refresh-012",
+            expires_in: 3600,
+          }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await service.refreshToken("old-refresh-token");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://oauth2.googleapis.com/token",
+        expect.objectContaining({ dispatcher: fakeDispatcher })
+      );
+
+      vi.mocked(getProxyDispatcher).mockReturnValue(undefined);
+      vi.unstubAllGlobals();
+    });
+
     it("should call Google token endpoint with refresh_token grant", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,

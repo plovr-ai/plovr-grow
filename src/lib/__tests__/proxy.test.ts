@@ -56,4 +56,5 @@ describe("getProxyDispatcher", () => {
     const dispatcher = getProxyDispatcher();
     expect(dispatcher).toBeDefined();
   });
+
 });
