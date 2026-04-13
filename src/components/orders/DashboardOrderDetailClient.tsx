@@ -132,12 +132,12 @@ function OrderStatusProgress({
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to mark order as paid");
+        throw new Error(data.error || t("actions.markPaidFailed"));
       }
 
       router.refresh();
     } catch (err) {
-      setMarkPaidError(err instanceof Error ? err.message : "An error occurred");
+      setMarkPaidError(err instanceof Error ? err.message : t("actions.markPaidError"));
     } finally {
       setIsMarkingPaid(false);
     }
