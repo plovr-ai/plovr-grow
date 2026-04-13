@@ -8,7 +8,15 @@ import { FooterSection } from "./FooterSection";
 export function CafeBakeryPage({
   websiteData,
   featuredItems,
+  companySlug,
+  merchantSlug,
+  locationCount,
 }: TemplatePageProps) {
+  const hasSingleMerchant = locationCount === 1;
+  const menuLink = hasSingleMerchant
+    ? `/r/${merchantSlug}/menu`
+    : `/${companySlug}/locations`;
+
   const reviews = websiteData.reviews || [];
 
   return (
@@ -20,6 +28,7 @@ export function CafeBakeryPage({
       />
       <SpecialsSection
         items={featuredItems}
+        menuLink={menuLink}
         currency={websiteData.currency}
         locale={websiteData.locale}
       />

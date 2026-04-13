@@ -13,7 +13,7 @@ function formatPrice(price: number, currency: string, locale: string): string {
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
-  }).format(price / 100);
+  }).format(price);
 }
 
 export function DrinksShowcase({
