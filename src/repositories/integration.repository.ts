@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
 import prisma from "@/lib/db";
 import type { DbClient } from "@/lib/db";
 import { generateEntityId } from "@/lib/id";
@@ -40,6 +40,18 @@ export class IntegrationRepository {
         deleted: false,
       },
     });
+  }
+
+  /**
+   * Lock the IntegrationConnection row (FOR UPDATE).
+   * Must be called within a prisma.$transaction() context.
+   */
+  async getConnectionForUpdate(connectionId: string, tx: DbClient) {
+    const rows = await (tx as PrismaClient).$queryRaw<
+      Array<{ id: string }>
+    >`SELECT id FROM integration_connections WHERE id = ${connectionId} AND deleted = false FOR UPDATE`;
+    if (rows.length === 0) return null;
+    return { id: rows[0].id };
   }
 
   async getActivePosConnection(tenantId: string, merchantId: string) {
@@ -153,6 +165,29 @@ export class IntegrationRepository {
         warnings: stats.warnings.slice(0, 100),
       };
       prismaData.stats = truncated as unknown as Prisma.InputJsonValue;
+    }
+
+    // Guard against stale cursor overwrite: if a newer successful sync already
+    // finished for the same connection, drop the cursor from this update so we
+    // don't regress it.
+    if (data.cursor && data.status === "success") {
+      const thisRecord = await prisma.integrationSyncRecord.findUnique({
+        where: { id: recordId },
+        select: { connectionId: true, startedAt: true },
+      });
+      if (thisRecord) {
+        const newerSync = await prisma.integrationSyncRecord.findFirst({
+          where: {
+            connectionId: thisRecord.connectionId,
+            status: "success",
+            cursor: { not: null },
+            startedAt: { gt: thisRecord.startedAt },
+          },
+        });
+        if (newerSync) {
+          delete prismaData.cursor;
+        }
+      }
     }
 
     return prisma.integrationSyncRecord.update({
