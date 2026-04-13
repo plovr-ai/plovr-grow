@@ -6,6 +6,7 @@ const PLACE_DETAILS_FIELDS = [
   "displayName", "formattedAddress", "addressComponents",
   "nationalPhoneNumber", "regularOpeningHours", "photos",
   "reviews", "websiteUri", "googleMapsUri",
+  "primaryType", "types",
 ].join(",");
 
 export interface PlaceReview {
@@ -33,6 +34,8 @@ export interface PlaceDetails {
   businessHours: Record<string, BusinessHourEntry>;
   photoReferences: string[];
   reviews: PlaceReview[];
+  primaryType?: string;
+  types?: string[];
 }
 
 interface AddressComponent {
@@ -138,6 +141,8 @@ export class GooglePlacesClient {
         text: r.text?.text ?? "",
         relativeTime: r.relativePublishTimeDescription ?? "",
       })),
+      primaryType: (data.primaryType as string | undefined) ?? undefined,
+      types: (data.types as string[] | undefined) ?? undefined,
     };
   }
 }
