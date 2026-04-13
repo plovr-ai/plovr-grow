@@ -47,3 +47,35 @@ Always check the `@@map()` annotation on the Prisma model to determine the actua
 Before writing any migration SQL, grep for `@@map` on the target model to find the actual table name.
 
 ---
+
+## [184] vi.mock factory cannot reference top-level variables (vitest hoisting)
+
+**Date**: 2026-04-13
+**Category**: api-misuse
+
+### What went wrong
+Created a `PrismaClient` at the top level and referenced it inside a `vi.mock("@/lib/db")` factory function. The factory is hoisted to the top of the file and runs before variable initialization, causing `ReferenceError: Cannot access 'prisma' before initialization`.
+
+### Correct approach
+Use `vi.hoisted()` to create any value that needs to be referenced inside a `vi.mock()` factory. `vi.hoisted()` callback runs in the hoisted scope and its return value is available to mock factories.
+
+### How to avoid
+When a `vi.mock()` factory needs to reference a variable, always wrap that variable's creation in `vi.hoisted()`.
+
+---
+
+## [184] Event listener leak across integration test describe blocks
+
+**Date**: 2026-04-13
+**Category**: test-mistake
+
+### What went wrong
+`unregisterOrderEventHandlers()` only sets an `isRegistered` flag to `false` — it does NOT remove the actual event listeners from the emitter. Handlers from one test block remained active in subsequent blocks, consuming `mockRejectedValueOnce` before the intended test could use it.
+
+### Correct approach
+Set mock behavior (e.g., `mockRejectedValue`) BEFORE any action that triggers the event (like `createMerchantOrderAtomic`), not after. Assume listeners from prior tests may still be active.
+
+### How to avoid
+In tests that rely on event-driven side effects, configure mocks before triggering the event source, and use `mockRejectedValue` (persistent) instead of `mockRejectedValueOnce` when lingering listeners may consume the mock.
+
+---
