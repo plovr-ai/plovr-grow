@@ -196,10 +196,14 @@ export class OrderService {
         return await this._createMerchantOrderAtomicInner(tenantId, input, options);
       } catch (error) {
         lastError = error;
-        const isPrismaConflict =
+        // P2034 = transaction conflict, P2028 = transaction API error (deadlock),
+        // "Deadlock" in message = MySQL InnoDB deadlock detected.
+        const isRetriable =
           error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === "P2034";
-        if (!isPrismaConflict || attempt === MAX_RETRIES - 1) {
+          (error.code === "P2034" || error.code === "P2028");
+        const isDeadlock =
+          error instanceof Error && error.message.includes("Deadlock");
+        if ((!isRetriable && !isDeadlock) || attempt === MAX_RETRIES - 1) {
           throw error;
         }
         // Brief backoff before retry
