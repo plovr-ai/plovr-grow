@@ -15,7 +15,6 @@
  * Requires: MySQL running with DATABASE_URL configured
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
-import { PrismaClient } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
 
 // ---------------------------------------------------------------------------
@@ -97,14 +96,19 @@ vi.mock("@/services/square/square.service", () => ({
 
 // ---------------------------------------------------------------------------
 // Real PrismaClient + override @/lib/db for repository code
+//
+// vi.mock factories are hoisted to the top of the file and execute before
+// any top-level variable initializations. We must create the PrismaClient
+// inside vi.hoisted() so the reference is available when the factory runs.
 // ---------------------------------------------------------------------------
 
-const TEST_DB_URL =
-  process.env.DATABASE_URL ||
-  "mysql://root:password@localhost:3306/plovr_test";
-
-const prisma = new PrismaClient({
-  datasources: { db: { url: TEST_DB_URL } },
+const prisma = vi.hoisted(() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { PrismaClient: PC } = require("@prisma/client") as typeof import("@prisma/client");
+  const url =
+    process.env.DATABASE_URL ||
+    "mysql://root:password@localhost:3306/plovr_test";
+  return new PC({ datasources: { db: { url } } });
 });
 
 vi.mock("@/lib/db", () => ({
