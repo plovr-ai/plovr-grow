@@ -1,5 +1,21 @@
 # Mistakes Log
 
+## [200] Prisma model field names don't always match intuitive names
+
+**Date**: 2026-04-13
+**Category**: wrong-assumption
+
+### What went wrong
+Used `subtotalAmount` and `type` as field names when creating Order and OrderFulfillment records in test setup. The actual Prisma schema uses `subtotal` (not `subtotalAmount`) for Order, and OrderFulfillment has no `type` field at all.
+
+### Correct approach
+Always check the Prisma schema (`prisma/schema.prisma`) for exact field names before writing `prisma.model.create()` calls. Don't guess field names from other types or service interfaces.
+
+### How to avoid
+Before any `prisma.*.create()` in tests, grep `model <ModelName>` in `schema.prisma` to confirm field names.
+
+---
+
 ## [128] Integration test cleanup must delete new FK-dependent tables
 
 **Date**: 2026-04-12
