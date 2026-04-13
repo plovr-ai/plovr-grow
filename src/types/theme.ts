@@ -26,13 +26,13 @@ export interface ThemeConfig {
 }
 
 /**
- * Default theme (red) - used when merchant has no custom config
+ * Default theme (amber) - used when merchant has no custom config
  */
 export const DEFAULT_THEME: ThemeConfig = {
   primary: {
-    base: "0 84% 60%", // red-600 equivalent
-    hover: "0 84% 54%", // red-700 equivalent
-    light: "0 86% 97%", // red-50 equivalent
+    base: "45 100% 48%", // #f5b800
+    hover: "38 100% 35%", // amber-700 (#b27900)
+    light: "45 100% 97%", // amber-50 (#fffaeb)
     foreground: "0 0% 100%", // white
   },
 };
@@ -41,7 +41,15 @@ export const DEFAULT_THEME: ThemeConfig = {
  * Preset themes for quick merchant selection
  */
 export const THEME_PRESETS = {
-  red: DEFAULT_THEME,
+  amber: DEFAULT_THEME,
+  red: {
+    primary: {
+      base: "0 84% 60%", // red-600
+      hover: "0 84% 54%", // red-700
+      light: "0 86% 97%", // red-50
+      foreground: "0 0% 100%",
+    },
+  },
   blue: {
     primary: {
       base: "221 83% 53%", // blue-600

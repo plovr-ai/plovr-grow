@@ -6,10 +6,10 @@
   --background: #ffffff;
   --foreground: #171717;
 
-  /* Theme colors - defaults (red-600 equivalent) */
-  --theme-primary: 0 84% 60%;
-  --theme-primary-hover: 0 84% 54%;
-  --theme-primary-light: 0 86% 97%;
+  /* Theme colors - defaults (amber) */
+  --theme-primary: 45 100% 48%;
+  --theme-primary-hover: 38 100% 35%;
+  --theme-primary-light: 45 100% 97%;
   --theme-primary-foreground: 0 0% 100%;
 
   /* Website theme — amber/yellow (from website-ava) */
