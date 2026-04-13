@@ -154,7 +154,16 @@ export class MerchantService {
       currency: tenantSettings?.defaultCurrency || "USD",
       locale: tenantSettings?.defaultLocale || "en-US",
       featuredItems,
-      reviews: tenantWebsite?.reviews || [],
+      reviews: (tenantWebsite?.reviews || []).map(
+        (r: Record<string, unknown>, i: number) => ({
+          id: String(r.id || `review-${i}`),
+          customerName: String(r.customerName || r.author || "Anonymous"),
+          rating: Number(r.rating || 5),
+          content: String(r.content || r.text || ""),
+          date: String(r.date || new Date().toISOString()),
+          source: String(r.source || "google") as "google" | "yelp" | "facebook" | "website",
+        })
+      ),
     };
 
     return websiteData;

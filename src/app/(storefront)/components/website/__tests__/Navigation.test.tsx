@@ -498,6 +498,29 @@ describe("Navigation", () => {
     });
   });
 
+  describe("empty logo fallback", () => {
+    it("should not render an img element for logo when logo is empty string", () => {
+      render(
+        <TestWrapper>
+          <Navigation logo="" restaurantName="Joe's Pizza" companySlug="joes-pizza" />
+        </TestWrapper>
+      );
+
+      expect(screen.queryByAltText("Joe's Pizza")).not.toBeInTheDocument();
+    });
+
+    it("should render the first letter of restaurant name as fallback when logo is empty string", () => {
+      render(
+        <TestWrapper>
+          <Navigation logo="" restaurantName="Joe's Pizza" companySlug="joes-pizza" />
+        </TestWrapper>
+      );
+
+      const fallback = screen.getByText("J");
+      expect(fallback.tagName).toBe("SPAN");
+    });
+  });
+
   describe("Sign In modal", () => {
     it("should open Sign In modal when button is clicked", async () => {
       render(

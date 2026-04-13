@@ -483,6 +483,73 @@ describe("MerchantService (unit tests)", () => {
 
       expect(result?.reviews).toEqual([]);
     });
+
+    it("should map Google Places review fields (author/text) to CustomerReview format (customerName/content)", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: {
+          website: {
+            reviews: [
+              {
+                author: "Jane S.",
+                text: "Amazing food and great service!",
+                rating: 4,
+                source: "google",
+              },
+            ],
+          },
+        },
+      } as never);
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
+
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
+
+      expect(result?.reviews).toHaveLength(1);
+      expect(result?.reviews?.[0].customerName).toBe("Jane S.");
+      expect(result?.reviews?.[0].content).toBe("Amazing food and great service!");
+      expect(result?.reviews?.[0].rating).toBe(4);
+      expect(result?.reviews?.[0].source).toBe("google");
+    });
+
+    it("should fallback to 'Anonymous' when both customerName and author are empty strings", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: {
+          website: {
+            reviews: [
+              {
+                customerName: "",
+                author: "",
+                text: "Good food",
+                rating: 3,
+              },
+            ],
+          },
+        },
+      } as never);
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
+
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
+
+      expect(result?.reviews).toHaveLength(1);
+      expect(result?.reviews?.[0].customerName).toBe("Anonymous");
+    });
+
+    it("should return empty reviews array when no reviews in tenant settings", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: {
+          website: {
+            tagline: "Some tagline",
+          },
+        },
+      } as never);
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
+
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
+
+      expect(result?.reviews).toEqual([]);
+    });
   });
 
   // ==================== getMerchantBySlug ====================

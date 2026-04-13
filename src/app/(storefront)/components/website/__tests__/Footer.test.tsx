@@ -353,6 +353,23 @@ describe("Footer", () => {
     });
   });
 
+  describe("empty logo fallback", () => {
+    it("should not render an img for logo when merchant.logo is empty string", () => {
+      const merchantWithEmptyLogo = { ...mockMerchant, logo: "" };
+      renderWithProvider(<Footer merchant={merchantWithEmptyLogo} companySlug="joes-pizza" />);
+
+      expect(screen.queryByAltText("Joe's Pizza")).not.toBeInTheDocument();
+    });
+
+    it("should render first letter of merchant name when merchant.logo is empty string", () => {
+      const merchantWithEmptyLogo = { ...mockMerchant, logo: "" };
+      renderWithProvider(<Footer merchant={merchantWithEmptyLogo} companySlug="joes-pizza" />);
+
+      const fallback = screen.getByText("J");
+      expect(fallback.tagName).toBe("SPAN");
+    });
+  });
+
   describe("slug fallback", () => {
     it("should use empty string when neither companySlug nor tenantSlug provided", () => {
       renderWithProvider(<Footer merchant={mockMerchant} />);

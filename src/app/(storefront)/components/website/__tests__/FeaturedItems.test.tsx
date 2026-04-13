@@ -388,4 +388,22 @@ describe("FeaturedItems", () => {
       expect(mockPush).toHaveBeenCalledWith("/joes-pizza/locations?addItem=item-pizza");
     });
   });
+
+  describe("empty items", () => {
+    it("should return null when items array is empty", () => {
+      const { container } = render(<FeaturedItems items={[]} />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      expect(container.innerHTML).toBe("");
+    });
+
+    it("should not render section heading when no items", () => {
+      render(<FeaturedItems items={[]} />, {
+        wrapper: createWrapper("USD", "en-US"),
+      });
+
+      expect(screen.queryByText("Featured Items")).not.toBeInTheDocument();
+    });
+  });
 });

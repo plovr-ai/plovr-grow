@@ -294,6 +294,7 @@ export class TenantService {
         data: {
           name: details.name,
           slug: newMerchantSlug,
+          status: "active",
           address: details.address,
           city: details.city,
           state: details.state,

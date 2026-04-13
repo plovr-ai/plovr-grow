@@ -22,6 +22,8 @@ export function FeaturedItems({
   const formatPrice = useFormatPrice();
   const router = useRouter();
 
+  if (items.length === 0) return null;
+
   const handleAddClick = (item: FeaturedItem) => {
     // Navigate to menu with addItem param so it can be added with proper tax info
     if (item.menuItemId) {
