@@ -24,7 +24,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Invalid JSON" },
+        { status: 400 }
+      );
+    }
+
     const parsed = cancelOrderSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(

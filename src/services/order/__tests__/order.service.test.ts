@@ -2034,6 +2034,36 @@ describe("OrderService", () => {
       ).rejects.toThrow("ORDER_CANCEL_NOT_ALLOWED");
     });
 
+    it("allows webhook source to cancel fulfilled orders (POS is authoritative)", async () => {
+      const fulfilledOrder = { ...mockOrder, fulfillmentStatus: "fulfilled" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(fulfilledOrder as never);
+      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+
+      await orderService.cancelOrder("tenant-1", "order-1", "Canceled on Square POS", {
+        source: "square_webhook",
+      });
+
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: "order-1" },
+        data: expect.objectContaining({
+          status: "canceled",
+          cancelReason: "Canceled on Square POS",
+        }),
+      });
+    });
+
+    it("allows toast_webhook source to bypass fulfillment guard", async () => {
+      const preparingOrder = { ...mockOrder, fulfillmentStatus: "preparing" };
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(preparingOrder as never);
+      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+
+      await orderService.cancelOrder("tenant-1", "order-1", "Canceled on Toast", {
+        source: "toast_webhook",
+      });
+
+      expect(prisma.order.update).toHaveBeenCalled();
+    });
+
     it("allows cancel when fulfillmentStatus is pending", async () => {
       const pendingOrder = { ...mockOrder, fulfillmentStatus: "pending" };
       vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(pendingOrder as never);
