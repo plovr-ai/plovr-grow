@@ -6,6 +6,7 @@ import { generateEntityId } from "@/lib/id";
 import type { Prisma } from "@prisma/client";
 import type { CreateTenantInput, UpdateTenantInput } from "./tenant.types";
 import { generateUniqueSlug } from "@/services/generator/slug.util";
+import { resolveTemplate } from "@/types/website-template";
 import {
   DEFAULT_ONBOARDING_DATA,
   WEBSITE_DEPENDENT_STEPS,
@@ -241,6 +242,8 @@ export class TenantService {
       websiteUrl?: string;
       businessHours?: unknown;
       reviews?: Array<{ author: string; rating: number; text: string }>;
+      primaryType?: string;
+      types?: string[];
     }
   ) {
     const tenant = await tenantRepository.getWithMerchants(tenantId);
@@ -267,10 +270,13 @@ export class TenantService {
         (await merchantRepository.isSlugAvailable(slug))
     );
 
+    const websiteTemplate = resolveTemplate(details.primaryType, details.types);
+
     const tenantSettings = {
       ...((tenant.settings as Record<string, unknown>) ?? {}),
       themePreset:
         (tenant.settings as Record<string, unknown>)?.themePreset ?? "blue",
+      websiteTemplate,
       website: {
         tagline: "",
         heroImage: "",

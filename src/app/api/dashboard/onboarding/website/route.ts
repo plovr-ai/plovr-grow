@@ -61,6 +61,8 @@ export async function POST(request: NextRequest) {
             rating: r.rating,
             text: r.text,
           })),
+        primaryType: details.primaryType,
+        types: details.types,
       }
     );
 
