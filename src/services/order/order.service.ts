@@ -522,10 +522,17 @@ export class OrderService {
         return;
       }
 
-      await prisma.order.update({
-        where: { id: orderId },
+      // Atomic CAS: only update if status hasn't changed since our read.
+      // Prevents duplicate order.paid events when concurrent webhooks
+      // (e.g. Stripe + Square) both try to mark the same order completed.
+      const result = await prisma.order.updateMany({
+        where: { id: orderId, status: { not: "completed" } },
         data: { status: "completed", paidAt: new Date() },
       });
+      if (result.count === 0) {
+        // Another request already marked it completed — safe to skip
+        return;
+      }
 
       orderEventEmitter.emit("order.paid", {
         orderId,
@@ -556,8 +563,12 @@ export class OrderService {
       return;
     }
 
-    await prisma.order.update({
-      where: { id: orderId },
+    // Atomic CAS: only mark failed if not already in a terminal state
+    await prisma.order.updateMany({
+      where: {
+        id: orderId,
+        status: { notIn: ["completed", "canceled", "payment_failed"] },
+      },
       data: { status: "payment_failed", paymentFailedAt: new Date() },
     });
   }
@@ -679,14 +690,20 @@ export class OrderService {
       }
     }
 
-    await prisma.order.update({
-      where: { id: orderId },
+    // Atomic CAS: only cancel if status hasn't changed to "canceled"
+    // since our read, preventing duplicate order.cancelled events.
+    const cancelResult = await prisma.order.updateMany({
+      where: { id: orderId, status: { not: "canceled" } },
       data: {
         status: "canceled",
         cancelledAt: new Date(),
         cancelReason: reason,
       },
     });
+    if (cancelResult.count === 0) {
+      // Another request already canceled — safe to skip
+      return;
+    }
 
     orderEventEmitter.emit("order.cancelled", {
       orderId,
