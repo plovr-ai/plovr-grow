@@ -164,7 +164,11 @@ export class SquareOrderService {
       if (error instanceof AppError) {
         throw error;
       }
-      throw new AppError(ErrorCodes.SQUARE_ORDER_PUSH_FAILED, undefined, 500);
+      throw new AppError(
+        ErrorCodes.SQUARE_ORDER_PUSH_FAILED,
+        { detail: error instanceof Error ? error.message : String(error) },
+        500
+      );
     }
   }
 
@@ -495,7 +499,7 @@ export class SquareOrderService {
   /**
    * Build service charges for tip and delivery fee.
    *
-   * - tipAmount → AUTO_GRATUITY service charge at TOTAL_PHASE
+   * - tipAmount → CUSTOM service charge at TOTAL_PHASE
    * - deliveryFee → CUSTOM service charge at TOTAL_PHASE
    */
   private buildServiceCharges(
@@ -512,7 +516,7 @@ export class SquareOrderService {
           currency: "USD",
         },
         calculationPhase: "TOTAL_PHASE",
-        type: "AUTO_GRATUITY",
+        type: "CUSTOM",
         taxable: false,
       });
     }
