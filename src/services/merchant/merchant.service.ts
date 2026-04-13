@@ -154,8 +154,8 @@ export class MerchantService {
       currency: tenantSettings?.defaultCurrency || "USD",
       locale: tenantSettings?.defaultLocale || "en-US",
       featuredItems,
-      reviews: (tenantWebsite?.reviews || []).map(
-        (r: Record<string, unknown>, i: number) => ({
+      reviews: ((tenantWebsite?.reviews || []) as unknown as Record<string, unknown>[]).map(
+        (r, i) => ({
           id: String(r.id || `review-${i}`),
           customerName: String(r.customerName || r.author || "Anonymous"),
           rating: Number(r.rating || 5),
