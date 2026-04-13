@@ -7,7 +7,6 @@ import type {
   PaymentIntentResult,
   RetrievedPaymentIntent,
   CreateCustomerInput,
-  PaymentMethodInfo,
   CreateSubscriptionCheckoutInput,
   SubscriptionCheckoutResult,
   CreateBillingPortalInput,
@@ -255,72 +254,6 @@ export class StripeService {
     });
 
     return customer.id;
-  }
-
-  /**
-   * List saved payment methods for a customer
-   */
-  async listPaymentMethods(customerId: string): Promise<PaymentMethodInfo[]> {
-    if (this.isMockMode()) {
-      console.log("[Stripe Mock] Listing payment methods for:", customerId);
-      return [];
-    }
-
-    const methods = await stripe!.paymentMethods.list({
-      customer: customerId,
-      type: "card",
-    });
-
-    return methods.data.map((pm) => ({
-      id: pm.id,
-      brand: pm.card?.brand || "unknown",
-      last4: pm.card?.last4 || "****",
-      expMonth: pm.card?.exp_month || 0,
-      expYear: pm.card?.exp_year || 0,
-    }));
-  }
-
-  /**
-   * Detach (delete) a payment method from a customer
-   */
-  async detachPaymentMethod(paymentMethodId: string): Promise<void> {
-    if (this.isMockMode()) {
-      console.log("[Stripe Mock] Detaching payment method:", paymentMethodId);
-      return;
-    }
-
-    await stripe!.paymentMethods.detach(paymentMethodId);
-  }
-
-  /**
-   * Get a customer by ID
-   */
-  async getCustomer(
-    customerId: string
-  ): Promise<{ id: string; email: string | null; name: string | null } | null> {
-    if (this.isMockMode()) {
-      console.log("[Stripe Mock] Getting customer:", customerId);
-      return {
-        id: customerId,
-        email: "mock@example.com",
-        name: "Mock Customer",
-      };
-    }
-
-    try {
-      const customer = await stripe!.customers.retrieve(customerId);
-      if (customer.deleted) {
-        return null;
-      }
-      return {
-        id: customer.id,
-        email: customer.email,
-        name: customer.name ?? null,
-      };
-    } catch (err) {
-      console.error("Failed to retrieve customer:", err);
-      return null;
-    }
   }
 
   // ==================== Subscription Methods ====================

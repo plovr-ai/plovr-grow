@@ -54,7 +54,6 @@ model Tenant {
   cateringOrderSequences CateringOrderSequence[]
   invoiceSequences       InvoiceSequence[]
   payments               Payment[]
-  stripeCustomers        StripeCustomer[]
   subscription           Subscription?
   merchants              Merchant[]
 
@@ -518,7 +517,6 @@ model LoyaltyMember {
   tenant            Tenant             @relation(fields: [tenantId], references: [id])
   pointTransactions PointTransaction[]
   orders            Order[]
-  stripeCustomer    StripeCustomer?
 
   @@unique([tenantId, phone])
   @@index([phone])
@@ -882,24 +880,6 @@ model StripePaymentDetail {
   payment Payment @relation(fields: [paymentId], references: [id])
 
   @@map("stripe_payment_details")
-}
-
-/// Stripe customer mapping for saved cards
-model StripeCustomer {
-  id               String   @id
-  tenantId         String   @map("tenant_id")
-  loyaltyMemberId  String   @unique @map("loyalty_member_id")
-  stripeCustomerId String   @unique @map("stripe_customer_id")
-  deleted          Boolean  @default(false)
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-
-  tenant        Tenant        @relation(fields: [tenantId], references: [id])
-  loyaltyMember LoyaltyMember @relation(fields: [loyaltyMemberId], references: [id])
-
-  @@index([tenantId])
-  @@index([stripeCustomerId])
-  @@map("stripe_customers")
 }
 
 model StripeConnectAccount {

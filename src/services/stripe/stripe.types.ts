@@ -80,14 +80,6 @@ export interface CreateCustomerInput {
   metadata?: Record<string, string>;
 }
 
-export interface PaymentMethodInfo {
-  id: string;
-  brand: string;
-  last4: string;
-  expMonth: number;
-  expYear: number;
-}
-
 // ==================== Subscription Types ====================
 
 export interface CreateSubscriptionCheckoutInput {
