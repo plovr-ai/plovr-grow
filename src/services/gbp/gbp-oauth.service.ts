@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { gbpConfig } from "./gbp.config";
 import { AppError, ErrorCodes } from "@/lib/errors";
+import { getProxyDispatcher } from "@/lib/proxy";
 import type { GbpTokenResponse, OAuthState } from "./gbp.types";
 
 const SCOPE = "https://www.googleapis.com/auth/business.manage";
@@ -65,6 +66,7 @@ export class GbpOAuthService {
   }
 
   async exchangeCode(code: string): Promise<GbpTokenResponse> {
+    const dispatcher = getProxyDispatcher();
     const response = await fetch(TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -75,7 +77,8 @@ export class GbpOAuthService {
         redirect_uri: gbpConfig.oauthRedirectUrl,
         grant_type: "authorization_code",
       }),
-    });
+      ...(dispatcher ? { dispatcher } : {}),
+    } as RequestInit);
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -97,6 +100,7 @@ export class GbpOAuthService {
   }
 
   async refreshToken(refreshTokenValue: string): Promise<GbpTokenResponse> {
+    const dispatcher = getProxyDispatcher();
     const response = await fetch(TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -106,7 +110,8 @@ export class GbpOAuthService {
         client_secret: gbpConfig.clientSecret,
         grant_type: "refresh_token",
       }),
-    });
+      ...(dispatcher ? { dispatcher } : {}),
+    } as RequestInit);
 
     if (!response.ok) {
       const errorBody = await response.text();

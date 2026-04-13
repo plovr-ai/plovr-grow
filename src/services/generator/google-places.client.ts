@@ -1,3 +1,5 @@
+import { getProxyDispatcher } from "@/lib/proxy";
+
 const DAY_NAMES = [
   "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
 ] as const;
@@ -76,19 +78,6 @@ function convertOpeningHours(
     };
   }
   return hours;
-}
-
-function getProxyDispatcher(): import("undici").Dispatcher | undefined {
-  const proxyUrl = process.env.https_proxy || process.env.HTTPS_PROXY ||
-    process.env.http_proxy || process.env.HTTP_PROXY;
-  if (!proxyUrl) return undefined;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { ProxyAgent } = require("undici") as typeof import("undici");
-    return new ProxyAgent(proxyUrl);
-  } catch {
-    return undefined;
-  }
 }
 
 export class GooglePlacesClient {
