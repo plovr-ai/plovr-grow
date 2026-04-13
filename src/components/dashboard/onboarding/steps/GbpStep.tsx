@@ -116,8 +116,8 @@ export function GbpStep({ status }: GbpStepProps) {
   if (stepState === "completed" || status === "completed") {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-emerald-800">{t("completedDescription")}</p>
-        <button className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+        <p className="text-sm text-primary">{t("completedDescription")}</p>
+        <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
           {t("completedAction")}
           <ExternalLink className="h-4 w-4" />
         </button>
@@ -147,7 +147,7 @@ export function GbpStep({ status }: GbpStepProps) {
         <p className="text-sm text-gray-600">{t("noLocations")}</p>
         <button
           onClick={fetchLocations}
-          className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           {t("retryButton")}
         </button>
@@ -178,7 +178,7 @@ export function GbpStep({ status }: GbpStepProps) {
               </div>
               <button
                 onClick={() => syncLocation(location.name)}
-                className="rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800"
+                className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
               >
                 {t("selectButton")}
               </button>
@@ -195,7 +195,7 @@ export function GbpStep({ status }: GbpStepProps) {
         <p className="text-sm text-red-600">{errorMessage}</p>
         <button
           onClick={fetchLocations}
-          className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           {t("retryButton")}
         </button>
@@ -235,7 +235,7 @@ export function GbpStep({ status }: GbpStepProps) {
       <div className="flex items-center gap-3">
         <button
           onClick={handleConnect}
-          className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           {t("pendingAction")}
         </button>
