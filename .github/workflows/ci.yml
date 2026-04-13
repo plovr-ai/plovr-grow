@@ -84,6 +84,7 @@ jobs:
           --health-retries=5
     env:
       DATABASE_URL: mysql://root:password@localhost:3306/plovr_test
+      SQUARE_SANDBOX_ACCESS_TOKEN: ${{ secrets.SQUARE_SANDBOX_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
