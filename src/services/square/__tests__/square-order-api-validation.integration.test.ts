@@ -320,7 +320,7 @@ describe.skipIf(!SANDBOX_TOKEN)(
         ],
         totalAmount: subtotal + taxAmount,
         taxAmount,
-        tipAmount: 1.50,       // non-zero to test service charge transformation
+        tipAmount: 0,
         deliveryFee: 0,
         discount: 0,
         notes: "Integration test order",
@@ -445,21 +445,90 @@ describe.skipIf(!SANDBOX_TOKEN)(
     });
 
     // ================================================================
-    // 6. Service charge: tipAmount → AUTO_GRATUITY
-    //    buildServiceCharges: BigInt(Math.round(tipAmount * 100))
-    //    Verifies the tip appears on Square with correct cents and type.
+    // 6. No service charges when tipAmount = 0
+    //    buildServiceCharges returns empty array → Square order has no
+    //    service charges. Confirms zero values are NOT sent as $0 charges.
     // ================================================================
 
-    it("tip amount appears as AUTO_GRATUITY service charge with correct cents", () => {
+    it("no service charges when tipAmount and deliveryFee are zero", () => {
       const serviceCharges = rawSquareOrder!.serviceCharges ?? [];
+      expect(serviceCharges).toHaveLength(0);
+    });
 
+    // ================================================================
+    // 6b. Tip service charge (AUTO_GRATUITY) — separate order
+    //     Creates a second order with non-zero tipAmount to verify the
+    //     dollars-to-cents conversion and type mapping independently.
+    //     If Square Sandbox rejects AUTO_GRATUITY, this test documents
+    //     the limitation rather than silently hiding it.
+    // ================================================================
+
+    it("tip creates AUTO_GRATUITY service charge with correct cents on Square", async () => {
+      const tipOrderId = generateEntityId();
+      const tipOrderNumber = `ORD-TIP-${Date.now()}`;
+      const tipAmount = 2.75;
+
+      // Seed a separate internal order for tip test
+      await prisma.order.create({
+        data: {
+          id: tipOrderId,
+          tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
+          orderNumber: tipOrderNumber,
+          status: "completed",
+          fulfillmentStatus: "pending",
+          orderMode: "pickup",
+          subtotal: pushInput.items[0].price * pushInput.items[0].quantity,
+          taxAmount: pushInput.taxAmount,
+          totalAmount: pushInput.totalAmount + tipAmount,
+          customerFirstName: "Tip",
+          customerLastName: "Tester",
+          customerPhone: "555-0200",
+        },
+      });
+      await prisma.orderFulfillment.create({
+        data: {
+          id: generateEntityId(),
+          orderId: tipOrderId,
+          tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
+          status: "pending",
+        },
+      });
+
+      const tipInput: SquareOrderPushInput = {
+        ...pushInput,
+        orderId: tipOrderId,
+        orderNumber: tipOrderNumber,
+        customerFirstName: "Tip",
+        customerLastName: "Tester",
+        customerPhone: "555-0200",
+        tipAmount,
+        totalAmount: pushInput.totalAmount + tipAmount,
+      };
+
+      const result = await squareOrderService.createOrder(
+        TENANT_ID,
+        MERCHANT_ID,
+        tipInput
+      );
+
+      // Read back from Square API
+      const client = new SquareClient({
+        token: SANDBOX_TOKEN!,
+        environment: SquareEnvironment.Sandbox,
+      });
+      const resp = await client.orders.get({ orderId: result.squareOrderId });
+      const tipOrder = resp.order!;
+
+      const serviceCharges = tipOrder.serviceCharges ?? [];
       const tipCharge = serviceCharges.find((sc) => sc.type === "AUTO_GRATUITY");
       expect(tipCharge, "tip should appear as AUTO_GRATUITY").toBeDefined();
 
-      const expectedTipCents = BigInt(Math.round(pushInput.tipAmount * 100));
+      const expectedTipCents = BigInt(Math.round(tipAmount * 100));
       expect(tipCharge!.amountMoney?.amount).toBe(expectedTipCents);
       expect(tipCharge!.amountMoney?.currency).toBe("USD");
-    });
+    }, 30_000);
 
     // ================================================================
     // 7. Fulfillment: orderMode "pickup" → type PICKUP, state PROPOSED,
