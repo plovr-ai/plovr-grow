@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GbpLocationService } from "../gbp-location.service";
 import { AppError } from "@/lib/errors";
 
+vi.mock("@/lib/proxy", () => ({
+  getProxyDispatcher: vi.fn(() => undefined),
+}));
+
 describe("GbpLocationService", () => {
   let service: GbpLocationService;
 
@@ -11,6 +15,28 @@ describe("GbpLocationService", () => {
   });
 
   describe("listAccounts()", () => {
+    it("should pass dispatcher to fetch when proxy is configured", async () => {
+      const { getProxyDispatcher } = await import("@/lib/proxy");
+      const fakeDispatcher = { fake: true };
+      vi.mocked(getProxyDispatcher).mockReturnValue(fakeDispatcher as never);
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ accounts: [] }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await service.listAccounts("access-token");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ dispatcher: fakeDispatcher })
+      );
+
+      vi.mocked(getProxyDispatcher).mockReturnValue(undefined);
+      vi.unstubAllGlobals();
+    });
+
     it("should fetch and return accounts from Google API", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -75,6 +101,28 @@ describe("GbpLocationService", () => {
   });
 
   describe("listLocations()", () => {
+    it("should pass dispatcher to fetch when proxy is configured", async () => {
+      const { getProxyDispatcher } = await import("@/lib/proxy");
+      const fakeDispatcher = { fake: true };
+      vi.mocked(getProxyDispatcher).mockReturnValue(fakeDispatcher as never);
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ locations: [] }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await service.listLocations("access-token", "accounts/123");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ dispatcher: fakeDispatcher })
+      );
+
+      vi.mocked(getProxyDispatcher).mockReturnValue(undefined);
+      vi.unstubAllGlobals();
+    });
+
     it("should fetch and return locations from Google API", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -142,6 +190,28 @@ describe("GbpLocationService", () => {
   });
 
   describe("getLocation()", () => {
+    it("should pass dispatcher to fetch when proxy is configured", async () => {
+      const { getProxyDispatcher } = await import("@/lib/proxy");
+      const fakeDispatcher = { fake: true };
+      vi.mocked(getProxyDispatcher).mockReturnValue(fakeDispatcher as never);
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ name: "locations/456", title: "Test" }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await service.getLocation("access-token", "locations/456");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ dispatcher: fakeDispatcher })
+      );
+
+      vi.mocked(getProxyDispatcher).mockReturnValue(undefined);
+      vi.unstubAllGlobals();
+    });
+
     it("should fetch a single location", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
