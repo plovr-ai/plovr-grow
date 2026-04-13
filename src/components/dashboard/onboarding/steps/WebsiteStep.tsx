@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Loader2 } from "lucide-react";
-import { PlaceSearch } from "@/app/(platform)/generator/components/PlaceSearch";
+import { PlaceSearch } from "@/app/(website)/generator/components/PlaceSearch";
 import { useDashboard } from "@/contexts/DashboardContext";
 
 interface SelectedPlace {

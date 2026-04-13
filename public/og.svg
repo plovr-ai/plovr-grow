@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFF8E9"/>
+      <stop offset="100%" stop-color="#FEDF89"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#g)"/>
+  <g fill="#0A0A0A">
+    <rect x="80" y="80" width="28" height="28" rx="6" fill="#F5B800"/>
+    <text x="120" y="104" font-family="Inter, sans-serif" font-size="28" font-weight="800">Localgrow</text>
+    <text x="80" y="340" font-family="Inter, sans-serif" font-size="72" font-weight="800" letter-spacing="-2">Your Agentic</text>
+    <text x="80" y="420" font-family="Inter, sans-serif" font-size="72" font-weight="800" letter-spacing="-2" fill="#B27900">Restaurant Partner.</text>
+    <text x="80" y="490" font-family="Inter, sans-serif" font-size="24" fill="#6B6B6B">AI voice agent that turns missed calls into booked orders.</text>
+  </g>
+</svg>

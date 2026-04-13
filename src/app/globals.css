@@ -11,6 +11,29 @@
   --theme-primary-hover: 0 84% 54%;
   --theme-primary-light: 0 86% 97%;
   --theme-primary-foreground: 0 0% 100%;
+
+  /* Website theme — amber/yellow (from website-ava) */
+  --color-primary-50: #fffaeb;
+  --color-primary-100: #fef0c7;
+  --color-primary-200: #fedf89;
+  --color-primary-300: #fec84b;
+  --color-primary-400: #fdb022;
+  --color-primary-500: #f5b800;
+  --color-primary-600: #dc9b00;
+  --color-primary-700: #b27900;
+  --color-bg-subtle: #fafaf7;
+  --color-bg-warm: #fff8e9;
+  --color-surface: #ffffff;
+  --color-text-ws: #0a0a0a;
+  --color-text-muted-ws: #6b6b6b;
+  --color-text-subtle-ws: #9a9a9a;
+  --color-dark-ws: #0f0f0f;
+  --color-dark-muted-ws: #1c1c1c;
+  --color-border-ws: #ececec;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 12px 48px rgba(245, 184, 0, 0.2);
 }
 
 @theme inline {
@@ -196,4 +219,12 @@ body {
 
 .focus\:border-theme-primary:focus {
   border-color: hsl(var(--theme-primary));
+}
+
+/* Website hero text gradient */
+.text-gradient-hero {
+  background: linear-gradient(128.537deg, rgb(25, 28, 29) 0%, rgb(80, 69, 50) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
