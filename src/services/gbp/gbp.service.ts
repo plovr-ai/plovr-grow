@@ -35,9 +35,15 @@ export class GbpService {
       gbpOAuthService.verifyAndParseState(state);
 
     const tokens = await gbpOAuthService.exchangeCode(code);
-    const accounts = await gbpLocationService.listAccounts(
-      tokens.accessToken
-    );
+
+    // Try to fetch accounts, but don't block token storage if it fails
+    // (GBP API requires separate quota approval from Google)
+    let accounts: GbpAccount[] = [];
+    try {
+      accounts = await gbpLocationService.listAccounts(tokens.accessToken);
+    } catch (error) {
+      console.warn("[GBP] listAccounts failed, storing connection without account info:", error);
+    }
 
     // Store connection (upsert — idempotent for re-auth)
     await integrationRepository.upsertConnection(tenantId, merchantId, {

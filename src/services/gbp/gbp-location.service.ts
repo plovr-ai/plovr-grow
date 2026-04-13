@@ -1,4 +1,5 @@
 import { AppError, ErrorCodes } from "@/lib/errors";
+import { getProxyDispatcher } from "@/lib/proxy";
 import type {
   GbpAccount,
   GbpLocation,
@@ -25,9 +26,11 @@ const DAY_MAP: Record<string, string> = {
 
 export class GbpLocationService {
   async listAccounts(accessToken: string): Promise<GbpAccount[]> {
+    const dispatcher = getProxyDispatcher();
     const response = await fetch(ACCOUNTS_API_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
-    });
+      ...(dispatcher ? { dispatcher } : {}),
+    } as RequestInit);
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -55,9 +58,11 @@ export class GbpLocationService {
     accountName: string
   ): Promise<GbpLocation[]> {
     const url = `${BUSINESS_INFO_API_URL}/${accountName}/locations?readMask=${LOCATION_READ_MASK}`;
+    const dispatcher = getProxyDispatcher();
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
-    });
+      ...(dispatcher ? { dispatcher } : {}),
+    } as RequestInit);
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -81,9 +86,11 @@ export class GbpLocationService {
     locationName: string
   ): Promise<GbpLocation> {
     const url = `${BUSINESS_INFO_API_URL}/${locationName}?readMask=${LOCATION_READ_MASK}`;
+    const dispatcher = getProxyDispatcher();
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
-    });
+      ...(dispatcher ? { dispatcher } : {}),
+    } as RequestInit);
 
     if (!response.ok) {
       const errorBody = await response.text();
