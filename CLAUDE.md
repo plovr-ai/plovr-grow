@@ -92,10 +92,14 @@ npm run lint             # 代码检查
   MenuCategory (1:N) → MenuItem
   ```
 
-### 数据库迁移规范
-- **禁止手写 Prisma migration SQL 文件** — 只修改 `prisma/schema.prisma`，migration 文件必须通过 `npx prisma migrate dev --name <name>` 生成
+### 数据库变更流程
+- **禁止手写 migration SQL 文件** — 必须由 Prisma 自动生成，手写极易出现 MySQL 语法错误
+- 正确流程：
+  1. 修改 `prisma/schema.prisma`
+  2. 运行 `npm run db:migrate` 让 Prisma 生成 migration SQL
+  3. 如需额外操作（如数据迁移、重命名），在 Prisma 生成的 SQL 基础上追加，而非从零手写
+- **禁止直接创建 `prisma/migrations/` 下的目录或文件** — 这些全部由 `prisma migrate` 命令管理
 - 若本地 DB 不可达或无法跑 `migrate dev`，停下来让用户执行，不要手写或伪造 migration SQL
-- 提交 schema 改动时不提交手写的 migration 目录
 
 ### TypeScript 规范 (ESLint 自动拦截)
 - **禁止使用 `any`**: 使用 `unknown` 或具体类型代替 (`@typescript-eslint/no-explicit-any`)
