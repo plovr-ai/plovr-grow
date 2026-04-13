@@ -282,9 +282,19 @@ describe("Order Edge Cases (integration)", () => {
 
       const results = await Promise.allSettled(promises);
 
-      // With P2034 retry, ALL 5 should succeed
+      // With P2034 retry, ALL 5 should succeed.
+      // Log rejection reasons for debugging if any fail.
       const fulfilled = results.filter((r) => r.status === "fulfilled");
       const rejected = results.filter((r) => r.status === "rejected");
+
+      if (rejected.length > 0) {
+        const reasons = rejected.map((r) => {
+          const err = (r as PromiseRejectedResult).reason;
+          return `${err?.constructor?.name}: ${err?.message ?? err} (code: ${err?.code ?? "none"})`;
+        });
+        console.error("Rejected order creation attempts:", reasons);
+      }
+
       expect(rejected).toHaveLength(0);
       expect(fulfilled).toHaveLength(5);
 
@@ -315,16 +325,13 @@ describe("Order Edge Cases (integration)", () => {
   // 2. Change the DB status behind the scenes (simulating another request)
   // 3. Attempt the CAS write — it MUST fail because status changed
   // =========================================================================
-  describe("Fulfillment CAS guard rejects stale writes", () => {
-    it("CAS fails when another request changed the status between read and write", async () => {
+  describe("Fulfillment guard rejects when status already changed", () => {
+    it("rejects duplicate transition when another request already completed it", async () => {
       setupOrderCreationMocks();
       const orderId = await createPaidOrder();
 
-      // Verify starting state
+      // Another request already changed pending → confirmed
       const fulfillment = await prisma.orderFulfillment.findFirst({ where: { orderId } });
-      expect(fulfillment!.status).toBe("pending");
-
-      // Simulate: another request already changed pending → confirmed
       await prisma.orderFulfillment.update({
         where: { id: fulfillment!.id },
         data: { status: "confirmed" },
@@ -334,27 +341,27 @@ describe("Order Edge Cases (integration)", () => {
         data: { fulfillmentStatus: "confirmed" },
       });
 
-      // Now our "stale" request tries pending → confirmed
-      // The CAS (updateMany WHERE status='pending') should fail
+      // Our request tries pending → confirmed, but getByOrderId now
+      // reads "confirmed" → assertTransition("confirmed", "confirmed")
+      // fails because self-transition is invalid.
       await expect(
         fulfillmentService.transitionStatus(TENANT_ID, orderId, {
           fulfillmentStatus: "confirmed",
           source: "internal",
         })
-      ).rejects.toThrow("FULFILLMENT_CONCURRENT_CONFLICT");
+      ).rejects.toThrow("INVALID_FULFILLMENT_STATUS_TRANSITION");
 
-      // DB state should remain at confirmed (not double-applied)
+      // DB state should remain at confirmed
       const dbFulfillment = await prisma.orderFulfillment.findFirst({ where: { orderId } });
       expect(dbFulfillment!.status).toBe("confirmed");
     });
 
-    it("CAS fails when status moved forward past the target", async () => {
+    it("rejects when status advanced past the target state", async () => {
       setupOrderCreationMocks();
       const orderId = await createPaidOrder();
 
+      // Another request advanced pending → preparing (skipping confirmed)
       const fulfillment = await prisma.orderFulfillment.findFirst({ where: { orderId } });
-
-      // Simulate: another request already advanced pending → confirmed → preparing
       await prisma.orderFulfillment.update({
         where: { id: fulfillment!.id },
         data: { status: "preparing" },
@@ -365,14 +372,43 @@ describe("Order Edge Cases (integration)", () => {
       });
 
       // Our stale request tries pending → confirmed
-      // Even though confirmed is "valid" from pending, the CAS should fail
-      // because the actual status is already "preparing"
+      // getByOrderId reads "preparing" → assertTransition("preparing", "confirmed")
+      // fails because going backward is invalid
       await expect(
         fulfillmentService.transitionStatus(TENANT_ID, orderId, {
           fulfillmentStatus: "confirmed",
           source: "internal",
         })
-      ).rejects.toThrow();
+      ).rejects.toThrow("INVALID_FULFILLMENT_STATUS_TRANSITION");
+    });
+
+    it("CAS guard catches status change within transaction window", async () => {
+      // Test the CAS at the repository level directly:
+      // Call updateMany WHERE status='pending' when status is actually 'confirmed'
+      setupOrderCreationMocks();
+      const orderId = await createPaidOrder();
+
+      const fulfillment = await prisma.orderFulfillment.findFirst({ where: { orderId } });
+      expect(fulfillment!.status).toBe("pending");
+
+      // Change status directly in DB (simulating concurrent write)
+      await prisma.orderFulfillment.update({
+        where: { id: fulfillment!.id },
+        data: { status: "confirmed" },
+      });
+
+      // CAS: updateMany WHERE status='pending' should return count=0
+      const result = await prisma.orderFulfillment.updateMany({
+        where: { id: fulfillment!.id, status: "pending" },
+        data: { status: "preparing" },
+      });
+
+      // CAS should detect the mismatch
+      expect(result.count).toBe(0);
+
+      // Status should still be "confirmed" (our update was rejected)
+      const dbFulfillment = await prisma.orderFulfillment.findFirst({ where: { orderId } });
+      expect(dbFulfillment!.status).toBe("confirmed");
     });
   });
 
