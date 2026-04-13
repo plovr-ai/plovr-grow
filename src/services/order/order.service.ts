@@ -612,7 +612,6 @@ export class OrderService {
         data: {
           status: "completed",
           paidAt: now,
-          cashPayment: amount,
         },
       });
     });
