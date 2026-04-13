@@ -1,4 +1,5 @@
 import type { ThemePresetName } from "./theme";
+import type { WebsiteTemplateName } from "./website-template";
 import type { OnboardingStatus, OnboardingData } from "./onboarding";
 
 export type TenantStatus = "active" | "inactive" | "suspended";
@@ -55,6 +56,7 @@ export interface TenantSettings {
   defaultLocale?: string;
   defaultTimezone?: string;
   themePreset?: ThemePresetName;
+  websiteTemplate?: WebsiteTemplateName;
   website?: {
     tagline?: string;
     heroImage?: string;
