@@ -31,6 +31,9 @@ export interface CreatePaymentInput {
   providerPaymentId?: string | null;
   amount: number;
   currency: string;
+  status?: PaymentStatus;
+  paidAt?: Date | null;
+  paymentMethod?: string | null;
   stripeDetail?: {
     stripeAccountId: string;
     stripeCustomerId?: string | null;
@@ -62,7 +65,9 @@ export class PaymentRepository {
         providerPaymentId: data.providerPaymentId,
         amount: data.amount,
         currency: data.currency,
-        status: "pending",
+        status: data.status ?? "pending",
+        ...(data.paidAt !== undefined && { paidAt: data.paidAt }),
+        ...(data.paymentMethod !== undefined && { paymentMethod: data.paymentMethod }),
         ...(data.stripeDetail && {
           stripeDetail: {
             create: {
