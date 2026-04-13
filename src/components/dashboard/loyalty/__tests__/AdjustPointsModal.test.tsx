@@ -148,6 +148,18 @@ describe("AdjustPointsModal", () => {
       expect(screen.getByLabelText("Add Points")).not.toBeChecked();
     });
 
+    it("should switch back to add mode from deduct mode", () => {
+      render(<AdjustPointsModal {...defaultProps} />);
+
+      const deductRadio = screen.getByLabelText("Deduct Points");
+      const addRadio = screen.getByLabelText("Add Points");
+      fireEvent.click(deductRadio);
+      fireEvent.click(addRadio);
+
+      expect(addRadio).toBeChecked();
+      expect(deductRadio).not.toBeChecked();
+    });
+
     it("should show negative adjustment preview in red", () => {
       render(<AdjustPointsModal {...defaultProps} />);
 

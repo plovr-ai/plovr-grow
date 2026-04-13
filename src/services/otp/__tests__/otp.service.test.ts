@@ -258,6 +258,25 @@ describe("OtpService", () => {
     });
   });
 
+  describe("generateOtpCode - development mode", () => {
+    it("should use fixed code 123456 in development mode", async () => {
+      const origEnv = process.env.NODE_ENV;
+      (process.env as Record<string, string | undefined>).NODE_ENV = "development";
+
+      vi.mocked(smsService.verifyPhoneFormat).mockReturnValue(true);
+      vi.mocked(otpVerificationRepository.upsert).mockResolvedValue(mockOtpRecord);
+      vi.mocked(smsService.sendOtp).mockResolvedValue({ success: true });
+
+      await service.sendOtp("tenant-1", "+12025551234", "login");
+
+      const upsertCall = vi.mocked(otpVerificationRepository.upsert).mock.calls[0];
+      const code = upsertCall[3];
+      expect(code).toBe("123456");
+
+      (process.env as Record<string, string | undefined>).NODE_ENV = origEnv;
+    });
+  });
+
   describe("cleanupExpired", () => {
     it("should clean up expired OTP records", async () => {
       vi.mocked(otpVerificationRepository.deleteExpired).mockResolvedValue({
