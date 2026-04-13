@@ -8,6 +8,7 @@
     "INVALID_PAYMENT_STATUS_TRANSITION": "Invalid payment status transition from {from} to {to}",
     "INVALID_FULFILLMENT_STATUS_TRANSITION": "Invalid fulfillment status transition from {from} to {to}",
     "FULFILLMENT_REQUIRES_PAYMENT": "Cannot update fulfillment status: order is not fully paid",
+    "FULFILLMENT_CONCURRENT_CONFLICT": "Fulfillment status was updated by another request, please refresh and try again",
     "MENU_ITEMS_UNAVAILABLE": "Some menu items are not available",
     "MERCHANT_ID_REQUIRED": "Merchant ID is required for this order type",
     "MERCHANT_NOT_FOUND": "Restaurant not found",

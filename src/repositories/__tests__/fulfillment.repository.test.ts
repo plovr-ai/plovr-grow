@@ -7,7 +7,9 @@ const mockPrisma = vi.hoisted(() => ({
     create: vi.fn(),
     findFirst: vi.fn(),
     findMany: vi.fn(),
+    findUniqueOrThrow: vi.fn(),
     update: vi.fn(),
+    updateMany: vi.fn(),
   },
   fulfillmentStatusLog: {
     create: vi.fn(),
@@ -123,7 +125,10 @@ describe("FulfillmentRepository", () => {
     it("should wrap in $transaction when no tx provided", async () => {
       mockPrisma.$transaction.mockImplementation(async (fn: (client: unknown) => unknown) => {
         const txClient = {
-          orderFulfillment: { update: vi.fn().mockResolvedValue({ id: FULFILLMENT_ID }) },
+          orderFulfillment: {
+            updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+            findUniqueOrThrow: vi.fn().mockResolvedValue({ id: FULFILLMENT_ID }),
+          },
           fulfillmentStatusLog: { create: vi.fn().mockResolvedValue({}) },
           order: { update: vi.fn().mockResolvedValue({}) },
         };
@@ -140,7 +145,10 @@ describe("FulfillmentRepository", () => {
 
     it("should use provided tx directly without wrapping", async () => {
       const mockTx = {
-        orderFulfillment: { update: vi.fn().mockResolvedValue({ id: FULFILLMENT_ID }) },
+        orderFulfillment: {
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ id: FULFILLMENT_ID }),
+        },
         fulfillmentStatusLog: { create: vi.fn().mockResolvedValue({}) },
         order: { update: vi.fn().mockResolvedValue({}) },
       };
@@ -153,14 +161,17 @@ describe("FulfillmentRepository", () => {
       );
 
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
-      expect(mockTx.orderFulfillment.update).toHaveBeenCalled();
+      expect(mockTx.orderFulfillment.updateMany).toHaveBeenCalled();
       expect(mockTx.fulfillmentStatusLog.create).toHaveBeenCalled();
       expect(mockTx.order.update).toHaveBeenCalled();
     });
 
     it("should set timestamp field and sync order fulfillmentStatus", async () => {
       const txClient = {
-        orderFulfillment: { update: vi.fn().mockResolvedValue({ id: FULFILLMENT_ID }) },
+        orderFulfillment: {
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ id: FULFILLMENT_ID }),
+        },
         fulfillmentStatusLog: { create: vi.fn().mockResolvedValue({}) },
         order: { update: vi.fn().mockResolvedValue({}) },
       };
@@ -171,9 +182,9 @@ describe("FulfillmentRepository", () => {
         fromStatus, toStatus, "square_webhook"
       );
 
-      // Check fulfillment update includes confirmedAt timestamp
-      expect(txClient.orderFulfillment.update).toHaveBeenCalledWith({
-        where: { id: FULFILLMENT_ID },
+      // Check fulfillment updateMany includes CAS condition and confirmedAt timestamp
+      expect(txClient.orderFulfillment.updateMany).toHaveBeenCalledWith({
+        where: { id: FULFILLMENT_ID, status: fromStatus },
         data: expect.objectContaining({
           status: "confirmed",
           confirmedAt: expect.any(Date),
@@ -198,9 +209,34 @@ describe("FulfillmentRepository", () => {
       });
     });
 
+    it("should throw FULFILLMENT_CONCURRENT_CONFLICT when CAS fails", async () => {
+      const txClient = {
+        orderFulfillment: {
+          updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+        },
+        fulfillmentStatusLog: { create: vi.fn() },
+        order: { update: vi.fn() },
+      };
+      mockPrisma.$transaction.mockImplementation(async (fn: (client: unknown) => unknown) => fn(txClient));
+
+      await expect(
+        fulfillmentRepository.transitionStatus(
+          TENANT_ID, FULFILLMENT_ID, ORDER_ID,
+          fromStatus, toStatus, "internal"
+        )
+      ).rejects.toThrow("FULFILLMENT_CONCURRENT_CONFLICT");
+
+      // Should not write status log or sync order when CAS fails
+      expect(txClient.fulfillmentStatusLog.create).not.toHaveBeenCalled();
+      expect(txClient.order.update).not.toHaveBeenCalled();
+    });
+
     it("should set cancelReason for canceled status", async () => {
       const txClient = {
-        orderFulfillment: { update: vi.fn().mockResolvedValue({ id: FULFILLMENT_ID }) },
+        orderFulfillment: {
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ id: FULFILLMENT_ID }),
+        },
         fulfillmentStatusLog: { create: vi.fn().mockResolvedValue({}) },
         order: { update: vi.fn().mockResolvedValue({}) },
       };
@@ -212,8 +248,8 @@ describe("FulfillmentRepository", () => {
         { cancelReason: "Out of stock" }
       );
 
-      expect(txClient.orderFulfillment.update).toHaveBeenCalledWith({
-        where: { id: FULFILLMENT_ID },
+      expect(txClient.orderFulfillment.updateMany).toHaveBeenCalledWith({
+        where: { id: FULFILLMENT_ID, status: "confirmed" },
         data: expect.objectContaining({
           status: "canceled",
           cancelledAt: expect.any(Date),
@@ -224,7 +260,10 @@ describe("FulfillmentRepository", () => {
 
     it("should set externalVersion when provided", async () => {
       const txClient = {
-        orderFulfillment: { update: vi.fn().mockResolvedValue({ id: FULFILLMENT_ID }) },
+        orderFulfillment: {
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ id: FULFILLMENT_ID }),
+        },
         fulfillmentStatusLog: { create: vi.fn().mockResolvedValue({}) },
         order: { update: vi.fn().mockResolvedValue({}) },
       };
@@ -236,8 +275,8 @@ describe("FulfillmentRepository", () => {
         { externalVersion: 5 }
       );
 
-      expect(txClient.orderFulfillment.update).toHaveBeenCalledWith({
-        where: { id: FULFILLMENT_ID },
+      expect(txClient.orderFulfillment.updateMany).toHaveBeenCalledWith({
+        where: { id: FULFILLMENT_ID, status: fromStatus },
         data: expect.objectContaining({ externalVersion: 5 }),
       });
     });

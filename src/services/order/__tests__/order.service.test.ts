@@ -20,6 +20,7 @@ vi.mock("@/lib/db", () => {
     $transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(mockTx)),
     order: {
       update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     orderFulfillment: {
       create: vi.fn().mockResolvedValue({ id: "ful-1", status: "pending" }),
@@ -1936,15 +1937,15 @@ describe("OrderService", () => {
 
     it("marks payment completed and emits order.paid", async () => {
       vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
       const emitSpy = vi.spyOn(orderEventEmitter, "emit");
 
       await orderService.updatePaymentStatus("tenant-1", "order-1", "completed", {
         source: "square_webhook",
       });
 
-      expect(prisma.order.update).toHaveBeenCalledWith({
-        where: { id: "order-1" },
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: "order-1", status: { not: "completed" } },
         data: { status: "completed", paidAt: expect.any(Date) },
       });
       expect(emitSpy).toHaveBeenCalledWith(
@@ -1959,13 +1960,16 @@ describe("OrderService", () => {
 
     it("marks payment_failed and does NOT emit event", async () => {
       vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
       const emitSpy = vi.spyOn(orderEventEmitter, "emit");
 
       await orderService.updatePaymentStatus("tenant-1", "order-1", "payment_failed");
 
-      expect(prisma.order.update).toHaveBeenCalledWith({
-        where: { id: "order-1" },
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: "order-1",
+          status: { notIn: ["completed", "canceled", "payment_failed"] },
+        },
         data: { status: "payment_failed", paymentFailedAt: expect.any(Date) },
       });
       expect(emitSpy).not.toHaveBeenCalled();
@@ -1977,7 +1981,7 @@ describe("OrderService", () => {
 
       await orderService.updatePaymentStatus("tenant-1", "order-1", "payment_failed");
 
-      expect(prisma.order.update).not.toHaveBeenCalled();
+      expect(prisma.order.updateMany).not.toHaveBeenCalled();
     });
 
     it("guards canceled state for payment_failed", async () => {
@@ -1986,7 +1990,7 @@ describe("OrderService", () => {
 
       await orderService.updatePaymentStatus("tenant-1", "order-1", "payment_failed");
 
-      expect(prisma.order.update).not.toHaveBeenCalled();
+      expect(prisma.order.updateMany).not.toHaveBeenCalled();
     });
 
     it("guards already payment_failed state", async () => {
@@ -1995,13 +1999,13 @@ describe("OrderService", () => {
 
       await orderService.updatePaymentStatus("tenant-1", "order-1", "payment_failed");
 
-      expect(prisma.order.update).not.toHaveBeenCalled();
+      expect(prisma.order.updateMany).not.toHaveBeenCalled();
     });
 
     it("uses empty string when merchantId is null for completed", async () => {
       const orderNoMerchant = { ...mockOrder, merchantId: null };
       vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(orderNoMerchant as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
       const emitSpy = vi.spyOn(orderEventEmitter, "emit");
 
       await orderService.updatePaymentStatus("tenant-1", "order-1", "completed");
@@ -2044,7 +2048,7 @@ describe("OrderService", () => {
 
       await orderService.updatePaymentStatus("tenant-1", "order-1", "completed");
 
-      expect(prisma.order.update).not.toHaveBeenCalled();
+      expect(prisma.order.updateMany).not.toHaveBeenCalled();
       expect(emitSpy).not.toHaveBeenCalled();
     });
 
@@ -2058,7 +2062,7 @@ describe("OrderService", () => {
         totalAmount: 99.50,
       };
       vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(orderWithCustomer as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
       const emitSpy = vi.spyOn(orderEventEmitter, "emit");
 
       await orderService.updatePaymentStatus("tenant-1", "order-1", "completed");
@@ -2188,15 +2192,15 @@ describe("OrderService", () => {
 
     it("cancels order and emits order.cancelled with reason and source", async () => {
       vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
       const emitSpy = vi.spyOn(orderEventEmitter, "emit");
 
       await orderService.cancelOrder("tenant-1", "order-1", "Customer request", {
         source: "square_webhook",
       });
 
-      expect(prisma.order.update).toHaveBeenCalledWith({
-        where: { id: "order-1" },
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: "order-1", status: { not: "canceled" } },
         data: expect.objectContaining({
           status: "canceled",
           cancelledAt: expect.any(Date),
@@ -2217,7 +2221,7 @@ describe("OrderService", () => {
     it("uses empty string when merchantId is null", async () => {
       const orderNoMerchant = { ...mockOrder, merchantId: null };
       vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(orderNoMerchant as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
       const emitSpy = vi.spyOn(orderEventEmitter, "emit");
 
       await orderService.cancelOrder("tenant-1", "order-1");
@@ -2243,7 +2247,7 @@ describe("OrderService", () => {
 
       await orderService.cancelOrder("tenant-1", "order-1", "duplicate request");
 
-      expect(prisma.order.update).not.toHaveBeenCalled();
+      expect(prisma.order.updateMany).not.toHaveBeenCalled();
       expect(emitSpy).not.toHaveBeenCalled();
     });
 
@@ -2277,14 +2281,14 @@ describe("OrderService", () => {
     it("allows webhook source to cancel fulfilled orders (POS is authoritative)", async () => {
       const fulfilledOrder = { ...mockOrder, fulfillmentStatus: "fulfilled" };
       vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(fulfilledOrder as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
 
       await orderService.cancelOrder("tenant-1", "order-1", "Canceled on Square POS", {
         source: "square_webhook",
       });
 
-      expect(prisma.order.update).toHaveBeenCalledWith({
-        where: { id: "order-1" },
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: "order-1", status: { not: "canceled" } },
         data: expect.objectContaining({
           status: "canceled",
           cancelReason: "Canceled on Square POS",
@@ -2295,24 +2299,24 @@ describe("OrderService", () => {
     it("allows toast_webhook source to bypass fulfillment guard", async () => {
       const preparingOrder = { ...mockOrder, fulfillmentStatus: "preparing" };
       vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(preparingOrder as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
 
       await orderService.cancelOrder("tenant-1", "order-1", "Canceled on Toast", {
         source: "toast_webhook",
       });
 
-      expect(prisma.order.update).toHaveBeenCalled();
+      expect(prisma.order.updateMany).toHaveBeenCalled();
     });
 
     it("allows cancel when fulfillmentStatus is pending", async () => {
       const pendingOrder = { ...mockOrder, fulfillmentStatus: "pending" };
       vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(pendingOrder as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
 
       await orderService.cancelOrder("tenant-1", "order-1", "changed mind");
 
-      expect(prisma.order.update).toHaveBeenCalledWith({
-        where: { id: "order-1" },
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: "order-1", status: { not: "canceled" } },
         data: expect.objectContaining({
           status: "canceled",
           cancelReason: "changed mind",
@@ -2323,12 +2327,12 @@ describe("OrderService", () => {
     it("allows cancel when fulfillmentStatus is confirmed", async () => {
       const confirmedOrder = { ...mockOrder, fulfillmentStatus: "confirmed" };
       vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(confirmedOrder as never);
-      vi.mocked(prisma.order.update).mockResolvedValue({} as never);
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
 
       await orderService.cancelOrder("tenant-1", "order-1", "changed mind");
 
-      expect(prisma.order.update).toHaveBeenCalledWith({
-        where: { id: "order-1" },
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: "order-1", status: { not: "canceled" } },
         data: expect.objectContaining({
           status: "canceled",
           cancelReason: "changed mind",

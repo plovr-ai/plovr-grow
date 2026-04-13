@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import type { DbClient } from "@/lib/db";
 import type { FulfillmentStatus } from "@/types";
 import type { FulfillmentChangeSource } from "@/services/order/fulfillment.types";
+import { AppError, ErrorCodes } from "@/lib/errors";
 
 export class FulfillmentRepository {
   /**
@@ -90,14 +91,30 @@ export class FulfillmentRepository {
       fulfillmentUpdate.cancelReason = options.cancelReason;
     }
 
-    // Execute all three writes atomically
+    // Execute all three writes atomically with optimistic locking.
+    // The WHERE clause on status=fromStatus ensures that if another request
+    // already changed the status between our read and write, we detect it
+    // instead of silently overwriting the newer state.
     const runInTx = async (client: DbClient) => {
-      const [fulfillment] = await Promise.all([
-        // 1. Update OrderFulfillment
-        client.orderFulfillment.update({
-          where: { id: fulfillmentId },
-          data: fulfillmentUpdate,
-        }),
+      // 1. Update OrderFulfillment with optimistic lock (CAS on status)
+      const result = await client.orderFulfillment.updateMany({
+        where: { id: fulfillmentId, status: fromStatus },
+        data: fulfillmentUpdate,
+      });
+      if (result.count === 0) {
+        throw new AppError(ErrorCodes.FULFILLMENT_CONCURRENT_CONFLICT, {
+          fulfillmentId,
+          expectedStatus: fromStatus,
+          targetStatus: toStatus,
+        });
+      }
+
+      // Fetch the updated record to return
+      const fulfillment = await client.orderFulfillment.findUniqueOrThrow({
+        where: { id: fulfillmentId },
+      });
+
+      await Promise.all([
         // 2. Write FulfillmentStatusLog
         client.fulfillmentStatusLog.create({
           data: {
