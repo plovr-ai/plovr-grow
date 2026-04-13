@@ -207,6 +207,8 @@ export function OrderDetailClient({ order: initialOrder, merchantSlug, imageMap 
           taxAmount={Number(order.taxAmount)}
           tipAmount={Number(order.tipAmount)}
           deliveryFee={Number(order.deliveryFee)}
+          feesAmount={Number(order.feesAmount)}
+          feesBreakdown={order.feesBreakdown}
           discount={Number(order.discount)}
           totalAmount={Number(order.totalAmount)}
           pointsEarned={order.pointsEarned}

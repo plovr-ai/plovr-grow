@@ -8,11 +8,12 @@ import { formatCustomerName } from "@/lib/names";
 import type { OrderMode, OrderStatus, SalesChannel } from "@/types";
 
 // Serialized order type with Decimal fields converted to numbers
-type SerializedOrder = Omit<Order, "tenant" | "subtotal" | "taxAmount" | "tipAmount" | "deliveryFee" | "discount" | "giftCardPayment" | "balanceDue" | "totalAmount"> & {
+type SerializedOrder = Omit<Order, "tenant" | "subtotal" | "taxAmount" | "tipAmount" | "deliveryFee" | "feesAmount" | "discount" | "giftCardPayment" | "balanceDue" | "totalAmount"> & {
   subtotal: number;
   taxAmount: number;
   tipAmount: number;
   deliveryFee: number;
+  feesAmount: number;
   discount: number;
   giftCardPayment: number;
   balanceDue: number;

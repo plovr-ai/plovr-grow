@@ -92,6 +92,8 @@ const mockOrder = {
   taxAmount: 2.56,
   tipAmount: 5.0,
   deliveryFee: 0,
+  feesAmount: 0,
+  feesBreakdown: [],
   discount: 0,
   totalAmount: 39.53,
   createdAt: new Date("2024-01-15T10:30:00Z"),

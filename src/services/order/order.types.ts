@@ -31,6 +31,8 @@ export interface OrderData {
   tipAmount: number | unknown;
   deliveryFee: number | unknown;
   discount: number | unknown;
+  feesAmount: number | unknown;
+  feesBreakdown: FeeBreakdownItem[] | unknown;
   giftCardPayment: number | unknown;
   balanceDue: number | unknown;
   totalAmount: number | unknown;

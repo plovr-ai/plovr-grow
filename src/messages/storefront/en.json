@@ -173,15 +173,22 @@
     "fulfilled": "Fulfilled"
   },
   "priceSummary": {
+    "title": "Payment Summary",
     "subtotal": "Subtotal",
     "tax": "Tax",
     "taxIncluded": "Tax (included)",
     "deliveryFee": "Delivery Fee",
     "tip": "Tip",
+    "discount": "Discount",
     "total": "Total",
     "giftCard": "Gift Card",
     "dueAtDelivery": "Due at Delivery",
-    "dueAtPickup": "Due at Pickup"
+    "dueAtPickup": "Due at Pickup",
+    "fees": {
+      "platform_fee": "Platform Fee",
+      "packaging_fee": "Packaging Fee",
+      "service_fee": "Service Fee"
+    }
   },
   "submitButton": {
     "submit": "Submit",
