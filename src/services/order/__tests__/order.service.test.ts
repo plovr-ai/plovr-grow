@@ -2052,6 +2052,17 @@ describe("OrderService", () => {
       expect(emitSpy).not.toHaveBeenCalled();
     });
 
+    it("skips event when CAS returns count=0 (concurrent completed)", async () => {
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 0 } as never);
+      const emitSpy = vi.spyOn(orderEventEmitter, "emit");
+
+      await orderService.updatePaymentStatus("tenant-1", "order-1", "completed");
+
+      expect(prisma.order.updateMany).toHaveBeenCalled();
+      expect(emitSpy).not.toHaveBeenCalled();
+    });
+
     it("includes customer info in order.paid event", async () => {
       const orderWithCustomer = {
         ...mockOrder,
@@ -2248,6 +2259,17 @@ describe("OrderService", () => {
       await orderService.cancelOrder("tenant-1", "order-1", "duplicate request");
 
       expect(prisma.order.updateMany).not.toHaveBeenCalled();
+      expect(emitSpy).not.toHaveBeenCalled();
+    });
+
+    it("skips event when CAS returns count=0 (concurrent cancel)", async () => {
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(mockOrder as never);
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 0 } as never);
+      const emitSpy = vi.spyOn(orderEventEmitter, "emit");
+
+      await orderService.cancelOrder("tenant-1", "order-1", "late cancel");
+
+      expect(prisma.order.updateMany).toHaveBeenCalled();
       expect(emitSpy).not.toHaveBeenCalled();
     });
 
