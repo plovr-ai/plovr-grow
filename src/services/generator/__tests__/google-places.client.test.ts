@@ -309,6 +309,54 @@ describe("GooglePlacesClient", () => {
     vi.unstubAllGlobals();
   });
 
+  it("parses primaryType and types from API response", async () => {
+    const mockResponse = {
+      displayName: { text: "Test Restaurant" },
+      formattedAddress: "123 Main St",
+      addressComponents: [
+        { types: ["locality"], longText: "New York" },
+        { types: ["administrative_area_level_1"], shortText: "NY" },
+        { types: ["postal_code"], longText: "10001" },
+      ],
+      primaryType: "italian_restaurant",
+      types: ["italian_restaurant", "restaurant", "food", "establishment"],
+      nationalPhoneNumber: "(212) 555-0100",
+      photos: [],
+      reviews: [],
+    };
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    }));
+
+    const result = await client.getPlaceDetails("test-place-id");
+    expect(result.primaryType).toBe("italian_restaurant");
+    expect(result.types).toEqual(["italian_restaurant", "restaurant", "food", "establishment"]);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("handles missing primaryType and types gracefully", async () => {
+    const mockResponse = {
+      displayName: { text: "Test" },
+      formattedAddress: "123 Main St",
+      addressComponents: [],
+      photos: [],
+      reviews: [],
+    };
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    }));
+
+    const result = await client.getPlaceDetails("test-place-id");
+    expect(result.primaryType).toBeUndefined();
+    expect(result.types).toBeUndefined();
+    vi.unstubAllGlobals();
+  });
+
   it("handles address components with null longText", async () => {
     const mockResponse = {
       displayName: { text: "Null Text" },
