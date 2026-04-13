@@ -196,11 +196,13 @@ export class OrderService {
         return await this._createMerchantOrderAtomicInner(tenantId, input, options);
       } catch (error) {
         lastError = error;
-        // P2034 = transaction conflict, P2028 = transaction API error (deadlock),
-        // "Deadlock" in message = MySQL InnoDB deadlock detected.
+        // Retriable Prisma errors under concurrent order creation:
+        // P2002 = unique constraint on sequence upsert (concurrent create race)
+        // P2034 = transaction conflict / write conflict
+        // P2028 = transaction API error (deadlock detected by MySQL)
         const isRetriable =
           error instanceof Prisma.PrismaClientKnownRequestError &&
-          (error.code === "P2034" || error.code === "P2028");
+          (error.code === "P2002" || error.code === "P2034" || error.code === "P2028");
         const isDeadlock =
           error instanceof Error && error.message.includes("Deadlock");
         if ((!isRetriable && !isDeadlock) || attempt === MAX_RETRIES - 1) {
