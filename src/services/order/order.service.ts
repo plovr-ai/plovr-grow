@@ -186,6 +186,46 @@ export class OrderService {
       };
     }
   ) {
+    // Retry on P2034 (transaction conflict / deadlock) which occurs under
+    // concurrent order creation due to the sequence upsert gap-lock.
+    const MAX_RETRIES = 3;
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        return await this._createMerchantOrderAtomicInner(tenantId, input, options);
+      } catch (error) {
+        lastError = error;
+        const isPrismaConflict =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2034";
+        if (!isPrismaConflict || attempt === MAX_RETRIES - 1) {
+          throw error;
+        }
+        // Brief backoff before retry
+        await new Promise((r) => setTimeout(r, 50 * (attempt + 1)));
+      }
+    }
+
+    throw lastError;
+  }
+
+  /** Inner implementation of createMerchantOrderAtomic — separated for retry. */
+  private async _createMerchantOrderAtomicInner(
+    tenantId: string,
+    input: CreateMerchantOrderInput,
+    options?: {
+      giftCard?: { id: string; amount: number };
+      payment?: {
+        provider: PaymentProvider;
+        providerPaymentId?: string | null;
+        amount: number;
+        currency: string;
+        stripeAccountId?: string;
+        stripeCustomerId?: string;
+      };
+    }
+  ) {
     const order = await prisma.$transaction(async (tx) => {
       // 1. Create order
       const createdOrder = await this.createMerchantOrder(tenantId, input, tx);
