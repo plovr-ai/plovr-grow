@@ -130,6 +130,9 @@ export class SquareService {
 
     // Atomic concurrency guard + sync record creation
     const syncRecord = await prisma.$transaction(async (tx) => {
+      // Acquire exclusive lock on connection row — serializes concurrent sync attempts
+      await integrationRepository.getConnectionForUpdate(connection.id, tx);
+
       const staleThreshold = new Date(Date.now() - 10 * 60 * 1000);
       const runningSync = await tx.integrationSyncRecord.findFirst({
         where: {

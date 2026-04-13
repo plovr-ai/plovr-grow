@@ -81,6 +81,7 @@ vi.mock("../square-order.service", () => ({
 vi.mock("@/repositories/integration.repository", () => ({
   integrationRepository: {
     getConnection: vi.fn(),
+    getConnectionForUpdate: vi.fn(() => ({ id: "conn-1" })),
     upsertConnection: vi.fn(() => ({ id: "conn-1" })),
     updateTokens: vi.fn(),
     softDeleteConnection: vi.fn(),
@@ -97,6 +98,8 @@ vi.mock("@/lib/db", () => {
   // Universal tx mock that supports both guard and data transactions.
   // syncCatalog calls $transaction twice: 1st for concurrency guard, 2nd for data write.
   const mockTx = {
+    // FOR UPDATE lock support
+    $queryRaw: vi.fn(() => [{ id: "conn-1" }]),
     // Guard transaction fields
     integrationSyncRecord: {
       findFirst: vi.fn(() => null), // no running sync by default

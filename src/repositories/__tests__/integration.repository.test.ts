@@ -17,6 +17,7 @@ vi.mock("@/lib/db", () => {
     integrationSyncRecord: {
       create: vi.fn(),
       update: vi.fn(),
+      findUnique: vi.fn(),
       findFirst: vi.fn(),
       findMany: vi.fn(),
       updateMany: vi.fn(),
@@ -43,7 +44,7 @@ type MockedFn = ReturnType<typeof vi.fn>;
 type MockedPrisma = {
   integrationConnection: { findUnique: MockedFn; findFirst: MockedFn; upsert: MockedFn; update: MockedFn };
   externalIdMapping: { upsert: MockedFn; findMany: MockedFn; findFirst: MockedFn };
-  integrationSyncRecord: { create: MockedFn; update: MockedFn; findFirst: MockedFn; findMany: MockedFn; updateMany: MockedFn };
+  integrationSyncRecord: { create: MockedFn; update: MockedFn; findUnique: MockedFn; findFirst: MockedFn; findMany: MockedFn; updateMany: MockedFn };
   webhookEvent: {
     findUnique: MockedFn;
     create: MockedFn;
@@ -60,6 +61,20 @@ describe("IntegrationRepository", () => {
   beforeEach(() => {
     repo = new IntegrationRepository();
     vi.clearAllMocks();
+  });
+
+  describe("getConnectionForUpdate", () => {
+    it("should return the locked row when connection exists", async () => {
+      const mockTx = { $queryRaw: vi.fn(() => [{ id: "conn-1" }]) };
+      const result = await repo.getConnectionForUpdate("conn-1", mockTx as never);
+      expect(result).toEqual({ id: "conn-1" });
+    });
+
+    it("should return null when connection does not exist", async () => {
+      const mockTx = { $queryRaw: vi.fn(() => []) };
+      const result = await repo.getConnectionForUpdate("conn-missing", mockTx as never);
+      expect(result).toBeNull();
+    });
   });
 
   describe("getConnection", () => {
@@ -649,6 +664,56 @@ describe("IntegrationRepository", () => {
       expect(savedStats.warnings).toHaveLength(100);
       expect(savedStats.warnings[0]).toBe("warn-0");
       expect(savedStats.warnings[99]).toBe("warn-99");
+    });
+  });
+
+  describe("updateSyncRecord cursor guard", () => {
+    it("should keep cursor when no newer successful sync exists", async () => {
+      mockPrisma.integrationSyncRecord.findUnique.mockResolvedValue({
+        connectionId: "conn-1",
+        startedAt: new Date("2026-01-01T00:00:00Z"),
+      } as never);
+      mockPrisma.integrationSyncRecord.findFirst.mockResolvedValue(null as never);
+      mockPrisma.integrationSyncRecord.update.mockResolvedValue({} as never);
+
+      await repo.updateSyncRecord("sync-1", {
+        status: "success",
+        cursor: "cursor-abc",
+      });
+
+      const updateCall = mockPrisma.integrationSyncRecord.update.mock.calls[0][0];
+      expect(updateCall.data.cursor).toBe("cursor-abc");
+    });
+
+    it("should drop cursor when a newer successful sync already finished", async () => {
+      mockPrisma.integrationSyncRecord.findUnique.mockResolvedValue({
+        connectionId: "conn-1",
+        startedAt: new Date("2026-01-01T00:00:00Z"),
+      } as never);
+      mockPrisma.integrationSyncRecord.findFirst.mockResolvedValue({
+        id: "sync-newer",
+        cursor: "cursor-newer",
+      } as never);
+      mockPrisma.integrationSyncRecord.update.mockResolvedValue({} as never);
+
+      await repo.updateSyncRecord("sync-1", {
+        status: "success",
+        cursor: "cursor-stale",
+      });
+
+      const updateCall = mockPrisma.integrationSyncRecord.update.mock.calls[0][0];
+      expect(updateCall.data.cursor).toBeUndefined();
+    });
+
+    it("should not check for newer sync when status is not success", async () => {
+      mockPrisma.integrationSyncRecord.update.mockResolvedValue({} as never);
+
+      await repo.updateSyncRecord("sync-1", {
+        status: "failed",
+        cursor: "cursor-abc",
+      });
+
+      expect(mockPrisma.integrationSyncRecord.findUnique).not.toHaveBeenCalled();
     });
   });
 

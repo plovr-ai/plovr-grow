@@ -805,11 +805,8 @@ describe("Menu Sync Pipeline (Integration)", () => {
       expect(failed).toHaveLength(1);
 
       const failReason = (failed[0] as PromiseRejectedResult).reason;
-      // The loser may get SQUARE_SYNC_ALREADY_RUNNING (caught by guard)
-      // or SQUARE_CATALOG_SYNC_FAILED (unique constraint violation in the data tx)
-      expect(["SQUARE_SYNC_ALREADY_RUNNING", "SQUARE_CATALOG_SYNC_FAILED"]).toContain(
-        failReason.code
-      );
+      // With FOR UPDATE lock the loser is always caught by the guard
+      expect(failReason.code).toBe("SQUARE_SYNC_ALREADY_RUNNING");
 
       // DB state should be consistent — only one sync's data
       const counts = await countSyncTables(TENANT_ID, MERCHANT_ID);
