@@ -1,19 +1,61 @@
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { LoyaltySection } from "../LoyaltySection";
 import { MerchantProvider, LoyaltyProvider } from "@/contexts";
 
-// Mock fetch
+// ---------------------------------------------------------------------------
+// URL-based fetch mock — eliminates FIFO ordering issues with
+// mockResolvedValueOnce that caused flaky CI failures.
+// ---------------------------------------------------------------------------
 global.fetch = vi.fn();
 
-const mockFetch = (response: object, ok = true) => {
-  (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-    ok,
-    json: () => Promise.resolve(response),
-  });
-};
+type FetchRoutes = Record<string, object>;
 
-const Wrapper = ({ children, companySlug = "test-company" }: { children: React.ReactNode; companySlug?: string | null }) => (
+/** Current route table – mutated by `setupFetchMock` / `updateFetchRoute`. */
+let fetchRoutes: FetchRoutes = {};
+
+/**
+ * Install a fetch mock that dispatches by URL substring.
+ * Always includes a default `/me` → not-logged-in route.
+ */
+function setupFetchMock(routes: FetchRoutes = {}) {
+  fetchRoutes = {
+    "/api/storefront/loyalty/me": { success: false, error: "Not logged in" },
+    ...routes,
+  };
+  (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+    (url: string) => {
+      for (const [pattern, response] of Object.entries(fetchRoutes)) {
+        if (url.includes(pattern)) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => response,
+          });
+        }
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ success: false, error: "Unmatched route" }),
+      });
+    },
+  );
+}
+
+/** Dynamically update one route without resetting the whole mock. */
+function updateFetchRoute(pattern: string, response: object) {
+  fetchRoutes[pattern] = response;
+}
+
+// ---------------------------------------------------------------------------
+// Wrapper
+// ---------------------------------------------------------------------------
+const Wrapper = ({
+  children,
+  companySlug = "test-company",
+}: {
+  children: React.ReactNode;
+  companySlug?: string | null;
+}) => (
   <MerchantProvider
     config={{
       name: "Test Merchant",
@@ -29,44 +71,85 @@ const Wrapper = ({ children, companySlug = "test-company" }: { children: React.R
   </MerchantProvider>
 );
 
-// Helper to mock initial /me API call for not-logged-in state
-const mockInitialNotLoggedIn = () => {
-  mockFetch({ success: false, error: "Not logged in" });
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
+/** Enter a 6-digit OTP code, wrapped in act() to flush all async effects. */
+const enterOtpCode = async (code = "123456") => {
+  const inputs = screen.getAllByLabelText(/Digit \d/);
+  await act(async () => {
+    for (let i = 0; i < code.length; i++) {
+      fireEvent.change(inputs[i], { target: { value: code[i] } });
+    }
+  });
 };
 
+/** Render component and wait for initial load to finish. */
+const renderAndWaitForLoad = async (
+  props: Parameters<typeof LoyaltySection>[0],
+  companySlug?: string | null,
+) => {
+  render(
+    <Wrapper companySlug={companySlug}>
+      <LoyaltySection {...props} />
+    </Wrapper>,
+  );
+  await waitFor(() => {
+    expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
+  });
+};
+
+/** Expand → enter phone → click Continue (wrapped in act). */
+const expandAndSubmitPhone = async (phone = "(555) 123-4567") => {
+  fireEvent.click(screen.getByText(/Sign in to earn/));
+  fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
+    target: { value: phone },
+  });
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 describe("LoyaltySection", () => {
   const defaultProps = {
-    subtotal: 25.00,
+    subtotal: 25.0,
     onMemberLogin: vi.fn(),
     onMemberLogout: vi.fn(),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (global.fetch as ReturnType<typeof vi.fn>).mockReset();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    setupFetchMock();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // -----------------------------------------------------------------------
   describe("when companySlug is null", () => {
     it("renders nothing", () => {
       const { container } = render(
         <Wrapper companySlug={null}>
           <LoyaltySection {...defaultProps} />
-        </Wrapper>
+        </Wrapper>,
       );
       expect(container.firstChild).toBeNull();
     });
   });
 
+  // -----------------------------------------------------------------------
   describe("collapsed state", () => {
-    beforeEach(() => {
-      mockInitialNotLoggedIn();
-    });
-
     it("shows login prompt", async () => {
       render(
         <Wrapper>
           <LoyaltySection {...defaultProps} />
-        </Wrapper>
+        </Wrapper>,
       );
       await waitFor(() => {
         expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
@@ -75,94 +158,60 @@ describe("LoyaltySection", () => {
     });
 
     it("expands when clicked", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
+      await renderAndWaitForLoad(defaultProps);
 
       fireEvent.click(screen.getByText(/Sign in to earn/));
 
       expect(screen.getByText("Earn Rewards")).toBeInTheDocument();
-      expect(screen.getByPlaceholderText("(555) 123-4567")).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("(555) 123-4567"),
+      ).toBeInTheDocument();
     });
   });
 
+  // -----------------------------------------------------------------------
   describe("phone input step", () => {
-    beforeEach(() => {
-      mockInitialNotLoggedIn();
-    });
-
     it("shows phone input and continue button", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
+      await renderAndWaitForLoad(defaultProps);
 
       fireEvent.click(screen.getByText(/Sign in to earn/));
 
-      expect(screen.getByPlaceholderText("(555) 123-4567")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("(555) 123-4567"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Continue" }),
+      ).toBeInTheDocument();
     });
 
     it("shows cancel button", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
+      await renderAndWaitForLoad(defaultProps);
 
       fireEvent.click(screen.getByText(/Sign in to earn/));
-      expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Cancel" }),
+      ).toBeInTheDocument();
     });
 
     it("collapses when cancel clicked", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
+      await renderAndWaitForLoad(defaultProps);
 
       fireEvent.click(screen.getByText(/Sign in to earn/));
       fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
-      expect(screen.queryByPlaceholderText("(555) 123-4567")).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText("(555) 123-4567"),
+      ).not.toBeInTheDocument();
     });
 
     it("disables continue button when phone is incomplete", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
+      await renderAndWaitForLoad(defaultProps);
 
       fireEvent.click(screen.getByText(/Sign in to earn/));
 
       const continueButton = screen.getByRole("button", { name: "Continue" });
       expect(continueButton).toBeDisabled();
 
-      // Enter partial phone
       fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
         target: { value: "(555) 123" },
       });
@@ -170,15 +219,7 @@ describe("LoyaltySection", () => {
     });
 
     it("enables continue button when phone is complete", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
+      await renderAndWaitForLoad(defaultProps);
 
       fireEvent.click(screen.getByText(/Sign in to earn/));
 
@@ -191,15 +232,7 @@ describe("LoyaltySection", () => {
     });
 
     it("shows estimated points", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} subtotal={25.50} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
+      await renderAndWaitForLoad({ ...defaultProps, subtotal: 25.5 });
 
       fireEvent.click(screen.getByText(/Sign in to earn/));
 
@@ -207,34 +240,27 @@ describe("LoyaltySection", () => {
     });
   });
 
+  // -----------------------------------------------------------------------
   describe("existing member flow", () => {
-    beforeEach(() => {
-      mockInitialNotLoggedIn();
-    });
-
     it("opens OTP modal directly for existing members", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
+      setupFetchMock({
+        "/api/storefront/loyalty/otp/send": {
+          success: true,
+          data: { isNewMember: false },
+        },
+        "/api/storefront/loyalty/status": {
+          success: true,
+          data: { config: { pointsPerDollar: 1 } },
+        },
       });
 
-      // API returns isNewMember: false for existing member
-      mockFetch({ success: true, data: { isNewMember: false } });
-      mockFetch({ success: true, data: { config: { pointsPerDollar: 1 } } });
-
-      fireEvent.click(screen.getByText(/Sign in to earn/));
-      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
-        target: { value: "(555) 123-4567" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await renderAndWaitForLoad(defaultProps);
+      await expandAndSubmitPhone();
 
       await waitFor(() => {
-        expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
+        expect(
+          screen.getByText("Enter Verification Code"),
+        ).toBeInTheDocument();
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
@@ -242,48 +268,43 @@ describe("LoyaltySection", () => {
         expect.objectContaining({
           method: "POST",
           body: expect.stringContaining("+15551234567"),
-        })
+        }),
       );
     });
 
     it("shows error when phone check fails", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
+      setupFetchMock({
+        "/api/storefront/loyalty/otp/send": {
+          success: false,
+          error: "Phone number not found",
+        },
       });
 
-      mockFetch({ success: false, error: "Phone number not found" });
-
-      fireEvent.click(screen.getByText(/Sign in to earn/));
-      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
-        target: { value: "(555) 123-4567" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await renderAndWaitForLoad(defaultProps);
+      await expandAndSubmitPhone();
 
       await waitFor(() => {
-        expect(screen.getByText("Phone number not found")).toBeInTheDocument();
+        expect(
+          screen.getByText("Phone number not found"),
+        ).toBeInTheDocument();
       });
     });
 
     it("shows checking state on button", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
+      await renderAndWaitForLoad(defaultProps);
 
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
-
-      // Make fetch never resolve immediately
-      (global.fetch as ReturnType<typeof vi.fn>).mockImplementationOnce(
-        () => new Promise(() => {})
+      // Override fetch to never resolve for the otp/send call
+      (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+        (url: string) => {
+          if (url.includes("/api/storefront/loyalty/me")) {
+            return Promise.resolve({
+              ok: true,
+              json: async () => ({ success: false, error: "Not logged in" }),
+            });
+          }
+          // Never resolve — simulates pending request
+          return new Promise(() => {});
+        },
       );
 
       fireEvent.click(screen.getByText(/Sign in to earn/));
@@ -296,162 +317,94 @@ describe("LoyaltySection", () => {
     });
   });
 
+  // -----------------------------------------------------------------------
   describe("new member registration flow", () => {
     beforeEach(() => {
-      mockInitialNotLoggedIn();
+      setupFetchMock({
+        "/api/storefront/loyalty/otp/send": {
+          success: true,
+          data: { isNewMember: true },
+        },
+        "/api/storefront/loyalty/status": {
+          success: true,
+          data: { config: { pointsPerDollar: 1 } },
+        },
+      });
     });
 
     it("shows registration form for new members", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
-
-      // API returns isNewMember: true for new member
-      mockFetch({ success: true, data: { isNewMember: true } });
-      mockFetch({ success: true, data: { config: { pointsPerDollar: 1 } } });
-
-      fireEvent.click(screen.getByText(/Sign in to earn/));
-      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
-        target: { value: "(555) 123-4567" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await renderAndWaitForLoad(defaultProps);
+      await expandAndSubmitPhone();
 
       await waitFor(() => {
         expect(screen.getByText("Create Your Account")).toBeInTheDocument();
       });
 
-      // Registration form should have required fields
       expect(screen.getByPlaceholderText("John")).toBeInTheDocument();
       expect(screen.getByPlaceholderText("Doe")).toBeInTheDocument();
-      expect(screen.getByPlaceholderText("john@example.com")).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("john@example.com"),
+      ).toBeInTheDocument();
     });
 
     it("shows phone number as read-only in registration form", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
-
-      mockFetch({ success: true, data: { isNewMember: true } });
-      mockFetch({ success: true, data: { config: { pointsPerDollar: 1 } } });
-
-      fireEvent.click(screen.getByText(/Sign in to earn/));
-      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
-        target: { value: "(555) 123-4567" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await renderAndWaitForLoad(defaultProps);
+      await expandAndSubmitPhone();
 
       await waitFor(() => {
         expect(screen.getByText("Create Your Account")).toBeInTheDocument();
       });
 
-      // Phone should be displayed but not editable
       expect(screen.getByText("(555) 123-4567")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Change" }),
+      ).toBeInTheDocument();
     });
 
     it("allows going back to phone input from registration form", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
-
-      mockFetch({ success: true, data: { isNewMember: true } });
-      mockFetch({ success: true, data: { config: { pointsPerDollar: 1 } } });
-
-      fireEvent.click(screen.getByText(/Sign in to earn/));
-      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
-        target: { value: "(555) 123-4567" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await renderAndWaitForLoad(defaultProps);
+      await expandAndSubmitPhone();
 
       await waitFor(() => {
         expect(screen.getByText("Create Your Account")).toBeInTheDocument();
       });
 
-      // Click Change to go back
       fireEvent.click(screen.getByRole("button", { name: "Change" }));
 
-      // Should be back to phone input
       expect(screen.getByText("Earn Rewards")).toBeInTheDocument();
-      expect(screen.getByPlaceholderText("(555) 123-4567")).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("(555) 123-4567"),
+      ).toBeInTheDocument();
     });
 
     it("validates required fields before showing OTP modal", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
-
-      mockFetch({ success: true, data: { isNewMember: true } });
-      mockFetch({ success: true, data: { config: { pointsPerDollar: 1 } } });
-
-      fireEvent.click(screen.getByText(/Sign in to earn/));
-      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
-        target: { value: "(555) 123-4567" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await renderAndWaitForLoad(defaultProps);
+      await expandAndSubmitPhone();
 
       await waitFor(() => {
         expect(screen.getByText("Create Your Account")).toBeInTheDocument();
       });
 
-      // Try to submit without filling in fields
-      fireEvent.click(screen.getByRole("button", { name: "Send Verification Code" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Send Verification Code" }),
+      );
 
-      // Should show validation errors
       await waitFor(() => {
-        expect(screen.getByText("First name is required")).toBeInTheDocument();
+        expect(
+          screen.getByText("First name is required"),
+        ).toBeInTheDocument();
         expect(screen.getByText("Last name is required")).toBeInTheDocument();
       });
     });
 
     it("validates email format", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
-
-      mockFetch({ success: true, data: { isNewMember: true } });
-      mockFetch({ success: true, data: { config: { pointsPerDollar: 1 } } });
-
-      fireEvent.click(screen.getByText(/Sign in to earn/));
-      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
-        target: { value: "(555) 123-4567" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await renderAndWaitForLoad(defaultProps);
+      await expandAndSubmitPhone();
 
       await waitFor(() => {
         expect(screen.getByText("Create Your Account")).toBeInTheDocument();
       });
 
-      // Fill in names but invalid email
       fireEvent.change(screen.getByPlaceholderText("John"), {
         target: { value: "John" },
       });
@@ -462,38 +415,25 @@ describe("LoyaltySection", () => {
         target: { value: "invalid-email" },
       });
 
-      fireEvent.click(screen.getByRole("button", { name: "Send Verification Code" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Send Verification Code" }),
+      );
 
       await waitFor(() => {
-        expect(screen.getByText("Please enter a valid email")).toBeInTheDocument();
+        expect(
+          screen.getByText("Please enter a valid email"),
+        ).toBeInTheDocument();
       });
     });
 
     it("shows OTP modal after valid registration form submission", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
-      });
-
-      mockFetch({ success: true, data: { isNewMember: true } });
-      mockFetch({ success: true, data: { config: { pointsPerDollar: 1 } } });
-
-      fireEvent.click(screen.getByText(/Sign in to earn/));
-      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
-        target: { value: "(555) 123-4567" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await renderAndWaitForLoad(defaultProps);
+      await expandAndSubmitPhone();
 
       await waitFor(() => {
         expect(screen.getByText("Create Your Account")).toBeInTheDocument();
       });
 
-      // Fill in all required fields
       fireEvent.change(screen.getByPlaceholderText("John"), {
         target: { value: "John" },
       });
@@ -504,48 +444,46 @@ describe("LoyaltySection", () => {
         target: { value: "john@example.com" },
       });
 
-      fireEvent.click(screen.getByRole("button", { name: "Send Verification Code" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Send Verification Code" }),
+      );
 
       await waitFor(() => {
-        expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
+        expect(
+          screen.getByText("Enter Verification Code"),
+        ).toBeInTheDocument();
       });
     });
   });
 
+  // -----------------------------------------------------------------------
   describe("verification flow", () => {
-    beforeEach(() => {
-      mockInitialNotLoggedIn();
-    });
-
     const setupOtpModalForExistingMember = async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
+      setupFetchMock({
+        "/api/storefront/loyalty/otp/send": {
+          success: true,
+          data: { isNewMember: false },
+        },
+        "/api/storefront/loyalty/status": {
+          success: true,
+          data: { config: { pointsPerDollar: 1 } },
+        },
       });
 
-      mockFetch({ success: true, data: { isNewMember: false } });
-      mockFetch({ success: true, data: { config: { pointsPerDollar: 1 } } });
-
-      fireEvent.click(screen.getByText(/Sign in to earn/));
-      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
-        target: { value: "(555) 123-4567" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await renderAndWaitForLoad(defaultProps);
+      await expandAndSubmitPhone();
 
       await waitFor(() => {
-        expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
+        expect(
+          screen.getByText("Enter Verification Code"),
+        ).toBeInTheDocument();
       });
     };
 
     it("verifies code and shows member card on success", async () => {
       await setupOtpModalForExistingMember();
 
-      mockFetch({
+      updateFetchRoute("/api/storefront/loyalty/otp/verify", {
         success: true,
         data: {
           member: {
@@ -559,11 +497,7 @@ describe("LoyaltySection", () => {
         },
       });
 
-      // Enter OTP code - get inputs by aria-label to avoid phone input
-      const inputs = screen.getAllByLabelText(/Digit \d/);
-      for (let i = 0; i < 6; i++) {
-        fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
-      }
+      await enterOtpCode();
 
       await waitFor(() => {
         expect(screen.getByText("Rewards Member")).toBeInTheDocument();
@@ -575,23 +509,19 @@ describe("LoyaltySection", () => {
           id: "member-1",
           phone: "+15551234567",
           points: 150,
-        })
+        }),
       );
     });
 
     it("shows error when verification fails", async () => {
       await setupOtpModalForExistingMember();
 
-      mockFetch({ success: false, error: "Invalid code" });
-
-      const inputs = screen.getAllByLabelText(/Digit \d/);
-      // Wrap in act() so React flushes the state update that triggers
-      // the async onVerify callback on the 6th digit.
-      await act(async () => {
-        for (let i = 0; i < 6; i++) {
-          fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
-        }
+      updateFetchRoute("/api/storefront/loyalty/otp/verify", {
+        success: false,
+        error: "Invalid code",
       });
+
+      await enterOtpCode();
 
       await waitFor(() => {
         expect(screen.getByText("Invalid code")).toBeInTheDocument();
@@ -599,30 +529,24 @@ describe("LoyaltySection", () => {
     });
 
     it("sends registration data when verifying new member", async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
+      setupFetchMock({
+        "/api/storefront/loyalty/otp/send": {
+          success: true,
+          data: { isNewMember: true },
+        },
+        "/api/storefront/loyalty/status": {
+          success: true,
+          data: { config: { pointsPerDollar: 1 } },
+        },
       });
 
-      mockFetch({ success: true, data: { isNewMember: true } });
-      mockFetch({ success: true, data: { config: { pointsPerDollar: 1 } } });
-
-      fireEvent.click(screen.getByText(/Sign in to earn/));
-      fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
-        target: { value: "(555) 123-4567" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      await renderAndWaitForLoad(defaultProps);
+      await expandAndSubmitPhone();
 
       await waitFor(() => {
         expect(screen.getByText("Create Your Account")).toBeInTheDocument();
       });
 
-      // Fill in registration form
       fireEvent.change(screen.getByPlaceholderText("John"), {
         target: { value: "John" },
       });
@@ -633,13 +557,17 @@ describe("LoyaltySection", () => {
         target: { value: "john@example.com" },
       });
 
-      fireEvent.click(screen.getByRole("button", { name: "Send Verification Code" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Send Verification Code" }),
+      );
 
       await waitFor(() => {
-        expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
+        expect(
+          screen.getByText("Enter Verification Code"),
+        ).toBeInTheDocument();
       });
 
-      mockFetch({
+      updateFetchRoute("/api/storefront/loyalty/otp/verify", {
         success: true,
         data: {
           member: {
@@ -653,19 +581,17 @@ describe("LoyaltySection", () => {
         },
       });
 
-      // Enter OTP
-      const inputs = screen.getAllByLabelText(/Digit \d/);
-      for (let i = 0; i < 6; i++) {
-        fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
-      }
+      await enterOtpCode();
 
       await waitFor(() => {
         expect(screen.getByText("Rewards Member")).toBeInTheDocument();
       });
 
       // Check that registration data was sent
-      const verifyCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.find(
-        (call) => call[0] === "/api/storefront/loyalty/otp/verify"
+      const verifyCall = (
+        global.fetch as ReturnType<typeof vi.fn>
+      ).mock.calls.find(
+        (call: string[]) => call[0] === "/api/storefront/loyalty/otp/verify",
       );
       expect(verifyCall).toBeDefined();
       const body = JSON.parse(verifyCall![1].body);
@@ -675,43 +601,30 @@ describe("LoyaltySection", () => {
     });
   });
 
+  // -----------------------------------------------------------------------
   describe("logged in state", () => {
-    beforeEach(() => {
-      mockInitialNotLoggedIn();
-    });
-
     const setupLoggedInState = async () => {
-      render(
-        <Wrapper>
-          <LoyaltySection {...defaultProps} />
-        </Wrapper>
-      );
+      setupFetchMock({
+        "/api/storefront/loyalty/otp/send": {
+          success: true,
+          data: { isNewMember: false },
+        },
+        "/api/storefront/loyalty/status": {
+          success: true,
+          data: { config: { pointsPerDollar: 2 } },
+        },
+      });
+
+      await renderAndWaitForLoad(defaultProps);
+      await expandAndSubmitPhone();
 
       await waitFor(() => {
-        expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
+        expect(
+          screen.getByText("Enter Verification Code"),
+        ).toBeInTheDocument();
       });
 
-      mockFetch({ success: true, data: { isNewMember: false } });
-      mockFetch({ success: true, data: { config: { pointsPerDollar: 2 } } });
-
-      // Go through login flow — wrap in act to flush all state updates
-      await act(async () => {
-        fireEvent.click(screen.getByText(/Sign in to earn/));
-      });
-      await act(async () => {
-        fireEvent.change(screen.getByPlaceholderText("(555) 123-4567"), {
-          target: { value: "(555) 123-4567" },
-        });
-      });
-      await act(async () => {
-        fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText("Enter Verification Code")).toBeInTheDocument();
-      });
-
-      mockFetch({
+      updateFetchRoute("/api/storefront/loyalty/otp/verify", {
         success: true,
         data: {
           member: {
@@ -725,20 +638,11 @@ describe("LoyaltySection", () => {
         },
       });
 
-      // Get OTP inputs by aria-label to avoid including the phone input
-      const inputs = screen.getAllByLabelText(/Digit \d/);
-      for (let i = 0; i < 6; i++) {
-        await act(async () => {
-          fireEvent.change(inputs[i], { target: { value: String(i + 1) } });
-        });
-      }
+      await enterOtpCode();
 
-      await waitFor(
-        () => {
-          expect(screen.getByText("Rewards Member")).toBeInTheDocument();
-        },
-        { timeout: 3000 }
-      );
+      await waitFor(() => {
+        expect(screen.getByText("Rewards Member")).toBeInTheDocument();
+      });
     };
 
     it("shows member card with points", async () => {
@@ -758,16 +662,19 @@ describe("LoyaltySection", () => {
     it("shows sign out button", async () => {
       await setupLoggedInState();
 
-      expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Sign out" }),
+      ).toBeInTheDocument();
     });
 
     it("signs out when sign out clicked", async () => {
       await setupLoggedInState();
 
-      // Mock the logout API call
-      mockFetch({ success: true });
+      updateFetchRoute("/api/storefront/loyalty/logout", { success: true });
 
-      fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+      });
 
       await waitFor(() => {
         expect(screen.getByText(/Sign in to earn/)).toBeInTheDocument();
