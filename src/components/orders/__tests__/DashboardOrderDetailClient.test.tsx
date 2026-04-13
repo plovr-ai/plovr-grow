@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { DashboardOrderDetailClient } from "../DashboardOrderDetailClient";
 import { DashboardProvider } from "@/contexts";
 import type { ReactNode } from "react";
@@ -444,6 +444,110 @@ describe("DashboardOrderDetailClient", () => {
 
       expect(screen.getByText("partialPaymentTitle")).toBeInTheDocument();
       expect(screen.getByText("partialPaymentMsg")).toBeInTheDocument();
+    });
+  });
+
+  describe("in-store mark as paid", () => {
+    const inStoreOrder = {
+      ...mockOrder,
+      status: "created",
+      paymentType: "in_store",
+      paidAt: null,
+    };
+
+    beforeEach(() => {
+      vi.stubGlobal("fetch", vi.fn());
+      vi.stubGlobal("confirm", vi.fn());
+    });
+
+    it("should show mark as paid button for in-store created orders", () => {
+      render(
+        <DashboardOrderDetailClient order={inStoreOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("awaitingInStorePayment")).toBeInTheDocument();
+      expect(screen.getByText("actions.markAsPaid")).toBeInTheDocument();
+    });
+
+    it("should not show mark as paid button for online created orders", () => {
+      const onlineOrder = { ...mockOrder, status: "created", paymentType: "online", paidAt: null };
+
+      render(
+        <DashboardOrderDetailClient order={onlineOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      expect(screen.getByText("awaitingPayment")).toBeInTheDocument();
+      expect(screen.queryByText("actions.markAsPaid")).not.toBeInTheDocument();
+    });
+
+    it("should call API when mark as paid button is clicked and confirmed", async () => {
+      vi.mocked(window.confirm).mockReturnValue(true);
+      vi.mocked(globalThis.fetch).mockResolvedValue(
+        new Response(JSON.stringify({ success: true }), { status: 200 })
+      );
+
+      render(
+        <DashboardOrderDetailClient order={inStoreOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getByText("actions.markAsPaid"));
+
+      await waitFor(() => {
+        expect(globalThis.fetch).toHaveBeenCalledWith(
+          `/api/dashboard/${inStoreOrder.merchant.id}/orders/${inStoreOrder.id}/mark-paid`,
+          expect.objectContaining({ method: "POST" })
+        );
+      });
+    });
+
+    it("should not call API when confirm is cancelled", () => {
+      vi.mocked(window.confirm).mockReturnValue(false);
+
+      render(
+        <DashboardOrderDetailClient order={inStoreOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getByText("actions.markAsPaid"));
+
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it("should show error when API call fails", async () => {
+      vi.mocked(window.confirm).mockReturnValue(true);
+      vi.mocked(globalThis.fetch).mockResolvedValue(
+        new Response(JSON.stringify({ success: false, error: "ORDER_NOT_ELIGIBLE_FOR_MARK_PAID" }), { status: 400 })
+      );
+
+      render(
+        <DashboardOrderDetailClient order={inStoreOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getByText("actions.markAsPaid"));
+
+      await waitFor(() => {
+        expect(screen.getByText("ORDER_NOT_ELIGIBLE_FOR_MARK_PAID")).toBeInTheDocument();
+      });
+    });
+
+    it("should show fallback error when fetch throws", async () => {
+      vi.mocked(window.confirm).mockReturnValue(true);
+      vi.mocked(globalThis.fetch).mockRejectedValue(new Error("Network error"));
+
+      render(
+        <DashboardOrderDetailClient order={inStoreOrder} imageMap={mockImageMap} />,
+        { wrapper: createWrapper() }
+      );
+
+      fireEvent.click(screen.getByText("actions.markAsPaid"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Network error")).toBeInTheDocument();
+      });
     });
   });
 

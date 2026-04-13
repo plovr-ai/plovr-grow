@@ -44,7 +44,7 @@ function makeRequest(body: unknown, signature?: string): Request {
 describe("POST /api/webhooks/stripe-connect", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: getPaymentByIntentId returns a succeeded payment with order info
+    // Default: getPaymentByProviderPaymentId returns a succeeded payment with order info
     vi.mocked(paymentService.getPaymentByProviderPaymentId).mockResolvedValue({
       id: "pay-1",
       status: "succeeded",
