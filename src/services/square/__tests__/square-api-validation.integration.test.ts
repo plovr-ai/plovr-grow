@@ -266,12 +266,20 @@ describe.skipIf(!SANDBOX_TOKEN)(
     it("sets each item price to the minimum variation price from raw API", async () => {
       const syncable = expectedSyncableItems(sandboxCatalog.items);
 
+      // Use external ID mapping to match API items to DB items (name may not be unique)
+      const idMappings = await prisma.externalIdMapping.findMany({
+        where: { tenantId: TENANT_ID, externalSource: "SQUARE", internalType: "MenuItem" },
+      });
+      const externalToInternalId = new Map(
+        idMappings.map((m) => [m.externalId, m.internalId])
+      );
+
       const dbItems = await prisma.menuItem.findMany({
         where: { tenantId: TENANT_ID, deleted: false },
       });
+      const dbItemById = new Map(dbItems.map((i) => [i.id, i]));
 
       for (const apiItem of syncable) {
-        const data = apiItem.itemData!;
         const validVariations = getValidVariations(apiItem);
 
         const expectedPrice = Math.min(
@@ -280,8 +288,10 @@ describe.skipIf(!SANDBOX_TOKEN)(
           )
         );
 
-        const dbItem = dbItems.find((i) => i.name === (data.name ?? "Unnamed"));
-        expect(dbItem).toBeDefined();
+        const internalId = externalToInternalId.get(apiItem.id);
+        expect(internalId, `ID mapping for Square item ${apiItem.id} should exist`).toBeDefined();
+        const dbItem = dbItemById.get(internalId!);
+        expect(dbItem, `DB item for Square item ${apiItem.id} should exist`).toBeDefined();
         expect(Number(dbItem!.price)).toBeCloseTo(expectedPrice, 2);
       }
     });
@@ -331,14 +341,22 @@ describe.skipIf(!SANDBOX_TOKEN)(
         sandboxCatalog.modifierLists.map((ml) => [ml.id, ml])
       );
 
+      // Use external ID mapping to match API items to DB items
+      const idMappings = await prisma.externalIdMapping.findMany({
+        where: { tenantId: TENANT_ID, externalSource: "SQUARE", internalType: "MenuItem" },
+      });
+      const externalToInternalId = new Map(
+        idMappings.map((m) => [m.externalId, m.internalId])
+      );
+
       const dbItems = await prisma.menuItem.findMany({
         where: { tenantId: TENANT_ID, deleted: false },
         include: { modifierGroups: true },
       });
+      const dbItemById = new Map(dbItems.map((i) => [i.id, i]));
 
       for (const apiItem of syncable) {
         const data = apiItem.itemData!;
-        const itemName = data.name ?? "Unnamed";
 
         // Count expected modifier groups from raw API:
         // 1. If >1 valid variation → 1 "Options" group for variations
@@ -352,11 +370,13 @@ describe.skipIf(!SANDBOX_TOKEN)(
 
         const expectedGroupCount = hasVariationGroup + enabledModifierLists.length;
 
-        const dbItem = dbItems.find((i) => i.name === itemName);
-        expect(dbItem, `item "${itemName}" should exist in DB`).toBeDefined();
+        const internalId = externalToInternalId.get(apiItem.id);
+        expect(internalId, `ID mapping for ${apiItem.id} should exist`).toBeDefined();
+        const dbItem = dbItemById.get(internalId!);
+        expect(dbItem, `DB item for ${apiItem.id} should exist`).toBeDefined();
         expect(
           dbItem!.modifierGroups.length,
-          `item "${itemName}" should have ${expectedGroupCount} modifier groups`
+          `item "${data.name}" (${apiItem.id}) should have ${expectedGroupCount} modifier groups`
         ).toBe(expectedGroupCount);
       }
     });
