@@ -67,6 +67,8 @@ export default async function OrderDetailPage({ params }: PageProps) {
     taxAmount: Number(order.taxAmount),
     tipAmount: Number(order.tipAmount),
     deliveryFee: Number(order.deliveryFee),
+    feesAmount: Number(order.feesAmount),
+    feesBreakdown: (order.feesBreakdown as OrderDetailData["feesBreakdown"]) ?? [],
     discount: Number(order.discount),
     totalAmount: Number(order.totalAmount),
     createdAt: order.createdAt,

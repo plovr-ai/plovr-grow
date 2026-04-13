@@ -87,6 +87,7 @@ export default async function OrdersManagementPage({
     taxAmount: Number(order.taxAmount),
     tipAmount: Number(order.tipAmount),
     deliveryFee: Number(order.deliveryFee),
+    feesAmount: Number(order.feesAmount),
     discount: Number(order.discount),
     giftCardPayment: Number(order.giftCardPayment),
     balanceDue: Number(order.balanceDue),

@@ -11,6 +11,7 @@ import { formatCustomerName } from "@/lib/names";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { PaymentStatusBadge, FulfillmentStatusBadge } from "./StatusBadge";
 import type { OrderStatus, FulfillmentStatus, OrderMode, OrderItemData, DeliveryAddress, SalesChannel, PaymentType } from "@/types";
+import type { FeeBreakdownItem } from "@/lib/pricing";
 
 // Types for Dashboard Order Detail
 interface TimelineEvent {
@@ -37,6 +38,8 @@ export interface DashboardOrderDetailData {
   taxAmount: number;
   tipAmount: number;
   deliveryFee: number;
+  feesAmount: number;
+  feesBreakdown: FeeBreakdownItem[];
   discount: number;
   totalAmount: number;
   createdAt: Date | string;
@@ -405,6 +408,8 @@ function OrderPriceSummary({
   taxAmount,
   tipAmount,
   deliveryFee,
+  feesAmount,
+  feesBreakdown,
   discount,
   totalAmount,
   formatPrice,
@@ -413,6 +418,8 @@ function OrderPriceSummary({
   taxAmount: number;
   tipAmount: number;
   deliveryFee: number;
+  feesAmount: number;
+  feesBreakdown: FeeBreakdownItem[];
   discount: number;
   totalAmount: number;
   formatPrice: (price: number) => string;
@@ -437,6 +444,12 @@ function OrderPriceSummary({
             <span>{formatPrice(deliveryFee)}</span>
           </div>
         )}
+        {feesAmount > 0 && feesBreakdown.map((fee) => (
+          <div key={fee.id} className="flex justify-between text-gray-600">
+            <span>{fee.id}</span>
+            <span>{formatPrice(fee.amount)}</span>
+          </div>
+        ))}
         {tipAmount > 0 && (
           <div className="flex justify-between text-gray-600">
             <span>Tip</span>
@@ -721,6 +734,8 @@ export function DashboardOrderDetailClient({ order, imageMap }: Props) {
           taxAmount={order.taxAmount}
           tipAmount={order.tipAmount}
           deliveryFee={order.deliveryFee}
+          feesAmount={order.feesAmount}
+          feesBreakdown={order.feesBreakdown}
           discount={order.discount}
           totalAmount={order.totalAmount}
           formatPrice={formatPrice}

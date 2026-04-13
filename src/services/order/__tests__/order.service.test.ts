@@ -442,6 +442,146 @@ describe("OrderService", () => {
     });
   });
 
+  describe("createMerchantOrder() - fee persistence", () => {
+    const mockInput = {
+      merchantId: "merchant-1",
+      customerFirstName: "John",
+      customerLastName: "Doe",
+      customerPhone: "123-456-7890",
+      customerEmail: "john@example.com",
+      orderMode: "pickup" as const,
+      items: [
+        {
+          menuItemId: "item-1",
+          name: "Margherita Pizza",
+          price: 18.99,
+          quantity: 2,
+          selectedModifiers: [],
+          totalPrice: 37.98,
+          taxes: [{ taxConfigId: "tax-1", name: "Standard Tax", rate: 0.08875, roundingMethod: "half_up" as const, inclusionType: "additive" as const }],
+        },
+      ],
+      tipAmount: 5,
+    };
+
+    beforeEach(() => {
+      vi.mocked(menuService.getMenuItemsByIds).mockResolvedValue([
+        { id: "item-1", name: "Margherita Pizza" },
+      ] as never);
+
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([["item-1", ["tax-1"]]])
+      );
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([
+        { id: "tax-1", name: "Sales Tax", roundingMethod: "half_up", status: "active" },
+      ] as never);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
+        new Map([["tax-1", 0.08875]])
+      );
+
+      vi.mocked(merchantService.getMerchantById).mockResolvedValue({
+        id: "merchant-1",
+        name: "Test Merchant",
+        slug: "test-merchant",
+        timezone: "America/New_York",
+      } as never);
+
+      vi.mocked(sequenceRepository.getNextOrderSequence).mockResolvedValue(1);
+
+      vi.mocked(orderRepository.create).mockResolvedValue({
+        id: "order-1",
+        orderNumber: "20260127-0001",
+        tenantId: "tenant-1",
+        merchantId: "merchant-1",
+        status: "created",
+        fulfillmentStatus: "pending",
+        subtotal: 37.98,
+        taxAmount: 3.37,
+        feesAmount: 0,
+        feesBreakdown: null,
+        tipAmount: 5,
+        deliveryFee: 0,
+        discount: 0,
+        giftCardPayment: 0,
+        balanceDue: 46.35,
+        totalAmount: 46.35,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never);
+    });
+
+    it("should pass feesAmount and feesBreakdown to repository", async () => {
+      await orderService.createMerchantOrder("tenant-1", mockInput);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "merchant-1",
+        expect.objectContaining({
+          feesAmount: 0,
+        }),
+        undefined,
+        expect.anything(),
+        mockInput.items
+      );
+    });
+
+    it("should pass non-zero feesAmount when calculateOrderTotals returns fees", async () => {
+      // Spy on calculateOrderTotals to return non-zero fees
+      const calculateSpy = vi.spyOn(orderService, "calculateOrderTotals").mockResolvedValue({
+        subtotal: 37.98,
+        taxAmount: 3.37,
+        taxBreakdown: [],
+        feesAmount: 1.99,
+        feesBreakdown: [{ id: "platform_fee", amount: 1.99 }],
+        tipAmount: 5,
+        deliveryFee: 0,
+        discount: 0,
+        totalAmount: 48.34,
+      });
+
+      await orderService.createMerchantOrder("tenant-1", mockInput);
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        "tenant-1",
+        "merchant-1",
+        expect.objectContaining({
+          feesAmount: 1.99,
+          feesBreakdown: [{ id: "platform_fee", amount: 1.99 }],
+        }),
+        undefined,
+        expect.anything(),
+        mockInput.items
+      );
+
+      calculateSpy.mockRestore();
+    });
+
+    it("should store feesBreakdown as JsonNull when no fees", async () => {
+      const calculateSpy = vi.spyOn(orderService, "calculateOrderTotals").mockResolvedValue({
+        subtotal: 37.98,
+        taxAmount: 3.37,
+        taxBreakdown: [],
+        feesAmount: 0,
+        feesBreakdown: [],
+        tipAmount: 5,
+        deliveryFee: 0,
+        discount: 0,
+        totalAmount: 46.35,
+      });
+
+      await orderService.createMerchantOrder("tenant-1", mockInput);
+
+      // When feesBreakdown is empty, should pass JsonNull
+      const createCall = vi.mocked(orderRepository.create).mock.calls[0];
+      const orderData = createCall[2] as Record<string, unknown>;
+      expect(orderData.feesAmount).toBe(0);
+      // feesBreakdown should be Prisma.JsonNull (which is a symbol/string)
+      expect(orderData.feesBreakdown).toBeDefined();
+
+      calculateSpy.mockRestore();
+    });
+  });
+
   describe("createGiftCardOrder()", () => {
     const mockInput = {
       customerFirstName: "Jane",

@@ -40,6 +40,8 @@ describe("OrdersManagementClient", () => {
       taxAmount: 0.88,
       tipAmount: 0.0,
       deliveryFee: 0.0,
+      feesAmount: 0.0,
+      feesBreakdown: null,
       discount: 0.0,
       giftCardPayment: 0.0,
       balanceDue: 10.88,

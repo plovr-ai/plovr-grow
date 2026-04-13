@@ -48,6 +48,8 @@ const baseOrder = {
   taxAmount: 1.5,
   tipAmount: 3,
   deliveryFee: 0,
+  feesAmount: 0,
+  feesBreakdown: null,
   discount: 0,
   giftCardPayment: 0,
   balanceDue: 24.5,

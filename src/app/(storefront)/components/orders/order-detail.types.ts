@@ -1,4 +1,5 @@
 import type { OrderStatus, FulfillmentStatus, OrderMode, OrderItemData, DeliveryAddress } from "@/types";
+import type { FeeBreakdownItem } from "@/lib/pricing";
 
 export type TimelineEventType = "payment" | "fulfillment";
 
@@ -25,6 +26,8 @@ export interface OrderDetailData {
   taxAmount: number;
   tipAmount: number;
   deliveryFee: number;
+  feesAmount: number;
+  feesBreakdown: FeeBreakdownItem[];
   discount: number;
   totalAmount: number;
   createdAt: Date | string;

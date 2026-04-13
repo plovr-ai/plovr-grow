@@ -124,6 +124,10 @@ export class OrderService {
           taxAmount: calculation.taxAmount,
           tipAmount: calculation.tipAmount,
           deliveryFee: calculation.deliveryFee,
+          feesAmount: calculation.feesAmount,
+          feesBreakdown: calculation.feesBreakdown.length > 0
+            ? (calculation.feesBreakdown as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
           discount: calculation.discount,
           giftCardPayment: Math.round(giftCardPayment * 100) / 100,
           balanceDue: Math.round(balanceDue * 100) / 100,
@@ -322,6 +326,8 @@ export class OrderService {
         taxAmount: 0,
         tipAmount: 0,
         deliveryFee: 0,
+        feesAmount: 0,
+        feesBreakdown: Prisma.JsonNull,
         discount: 0,
         giftCardPayment: Math.round(giftCardPayment * 100) / 100,
         balanceDue: Math.round(balanceDue * 100) / 100,
