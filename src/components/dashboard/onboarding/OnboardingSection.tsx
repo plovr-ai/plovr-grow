@@ -5,28 +5,35 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDashboard } from "@/contexts/DashboardContext";
 import type { OnboardingStepId } from "@/types/onboarding";
-import { ONBOARDING_STEP_ORDER, isOnboardingComplete } from "@/types/onboarding";
-import { OnboardingCard } from "./OnboardingCard";
+import { ONBOARDING_STEP_ORDER, isOnboardingComplete, countFinishedSteps } from "@/types/onboarding";
+import { OnboardingStepper } from "./OnboardingStepper";
+import { OnboardingProgressBar } from "./OnboardingProgressBar";
+import { OnboardingStepContent } from "./OnboardingStepContent";
 import { OnboardingCompletedBar } from "./OnboardingCompletedBar";
 import { WebsiteStep } from "./steps/WebsiteStep";
 import { GbpStep } from "./steps/GbpStep";
 import { MenuStep } from "./steps/MenuStep";
 import { StripeStep } from "./steps/StripeStep";
-import { Globe, MapPin, UtensilsCrossed, CreditCard } from "lucide-react";
 
-const STEP_ICONS: Record<OnboardingStepId, React.ReactNode> = {
-  website: <Globe className="h-5 w-5" />,
-  gbp: <MapPin className="h-5 w-5" />,
-  menu: <UtensilsCrossed className="h-5 w-5" />,
-  stripe: <CreditCard className="h-5 w-5" />,
-};
+function getStepContent(stepId: OnboardingStepId, status: "pending" | "completed" | "skipped") {
+  switch (stepId) {
+    case "website":
+      return <WebsiteStep status={status} />;
+    case "gbp":
+      return <GbpStep status={status} />;
+    case "menu":
+      return <MenuStep status={status} />;
+    case "stripe":
+      return <StripeStep status={status} />;
+  }
+}
 
 export function OnboardingSection() {
   const t = useTranslations("onboarding");
   const { onboarding } = useDashboard();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [expandedStep, setExpandedStep] = useState<OnboardingStepId | null>(null);
+  const [selectedStep, setSelectedStep] = useState<OnboardingStepId | null>(null);
   const [, startTransition] = useTransition();
 
   const data = onboarding.data;
@@ -61,52 +68,60 @@ export function OnboardingSection() {
   if (data.dismissedAt) return null;
 
   const completed = isOnboardingComplete(data);
+  const { finished, total } = countFinishedSteps(data);
 
+  // Determine active step: user selection > first pending step
   const firstPending = ONBOARDING_STEP_ORDER.find(
     (id) => data.steps[id].status === "pending"
   );
+  const activeStep = selectedStep ?? firstPending ?? ONBOARDING_STEP_ORDER[0];
 
-  const activeStep = expandedStep ?? firstPending ?? null;
-
-  function handleToggle(stepId: OnboardingStepId) {
-    setExpandedStep(activeStep === stepId ? null : stepId);
+  function handleStepClick(stepId: OnboardingStepId) {
+    setSelectedStep(stepId);
   }
 
-  const cards = ONBOARDING_STEP_ORDER.map((stepId, index) => {
-    const stepStatus = data.steps[stepId].status;
-    return (
-      <OnboardingCard
-        key={stepId}
-        stepId={stepId}
-        stepNumber={index + 1}
-        status={stepStatus}
-        icon={STEP_ICONS[stepId]}
-        isExpanded={activeStep === stepId}
-        onToggle={() => handleToggle(stepId)}
-      >
-        {stepId === "website" && <WebsiteStep status={stepStatus as "pending" | "completed" | "skipped"} />}
-        {stepId === "gbp" && <GbpStep status={stepStatus as "pending" | "completed" | "skipped"} />}
-        {stepId === "menu" && <MenuStep status={stepStatus as "pending" | "completed" | "skipped"} />}
-        {stepId === "stripe" && <StripeStep status={stepStatus as "pending" | "completed" | "skipped"} />}
-      </OnboardingCard>
-    );
-  });
+  const activeStatus = data.steps[activeStep].status;
 
   if (completed) {
     return (
       <OnboardingCompletedBar data={data}>
-        <div className="space-y-3">{cards}</div>
+        <div className="space-y-4">
+          <OnboardingStepper
+            steps={data.steps}
+            activeStep={activeStep}
+            onStepClick={handleStepClick}
+          />
+          <OnboardingStepContent stepId={activeStep} status={activeStatus}>
+            {getStepContent(activeStep, activeStatus as "pending" | "completed" | "skipped")}
+          </OnboardingStepContent>
+        </div>
       </OnboardingCompletedBar>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Header */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900">{t("title")}</h2>
         <p className="text-sm text-gray-500">{t("subtitle")}</p>
       </div>
-      <div className="space-y-3">{cards}</div>
+
+      {/* Stepper */}
+      <OnboardingStepper
+        steps={data.steps}
+        activeStep={activeStep}
+        onStepClick={handleStepClick}
+      />
+
+      {/* Progress bar */}
+      <OnboardingProgressBar finished={finished} total={total} />
+
+      {/* Active step content */}
+      <OnboardingStepContent stepId={activeStep} status={activeStatus}>
+        {activeStatus !== "locked" &&
+          getStepContent(activeStep, activeStatus as "pending" | "completed" | "skipped")}
+      </OnboardingStepContent>
     </div>
   );
 }
