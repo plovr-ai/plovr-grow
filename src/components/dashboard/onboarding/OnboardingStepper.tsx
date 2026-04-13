@@ -84,7 +84,7 @@ export function OnboardingStepper({ steps, activeStep, onStepClick }: Onboarding
               <div className="flex-1 pt-5 px-2">
                 <div
                   className={`h-0.5 w-full ${
-                    isCompleted ? "bg-green-400" : "bg-gray-200"
+                    isCompleted || isSkipped ? "bg-green-400" : "bg-gray-200"
                   }`}
                 />
               </div>
