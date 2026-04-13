@@ -8,6 +8,9 @@ const requestSchema = z.object({
   placeId: z.string().min(1),
 });
 
+/** Only display reviews with this rating or higher on the website */
+const MIN_DISPLAY_RATING = 4;
+
 /**
  * POST: Update Tenant + Merchant from Google Places data during onboarding.
  * Fetches place details, updates existing entities, and marks website step complete.
@@ -50,11 +53,14 @@ export async function POST(request: NextRequest) {
         phone: details.phone ?? undefined,
         websiteUrl: details.websiteUrl ?? undefined,
         businessHours: details.businessHours,
-        reviews: details.reviews.slice(0, 5).map((r) => ({
-          author: r.author,
-          rating: r.rating,
-          text: r.text,
-        })),
+        reviews: details.reviews
+          .filter((r) => r.rating >= MIN_DISPLAY_RATING)
+          .slice(0, 5)
+          .map((r) => ({
+            author: r.author,
+            rating: r.rating,
+            text: r.text,
+          })),
       }
     );
 
