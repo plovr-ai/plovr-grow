@@ -2,29 +2,27 @@ import { getRequestConfig } from "next-intl/server";
 import { headers } from "next/headers";
 
 export default getRequestConfig(async () => {
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") || "";
+
   const locale = "en"; // Future: detect from user preference
 
-  // Determine which message bundle to load based on the current route.
-  // Try multiple header sources for pathname detection:
-  // 1. x-pathname: set by our proxy.ts middleware (dashboard routes)
-  // 2. x-next-url / referer: set by Next.js internally
-  const headersList = await headers();
-  const pathname =
-    headersList.get("x-pathname") ||
-    headersList.get("x-invoke-path") ||
-    "";
+  // Load appropriate messages based on route
+  const isDashboard = pathname.startsWith("/dashboard");
+  const isAdmin = pathname.startsWith("/admin");
 
-  const isDashboard =
-    pathname.startsWith("/dashboard") || pathname.startsWith("/admin");
+  let messages;
+  if (isDashboard || isAdmin) {
+    messages = (await import(`@/messages/dashboard/${locale}.json`)).default;
+  } else {
+    messages = (await import(`@/messages/storefront/${locale}.json`)).default;
+  }
 
-  // Load route-specific messages + shared base
+  // Merge with shared messages
   const shared = (await import(`@/messages/shared/${locale}.json`)).default;
-  const routeMessages = isDashboard
-    ? (await import(`@/messages/dashboard/${locale}.json`)).default
-    : (await import(`@/messages/storefront/${locale}.json`)).default;
 
   return {
     locale,
-    messages: { ...shared, ...routeMessages },
+    messages: { ...shared, ...messages },
   };
 });
