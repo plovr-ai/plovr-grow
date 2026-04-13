@@ -18,6 +18,9 @@ import type {
 } from "@/types/onboarding";
 import type { CreateMerchantInput } from "@/services/merchant/merchant.types";
 
+/** Only display reviews with this rating or higher on the website */
+const MIN_DISPLAY_RATING = 4;
+
 export class TenantService {
   /**
    * Create a new tenant
@@ -272,7 +275,7 @@ export class TenantService {
         tagline: "",
         heroImage: "",
         socialLinks: [],
-        reviews: details.reviews?.slice(0, 5) ?? [],
+        reviews: details.reviews?.filter((r) => r.rating >= MIN_DISPLAY_RATING).slice(0, 5) ?? [],
       },
     };
 

@@ -19,6 +19,9 @@ import type {
 import type { SocialLink, TenantSettings } from "@/types/tenant";
 import type { MerchantSettings } from "@/types/merchant";
 
+/** Only display reviews with this rating or higher on the website */
+const MIN_DISPLAY_RATING = 4;
+
 export class MerchantService {
   // ==================== 公开查询方法 (Storefront) ====================
 
@@ -154,16 +157,16 @@ export class MerchantService {
       currency: tenantSettings?.defaultCurrency || "USD",
       locale: tenantSettings?.defaultLocale || "en-US",
       featuredItems,
-      reviews: ((tenantWebsite?.reviews || []) as unknown as Record<string, unknown>[]).map(
-        (r, i) => ({
+      reviews: ((tenantWebsite?.reviews || []) as unknown as Record<string, unknown>[])
+        .filter((r) => Number(r.rating || 5) >= MIN_DISPLAY_RATING)
+        .map((r, i) => ({
           id: String(r.id || `review-${i}`),
           customerName: String(r.customerName || r.author || "Anonymous"),
           rating: Number(r.rating || 5),
           content: String(r.content || r.text || ""),
           date: String(r.date || new Date().toISOString()),
           source: String(r.source || "google") as "google" | "yelp" | "facebook" | "website",
-        })
-      ),
+        }))
     };
 
     return websiteData;

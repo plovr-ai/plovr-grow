@@ -521,7 +521,7 @@ describe("MerchantService (unit tests)", () => {
                 customerName: "",
                 author: "",
                 text: "Good food",
-                rating: 3,
+                rating: 4,
               },
             ],
           },
@@ -541,6 +541,67 @@ describe("MerchantService (unit tests)", () => {
         settings: {
           website: {
             tagline: "Some tagline",
+          },
+        },
+      } as never);
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
+
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
+
+      expect(result?.reviews).toEqual([]);
+    });
+
+    it("should filter out reviews with rating below 4", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: {
+          website: {
+            reviews: [
+              { id: "r1", customerName: "Alice", rating: 5, content: "Amazing!", date: "2024-01-01", source: "google" },
+              { id: "r2", customerName: "Bob", rating: 3, content: "Okay", date: "2024-01-02", source: "google" },
+              { id: "r3", customerName: "Carol", rating: 4, content: "Good", date: "2024-01-03", source: "google" },
+              { id: "r4", customerName: "Dave", rating: 2, content: "Bad", date: "2024-01-04", source: "google" },
+              { id: "r5", customerName: "Eve", rating: 1, content: "Terrible", date: "2024-01-05", source: "google" },
+            ],
+          },
+        },
+      } as never);
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
+
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
+
+      expect(result?.reviews).toHaveLength(2);
+      expect(result?.reviews?.map((r) => r.customerName)).toEqual(["Alice", "Carol"]);
+    });
+
+    it("should include reviews with exactly 4 stars", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: {
+          website: {
+            reviews: [
+              { id: "r1", customerName: "Alice", rating: 4, content: "Good", date: "2024-01-01", source: "google" },
+            ],
+          },
+        },
+      } as never);
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
+
+      const result = await merchantService.getTenantWebsiteData("joes-pizza");
+
+      expect(result?.reviews).toHaveLength(1);
+      expect(result?.reviews?.[0].customerName).toBe("Alice");
+    });
+
+    it("should return empty array when all reviews are below 4 stars", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: {
+          website: {
+            reviews: [
+              { id: "r1", customerName: "Bob", rating: 3, content: "Meh", date: "2024-01-01", source: "google" },
+              { id: "r2", customerName: "Dave", rating: 1, content: "Bad", date: "2024-01-02", source: "google" },
+            ],
           },
         },
       } as never);
