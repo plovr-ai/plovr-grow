@@ -25,23 +25,23 @@ export function OnboardingCompletedBar({
       : t("completedBar", { finished, total });
 
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50">
+    <div className="rounded-lg border border-primary/20 bg-primary/5">
       <button
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center gap-3 p-4"
       >
-        <Check className="h-5 w-5 text-emerald-700" />
-        <span className="flex-1 text-left text-sm font-medium text-emerald-800">
+        <Check className="h-5 w-5 text-primary" />
+        <span className="flex-1 text-left text-sm font-medium text-primary">
           {label}
         </span>
-        <span className="text-sm text-emerald-700">{t("expand")}</span>
+        <span className="text-sm text-primary">{t("expand")}</span>
         {expanded ? (
-          <ChevronUp className="h-4 w-4 text-emerald-700" />
+          <ChevronUp className="h-4 w-4 text-primary" />
         ) : (
-          <ChevronDown className="h-4 w-4 text-emerald-700" />
+          <ChevronDown className="h-4 w-4 text-primary" />
         )}
       </button>
-      {expanded && <div className="border-t border-emerald-200 p-4">{children}</div>}
+      {expanded && <div className="border-t border-primary/20 p-4">{children}</div>}
     </div>
   );
 }

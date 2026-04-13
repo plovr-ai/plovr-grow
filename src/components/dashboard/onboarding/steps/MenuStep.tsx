@@ -21,13 +21,13 @@ export function MenuStep({ status }: MenuStepProps) {
   if (status === "completed") {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-emerald-800">{t("completedDescription", { categories: "—", items: "—" })}</p>
+        <p className="text-sm text-primary">{t("completedDescription", { categories: "—", items: "—" })}</p>
         {merchantSlug && (
           <a
             href={`/r/${merchantSlug}/menu`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             {t("completedAction")}
             <ExternalLink className="h-4 w-4" />
@@ -68,7 +68,7 @@ export function MenuStep({ status }: MenuStepProps) {
       <div className="flex items-center gap-3">
         <button
           onClick={handleConnect}
-          className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           {t("pendingAction")}
         </button>
