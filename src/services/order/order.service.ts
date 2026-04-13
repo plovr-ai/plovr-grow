@@ -574,19 +574,28 @@ export class OrderService {
       return;
     }
 
-    // Cancellation not allowed once kitchen has started working
-    const NON_CANCELLABLE_FULFILLMENT_STATUSES = [
-      "preparing",
-      "ready",
-      "fulfilled",
-    ];
-    if (
-      NON_CANCELLABLE_FULFILLMENT_STATUSES.includes(order.fulfillmentStatus)
-    ) {
-      throw new AppError(ErrorCodes.ORDER_CANCEL_NOT_ALLOWED, {
-        orderId,
-        fulfillmentStatus: order.fulfillmentStatus,
-      });
+    // POS webhooks are authoritative — skip fulfillment guard so late
+    // cancellation webhooks on already-fulfilled orders are treated as no-ops
+    // rather than errors that trigger retries.
+    const isWebhookSource =
+      options?.source === "square_webhook" ||
+      options?.source === "toast_webhook";
+
+    if (!isWebhookSource) {
+      // Manual cancellation not allowed once kitchen has started working
+      const NON_CANCELLABLE_FULFILLMENT_STATUSES = [
+        "preparing",
+        "ready",
+        "fulfilled",
+      ];
+      if (
+        NON_CANCELLABLE_FULFILLMENT_STATUSES.includes(order.fulfillmentStatus)
+      ) {
+        throw new AppError(ErrorCodes.ORDER_CANCEL_NOT_ALLOWED, {
+          orderId,
+          fulfillmentStatus: order.fulfillmentStatus,
+        });
+      }
     }
 
     await prisma.order.update({
