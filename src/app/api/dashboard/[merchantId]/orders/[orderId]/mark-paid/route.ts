@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { orderService } from "@/services/order";
 import { merchantService } from "@/services/merchant";
-import { AppError } from "@/lib/errors/app-error";
+import { AppError } from "@/lib/errors";
 
 interface RouteParams {
   params: Promise<{ merchantId: string; orderId: string }>;
@@ -13,12 +13,10 @@ const markPaidSchema = z.object({
   notes: z.string().max(500).optional(),
 });
 
-// POST: Mark an in-store order as paid
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { merchantId, orderId } = await params;
 
-    // Get merchant to find tenant
     const merchant = await merchantService.getMerchantById(merchantId);
     if (!merchant) {
       return NextResponse.json(
@@ -27,39 +25,45 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const tenantId = merchant.tenant.tenantId;
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Invalid JSON" },
+        { status: 400 }
+      );
+    }
 
-    // Parse and validate request body
-    const body = await request.json().catch(() => ({}));
-    const parseResult = markPaidSchema.safeParse(body);
-
-    if (!parseResult.success) {
+    const parsed = markPaidSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
         {
           success: false,
-          error: parseResult.error.issues[0]?.message || "Invalid request",
+          error: "Invalid request",
+          details: parsed.error.flatten(),
         },
         { status: 400 }
       );
     }
 
-    const input = parseResult.data;
-
-    await orderService.markCashOrderPaid(tenantId, orderId, input);
+    await orderService.markCashOrderPaid(
+      merchant.tenant.tenantId,
+      orderId,
+      parsed.data
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[Dashboard Mark Paid] Error:", error);
-
     if (error instanceof AppError) {
+      const status = error.code === "ORDER_NOT_FOUND" ? 404 : 422;
       return NextResponse.json(
         { success: false, error: error.code },
-        { status: error.statusCode }
+        { status }
       );
     }
-
     return NextResponse.json(
-      { success: false, error: "Failed to mark order as paid" },
+      { success: false, error: "Internal server error" },
       { status: 500 }
     );
   }

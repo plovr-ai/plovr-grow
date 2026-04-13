@@ -39,6 +39,9 @@ export interface CreatePaymentRecordInput {
   stripeCustomerId?: string | null;
   amount: number;
   currency: string;
+  status?: string;
+  paidAt?: Date | null;
+  paymentMethod?: string | null;
 }
 
 export interface VerifyPaymentResult {

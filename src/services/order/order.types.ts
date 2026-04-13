@@ -75,6 +75,11 @@ export interface CreateMerchantOrderInput extends BaseOrderInput {
 // salesChannel is always "giftcard" for now.
 export type CreateGiftCardOrderInput = BaseOrderInput;
 
+export interface MarkCashOrderPaidInput {
+  amount?: number;
+  notes?: string;
+}
+
 export interface OrderCalculation {
   subtotal: number;
   taxAmount: number;

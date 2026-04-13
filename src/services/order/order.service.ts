@@ -25,11 +25,11 @@ import { AppError, ErrorCodes } from "@/lib/errors";
 import type {
   CreateMerchantOrderInput,
   CreateGiftCardOrderInput,
+  MarkCashOrderPaidInput,
   OrderCalculation,
   TenantOrderListOptions,
   TimelineEvent,
   OrderWithTimeline,
-  MarkCashOrderPaidInput,
 } from "./order.types";
 import type { OrderItemWithModifiers } from "@/repositories/order.repository";
 import type { OrderItemData, SelectedModifier, ItemTaxInfo } from "@/types";
@@ -563,9 +563,8 @@ export class OrderService {
   }
 
   /**
-   * Mark a cash (in_store) order as paid.
-   * Creates a Payment record and transitions order to "completed".
-   * Idempotent: re-confirming an already-paid order is a no-op.
+   * Mark a cash / in-store order as paid.
+   * Creates a succeeded payment record in one step (no repository bypass).
    */
   async markCashOrderPaid(
     tenantId: string,
@@ -591,7 +590,7 @@ export class OrderService {
     const now = new Date();
 
     await prisma.$transaction(async (tx: DbClient) => {
-      // Create a Payment record
+      // Create a succeeded payment record in one step (no repository bypass)
       await paymentService.createPaymentRecord(
         {
           tenantId,
@@ -599,18 +598,12 @@ export class OrderService {
           provider: "cash" as PaymentProvider,
           amount,
           currency: "USD",
+          status: "succeeded",
+          paidAt: now,
+          paymentMethod: "cash",
         },
         tx
       );
-
-      // Mark the cash payment as succeeded immediately
-      // (for cash, we create with pending status via repository, then update)
-      // Actually, the repository creates with status "pending" by default.
-      // We need to update it to "succeeded". Let's do it in the same tx.
-      await tx.payment.updateMany({
-        where: { orderId, tenantId, provider: "cash", status: "pending" },
-        data: { status: "succeeded", paidAt: now, paymentMethod: "cash" },
-      });
 
       // Update order status
       await tx.order.update({
@@ -618,6 +611,7 @@ export class OrderService {
         data: {
           status: "completed",
           paidAt: now,
+          balanceDue: amount,
         },
       });
     });
@@ -637,6 +631,8 @@ export class OrderService {
       customerLastName: order.customerLastName,
       customerEmail: order.customerEmail ?? undefined,
       totalAmount: Number(order.totalAmount),
+      giftCardPayment: Number(order.giftCardPayment) || 0,
+      loyaltyMemberId: order.loyaltyMemberId ?? undefined,
     });
   }
 

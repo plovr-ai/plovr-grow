@@ -2,6 +2,7 @@ import type { DbClient } from "@/lib/db";
 import {
   paymentRepository,
   type PaymentProvider,
+  type PaymentStatus,
 } from "@/repositories/payment.repository";
 import { AppError } from "@/lib/errors/app-error";
 import { ErrorCodes } from "@/lib/errors/error-codes";
@@ -72,6 +73,9 @@ export class PaymentService {
         providerPaymentId: input.providerPaymentId,
         amount: input.amount,
         currency: input.currency,
+        ...(input.status && { status: input.status as PaymentStatus }),
+        ...(input.paidAt !== undefined && { paidAt: input.paidAt }),
+        ...(input.paymentMethod !== undefined && { paymentMethod: input.paymentMethod }),
         ...(input.provider === "stripe" &&
           input.stripeAccountId && {
             stripeDetail: {
