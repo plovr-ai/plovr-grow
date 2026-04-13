@@ -79,7 +79,7 @@ describe("PlaceSearch", () => {
   });
 
   describe("script loading", () => {
-    it("should load Google Maps script with correct URL and call importLibrary", async () => {
+    it("should load Google Maps script with correct URL including places library", async () => {
       const createElementSpy = vi.spyOn(document, "createElement");
 
       const { PlaceAutocompleteElement, googleMaps } = setupGoogleMapsGlobal();
@@ -117,8 +117,8 @@ describe("PlaceSearch", () => {
         script.onload?.(new Event("load"));
       });
 
-      // importLibrary should have been called with 'places'
-      expect(googleMaps.maps.importLibrary).toHaveBeenCalledWith("places");
+      // Script URL should include libraries=places
+      expect(script.src).toContain("libraries=places");
     });
 
     it("should skip script loading when Google Maps is already loaded", async () => {
