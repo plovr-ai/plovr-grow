@@ -369,6 +369,8 @@
         "pendingEffect": "In just seconds, your restaurant will have a professional website that customers can visit anytime, anywhere",
         "pendingAction": "Search your restaurant",
         "generating": "Building your website...",
+        "generateAction": "Generate My Website",
+        "changePlace": "Change",
         "completedHeadline": "Your website is LIVE!",
         "completedDescription": "Customers can now discover your restaurant online — your digital front door is open for business",
         "completedAction": "Visit your website"

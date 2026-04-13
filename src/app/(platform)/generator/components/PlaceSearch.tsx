@@ -75,7 +75,7 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
   return (
     <div
       ref={containerRef}
-      className="[&_input]:w-full [&_input]:text-lg [&_input]:px-4 [&_input]:py-3 [&_input]:border [&_input]:border-gray-300 [&_input]:rounded-lg [&_input]:focus:outline-none [&_input]:focus:ring-2 [&_input]:focus:ring-blue-500 [&_input]:focus:border-transparent"
+      className="border border-gray-300 rounded-lg overflow-hidden [&_input]:w-full [&_input]:text-lg [&_input]:px-4 [&_input]:py-3 [&_input]:border-none [&_input]:focus:outline-none [&_input]:focus:ring-0"
     />
   );
 }

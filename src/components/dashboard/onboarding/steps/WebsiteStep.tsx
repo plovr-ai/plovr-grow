@@ -7,6 +7,12 @@ import { ExternalLink, Loader2 } from "lucide-react";
 import { PlaceSearch } from "@/app/(platform)/generator/components/PlaceSearch";
 import { useDashboard } from "@/contexts/DashboardContext";
 
+interface SelectedPlace {
+  placeId: string;
+  name: string;
+  address: string;
+}
+
 interface WebsiteStepProps {
   status: "pending" | "completed" | "skipped";
 }
@@ -16,6 +22,9 @@ export function WebsiteStep({ status }: WebsiteStepProps) {
   const { tenant } = useDashboard();
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(
+    null
+  );
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,13 +47,11 @@ export function WebsiteStep({ status }: WebsiteStepProps) {
     );
   }
 
-  async function handlePlaceSelect(place: {
-    placeId: string;
-    name: string;
-    address: string;
-  }) {
+  async function handleGenerate() {
+    if (!selectedPlace) return;
     setError(null);
     setProgress(t("generating"));
+    const place = selectedPlace;
 
     try {
       // Call onboarding-specific API that updates existing Company + Merchant
@@ -82,8 +89,29 @@ export function WebsiteStep({ status }: WebsiteStepProps) {
           <Loader2 className="h-4 w-4 animate-spin" />
           {progress}
         </div>
+      ) : selectedPlace ? (
+        <div className="space-y-3">
+          <div className="rounded-lg border border-gray-200 bg-white p-4">
+            <p className="font-semibold text-gray-900">{selectedPlace.name}</p>
+            <p className="text-sm text-gray-500">{selectedPlace.address}</p>
+            <button
+              type="button"
+              onClick={() => setSelectedPlace(null)}
+              className="mt-1 text-sm text-theme-primary hover:text-theme-primary-hover underline"
+            >
+              {t("changePlace")}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleGenerate}
+            className="w-full rounded-lg bg-theme-primary px-4 py-2 text-sm font-medium text-theme-primary-foreground hover:bg-theme-primary-hover"
+          >
+            {t("generateAction")}
+          </button>
+        </div>
       ) : (
-        <PlaceSearch onSelect={handlePlaceSelect} />
+        <PlaceSearch onSelect={setSelectedPlace} />
       )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
