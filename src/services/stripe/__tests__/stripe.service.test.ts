@@ -10,9 +10,6 @@ const mockPaymentLinksCreate = vi.fn();
 const mockPaymentIntentsCreate = vi.fn();
 const mockPaymentIntentsRetrieve = vi.fn();
 const mockCustomersCreate = vi.fn();
-const mockCustomersRetrieve = vi.fn();
-const mockPaymentMethodsList = vi.fn();
-const mockPaymentMethodsDetach = vi.fn();
 const mockCheckoutSessionsCreate = vi.fn();
 const mockBillingPortalSessionsCreate = vi.fn();
 const mockSubscriptionsUpdate = vi.fn();
@@ -29,8 +26,7 @@ vi.mock("stripe", () => {
     prices = { create: mockPricesCreate };
     paymentLinks = { create: mockPaymentLinksCreate };
     paymentIntents = { create: mockPaymentIntentsCreate, retrieve: mockPaymentIntentsRetrieve };
-    customers = { create: mockCustomersCreate, retrieve: mockCustomersRetrieve };
-    paymentMethods = { list: mockPaymentMethodsList, detach: mockPaymentMethodsDetach };
+    customers = { create: mockCustomersCreate };
     checkout = { sessions: { create: mockCheckoutSessionsCreate } };
     billingPortal = { sessions: { create: mockBillingPortalSessionsCreate } };
     subscriptions = { update: mockSubscriptionsUpdate, cancel: mockSubscriptionsCancel, retrieve: mockSubscriptionsRetrieve };
@@ -106,36 +102,6 @@ describe("StripeService", () => {
       });
 
       expect(result).toMatch(/^mock_cus_/);
-    });
-
-    it("should return empty payment methods in mock mode", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
-
-      const result = await service.listPaymentMethods("cus_123");
-
-      expect(result).toEqual([]);
-    });
-
-    it("should handle detachPaymentMethod in mock mode", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
-
-      // Should not throw
-      await expect(service.detachPaymentMethod("pm_123")).resolves.toBeUndefined();
-    });
-
-    it("should return mock customer in mock mode", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
-
-      const result = await service.getCustomer("cus_123");
-
-      expect(result).toEqual({
-        id: "cus_123",
-        email: "mock@example.com",
-        name: "Mock Customer",
-      });
     });
 
     it("should report not configured in mock mode", async () => {
@@ -241,61 +207,6 @@ describe("StripeService", () => {
         const cents = Math.round(dollars * 100);
         expect(cents).toBe(expectedCents);
       });
-    });
-  });
-
-  describe("PaymentMethodInfo Mapping", () => {
-    it("should map Stripe payment method to PaymentMethodInfo", () => {
-      const stripePaymentMethod = {
-        id: "pm_123",
-        card: {
-          brand: "visa",
-          last4: "4242",
-          exp_month: 12,
-          exp_year: 2025,
-        },
-      };
-
-      const expected = {
-        id: "pm_123",
-        brand: "visa",
-        last4: "4242",
-        expMonth: 12,
-        expYear: 2025,
-      };
-
-      const mapped = {
-        id: stripePaymentMethod.id,
-        brand: stripePaymentMethod.card?.brand || "unknown",
-        last4: stripePaymentMethod.card?.last4 || "****",
-        expMonth: stripePaymentMethod.card?.exp_month || 0,
-        expYear: stripePaymentMethod.card?.exp_year || 0,
-      };
-
-      expect(mapped).toEqual(expected);
-    });
-
-    it("should handle missing card details gracefully", () => {
-      const stripePaymentMethod: {
-        id: string;
-        card: { brand: string; last4: string; exp_month: number; exp_year: number } | null;
-      } = {
-        id: "pm_123",
-        card: null,
-      };
-
-      const mapped = {
-        id: stripePaymentMethod.id,
-        brand: stripePaymentMethod.card?.brand || "unknown",
-        last4: stripePaymentMethod.card?.last4 || "****",
-        expMonth: stripePaymentMethod.card?.exp_month || 0,
-        expYear: stripePaymentMethod.card?.exp_year || 0,
-      };
-
-      expect(mapped.brand).toBe("unknown");
-      expect(mapped.last4).toBe("****");
-      expect(mapped.expMonth).toBe(0);
-      expect(mapped.expYear).toBe(0);
     });
   });
 
@@ -794,138 +705,6 @@ describe("StripeService", () => {
         name: "John Doe",
         metadata: { loyaltyId: "lm-1" },
       });
-    });
-
-    it("should list real payment methods", async () => {
-      mockPaymentMethodsList.mockResolvedValueOnce({
-        data: [
-          {
-            id: "pm_1",
-            card: { brand: "visa", last4: "4242", exp_month: 12, exp_year: 2027 },
-          },
-          {
-            id: "pm_2",
-            card: { brand: "amex", last4: "0005", exp_month: 3, exp_year: 2026 },
-          },
-        ],
-      });
-
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
-
-      const result = await service.listPaymentMethods("cus_123");
-
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({
-        id: "pm_1",
-        brand: "visa",
-        last4: "4242",
-        expMonth: 12,
-        expYear: 2027,
-      });
-    });
-
-    it("should list payment methods with missing card details", async () => {
-      mockPaymentMethodsList.mockResolvedValueOnce({
-        data: [
-          {
-            id: "pm_no_card",
-            card: null,
-          },
-          {
-            id: "pm_partial",
-            card: { brand: undefined, last4: undefined, exp_month: undefined, exp_year: undefined },
-          },
-        ],
-      });
-
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
-
-      const result = await service.listPaymentMethods("cus_123");
-
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({
-        id: "pm_no_card",
-        brand: "unknown",
-        last4: "****",
-        expMonth: 0,
-        expYear: 0,
-      });
-      expect(result[1]).toEqual({
-        id: "pm_partial",
-        brand: "unknown",
-        last4: "****",
-        expMonth: 0,
-        expYear: 0,
-      });
-    });
-
-    it("should detach a real payment method", async () => {
-      mockPaymentMethodsDetach.mockResolvedValueOnce({});
-
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
-
-      await service.detachPaymentMethod("pm_123");
-      expect(mockPaymentMethodsDetach).toHaveBeenCalledWith("pm_123");
-    });
-
-    it("should get a real customer", async () => {
-      mockCustomersRetrieve.mockResolvedValueOnce({
-        id: "cus_123",
-        email: "real@example.com",
-        name: "Real Customer",
-        deleted: false,
-      });
-
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
-
-      const result = await service.getCustomer("cus_123");
-      expect(result).toEqual({
-        id: "cus_123",
-        email: "real@example.com",
-        name: "Real Customer",
-      });
-    });
-
-    it("should return null for deleted customer", async () => {
-      mockCustomersRetrieve.mockResolvedValueOnce({
-        id: "cus_123",
-        deleted: true,
-      });
-
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
-
-      const result = await service.getCustomer("cus_123");
-      expect(result).toBeNull();
-    });
-
-    it("should return null when getCustomer fails", async () => {
-      mockCustomersRetrieve.mockRejectedValueOnce(new Error("Not found"));
-
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
-
-      const result = await service.getCustomer("cus_nonexistent");
-      expect(result).toBeNull();
-    });
-
-    it("should return null for customer with null name", async () => {
-      mockCustomersRetrieve.mockResolvedValueOnce({
-        id: "cus_123",
-        email: "test@example.com",
-        name: undefined,
-        deleted: false,
-      });
-
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
-
-      const result = await service.getCustomer("cus_123");
-      expect(result?.name).toBeNull();
     });
 
     it("should create a real subscription checkout session", async () => {
