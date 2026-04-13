@@ -115,6 +115,147 @@ describe("PlaceSearch", () => {
       expect(script.src).toContain("libraries=places");
     });
 
+    it("should resolve immediately when existing script and places already available", async () => {
+      // Pre-inject a script tag
+      const existingScript = document.createElement("script");
+      existingScript.src = "https://maps.googleapis.com/maps/api/js?key=test&libraries=places";
+      document.head.appendChild(existingScript);
+
+      // Set up google maps as fully preloaded (places available)
+      setupGoogleMapsGlobal({ preloaded: true });
+
+      const onSelect = vi.fn();
+      await act(async () => {
+        render(<PlaceSearch onSelect={onSelect} />);
+      });
+
+      // Should have used existing script — no new maps script injected
+      const scripts = document.head.querySelectorAll<HTMLScriptElement>(
+        'script[src*="maps.googleapis.com"]'
+      );
+      expect(scripts).toHaveLength(1);
+    });
+
+    it("should resolve via dataset.loaded when existing script already loaded but places not in initial check", async () => {
+      // Pre-inject a script tag with dataset.loaded = "true"
+      const existingScript = document.createElement("script");
+      existingScript.src = "https://maps.googleapis.com/maps/api/js?key=test&libraries=places";
+      existingScript.dataset.loaded = "true";
+      document.head.appendChild(existingScript);
+
+      // google.maps exists but places is NOT available at first check (line 27 = false)
+      // but dataset.loaded is true (line 33 = true)
+      Object.defineProperty(window, "google", {
+        value: { maps: {} },
+        writable: true,
+        configurable: true,
+      });
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const onSelect = vi.fn();
+      await act(async () => {
+        render(<PlaceSearch onSelect={onSelect} />);
+      });
+
+      // Script resolves via dataset.loaded, but then PlaceAutocompleteElement check (line 71) fails
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "[PlaceSearch] PlaceAutocompleteElement not available"
+      );
+      consoleSpy.mockRestore();
+    });
+
+    it("should wait for existing script to load when places not yet available", async () => {
+      // Pre-inject a script tag without dataset.loaded (still loading)
+      const existingScript = document.createElement("script");
+      existingScript.src = "https://maps.googleapis.com/maps/api/js?key=test&libraries=places";
+      document.head.appendChild(existingScript);
+
+      // google is defined but places is not available yet
+      Object.defineProperty(window, "google", {
+        value: { maps: {} },
+        writable: true,
+        configurable: true,
+      });
+
+      const { PlaceAutocompleteElement } = setupGoogleMapsGlobal();
+
+      const onSelect = vi.fn();
+      render(<PlaceSearch onSelect={onSelect} />);
+
+      // Simulate script load completing — inject places library
+      injectPlacesLibrary(PlaceAutocompleteElement);
+
+      await act(async () => {
+        existingScript.dispatchEvent(new Event("load"));
+      });
+
+      // Should have initialized the autocomplete element
+      expect(PlaceAutocompleteElement).toHaveBeenCalled();
+    });
+
+    it("should handle script load failure gracefully", async () => {
+      Object.defineProperty(window, "google", {
+        value: undefined,
+        writable: true,
+        configurable: true,
+      });
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const onSelect = vi.fn();
+
+      render(<PlaceSearch onSelect={onSelect} />);
+
+      // Find the injected script and trigger onerror
+      const scripts = document.head.querySelectorAll<HTMLScriptElement>(
+        'script[src*="maps.googleapis.com"]'
+      );
+      const script = scripts[scripts.length - 1];
+
+      await act(async () => {
+        script.onerror?.(new Event("error"));
+      });
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "[PlaceSearch] failed to load Google Maps:",
+        expect.any(Error)
+      );
+      consoleSpy.mockRestore();
+    });
+
+    it("should handle PlaceAutocompleteElement not available after script loads", async () => {
+      Object.defineProperty(window, "google", {
+        value: undefined,
+        writable: true,
+        configurable: true,
+      });
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const onSelect = vi.fn();
+
+      render(<PlaceSearch onSelect={onSelect} />);
+
+      const scripts = document.head.querySelectorAll<HTMLScriptElement>(
+        'script[src*="maps.googleapis.com"]'
+      );
+      const script = scripts[scripts.length - 1];
+
+      // Script loads but google.maps.places is not available
+      Object.defineProperty(window, "google", {
+        value: { maps: {} },
+        writable: true,
+        configurable: true,
+      });
+
+      await act(async () => {
+        script.onload?.(new Event("load"));
+      });
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "[PlaceSearch] PlaceAutocompleteElement not available"
+      );
+      consoleSpy.mockRestore();
+    });
+
     it("should skip script loading when Google Maps is already loaded", async () => {
       setupGoogleMapsGlobal({ preloaded: true });
 
@@ -216,6 +357,34 @@ describe("PlaceSearch", () => {
         name: "New API Restaurant",
         address: "789 Elm St, Pasadena, CA",
       });
+    });
+
+    it("should handle fetchFields failure gracefully", async () => {
+      setupGoogleMapsGlobal({ preloaded: true });
+
+      const onSelect = vi.fn();
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      await act(async () => {
+        render(<PlaceSearch onSelect={onSelect} />);
+      });
+
+      const mockPlace = {
+        id: "place-err",
+        displayName: "Error Place",
+        formattedAddress: "999 Fail St",
+        fetchFields: vi.fn().mockRejectedValue(new Error("network error")),
+      };
+
+      await act(async () => {
+        await eventHandlers["gmp-placeselect"]!({ place: mockPlace });
+      });
+
+      expect(onSelect).not.toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "[PlaceSearch] fetchFields failed:",
+        expect.any(Error)
+      );
+      consoleSpy.mockRestore();
     });
 
     it("should not call onSelect when place data is incomplete", async () => {

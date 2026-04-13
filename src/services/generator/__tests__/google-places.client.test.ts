@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { GooglePlacesClient } from "../google-places.client";
 
 describe("GooglePlacesClient", () => {
@@ -277,6 +277,35 @@ describe("GooglePlacesClient", () => {
     expect(result.state).toBe("");
     expect(result.zipCode).toBe("");
 
+    vi.unstubAllGlobals();
+  });
+
+  it("uses proxy dispatcher when proxy env var is set and undici is available", async () => {
+    // Set proxy env var
+    process.env.https_proxy = "http://proxy.example.com:8080";
+
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        displayName: { text: "Proxy Test" },
+        formattedAddress: "123 St",
+        addressComponents: [],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const freshClient = new GooglePlacesClient("test-key");
+    const result = await freshClient.getPlaceDetails("ChIJ_proxy");
+    expect(result.name).toBe("Proxy Test");
+    // fetch called with dispatcher option when proxy is configured
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        dispatcher: expect.anything(),
+      })
+    );
+
+    delete process.env.https_proxy;
     vi.unstubAllGlobals();
   });
 

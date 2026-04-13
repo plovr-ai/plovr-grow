@@ -18,9 +18,16 @@ vi.mock("@/services/tenant/tenant.service", () => ({
   },
 }));
 
+vi.mock("../google-places.client", () => {
+  const MockGooglePlacesClient = vi.fn().mockImplementation(function () {
+    return { getPlaceDetails: vi.fn() };
+  });
+  return { GooglePlacesClient: MockGooglePlacesClient };
+});
+
 import { generatorRepository } from "@/repositories/generator.repository";
 import { tenantService } from "@/services/tenant/tenant.service";
-import { GeneratorService } from "../generator.service";
+import { GeneratorService, getGeneratorService } from "../generator.service";
 import type { PlaceDetails } from "../google-places.client";
 
 const mockGetPlaceDetails = vi.fn();
@@ -175,3 +182,13 @@ describe("GeneratorService", () => {
     });
   });
 });
+
+describe("getGeneratorService", () => {
+  it("returns a GeneratorService singleton", () => {
+    const svc1 = getGeneratorService();
+    expect(svc1).toBeInstanceOf(GeneratorService);
+    const svc2 = getGeneratorService();
+    expect(svc1).toBe(svc2);
+  });
+});
+

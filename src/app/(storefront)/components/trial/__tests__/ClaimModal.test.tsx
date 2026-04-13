@@ -96,6 +96,16 @@ describe("ClaimModal", () => {
     });
   });
 
+  it("shows email validation error for invalid email", async () => {
+    render(<ClaimModal {...defaultProps} />);
+    fillForm({ email: "not-an-email" });
+    const form = document.querySelector("form");
+    fireEvent.submit(form!);
+    await waitFor(() => {
+      expect(screen.getByText("Please enter a valid email")).toBeInTheDocument();
+    });
+  });
+
   it("shows default error when API returns success false without error", async () => {
     vi.mocked(global.fetch).mockResolvedValue({
       json: () =>

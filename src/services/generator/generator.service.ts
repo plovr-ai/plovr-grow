@@ -1,6 +1,7 @@
 import { generatorRepository } from "@/repositories/generator.repository";
 import { tenantService } from "@/services/tenant/tenant.service";
-import type { GooglePlacesClient, PlaceDetails } from "./google-places.client";
+import { GooglePlacesClient } from "./google-places.client";
+import type { PlaceDetails } from "./google-places.client";
 import type {
   CreateGenerationInput,
   CreateGenerationResult,
@@ -95,8 +96,6 @@ let _generatorService: GeneratorService | null = null;
 
 export function getGeneratorService(): GeneratorService {
   if (!_generatorService) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { GooglePlacesClient } = require("./google-places.client");
     const apiKey = process.env.GOOGLE_PLACES_API_KEY ?? "";
     _generatorService = new GeneratorService(new GooglePlacesClient(apiKey));
   }

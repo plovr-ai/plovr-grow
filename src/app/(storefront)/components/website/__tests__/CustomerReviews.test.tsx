@@ -95,4 +95,22 @@ describe("CustomerReviews", () => {
     expect(screen.getByText("Bob")).toBeInTheDocument();
     expect(screen.getByText("Charlie")).toBeInTheDocument();
   });
+
+  it("should render yelp source icon", () => {
+    const review = makeReview({ source: "yelp" });
+
+    const { container } = renderWithProvider(<CustomerReviews reviews={[review]} />);
+
+    const yelpIcon = container.querySelector("svg.text-red-500");
+    expect(yelpIcon).toBeInTheDocument();
+  });
+
+  it("should render default source icon for unknown sources", () => {
+    const review = makeReview({ source: "unknown" as CustomerReview["source"] });
+
+    const { container } = renderWithProvider(<CustomerReviews reviews={[review]} />);
+
+    const defaultIcon = container.querySelector("svg.text-gray-400");
+    expect(defaultIcon).toBeInTheDocument();
+  });
 });
