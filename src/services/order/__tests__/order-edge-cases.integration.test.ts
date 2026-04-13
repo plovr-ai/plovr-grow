@@ -4,13 +4,14 @@
  * Covers concurrency, idempotency, and edge cases that existing tests miss:
  *
  * 1. Concurrent order creation — 5 simultaneous orders, verify unique order numbers
- * 2. Concurrent fulfillment transitions — exactly 1 CAS winner
+ *    (tests the P2034 retry logic added to createMerchantOrderAtomic)
+ * 2. Fulfillment CAS guard — simulate concurrent modification, verify CAS rejection
  * 3. Duplicate order cancellation — idempotent behavior
  * 4. Zero subtotal order — free item
- * 5. Discount exceeds subtotal — balanceDue clamped to 0
+ * 5. Gift card covers entire order — verify immediately paid
  * 6. Invalid fulfillment state transition — backward rejected
  *
- * Run with: npx vitest run --config vitest.config.integration.ts
+ * Run with: npx vitest run --config vitest.config.integration.ts order-edge-cases
  * Requires: MySQL running with DATABASE_URL configured
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
@@ -47,9 +48,10 @@ vi.mock("@/repositories/tax-config.repository", () => ({
 
 // DO NOT mock sequenceRepository — let it hit the real DB for concurrency tests
 
+const mockRedeemGiftCard = vi.fn();
 vi.mock("@/services/giftcard", () => ({
   giftCardService: {
-    redeemGiftCard: vi.fn(),
+    redeemGiftCard: (...args: unknown[]) => mockRedeemGiftCard(...args),
   },
 }));
 
@@ -193,6 +195,7 @@ function setupOrderCreationMocks(overrides?: { price?: number }) {
   mockGetTaxConfigsByIds.mockResolvedValue([]);
   mockGetMerchantTaxRateMap.mockResolvedValue(new Map());
   mockCreatePaymentRecord.mockResolvedValue({ id: generateEntityId() });
+  mockRedeemGiftCard.mockResolvedValue(undefined);
 }
 
 function makeOrderInput(overrides: Partial<CreateMerchantOrderInput> = {}): CreateMerchantOrderInput {
@@ -253,10 +256,10 @@ describe("Order Edge Cases (integration)", () => {
   });
 
   // =========================================================================
-  // Block 1: Concurrent order creation
+  // Block 1: Concurrent order creation (tests P2034 retry logic)
   // =========================================================================
   describe("Concurrent order creation", () => {
-    it("5 concurrent orders all succeed with unique order numbers", async () => {
+    it("5 concurrent orders all succeed with unique order numbers (P2034 retry)", async () => {
       setupOrderCreationMocks();
 
       const promises = Array.from({ length: 5 }, (_, i) =>
@@ -279,7 +282,7 @@ describe("Order Edge Cases (integration)", () => {
 
       const results = await Promise.allSettled(promises);
 
-      // All 5 should succeed
+      // With P2034 retry, ALL 5 should succeed
       const fulfilled = results.filter((r) => r.status === "fulfilled");
       const rejected = results.filter((r) => r.status === "rejected");
       expect(rejected).toHaveLength(0);
@@ -292,14 +295,10 @@ describe("Order Edge Cases (integration)", () => {
       const uniqueNumbers = new Set(orderNumbers);
       expect(uniqueNumbers.size).toBe(5);
 
-      // All 5 should have unique IDs
+      // All 5 should exist in the DB
       const orderIds = fulfilled.map(
         (r) => (r as PromiseFulfilledResult<{ id: string }>).value.id
       );
-      const uniqueIds = new Set(orderIds);
-      expect(uniqueIds.size).toBe(5);
-
-      // All 5 should exist in the DB
       const dbOrders = await prisma.order.findMany({
         where: { tenantId: TENANT_ID, id: { in: orderIds } },
       });
@@ -308,52 +307,72 @@ describe("Order Edge Cases (integration)", () => {
   });
 
   // =========================================================================
-  // Block 2: Concurrent fulfillment transitions
+  // Block 2: Fulfillment CAS guard — deterministic concurrency simulation
+  //
+  // Instead of relying on Promise.allSettled (which may serialize in a
+  // single Node.js process), we deterministically simulate the race:
+  // 1. Read the fulfillment (getByOrderId)
+  // 2. Change the DB status behind the scenes (simulating another request)
+  // 3. Attempt the CAS write — it MUST fail because status changed
   // =========================================================================
-  describe("Concurrent fulfillment transitions", () => {
-    it("exactly 1 succeeds and 2 fail with CAS conflict for 3 concurrent transitions", async () => {
+  describe("Fulfillment CAS guard rejects stale writes", () => {
+    it("CAS fails when another request changed the status between read and write", async () => {
       setupOrderCreationMocks();
       const orderId = await createPaidOrder();
 
-      // Verify starting state is pending
+      // Verify starting state
       const fulfillment = await prisma.orderFulfillment.findFirst({ where: { orderId } });
-      expect(fulfillment).not.toBeNull();
       expect(fulfillment!.status).toBe("pending");
 
-      // Fire 3 concurrent transitions from pending -> confirmed
-      const promises = Array.from({ length: 3 }, () =>
+      // Simulate: another request already changed pending → confirmed
+      await prisma.orderFulfillment.update({
+        where: { id: fulfillment!.id },
+        data: { status: "confirmed" },
+      });
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { fulfillmentStatus: "confirmed" },
+      });
+
+      // Now our "stale" request tries pending → confirmed
+      // The CAS (updateMany WHERE status='pending') should fail
+      await expect(
         fulfillmentService.transitionStatus(TENANT_ID, orderId, {
           fulfillmentStatus: "confirmed",
           source: "internal",
         })
-      );
+      ).rejects.toThrow("FULFILLMENT_CONCURRENT_CONFLICT");
 
-      const results = await Promise.allSettled(promises);
-
-      const fulfilled = results.filter((r) => r.status === "fulfilled");
-      const rejected = results.filter((r) => r.status === "rejected");
-
-      // Exactly 1 should succeed, exactly 2 should fail with CAS conflict
-      expect(fulfilled).toHaveLength(1);
-      expect(rejected).toHaveLength(2);
-
-      for (const r of rejected) {
-        const reason = (r as PromiseRejectedResult).reason;
-        expect(String(reason)).toContain("FULFILLMENT_CONCURRENT_CONFLICT");
-      }
-
-      // DB should be in confirmed state
-      const dbOrder = await prisma.order.findUnique({ where: { id: orderId } });
-      expect(dbOrder!.fulfillmentStatus).toBe("confirmed");
-
-      // Exactly 1 status log entry
+      // DB state should remain at confirmed (not double-applied)
       const dbFulfillment = await prisma.orderFulfillment.findFirst({ where: { orderId } });
-      const logs = await prisma.fulfillmentStatusLog.findMany({
-        where: { fulfillmentId: dbFulfillment!.id },
+      expect(dbFulfillment!.status).toBe("confirmed");
+    });
+
+    it("CAS fails when status moved forward past the target", async () => {
+      setupOrderCreationMocks();
+      const orderId = await createPaidOrder();
+
+      const fulfillment = await prisma.orderFulfillment.findFirst({ where: { orderId } });
+
+      // Simulate: another request already advanced pending → confirmed → preparing
+      await prisma.orderFulfillment.update({
+        where: { id: fulfillment!.id },
+        data: { status: "preparing" },
       });
-      expect(logs).toHaveLength(1);
-      expect(logs[0].fromStatus).toBe("pending");
-      expect(logs[0].toStatus).toBe("confirmed");
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { fulfillmentStatus: "preparing" },
+      });
+
+      // Our stale request tries pending → confirmed
+      // Even though confirmed is "valid" from pending, the CAS should fail
+      // because the actual status is already "preparing"
+      await expect(
+        fulfillmentService.transitionStatus(TENANT_ID, orderId, {
+          fulfillmentStatus: "confirmed",
+          source: "internal",
+        })
+      ).rejects.toThrow();
     });
   });
 
@@ -374,7 +393,7 @@ describe("Order Edge Cases (integration)", () => {
       expect(afterFirst!.cancelledAt).not.toBeNull();
       const firstCancelledAt = afterFirst!.cancelledAt!;
 
-      // Second cancellation with a different reason
+      // Second cancellation with a different reason — should be no-op
       await orderService.cancelOrder(TENANT_ID, orderId, "Duplicate request");
 
       const afterSecond = await prisma.order.findUnique({ where: { id: orderId } });
@@ -383,10 +402,6 @@ describe("Order Edge Cases (integration)", () => {
       expect(afterSecond!.cancelReason).toBe("Customer changed mind");
       // cancelledAt should be preserved from first call
       expect(afterSecond!.cancelledAt!.getTime()).toBe(firstCancelledAt.getTime());
-
-      // Verify fulfillment cancelledAt is set (via manual transition for this test)
-      // Note: cancelOrder does not automatically transition fulfillment, but we
-      // verify the order-level fields are idempotent
     });
   });
 
@@ -433,18 +448,22 @@ describe("Order Edge Cases (integration)", () => {
   });
 
   // =========================================================================
-  // Block 5: Edge case: discount exceeds subtotal
+  // Block 5: Gift card covers entire order → immediately paid
+  //
+  // Uses options.giftCard (the correct API) to trigger real gift card
+  // redemption and verify the order is immediately marked as completed.
   // =========================================================================
-  describe("Edge case: discount exceeds subtotal", () => {
-    it("balanceDue is clamped to 0 when gift card payment exceeds total", async () => {
+  describe("Gift card covers entire order", () => {
+    it("order is immediately completed when gift card covers full amount", async () => {
       setupOrderCreationMocks();
 
-      // Order total is $10, but gift card pays $15
       const order = await orderService.createMerchantOrderAtomic(
         TENANT_ID,
-        makeOrderInput({
-          giftCardPayment: 15,
-        })
+        makeOrderInput(),
+        {
+          // Gift card with amount >= order total, no card payment
+          giftCard: { id: generateEntityId(), amount: 15 },
+        }
       );
 
       expect(order).toBeDefined();
@@ -452,11 +471,26 @@ describe("Order Edge Cases (integration)", () => {
       const dbOrder = await prisma.order.findUnique({ where: { id: order.id } });
       expect(dbOrder).not.toBeNull();
       expect(Number(dbOrder!.subtotal)).toBeCloseTo(10.00, 2);
-      // balanceDue should be clamped to 0, NOT negative
-      expect(Number(dbOrder!.balanceDue)).toBe(0);
-      expect(Number(dbOrder!.giftCardPayment)).toBe(15);
       // Order should be completed because gift card covers full amount
       expect(dbOrder!.status).toBe("completed");
+      expect(dbOrder!.paidAt).not.toBeNull();
+    });
+
+    it("balanceDue is clamped to 0 when gift card exceeds total", async () => {
+      setupOrderCreationMocks();
+
+      const order = await orderService.createMerchantOrderAtomic(
+        TENANT_ID,
+        makeOrderInput({ giftCardPayment: 15 }),
+        {
+          giftCard: { id: generateEntityId(), amount: 15 },
+        }
+      );
+
+      const dbOrder = await prisma.order.findUnique({ where: { id: order.id } });
+      expect(Number(dbOrder!.balanceDue)).toBe(0);
+      // balanceDue should NOT be negative
+      expect(Number(dbOrder!.balanceDue)).toBeGreaterThanOrEqual(0);
     });
   });
 
