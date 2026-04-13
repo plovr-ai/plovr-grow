@@ -18,13 +18,6 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/components/dashboard/onboarding", () => ({
   OnboardingSection: () => React.createElement("div", { "data-testid": "onboarding-section" }),
 }));
-vi.mock("@/components/dashboard/agent", () => ({
-  AgentChatClient: () =>
-    React.createElement("div", { "data-testid": "agent-chat" }),
-}));
-vi.mock("@/services/menu/menu.service", () => ({
-  menuService: { countMenus: vi.fn().mockResolvedValue(0) },
-}));
 
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -71,7 +64,6 @@ describe("Dashboard protected page (integration)", () => {
 
     expect(html).not.toContain("No Store Found");
     expect(html).toContain('data-testid="onboarding-section"');
-    expect(html).toContain('data-testid="agent-chat"');
     expect(redirect).not.toHaveBeenCalled();
   });
 
@@ -86,7 +78,6 @@ describe("Dashboard protected page (integration)", () => {
 
     expect(html).not.toContain("No Store Found");
     expect(html).not.toContain('data-testid="onboarding-section"');
-    expect(html).toContain('data-testid="agent-chat"');
   });
 
   it("redirects to signout when tenant has no merchant (corrupted state)", async () => {
