@@ -18,6 +18,7 @@ import type {
 } from "./merchant.types";
 import type { SocialLink, TenantSettings } from "@/types/tenant";
 import type { MerchantSettings } from "@/types/merchant";
+import type { WebsiteTemplateName } from "@/types/website-template";
 
 /** Only display reviews with this rating or higher on the website */
 const MIN_DISPLAY_RATING = 4;
@@ -98,6 +99,7 @@ export class MerchantService {
       locale: merchant.locale,
       tipConfig: merchantSettings?.tipConfig,
       feeConfig: merchantSettings?.feeConfig,
+      websiteTemplate: (tenantSettings?.websiteTemplate as WebsiteTemplateName) || "casual",
     };
 
     return websiteData;
@@ -166,7 +168,8 @@ export class MerchantService {
           content: String(r.content || r.text || ""),
           date: String(r.date || new Date().toISOString()),
           source: String(r.source || "google") as "google" | "yelp" | "facebook" | "website",
-        }))
+        })),
+      websiteTemplate: (tenantSettings?.websiteTemplate as WebsiteTemplateName) || "casual",
     };
 
     return websiteData;
