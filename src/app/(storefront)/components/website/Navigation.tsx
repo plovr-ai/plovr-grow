@@ -184,14 +184,20 @@ export function Navigation({
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
             <Link href={homeLink} className="flex items-center gap-3">
-              <Image
-                src={logo}
-                alt={restaurantName}
-                width={48}
-                height={48}
-                priority
-                className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
-              />
+              {logo ? (
+                <Image
+                  src={logo}
+                  alt={restaurantName}
+                  width={48}
+                  height={48}
+                  priority
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
+                />
+              ) : (
+                <span className="flex w-10 h-10 md:w-12 md:h-12 items-center justify-center rounded-full bg-theme-primary text-theme-primary-foreground font-bold text-lg">
+                  {restaurantName.charAt(0)}
+                </span>
+              )}
               <span className="font-bold text-lg md:text-xl text-gray-900 hidden sm:block">
                 {restaurantName}
               </span>

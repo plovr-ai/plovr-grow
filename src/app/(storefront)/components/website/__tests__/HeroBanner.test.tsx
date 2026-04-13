@@ -200,4 +200,30 @@ describe("HeroBanner", () => {
       });
     });
   });
+
+  describe("empty heroImage fallback", () => {
+    it("should use bg-gray-800 fallback when heroImage is empty", () => {
+      const merchantEmptyHero = { ...mockMerchant, heroImage: "" };
+      const { container } = render(
+        <HeroBanner merchant={merchantEmptyHero} companySlug="joes-pizza" />
+      );
+
+      const section = container.querySelector("section");
+      const backgroundDiv = section?.querySelector("div");
+      expect(backgroundDiv).toHaveClass("bg-gray-800");
+    });
+
+    it("should not set inline backgroundImage style when heroImage is empty", () => {
+      const merchantEmptyHero = { ...mockMerchant, heroImage: "" };
+      const { container } = render(
+        <HeroBanner merchant={merchantEmptyHero} companySlug="joes-pizza" />
+      );
+
+      const section = container.querySelector("section");
+      const backgroundDiv = section?.querySelector("div");
+      expect(backgroundDiv).not.toHaveStyle({
+        backgroundImage: "url()",
+      });
+    });
+  });
 });

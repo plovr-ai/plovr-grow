@@ -75,6 +75,19 @@ function convertOpeningHours(
   return hours;
 }
 
+function getProxyDispatcher(): import("undici").Dispatcher | undefined {
+  const proxyUrl = process.env.https_proxy || process.env.HTTPS_PROXY ||
+    process.env.http_proxy || process.env.HTTP_PROXY;
+  if (!proxyUrl) return undefined;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { ProxyAgent } = require("undici") as typeof import("undici");
+    return new ProxyAgent(proxyUrl);
+  } catch {
+    return undefined;
+  }
+}
+
 export class GooglePlacesClient {
   private apiKey: string;
 
@@ -84,12 +97,14 @@ export class GooglePlacesClient {
 
   async getPlaceDetails(placeId: string): Promise<PlaceDetails> {
     const url = `https://places.googleapis.com/v1/places/${placeId}`;
+    const dispatcher = getProxyDispatcher();
     const response = await fetch(url, {
       headers: {
         "X-Goog-Api-Key": this.apiKey,
         "X-Goog-FieldMask": PLACE_DETAILS_FIELDS,
       },
-    });
+      ...(dispatcher ? { dispatcher } : {}),
+    } as RequestInit);
 
     if (!response.ok) {
       const errorText = await response.text();

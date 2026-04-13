@@ -124,13 +124,19 @@ export function Footer({
           {/* Brand */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <Image
-                src={merchant.logo}
-                alt={merchant.name}
-                width={48}
-                height={48}
-                className="w-12 h-12 rounded-full object-cover"
-              />
+              {merchant.logo ? (
+                <Image
+                  src={merchant.logo}
+                  alt={merchant.name}
+                  width={48}
+                  height={48}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              ) : (
+                <span className="flex w-12 h-12 items-center justify-center rounded-full bg-white/20 font-bold text-xl">
+                  {merchant.name.charAt(0)}
+                </span>
+              )}
               <span className="font-bold text-xl">{merchant.name}</span>
             </div>
             <p className="text-gray-400 mb-6">{merchant.tagline}</p>

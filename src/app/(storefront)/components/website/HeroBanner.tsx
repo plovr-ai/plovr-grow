@@ -68,8 +68,8 @@ export function HeroBanner({
     <section className="relative h-screen min-h-[600px] max-h-[900px] flex items-center justify-center">
       {/* Background Image */}
       <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${merchant.heroImage})` }}
+        className={`absolute inset-0 bg-cover bg-center bg-no-repeat ${!merchant.heroImage ? "bg-gray-800" : ""}`}
+        style={merchant.heroImage ? { backgroundImage: `url(${merchant.heroImage})` } : undefined}
       >
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/50" />

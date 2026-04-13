@@ -4,15 +4,14 @@ import { PlaceSearch } from "../PlaceSearch";
 
 // --- Google Maps mock infrastructure ---
 
-let placeSelectHandler: ((event: unknown) => void) | null = null;
+let eventHandlers: Record<string, ((event: unknown) => void)>;
 
 function createMockPlaceAutocompleteElement() {
-  // Use a real DOM element so appendChild works in jsdom
   const el = document.createElement("div");
   const originalAddEventListener = el.addEventListener.bind(el);
   el.addEventListener = vi.fn((event: string, handler: unknown) => {
-    if (event === "gmp-placeselect") {
-      placeSelectHandler = handler as (event: unknown) => void;
+    if (event === "gmp-placeselect" || event === "gmp-select") {
+      eventHandlers[event] = handler as (event: unknown) => void;
     }
     originalAddEventListener(event, handler as EventListener);
   });
@@ -23,14 +22,13 @@ function setupGoogleMapsGlobal({
   preloaded = false,
 }: { preloaded?: boolean } = {}) {
   const mockElement = createMockPlaceAutocompleteElement();
-  // Return the DOM element from the constructor so it can be appended
   const PlaceAutocompleteElement = vi.fn(function () {
     return mockElement;
   });
 
   const googleMaps = {
     maps: {
-      importLibrary: vi.fn().mockResolvedValue(undefined),
+      importLibrary: vi.fn().mockResolvedValue({ PlaceAutocompleteElement }),
       ...(preloaded
         ? {
             places: { PlaceAutocompleteElement },
@@ -63,7 +61,7 @@ describe("PlaceSearch", () => {
 
   beforeEach(() => {
     originalGoogle = window.google;
-    placeSelectHandler = null;
+    eventHandlers = {};
     vi.stubEnv(ENV_KEY, "test-api-key");
   });
 
@@ -84,7 +82,6 @@ describe("PlaceSearch", () => {
 
       const { PlaceAutocompleteElement, googleMaps } = setupGoogleMapsGlobal();
 
-      // Remove google from window initially so it triggers script loading
       Object.defineProperty(window, "google", {
         value: undefined,
         writable: true,
@@ -94,7 +91,6 @@ describe("PlaceSearch", () => {
       const onSelect = vi.fn();
       render(<PlaceSearch onSelect={onSelect} />);
 
-      // Find the script element that was created
       const scriptCalls = createElementSpy.mock.results.filter(
         (r) => r.type === "return" && (r.value as HTMLElement).tagName === "SCRIPT"
       );
@@ -105,7 +101,6 @@ describe("PlaceSearch", () => {
       expect(script.src).toContain("key=test-api-key");
       expect(script.async).toBe(true);
 
-      // Simulate script load — set google global, then fire onload
       Object.defineProperty(window, "google", {
         value: googleMaps,
         writable: true,
@@ -117,7 +112,6 @@ describe("PlaceSearch", () => {
         script.onload?.(new Event("load"));
       });
 
-      // Script URL should include libraries=places
       expect(script.src).toContain("libraries=places");
     });
 
@@ -131,7 +125,6 @@ describe("PlaceSearch", () => {
         render(<PlaceSearch onSelect={onSelect} />);
       });
 
-      // Should not have created a script element for Google Maps
       const scriptCalls = createElementSpy.mock.results.filter(
         (r) =>
           r.type === "return" &&
@@ -156,7 +149,7 @@ describe("PlaceSearch", () => {
       expect(PlaceAutocompleteElement).toHaveBeenCalled();
     });
 
-    it("should call onSelect with place data when a place is selected", async () => {
+    it("should register both gmp-placeselect and gmp-select listeners", async () => {
       setupGoogleMapsGlobal({ preloaded: true });
 
       const onSelect = vi.fn();
@@ -164,9 +157,18 @@ describe("PlaceSearch", () => {
         render(<PlaceSearch onSelect={onSelect} />);
       });
 
-      expect(placeSelectHandler).not.toBeNull();
+      expect(eventHandlers["gmp-placeselect"]).toBeDefined();
+      expect(eventHandlers["gmp-select"]).toBeDefined();
+    });
 
-      // Simulate place selection
+    it("should call onSelect via gmp-placeselect (legacy v3.58)", async () => {
+      setupGoogleMapsGlobal({ preloaded: true });
+
+      const onSelect = vi.fn();
+      await act(async () => {
+        render(<PlaceSearch onSelect={onSelect} />);
+      });
+
       const mockPlace = {
         id: "place-123",
         displayName: "Test Restaurant",
@@ -175,16 +177,44 @@ describe("PlaceSearch", () => {
       };
 
       await act(async () => {
-        await placeSelectHandler!({ place: mockPlace });
+        await eventHandlers["gmp-placeselect"]!({ place: mockPlace });
       });
 
       expect(mockPlace.fetchFields).toHaveBeenCalledWith({
-        fields: ["id", "displayName", "formattedAddress"],
+        fields: ["displayName", "formattedAddress"],
       });
       expect(onSelect).toHaveBeenCalledWith({
         placeId: "place-123",
         name: "Test Restaurant",
         address: "456 Oak Ave, Los Angeles, CA",
+      });
+    });
+
+    it("should call onSelect via gmp-select (v3.59+)", async () => {
+      setupGoogleMapsGlobal({ preloaded: true });
+
+      const onSelect = vi.fn();
+      await act(async () => {
+        render(<PlaceSearch onSelect={onSelect} />);
+      });
+
+      const mockPlace = {
+        id: "place-456",
+        displayName: "New API Restaurant",
+        formattedAddress: "789 Elm St, Pasadena, CA",
+        fetchFields: vi.fn().mockResolvedValue(undefined),
+      };
+
+      await act(async () => {
+        await eventHandlers["gmp-select"]!({
+          placePrediction: { toPlace: () => mockPlace },
+        });
+      });
+
+      expect(onSelect).toHaveBeenCalledWith({
+        placeId: "place-456",
+        name: "New API Restaurant",
+        address: "789 Elm St, Pasadena, CA",
       });
     });
 
@@ -204,10 +234,11 @@ describe("PlaceSearch", () => {
       };
 
       await act(async () => {
-        await placeSelectHandler!({ place: mockPlace });
+        await eventHandlers["gmp-placeselect"]!({ place: mockPlace });
       });
 
       expect(onSelect).not.toHaveBeenCalled();
     });
+
   });
 });

@@ -26,13 +26,18 @@ export default async function MenuPage({ params, searchParams }: MenuPageProps) 
 
   // Fetch the current menu with full data. Pass preloaded merchant so the
   // service doesn't re-query it by id.
-  const response = await menuService.getMenu(tenantId, merchant.id, menuId, {
-    preloadedMerchant: {
-      id: merchant.id,
-      name: merchant.name,
-      logoUrl: merchant.logoUrl ?? null,
-    },
-  });
+  let response;
+  try {
+    response = await menuService.getMenu(tenantId, merchant.id, menuId, {
+      preloadedMerchant: {
+        id: merchant.id,
+        name: merchant.name,
+        logoUrl: merchant.logoUrl ?? null,
+      },
+    });
+  } catch {
+    notFound();
+  }
 
   // Fetch item counts for the *other* menus in a single aggregate query so we
   // can filter out empty ones in the menu switcher. Previously this was an
