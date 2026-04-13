@@ -242,7 +242,7 @@ describe.skipIf(!SANDBOX_TOKEN)(
           status: "completed",
           fulfillmentStatus: "pending",
           orderMode: "pickup",
-          subtotalAmount: subtotal,
+          subtotal,
           taxAmount,
           totalAmount: subtotal + taxAmount,
           customerFirstName: "Sandbox",
@@ -257,7 +257,6 @@ describe.skipIf(!SANDBOX_TOKEN)(
           orderId: ORDER_ID,
           tenantId: TENANT_ID,
           merchantId: MERCHANT_ID,
-          type: "pickup",
           status: "pending",
         },
       });
