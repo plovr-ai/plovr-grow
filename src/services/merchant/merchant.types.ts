@@ -170,6 +170,7 @@ export interface GetMerchantsFilter {
 import type { SocialLink, CustomerReview } from "@/types/tenant";
 import type { FeaturedItem } from "@/types/website";
 import type { TipConfig, FeeConfig } from "@/types/index";
+import type { WebsiteTemplateName } from "@/types/website-template";
 
 /**
  * Website display data - 用于渲染网站模板
@@ -194,4 +195,5 @@ export interface WebsiteMerchantData {
   feeConfig?: FeeConfig;
   featuredItems?: FeaturedItem[];
   reviews?: CustomerReview[];
+  websiteTemplate: WebsiteTemplateName;
 }
