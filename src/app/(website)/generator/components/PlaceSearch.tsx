@@ -80,6 +80,17 @@ function patchShadowDomForLightTheme() {
         input {
           background-color: #ffffff !important;
           color: #1f2937 !important;
+          border: 1px solid #d1d5db !important;
+          border-radius: 0.5rem !important;
+          padding: 0.75rem 1rem !important;
+          font-size: 1.125rem !important;
+          width: 100% !important;
+          outline: none !important;
+          box-sizing: border-box !important;
+        }
+        input:focus {
+          border-color: #ffbf00 !important;
+          box-shadow: 0 0 0 1px #ffbf00 !important;
         }
       `;
       shadow.appendChild(style);
@@ -162,7 +173,7 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
     <div
       ref={containerRef}
       style={{ colorScheme: "light" }}
-      className="overflow-hidden rounded-lg bg-white [&_input]:w-full [&_input]:bg-white [&_input]:text-gray-900 [&_input]:text-lg [&_input]:px-4 [&_input]:py-3 [&_input]:border [&_input]:border-gray-300 [&_input]:rounded-lg [&_input]:focus:outline-none [&_input]:focus:ring-1 [&_input]:focus:ring-[#ffbf00] [&_input]:focus:border-[#ffbf00]"
+      className="w-full"
     />
   );
 }
