@@ -175,41 +175,11 @@ const faqItems = [
 export default function HomePage() {
   return (
     <>
-      <HomeHero
-        badge="0 Busy signals"
-        title="Stop Losing Revenue To"
-        titleHighlight="Misses Calls"
-        subtitle="Our AI Voice Agent that handles 100% of your phone orders with human-like precision, 24/7."
-        agentName="Ava"
-        agentSubtitle="Hearing is believing"
-        callCta={{
-          label: "Call Me",
-          href: siteConfig.cta.secondary.href,
-          external: true,
-        }}
-        talkCta={{
-          label: "Talk Now",
-          href: siteConfig.cta.secondary.href,
-          external: true,
-        }}
-        demoCta={{
-          label: "Get a Free Demo",
-          href: siteConfig.cta.secondary.href,
-          external: true,
-        }}
-      />
+      <HomeHero />
 
-      <CostOfSilence
-        title="The Cost of Silence"
-        subtitle="Every missed call is a customer lost to your competitor."
-        cards={costCards}
-      />
+      <CostOfSilence cards={costCards} />
 
-      <AvaAdvantage
-        eyebrow={'Meet "Ava", our AI agent.'}
-        title="Industrial-Grade Reliability Meet Human-Like Warmth."
-        cards={advantageCards}
-      />
+      <AvaAdvantage cards={advantageCards} />
 
       <Testimonials items={testimonials} />
 

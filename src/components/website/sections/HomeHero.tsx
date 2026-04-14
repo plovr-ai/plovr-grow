@@ -15,7 +15,7 @@ interface HomeHeroProps {
 export function HomeHero({
   badge = "0 Busy signals",
   title = "Stop Losing Revenue To",
-  titleHighlight = "Misses Calls",
+  titleHighlight = "Missed Calls",
   subtitle = "Our AI Voice Agent that handles 100% of your phone orders with human-like precision, 24/7.",
   agentName = "Ava",
   agentSubtitle = "Hearing is believing",
