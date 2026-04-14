@@ -70,18 +70,18 @@ function patchShadowDomForLightTheme() {
       style.textContent = `
         *, *::before, *::after {
           color-scheme: light !important;
-          background-color: transparent !important;
         }
         :host {
           color-scheme: light !important;
-          background-color: transparent !important;
         }
-        input, input:focus, input:focus-visible {
+        * {
           background-color: transparent !important;
-          color: #1f2937 !important;
+          border-color: transparent !important;
           outline: none !important;
           box-shadow: none !important;
-          border-color: transparent !important;
+        }
+        input {
+          color: #1f2937 !important;
         }
       `;
       shadow.appendChild(style);
