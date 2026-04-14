@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { PlaceSearch } from "@/app/(website)/generator/components/PlaceSearch";
 
 interface PlaceResult {
@@ -175,13 +176,13 @@ export function LeadForm() {
           <p className="text-xs leading-relaxed text-gray-400">
             By providing us with your information you are consenting to the
             collection and use of your information in accordance with our{" "}
-            <a href="/terms" className="underline">
+            <Link href="/terms" className="underline">
               Terms of Service
-            </a>{" "}
+            </Link>{" "}
             and{" "}
-            <a href="/privacy" className="underline">
+            <Link href="/privacy" className="underline">
               Privacy Policy
-            </a>
+            </Link>
             .
           </p>
         </div>
@@ -273,13 +274,13 @@ export function LeadForm() {
           <p className="text-xs leading-relaxed text-gray-400">
             By providing us with your information you are consenting to the
             collection and use of your information in accordance with our{" "}
-            <a href="/terms" className="underline">
+            <Link href="/terms" className="underline">
               Terms of Service
-            </a>{" "}
+            </Link>{" "}
             and{" "}
-            <a href="/privacy" className="underline">
+            <Link href="/privacy" className="underline">
               Privacy Policy
-            </a>
+            </Link>
             .
           </p>
         </form>
