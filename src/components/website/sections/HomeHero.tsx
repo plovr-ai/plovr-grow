@@ -168,7 +168,7 @@ export function HomeHero({
             href={primaryCta.href}
             rel={primaryCta.external ? "noopener noreferrer" : undefined}
             target={primaryCta.external ? "_blank" : undefined}
-            className="px-8 py-5 bg-ws-primary-400 text-ws-primary-700 font-bold text-base rounded-lg shadow-lg shadow-ws-primary-400/20 hover:bg-ws-primary-500 whitespace-nowrap transition-colors"
+            className="px-8 py-5 bg-primary text-primary-foreground font-bold text-base rounded-lg shadow-lg shadow-primary/20 hover:bg-primary/90 whitespace-nowrap transition-colors"
           >
             {primaryCta.label}
           </a>

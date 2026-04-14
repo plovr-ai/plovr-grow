@@ -168,7 +168,7 @@ export function VoiceAgent({
                   href={primaryCta.href}
                   rel={primaryCta.external ? "noopener noreferrer" : undefined}
                   target={primaryCta.external ? "_blank" : undefined}
-                  className="bg-ws-primary-400 text-ws-primary-700 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-ws-primary-500 transition-colors text-sm"
+                  className="bg-primary text-primary-foreground font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors text-sm"
                 >
                   {/* Lucide: phone */}
                   <svg

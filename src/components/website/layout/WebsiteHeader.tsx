@@ -77,7 +77,7 @@ export function WebsiteHeader() {
           <div className="hidden items-center gap-4 md:flex">
             <Link
               href={siteConfig.cta.primary.href}
-              className="px-6 py-2 bg-ws-primary-400 text-ws-primary-700 font-bold text-sm rounded-lg hover:bg-ws-primary-500 transition-colors"
+              className="px-6 py-2 bg-primary text-primary-foreground font-bold text-sm rounded-lg hover:bg-primary/90 transition-colors"
             >
               Get Started
             </Link>
@@ -137,7 +137,7 @@ export function WebsiteHeader() {
               <div className="mt-2 flex flex-col gap-2 border-t border-ws-border pt-4">
                 <Link
                   href={siteConfig.cta.primary.href}
-                  className="rounded-lg bg-ws-primary-400 px-4 py-3 text-center font-bold text-ws-primary-700 hover:bg-ws-primary-500"
+                  className="rounded-lg bg-primary px-4 py-3 text-center font-bold text-primary-foreground hover:bg-primary/90"
                   onClick={() => setMobileOpen(false)}
                 >
                   Get Started

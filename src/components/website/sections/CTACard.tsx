@@ -40,7 +40,7 @@ export function CTACard({
           href={cta.href}
           rel={cta.external ? "noopener noreferrer" : undefined}
           target={cta.external ? "_blank" : undefined}
-          className="inline-block px-10 py-5 bg-ws-primary-400 text-ws-primary-700 font-bold text-lg rounded-lg shadow-lg shadow-ws-primary-400/20 hover:bg-ws-primary-500 transition-colors"
+          className="inline-block px-10 py-5 bg-primary text-primary-foreground font-bold text-lg rounded-lg shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
         >
           {cta.label}
         </a>
