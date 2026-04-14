@@ -118,7 +118,7 @@ export function CallDemoCard({ compact = false }: CallDemoCardProps) {
               className={`relative flex ${avatarSize} items-center justify-center rounded-full border border-[rgba(255,191,0,0.2)] bg-white shadow-xl`}
             >
               <svg
-                className={`${iconSize} phone-ring text-[#ffbf00]`}
+                className={`${iconSize} text-[#ffbf00]`}
                 viewBox="0 0 27 30"
                 fill="currentColor"
                 aria-hidden="true"
@@ -208,7 +208,7 @@ export function CallDemoCard({ compact = false }: CallDemoCardProps) {
           className="mt-1 flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#ffbf00] px-6 py-3.5 font-bold text-[#1c1b1b] shadow-md transition-all hover:shadow-lg hover:brightness-105"
         >
           <svg
-            className="size-4"
+            className="phone-ring size-4"
             viewBox="0 0 18.4 18.4"
             fill="currentColor"
             aria-hidden="true"
