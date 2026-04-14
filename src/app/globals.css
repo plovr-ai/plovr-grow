@@ -258,18 +258,3 @@ body {
   background-clip: text;
 }
 
-/* Google Places autocomplete dropdown — force light theme and high z-index */
-.pac-container {
-  z-index: 9999 !important;
-  color-scheme: light !important;
-  background-color: #ffffff !important;
-}
-
-gmp-place-autocomplete-overlay {
-  z-index: 9999 !important;
-  color-scheme: light !important;
-}
-
-gmp-place-autocomplete-overlay * {
-  color-scheme: light !important;
-}
