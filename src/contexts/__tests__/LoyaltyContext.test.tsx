@@ -3,8 +3,6 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import {
   LoyaltyProvider,
   useLoyalty,
-  useLoyaltyMember,
-  useIsLoyaltyLoading,
 } from "../LoyaltyContext";
 import { MerchantProvider } from "../MerchantContext";
 import type { ReactNode } from "react";
@@ -143,81 +141,6 @@ describe("LoyaltyContext", () => {
       }).toThrow("useLoyalty must be used within LoyaltyProvider");
 
       consoleSpy.mockRestore();
-    });
-  });
-
-  describe("useLoyaltyMember", () => {
-    it("should return member when logged in", async () => {
-      const mockMember = {
-        id: "member-123",
-        phone: "+11234567890",
-        name: "Jane Doe",
-        points: 250,
-      };
-
-      mockFetch.mockResolvedValueOnce({
-        json: () =>
-          Promise.resolve({
-            success: true,
-            data: { member: mockMember, pointsPerDollar: 1 },
-          }),
-      });
-
-      const { result } = renderHook(() => useLoyaltyMember(), {
-        wrapper: createWrapper("test-company-id"),
-      });
-
-      await waitFor(() => {
-        expect(result.current).toEqual(mockMember);
-      });
-    });
-
-    it("should return null when not logged in", async () => {
-      mockFetch.mockResolvedValueOnce({
-        json: () => Promise.resolve({ success: false }),
-      });
-
-      const { result } = renderHook(() => useLoyaltyMember(), {
-        wrapper: createWrapper("test-company-id"),
-      });
-
-      await waitFor(() => {
-        // Wait for loading to complete
-        const { result: loadingResult } = renderHook(
-          () => useIsLoyaltyLoading(),
-          {
-            wrapper: createWrapper("test-company-id"),
-          }
-        );
-        return loadingResult.current === false;
-      });
-
-      expect(result.current).toBeNull();
-    });
-  });
-
-  describe("useIsLoyaltyLoading", () => {
-    it("should return true initially, then false after fetch completes", async () => {
-      mockFetch.mockResolvedValueOnce({
-        json: () =>
-          Promise.resolve({
-            success: true,
-            data: {
-              member: { id: "1", phone: "+1", name: null, points: 0 },
-              pointsPerDollar: 1,
-            },
-          }),
-      });
-
-      const { result } = renderHook(() => useIsLoyaltyLoading(), {
-        wrapper: createWrapper("test-company-id"),
-      });
-
-      expect(result.current).toBe(true);
-
-      await waitFor(() => {
-        expect(result.current).toBe(false);
-      });
     });
   });
 

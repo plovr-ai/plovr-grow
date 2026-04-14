@@ -1,2 +1,2 @@
-export { invoiceService, InvoiceService } from "./invoice.service";
+export { invoiceService } from "./invoice.service";
 export * from "./invoice.types";

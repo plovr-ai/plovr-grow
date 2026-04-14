@@ -11,7 +11,7 @@ import type {
 import type { FeeBreakdownItem } from "@/lib/pricing";
 
 // Generic order data type that works with both mock and Prisma orders
-export interface OrderData {
+interface OrderData {
   id: string;
   tenantId: string;
   merchantId: string | null;

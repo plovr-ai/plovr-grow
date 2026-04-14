@@ -6,7 +6,7 @@ const CONTENT_DIR = path.join(process.cwd(), "src/content");
 
 // ---------- Types ----------
 
-export interface BlogFrontmatter {
+interface BlogFrontmatter {
   title: string;
   description: string;
   date: string;
@@ -15,7 +15,7 @@ export interface BlogFrontmatter {
   draft: boolean;
 }
 
-export interface ReleaseFrontmatter {
+interface ReleaseFrontmatter {
   version: string;
   date: string;
   title: string;

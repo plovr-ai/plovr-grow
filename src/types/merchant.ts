@@ -52,29 +52,6 @@ export interface MerchantInfo {
   updatedAt: Date;
 }
 
-// Public merchant info (for customer-facing pages, excludes sensitive data)
-export interface PublicMerchantInfo {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  zipCode: string | null;
-  phone: string | null;
-  logoUrl: string | null;
-  bannerUrl: string | null;
-  businessHours: BusinessHoursMap | null;
-  timezone: string;
-  currency: string;
-  locale: string;
-  settings: Pick<
-    MerchantSettings,
-    "acceptsPickup" | "acceptsDelivery" | "tipConfig" | "feeConfig"
-  > | null;
-}
-
 // ==================== Merchant Context ====================
 
 export interface MerchantContext {

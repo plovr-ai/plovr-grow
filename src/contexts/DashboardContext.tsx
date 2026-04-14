@@ -61,7 +61,7 @@ export function useMerchants(): MerchantInfo[] {
   return merchants;
 }
 
-export function useTenantBrand(): TenantBrandInfo {
+function useTenantBrand(): TenantBrandInfo {
   const { tenant } = useDashboard();
   return tenant;
 }

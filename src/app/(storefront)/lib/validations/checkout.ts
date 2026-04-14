@@ -91,4 +91,3 @@ export const checkoutFormSchema = z
 
 // Type exports
 export type DeliveryAddress = z.infer<typeof deliveryAddressSchema>;
-export type CheckoutFormData = z.infer<typeof checkoutFormSchema>;

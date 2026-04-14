@@ -4,7 +4,6 @@ import {
   normalizeGiftCardNumber,
   formatGiftCardNumber,
   isValidGiftCardFormat,
-  maskGiftCardNumber,
 } from "../giftcard";
 
 describe("generateGiftCardNumber", () => {
@@ -137,31 +136,5 @@ describe("isValidGiftCardFormat", () => {
     it("should reject spaces", () => {
       expect(isValidGiftCardFormat("1234 5678 9012 3456")).toBe(false);
     });
-  });
-});
-
-describe("maskGiftCardNumber", () => {
-  it("should mask all but last 4 digits with dashes", () => {
-    expect(maskGiftCardNumber("1234-5678-9012-3456")).toBe(
-      "****-****-****-3456"
-    );
-  });
-
-  it("should handle input without dashes", () => {
-    expect(maskGiftCardNumber("1234567890123456")).toBe("****-****-****-3456");
-  });
-
-  it("should handle input with spaces", () => {
-    expect(maskGiftCardNumber("1234 5678 9012 3456")).toBe(
-      "****-****-****-3456"
-    );
-  });
-
-  it("should preserve only the last 4 digits", () => {
-    const masked = maskGiftCardNumber("1111-2222-3333-4444");
-    expect(masked).toBe("****-****-****-4444");
-    expect(masked).not.toContain("1111");
-    expect(masked).not.toContain("2222");
-    expect(masked).not.toContain("3333");
   });
 });

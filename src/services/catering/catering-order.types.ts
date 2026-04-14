@@ -125,25 +125,6 @@ export interface UpdateCateringOrderInput {
 
 // ==================== Paginated Types ====================
 
-export interface PaginatedCateringOrders {
-  items: CateringOrderData[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
-
-export interface PaginatedCateringOrdersWithMerchant {
-  items: (CateringOrderData & {
-    merchant: { id: string; name: string; slug: string };
-    invoice: CateringOrderInvoice | null;
-  })[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
-
 // ==================== Filter Options ====================
 
 export interface CateringOrderListOptions {

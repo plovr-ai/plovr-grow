@@ -16,7 +16,7 @@ export interface CTA {
   external?: boolean;
 }
 
-export interface SiteConfig {
+interface SiteConfig {
   name: string;
   tagline: string;
   description: string;

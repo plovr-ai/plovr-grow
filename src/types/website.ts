@@ -11,7 +11,7 @@ export type { SocialLink, BusinessHoursMap };
  * Website display info - combines data from Company and Merchant
  * This is a denormalized view for rendering website templates
  */
-export interface WebsiteMerchantInfo {
+interface WebsiteMerchantInfo {
   name: string;
   tagline: string;
   address: string;
@@ -54,11 +54,6 @@ export interface CustomerReview {
   avatarUrl?: string;
 }
 
-export interface WebsiteData {
-  merchant: MerchantInfo;
-  featuredItems: FeaturedItem[];
-  reviews: CustomerReview[];
-}
 
 export interface NavigationLink {
   label: string;

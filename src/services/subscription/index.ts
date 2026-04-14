@@ -1,4 +1,4 @@
-export { subscriptionService, SubscriptionService } from "./subscription.service";
+export { subscriptionService } from "./subscription.service";
 export type {
   SubscriptionStatus,
   SubscriptionPlan,
@@ -13,11 +13,4 @@ export type {
   SubscriptionResponse,
 } from "./subscription.types";
 
-export {
-  getPlanByCode,
-  getStripePriceId,
-  getPlanByStripePriceId,
-  getAllPlans,
-  getPlanTier,
-} from "./subscription.plans";
-export type { PlanDefinition } from "./subscription.plans";
+export { getAllPlans } from "./subscription.plans";

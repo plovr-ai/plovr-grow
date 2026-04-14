@@ -8,7 +8,7 @@ import {
   DEFAULT_FEE_CONFIG,
 } from "@/types";
 
-export interface MerchantConfig {
+interface MerchantConfig {
   name: string;
   logoUrl: string | null;
   currency: string;
@@ -89,7 +89,7 @@ export function useMerchantInfo(): { name: string; logoUrl: string | null } {
   return { name, logoUrl };
 }
 
-export function useTimezone(): string {
+function useTimezone(): string {
   const { timezone } = useMerchantConfig();
   return timezone;
 }

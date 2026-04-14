@@ -33,12 +33,6 @@ export interface PaymentProvider {
 
 // --- Connect Account Types ---
 
-export interface ConnectAccountInfo {
-  stripeAccountId: string
-  accessToken: string
-  refreshToken: string
-  scope: string
-}
 
 export interface ConnectAccountStatus {
   chargesEnabled: boolean

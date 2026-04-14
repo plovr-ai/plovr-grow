@@ -63,12 +63,3 @@ export function isValidGiftCardFormat(cardNumber: string): boolean {
   return withDashes.test(cardNumber) || withoutDashes.test(cardNumber);
 }
 
-/**
- * Mask a gift card number for display (security)
- * 1234-5678-9012-3456 -> ****-****-****-3456
- */
-export function maskGiftCardNumber(cardNumber: string): string {
-  const formatted = formatGiftCardNumber(normalizeGiftCardNumber(cardNumber));
-  // Show only last 4 characters
-  return formatted.replace(/^(\d{4})-(\d{4})-(\d{4})-/, "****-****-****-");
-}
