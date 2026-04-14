@@ -8,17 +8,6 @@ export function LandingHero() {
       <div className="mx-auto grid max-w-6xl gap-12 pt-16 pb-12 lg:grid-cols-[1fr_420px] lg:items-start lg:gap-16">
         {/* Left: Hero content */}
         <div className="flex flex-col">
-          {/* Badge */}
-          <div className="relative mb-6 inline-flex w-fit items-center justify-center rounded-full bg-[rgba(121,89,0,0.05)] px-5 py-2">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 rounded-full border border-[rgba(121,89,0,0.2)]"
-            />
-            <span className="text-[10px] font-bold uppercase tracking-[2.5px] text-ws-text-amber">
-              Zero Busy Signals
-            </span>
-          </div>
-
           {/* Title */}
           <h1 className="max-w-xl text-5xl font-extrabold leading-tight tracking-tight md:text-6xl lg:text-7xl">
             <span className="text-ws-text-heading">
