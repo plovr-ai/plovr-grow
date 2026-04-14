@@ -5,8 +5,8 @@ interface BadgeProps {
 }
 
 const variants: Record<NonNullable<BadgeProps["variant"]>, string> = {
-  primary: "bg-[#fef0c7] text-[#b27900]",
-  neutral: "bg-[#fafaf7] text-[#6b6b6b]",
+  primary: "bg-ws-primary-100 text-ws-primary-700",
+  neutral: "bg-ws-bg-subtle text-ws-text-muted",
   success: "bg-green-100 text-green-600",
 };
 

@@ -7,9 +7,9 @@ interface SectionProps {
 
 const backgrounds: Record<NonNullable<SectionProps["variant"]>, string> = {
   default: "bg-white",
-  subtle: "bg-[#fafaf7]",
-  warm: "bg-[#fff8e9]",
-  dark: "bg-[#0f0f0f] text-white",
+  subtle: "bg-ws-bg-subtle",
+  warm: "bg-ws-bg-warm",
+  dark: "bg-ws-dark text-white",
 };
 
 export function Section({

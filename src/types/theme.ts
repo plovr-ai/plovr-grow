@@ -30,10 +30,10 @@ export interface ThemeConfig {
  */
 export const DEFAULT_THEME: ThemeConfig = {
   primary: {
-    base: "45 100% 48%", // #f5b800
-    hover: "38 100% 35%", // amber-700 (#b27900)
-    light: "45 100% 97%", // amber-50 (#fffaeb)
-    foreground: "0 0% 100%", // white
+    base: "45 100% 50%", // #FFBF00
+    hover: "42 100% 40%", // dark gold (#CC9900)
+    light: "48 100% 96%", // light gold (#FFF9EB)
+    foreground: "42 100% 13%", // #402D00
   },
 };
 

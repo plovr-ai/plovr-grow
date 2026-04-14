@@ -11,13 +11,13 @@ interface WebsiteButtonProps {
 }
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5b800] focus-visible:ring-offset-2";
+  "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ws-primary-500 focus-visible:ring-offset-2";
 
 const variantStyles: Record<NonNullable<WebsiteButtonProps["variant"]>, string> = {
-  primary: "bg-[#f5b800] text-[#0f0f0f] hover:bg-[#fdb022]",
-  secondary: "bg-white text-[#0a0a0a] border border-[#ececec] hover:bg-[#fafaf7]",
-  ghost: "bg-transparent text-[#0a0a0a] hover:bg-[#fafaf7]",
-  dark: "bg-[#0f0f0f] text-white hover:bg-[#1c1c1c]",
+  primary: "bg-ws-primary-500 text-[#402D00] hover:bg-ws-primary-400",
+  secondary: "bg-white text-ws-text border border-ws-border hover:bg-ws-bg-subtle",
+  ghost: "bg-transparent text-ws-text hover:bg-ws-bg-subtle",
+  dark: "bg-ws-dark text-white hover:bg-ws-dark-muted",
 };
 
 const sizeStyles: Record<NonNullable<WebsiteButtonProps["size"]>, string> = {
