@@ -64,7 +64,7 @@ export interface MenuCategoryWithItemsViewModel {
 }
 
 // 页面完整数据
-export interface MenuPageViewModel {
+interface MenuPageViewModel {
   merchantName: string;
   merchantLogo: string | null;
   currency: string;

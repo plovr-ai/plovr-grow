@@ -1,5 +1,5 @@
-export { cateringService, CateringService } from "./catering.service";
+export { cateringService } from "./catering.service";
 export * from "./catering.types";
 
-export { cateringOrderService, CateringOrderService } from "./catering-order.service";
+export { cateringOrderService } from "./catering-order.service";
 export * from "./catering-order.types";

@@ -53,8 +53,7 @@ export const CATERING_STATUSES = {
   CANCELLED: "cancelled",
 } as const;
 
-export type CateringStatus =
-  (typeof CATERING_STATUSES)[keyof typeof CATERING_STATUSES];
+type CateringStatus = (typeof CATERING_STATUSES)[keyof typeof CATERING_STATUSES];
 
 export function toCateringLeadData(lead: CateringLead): CateringLeadData {
   return {

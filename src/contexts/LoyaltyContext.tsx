@@ -130,12 +130,12 @@ export function useLoyalty(): LoyaltyContextValue {
   return context;
 }
 
-export function useLoyaltyMember(): LoyaltyMember | null {
+function useLoyaltyMember(): LoyaltyMember | null {
   const { member } = useLoyalty();
   return member;
 }
 
-export function useIsLoyaltyLoading(): boolean {
+function useIsLoyaltyLoading(): boolean {
   const { isLoading } = useLoyalty();
   return isLoading;
 }

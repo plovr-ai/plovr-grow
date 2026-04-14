@@ -6,7 +6,6 @@ import {
   useTipConfig,
   useFeeConfig,
   useCompanySlug,
-  useTimezone,
   useCountry,
 } from "../MerchantContext";
 import { DEFAULT_TIP_CONFIG, DEFAULT_FEE_CONFIG } from "@/types";
@@ -472,38 +471,6 @@ describe("MerchantContext", () => {
 
       expect(() => {
         renderHook(() => useCompanySlug());
-      }).toThrow("useMerchantConfig must be used within MerchantProvider");
-
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe("useTimezone", () => {
-    it("should return timezone value", () => {
-      const config = {
-        name: "Test",
-        logoUrl: null,
-        currency: "USD",
-        locale: "en-US",
-        timezone: "America/Los_Angeles",
-      };
-
-      const wrapper = ({ children }: { children: ReactNode }) => (
-        <MerchantProvider config={config}>{children}</MerchantProvider>
-      );
-
-      const { result } = renderHook(() => useTimezone(), { wrapper });
-
-      expect(result.current).toBe("America/Los_Angeles");
-    });
-
-    it("should throw error when used outside provider", () => {
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
-
-      expect(() => {
-        renderHook(() => useTimezone());
       }).toThrow("useMerchantConfig must be used within MerchantProvider");
 
       consoleSpy.mockRestore();

@@ -4,7 +4,7 @@
  * Color configuration for a single color with its variants
  * Uses HSL format for easy manipulation (e.g., "0 84% 60%")
  */
-export interface ColorConfig {
+interface ColorConfig {
   /** Base color value in HSL format without hsl() wrapper */
   base: string;
   /** Hover/darker variant */

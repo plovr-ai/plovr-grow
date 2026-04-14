@@ -1,7 +1,7 @@
 import type { OrderStatus, FulfillmentStatus, OrderMode, OrderItemData, SalesChannel } from "@/types";
 
 // Payment events (user behavior)
-export type PaymentEventType =
+type PaymentEventType =
   | "order.created"
   | "order.paid"
   | "order.partial_paid"
@@ -80,9 +80,3 @@ export type OrderEventHandler<T extends OrderEventPayload = OrderEventPayload> =
   event: T
 ) => void | Promise<void>;
 
-// Legacy types for backward compatibility
-/** @deprecated Use PaymentStatusChangedEvent instead */
-export type OrderStatusChangedEvent = PaymentStatusChangedEvent;
-
-/** @deprecated Use OrderPaidEvent instead */
-export type OrderCompletedEvent = OrderPaidEvent;

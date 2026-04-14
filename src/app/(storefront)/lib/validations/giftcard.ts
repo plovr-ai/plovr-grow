@@ -18,5 +18,3 @@ const giftcardFormSchema = z.object({
 export const giftcardApiSchema = giftcardFormSchema.extend({
   stripePaymentIntentId: z.string().optional(),
 });
-
-export type GiftcardApiData = z.infer<typeof giftcardApiSchema>;

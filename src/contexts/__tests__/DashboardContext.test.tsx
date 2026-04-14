@@ -4,7 +4,6 @@ import {
   DashboardProvider,
   useDashboard,
   useMerchants,
-  useTenantBrand,
   useDashboardCurrency,
   useDashboardLocale,
 } from "../DashboardContext";
@@ -62,13 +61,6 @@ describe("DashboardContext", () => {
 
     expect(result.current).toHaveLength(1);
     expect(result.current[0].name).toBe("Main Store");
-  });
-
-  it("useTenantBrand should return tenant brand info", () => {
-    const { result } = renderHook(() => useTenantBrand(), { wrapper });
-
-    expect(result.current.name).toBe("Test Company");
-    expect(result.current.slug).toBe("test-company");
   });
 
   it("useDashboardCurrency should return currency string", () => {

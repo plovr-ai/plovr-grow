@@ -13,7 +13,7 @@ export type InvoiceStatus = (typeof INVOICE_STATUSES)[keyof typeof INVOICE_STATU
 
 // ==================== Data Types ====================
 
-export interface InvoiceMerchant {
+interface InvoiceMerchant {
   id: string;
   name: string;
   slug: string;
@@ -27,7 +27,7 @@ export interface InvoiceMerchant {
   locale: string;
 }
 
-export interface InvoiceCateringOrder {
+interface InvoiceCateringOrder {
   id: string;
   orderNumber: string;
   customerFirstName: string;
@@ -47,7 +47,7 @@ export interface InvoiceCateringOrder {
   merchant: InvoiceMerchant;
 }
 
-export interface InvoiceData {
+interface InvoiceData {
   id: string;
   tenantId: string;
   cateringOrderId: string;

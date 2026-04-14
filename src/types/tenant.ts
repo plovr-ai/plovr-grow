@@ -32,7 +32,7 @@ export interface SocialLink {
   url: string;
 }
 
-export type FeaturedItemRef = string;
+type FeaturedItemRef = string;
 
 export interface CustomerReview {
   id: string;

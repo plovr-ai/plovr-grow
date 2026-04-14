@@ -1,8 +1,8 @@
 // Services
-export { loyaltyService, LoyaltyService } from "./loyalty.service";
-export { loyaltyConfigService, LoyaltyConfigService } from "./loyalty-config.service";
-export { loyaltyMemberService, LoyaltyMemberService } from "./loyalty-member.service";
-export { pointsService, PointsService } from "./points.service";
+export { loyaltyService } from "./loyalty.service";
+export { loyaltyConfigService } from "./loyalty-config.service";
+export { loyaltyMemberService } from "./loyalty-member.service";
+export { pointsService } from "./points.service";
 
 // Event handlers
 export {

@@ -103,9 +103,6 @@ export interface ModifierGroupInput {
   modifiers: ModifierInput[];
 }
 
-/** @deprecated Use ModifierGroupInput instead */
-export type MenuItemOptionInput = ModifierGroupInput;
-
 // ==================== Dashboard Types ====================
 
 export interface DashboardMenuItem {

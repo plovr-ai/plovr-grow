@@ -12,7 +12,7 @@ import type {
 /**
  * 商品税率配置（直接传值）
  */
-export interface ItemTaxConfig {
+interface ItemTaxConfig {
   rate: number;
   roundingMethod: RoundingMethod;
   inclusionType: TaxInclusionType;
@@ -79,7 +79,7 @@ export interface PricingResult {
 /**
  * 根据 subtotal 计算 tip 金额
  */
-export function calculateTipAmount(
+function calculateTipAmount(
   subtotal: number,
   tip: TipInput | null | undefined
 ): number {

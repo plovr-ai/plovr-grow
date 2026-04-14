@@ -27,11 +27,5 @@ export interface GenerationStatusResult {
   errorMessage: string | null;
 }
 
-export interface GeneratedTenantData {
-  tenantId: string;
-  merchantId: string;
-  tenantSlug: string;
-  merchantSlug: string;
-}
 
 export type { PlaceDetails };

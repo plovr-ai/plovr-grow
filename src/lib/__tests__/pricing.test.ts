@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   calculateOrderPricing,
-  calculateTipAmount,
   type PricingItem,
   type TipInput,
 } from "../pricing";
@@ -321,32 +320,6 @@ describe("calculateOrderPricing", () => {
       const result = calculateOrderPricing(items, null);
 
       expect(result.tipAmount).toBe(0);
-    });
-  });
-
-  describe("calculateTipAmount", () => {
-    it("should calculate fixed tip amount", () => {
-      const tip: TipInput = { type: "fixed", amount: 5.0 };
-      expect(calculateTipAmount(100.0, tip)).toBe(5.0);
-    });
-
-    it("should calculate percentage tip based on subtotal", () => {
-      const tip: TipInput = { type: "percentage", percentage: 0.15 };
-      expect(calculateTipAmount(100.0, tip)).toBe(15.0);
-    });
-
-    it("should round percentage tip to 2 decimal places", () => {
-      const tip: TipInput = { type: "percentage", percentage: 0.18 };
-      // 33.33 * 0.18 = 5.9994 -> 6.00
-      expect(calculateTipAmount(33.33, tip)).toBe(6.0);
-    });
-
-    it("should return 0 for null tip", () => {
-      expect(calculateTipAmount(100.0, null)).toBe(0);
-    });
-
-    it("should return 0 for undefined tip", () => {
-      expect(calculateTipAmount(100.0, undefined)).toBe(0);
     });
   });
 
