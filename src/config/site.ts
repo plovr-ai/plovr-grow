@@ -52,9 +52,6 @@ export const siteConfig: SiteConfig = {
       children: [
         { label: "Voice Agent", href: "/#voice-agent" },
         { label: "Grow Agent", href: "/grow-agent" },
-        { label: "Manager Agent", href: "/#manager" },
-        { label: "Marketing Suite", href: "/#autopilot" },
-        { label: "Analytics", href: "/#analytics" },
       ],
     },
     { label: "Pricing", href: "/pricing" },
@@ -63,8 +60,6 @@ export const siteConfig: SiteConfig = {
       href: "/about",
       children: [
         { label: "About Us", href: "/about" },
-        { label: "Blog", href: "/blog" },
-        { label: "Careers", href: "/careers" },
         { label: "Contact", href: "mailto:hello@localgrow.ai" },
       ],
     },
@@ -72,10 +67,7 @@ export const siteConfig: SiteConfig = {
       label: "Resources",
       href: "/blog",
       children: [
-        { label: "Documentation", href: "/docs" },
-        { label: "Case Studies", href: "/case-studies" },
-        { label: "Support", href: "/support" },
-        { label: "API Reference", href: "/api" },
+        { label: "Blog", href: "/blog" },
       ],
     },
   ],
