@@ -120,7 +120,15 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
   return (
     <div
       ref={containerRef}
-      style={{ colorScheme: "light" }}
+      style={{
+        colorScheme: "light",
+        // Google Places UI Kit CSS custom properties — force light mode
+        "--gmp-mat-color-surface": "#ffffff",
+        "--gmp-mat-color-on-surface": "#1f2937",
+        "--gmp-mat-color-on-surface-variant": "#6b7280",
+        "--gmp-mat-color-primary": "#ffbf00",
+        "--gmp-mat-color-outline": "#d1d5db",
+      } as React.CSSProperties}
       className="border border-gray-300 rounded-lg bg-white [&_input]:w-full [&_input]:bg-white [&_input]:text-gray-900 [&_input]:text-lg [&_input]:px-4 [&_input]:py-3 [&_input]:border-none [&_input]:focus:outline-none [&_input]:focus:ring-0"
     />
   );
