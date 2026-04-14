@@ -1,77 +1,64 @@
 interface Testimonial {
   quote: string;
   author: string;
-  role?: string;
 }
 
 interface TestimonialsProps {
-  title: string;
-  titleBreak?: string;
-  featuredQuote?: string;
+  title?: string;
   items: Testimonial[];
 }
 
 function StarIcon() {
   return (
     <svg
-      className="w-5 h-5 text-ws-primary-400"
-      viewBox="0 0 24 24"
+      className="size-5 text-[#ffbf00]"
+      viewBox="0 0 20 19"
       fill="currentColor"
-      stroke="currentColor"
-      strokeWidth="1"
       aria-hidden="true"
     >
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      <path d="M10 0l3.09 6.26L20 7.27l-5 4.87 1.18 6.88L10 15.77l-6.18 3.25L5 12.14 0 7.27l6.91-1.01L10 0z" />
     </svg>
   );
 }
 
 export function Testimonials({
-  title,
-  titleBreak,
-  featuredQuote,
+  title = "Voice of the Floor",
   items,
 }: TestimonialsProps) {
   return (
-    <section className="relative bg-white px-6 md:px-16 py-24">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-10 md:gap-16">
-        {/* Left Heading */}
-        <div className="md:w-96 flex-shrink-0">
-          <h2 className="text-3xl md:text-5xl font-bold text-ws-text mb-6 leading-tight">
+    <section className="bg-ws-bg-page px-6 py-24 md:px-8">
+      <div className="mx-auto max-w-7xl">
+        {/* Heading */}
+        <div className="flex flex-col items-center gap-4">
+          <h2 className="text-center text-3xl font-extrabold tracking-tight text-ws-text-heading md:text-5xl">
             {title}
-            {titleBreak && (
-              <>
-                <br />
-                {titleBreak}
-              </>
-            )}
           </h2>
-          {featuredQuote && (
-            <div className="border-l-2 border-ws-primary-400 pl-6">
-              <p className="text-ws-text-muted leading-relaxed">
-                &ldquo;{featuredQuote}&rdquo;
-              </p>
-            </div>
-          )}
+          <div className="h-1 w-20 rounded-full bg-[#ffbf00]" />
         </div>
 
-        {/* Testimonial Cards */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Cards */}
+        <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">
           {items.map((t, i) => (
             <div
               key={i}
-              className="bg-white border border-ws-border rounded-xl p-8 shadow-sm"
+              className="flex flex-col rounded-[32px] bg-ws-bg-card p-8"
             >
-              {/* Star Rating */}
-              <div className="flex gap-1 mb-4">
+              {/* Stars */}
+              <div className="mb-6 flex gap-0.5">
                 {Array.from({ length: 5 }).map((_, j) => (
                   <StarIcon key={j} />
                 ))}
               </div>
-              <p className="text-ws-text-muted mb-4 leading-relaxed">
+
+              {/* Quote */}
+              <p className="mb-auto text-lg font-medium leading-relaxed text-ws-text-heading">
                 &ldquo;{t.quote}&rdquo;
               </p>
-              <p className="font-bold text-ws-text">{t.author}</p>
+
+              {/* Author */}
+              <p className="mt-6 text-sm font-bold text-ws-text-heading">
+                {t.author}
+              </p>
             </div>
           ))}
         </div>

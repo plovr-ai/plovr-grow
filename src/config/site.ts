@@ -25,9 +25,9 @@ export interface SiteConfig {
   locale: string;
   nav: NavLink[];
   footer: {
-    product: NavLink[];
-    company: NavLink[];
-    resources: NavLink[];
+    product?: NavLink[];
+    company?: NavLink[];
+    resources?: NavLink[];
     legal: NavLink[];
   };
   cta: {
@@ -79,27 +79,14 @@ export const siteConfig: SiteConfig = {
     },
   ],
   footer: {
-    product: [
-      { label: "Pricing", href: "/pricing" },
-      { label: "Release Notes", href: "/releases" },
-    ],
-    company: [
-      { label: "About", href: "/about" },
-      { label: "Blog", href: "/blog" },
-      { label: "Contact", href: "mailto:hello@localgrow.ai", external: true },
-    ],
-    resources: [
-      { label: "Get Started", href: "/dashboard/login" },
-      { label: "Request Demo", href: "/dashboard/login" },
-      { label: "Login", href: "/dashboard/login" },
-    ],
     legal: [
-      { label: "Privacy", href: "/privacy" },
-      { label: "Terms", href: "/terms" },
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Terms of Service", href: "/terms" },
+      { label: "Cookie Policy", href: "/cookies" },
     ],
   },
   cta: {
-    primary: { label: "Get Started", href: "/dashboard/login" },
+    primary: { label: "Get a Free Demo", href: "/dashboard/login" },
     secondary: { label: "Request Demo", href: "/dashboard/login" },
     login: { label: "Login", href: "/dashboard/login" },
   },

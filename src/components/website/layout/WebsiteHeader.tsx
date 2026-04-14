@@ -20,57 +20,26 @@ export function WebsiteHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-ws-border">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-ws-bg-page">
       <Container>
         <div className="flex h-16 items-center justify-between">
           <Logo />
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
-            {siteConfig.nav.map((link) => {
-              if (link.children && link.children.length > 0) {
-                return (
-                  <div key={link.label} className="relative group">
-                    <Link
-                      href={link.href}
-                      className={`text-sm transition-colors ${
-                        isActive(pathname, link.href)
-                          ? "font-semibold text-ws-text"
-                          : "text-ws-text-muted hover:text-ws-text"
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                    <div className="absolute left-0 top-full mt-2 w-56 bg-white border border-ws-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                      <div className="py-2">
-                        {link.children.map((child) => (
-                          <Link
-                            key={child.href}
-                            href={child.href}
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                          >
-                            {child.label}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-              return (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className={`text-sm transition-colors ${
-                    isActive(pathname, link.href)
-                      ? "font-semibold text-ws-text"
-                      : "text-ws-text-muted hover:text-ws-text"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
+            {siteConfig.nav.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                className={`text-sm font-medium tracking-tight transition-colors ${
+                  isActive(pathname, link.href)
+                    ? "font-semibold text-ws-text-amber"
+                    : "text-ws-text-body hover:text-ws-text-heading"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
           </nav>
 
           {/* Desktop CTA */}
@@ -79,7 +48,7 @@ export function WebsiteHeader() {
               href={siteConfig.cta.primary.href}
               className="px-6 py-2 bg-primary text-primary-foreground font-bold text-sm rounded-lg hover:bg-primary/90 transition-colors"
             >
-              Get Started
+              {siteConfig.cta.primary.label}
             </Link>
           </div>
 
@@ -104,34 +73,19 @@ export function WebsiteHeader() {
               {siteConfig.nav.map((link) => {
                 const active = isActive(pathname, link.href);
                 return (
-                  <div key={link.label}>
-                    <Link
-                      href={link.href}
-                      aria-current={active ? "page" : undefined}
-                      className={`block rounded-md px-3 py-3 text-base font-medium ${
-                        active
-                          ? "bg-ws-primary-50 text-ws-primary-700"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`}
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      {link.label}
-                    </Link>
-                    {link.children && link.children.length > 0 && (
-                      <div className="pl-6 flex flex-col gap-1">
-                        {link.children.map((child) => (
-                          <Link
-                            key={child.href}
-                            href={child.href}
-                            className="rounded-md px-3 py-2 text-sm text-ws-text-muted hover:bg-gray-50"
-                            onClick={() => setMobileOpen(false)}
-                          >
-                            {child.label}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <Link
+                    key={link.label}
+                    href={link.href}
+                    aria-current={active ? "page" : undefined}
+                    className={`block rounded-md px-3 py-3 text-base font-medium ${
+                      active
+                        ? "bg-ws-primary-50 text-ws-primary-700"
+                        : "text-ws-text-body hover:bg-gray-50"
+                    }`}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
                 );
               })}
               <div className="mt-2 flex flex-col gap-2 border-t border-ws-border pt-4">
@@ -140,7 +94,7 @@ export function WebsiteHeader() {
                   className="rounded-lg bg-primary px-4 py-3 text-center font-bold text-primary-foreground hover:bg-primary/90"
                   onClick={() => setMobileOpen(false)}
                 >
-                  Get Started
+                  {siteConfig.cta.primary.label}
                 </Link>
               </div>
             </nav>
