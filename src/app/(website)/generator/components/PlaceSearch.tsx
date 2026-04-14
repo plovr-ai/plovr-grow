@@ -76,9 +76,12 @@ function patchShadowDomForLightTheme() {
           color-scheme: light !important;
           background-color: transparent !important;
         }
-        input {
+        input, input:focus, input:focus-visible {
           background-color: transparent !important;
           color: #1f2937 !important;
+          outline: none !important;
+          box-shadow: none !important;
+          border-color: transparent !important;
         }
       `;
       shadow.appendChild(style);
