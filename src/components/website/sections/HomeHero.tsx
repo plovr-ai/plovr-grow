@@ -100,7 +100,7 @@ export function HomeHero({
         <h1 className="text-4xl md:text-7xl font-extrabold mb-6 tracking-tight text-gradient-hero">
           <span className="block leading-tight">{title}</span>
           {titleAccent && (
-            <span className="block leading-tight">{titleAccent}</span>
+            <span className="block leading-tight text-theme-primary">{titleAccent}</span>
           )}
         </h1>
 
