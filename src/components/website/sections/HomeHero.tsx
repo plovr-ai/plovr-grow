@@ -2,9 +2,9 @@ import { siteConfig } from "@/config/site";
 
 interface HomeHeroProps {
   badge?: string;
-  title: string;
+  title?: string;
   titleHighlight?: string;
-  subtitle: string;
+  subtitle?: string;
   agentName?: string;
   agentSubtitle?: string;
   callCta?: { label: string; href: string; external?: boolean };
