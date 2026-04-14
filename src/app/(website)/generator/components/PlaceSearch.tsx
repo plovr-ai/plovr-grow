@@ -120,7 +120,8 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
   return (
     <div
       ref={containerRef}
-      className="border border-gray-300 rounded-lg bg-white [&_input]:w-full [&_input]:bg-white [&_input]:text-lg [&_input]:px-4 [&_input]:py-3 [&_input]:border-none [&_input]:focus:outline-none [&_input]:focus:ring-0"
+      style={{ colorScheme: "light" }}
+      className="border border-gray-300 rounded-lg bg-white [&_input]:w-full [&_input]:bg-white [&_input]:text-gray-900 [&_input]:text-lg [&_input]:px-4 [&_input]:py-3 [&_input]:border-none [&_input]:focus:outline-none [&_input]:focus:ring-0"
     />
   );
 }
