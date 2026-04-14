@@ -176,7 +176,7 @@ export function LeadForm() {
             By providing us with your information you are consenting to the
             collection and use of your information in accordance with our{" "}
             <a href="/terms" className="underline">
-              Term of Service
+              Terms of Service
             </a>{" "}
             and{" "}
             <a href="/privacy" className="underline">
@@ -274,7 +274,7 @@ export function LeadForm() {
             By providing us with your information you are consenting to the
             collection and use of your information in accordance with our{" "}
             <a href="/terms" className="underline">
-              Term of Service
+              Terms of Service
             </a>{" "}
             and{" "}
             <a href="/privacy" className="underline">

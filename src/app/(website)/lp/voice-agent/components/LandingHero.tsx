@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { siteConfig } from "@/config/site";
 import { LeadForm } from "./LeadForm";
 
@@ -127,7 +128,9 @@ export function LandingHero() {
 
         {/* Right: Lead form */}
         <div className="lg:sticky lg:top-24">
-          <LeadForm />
+          <Suspense>
+            <LeadForm />
+          </Suspense>
         </div>
       </div>
     </section>
