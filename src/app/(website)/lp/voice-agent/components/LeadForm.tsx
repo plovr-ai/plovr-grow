@@ -29,7 +29,11 @@ interface FormData {
 const LOCATION_OPTIONS = ["1", "2-5", "6-10", "11-25", "26+"];
 const POS_OPTIONS = ["Toast", "Square", "Clover", "Aloha", "Revel", "SpotOn", "Lightspeed", "Other", "None"];
 
-export function LeadForm() {
+interface LeadFormProps {
+  redirectPath?: string;
+}
+
+export function LeadForm({ redirectPath = "/lp/voice-agent/thank-you" }: LeadFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
@@ -117,7 +121,7 @@ export function LeadForm() {
         throw new Error("Submit failed");
       }
 
-      router.push("/lp/voice-agent/thank-you");
+      router.push(redirectPath);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
