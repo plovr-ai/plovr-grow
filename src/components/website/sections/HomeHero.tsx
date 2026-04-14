@@ -38,15 +38,13 @@ export function HomeHero({
         </div>
 
         {/* Title */}
-        <h1 className="relative max-w-5xl text-center font-extrabold leading-none tracking-tight">
-          <span className="block text-5xl text-ws-text-heading md:text-7xl lg:text-[96px] lg:leading-[96px]">
-            {title}
-          </span>
+        <h1 className="relative max-w-5xl text-center text-5xl font-extrabold leading-tight tracking-tight md:text-7xl lg:text-[96px] lg:leading-[1.1]">
+          <span className="text-ws-text-heading">{title} </span>
           {titleHighlight && (
-            <span className="relative mt-1 block text-5xl text-[#ffbf00] md:text-7xl lg:text-[96px] lg:leading-[96px]">
+            <span className="relative inline text-[#ffbf00]">
               <span
                 aria-hidden="true"
-                className="absolute inset-x-0 bottom-1 h-3 bg-[rgba(255,191,0,0.2)] md:bottom-2"
+                className="absolute inset-x-0 bottom-0 h-2 bg-[rgba(255,191,0,0.2)] md:bottom-1 md:h-3"
               />
               <span className="relative">{titleHighlight}</span>
             </span>
