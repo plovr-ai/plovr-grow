@@ -976,11 +976,30 @@ model WebsiteGeneration {
 model Lead {
   id          String   @id @default(cuid())
   email       String
-  revenue     Float
-  aov         Float
-  platform    String
-  monthlyLoss Float    @map("monthly_loss")
+  revenue     Float?
+  aov         Float?
+  platform    String?
+  monthlyLoss Float?   @map("monthly_loss")
   source      String   @default("calculator")
+
+  // Landing page fields
+  firstName      String?  @map("first_name")
+  lastName       String?  @map("last_name")
+  phone          String?
+  restaurantName String?  @map("restaurant_name")
+  placeId        String?  @map("place_id")
+  address        String?
+  locations      String?
+  smsConsent     Boolean? @map("sms_consent")
+
+  // UTM tracking
+  utmSource      String?  @map("utm_source")
+  utmMedium      String?  @map("utm_medium")
+  utmCampaign    String?  @map("utm_campaign")
+  utmTerm        String?  @map("utm_term")
+  utmContent     String?  @map("utm_content")
+  lgref          String?
+
   deleted     Boolean  @default(false)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
