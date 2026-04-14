@@ -84,6 +84,24 @@ export function CallDemoCard({ compact = false }: CallDemoCardProps) {
       ref={containerRef}
       className={`relative ${maxWidth} ${rounded} bg-white/70 ${padding} shadow-[0px_10px_40px_0px_rgba(255,191,0,0.12)] backdrop-blur-sm`}
     >
+      {/* Phone ring animation */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes phoneRing {
+              0%, 100% { transform: rotate(0deg); }
+              5% { transform: rotate(15deg); }
+              10% { transform: rotate(-13deg); }
+              15% { transform: rotate(12deg); }
+              20% { transform: rotate(-10deg); }
+              25% { transform: rotate(6deg); }
+              30% { transform: rotate(0deg); }
+            }
+            .phone-ring { animation: phoneRing 2.5s ease-in-out infinite; transform-origin: 50% 50%; }
+          `,
+        }}
+      />
+
       {/* Border overlay */}
       <div
         aria-hidden="true"
@@ -100,7 +118,7 @@ export function CallDemoCard({ compact = false }: CallDemoCardProps) {
               className={`relative flex ${avatarSize} items-center justify-center rounded-full border border-[rgba(255,191,0,0.2)] bg-white shadow-xl`}
             >
               <svg
-                className={`${iconSize} text-[#ffbf00]`}
+                className={`${iconSize} phone-ring text-[#ffbf00]`}
                 viewBox="0 0 27 30"
                 fill="currentColor"
                 aria-hidden="true"
