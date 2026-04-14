@@ -990,6 +990,7 @@ model Lead {
   placeId        String?  @map("place_id")
   address        String?
   locations      String?
+  posSystem      String?  @map("pos_system")
   smsConsent     Boolean? @map("sms_consent")
 
   // UTM tracking
