@@ -77,7 +77,7 @@ export function CallDemoCard({ compact = false }: CallDemoCardProps) {
   const nameSize = compact
     ? "text-base font-extrabold"
     : "text-lg font-extrabold";
-  const maxWidth = compact ? "max-w-lg" : "w-full max-w-2xl";
+  const maxWidth = compact ? "max-w-xl" : "w-full max-w-3xl";
 
   return (
     <div
