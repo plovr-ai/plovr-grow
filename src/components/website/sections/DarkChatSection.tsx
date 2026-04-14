@@ -32,12 +32,12 @@ export function DarkChatSection({
   workspaceName = "LocalGrow Manager",
 }: DarkChatSectionProps) {
   return (
-    <section id="manager" className="relative bg-gray-900 px-6 md:px-16 py-24">
+    <section id="manager" className="relative bg-ws-dark px-6 md:px-16 py-24">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16">
         {/* Left: Text Content */}
         <div className="flex flex-col justify-center">
           {eyebrow && (
-            <span className="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-6">
+            <span className="text-xs font-bold text-ws-primary-400 uppercase tracking-widest mb-6">
               {eyebrow}
             </span>
           )}
@@ -50,7 +50,7 @@ export function DarkChatSection({
               </>
             )}
           </h2>
-          <p className="text-lg text-gray-400 leading-relaxed">{description}</p>
+          <p className="text-lg text-ws-text-subtle leading-relaxed">{description}</p>
         </div>
 
         {/* Right: Interactive Card */}
@@ -65,12 +65,12 @@ export function DarkChatSection({
           <div className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
             {/* Header */}
             <div className="flex items-center gap-4 mb-8">
-              <div className="w-14 h-14 bg-yellow-400 rounded-full flex items-center justify-center text-yellow-900 font-bold text-lg">
+              <div className="w-14 h-14 bg-ws-primary-400 rounded-full flex items-center justify-center text-ws-primary-700 font-bold text-lg">
                 LG
               </div>
               <div>
                 <h3 className="text-white font-bold">{workspaceName}</h3>
-                <p className="text-gray-400 text-sm">AI Strategic Advisor</p>
+                <p className="text-ws-text-subtle text-sm">AI Strategic Advisor</p>
               </div>
             </div>
 

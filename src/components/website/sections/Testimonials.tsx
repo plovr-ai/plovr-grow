@@ -14,7 +14,7 @@ interface TestimonialsProps {
 function StarIcon() {
   return (
     <svg
-      className="w-5 h-5 text-yellow-400"
+      className="w-5 h-5 text-ws-primary-400"
       viewBox="0 0 24 24"
       fill="currentColor"
       stroke="currentColor"
@@ -37,7 +37,7 @@ export function Testimonials({
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-10 md:gap-16">
         {/* Left Heading */}
         <div className="md:w-96 flex-shrink-0">
-          <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+          <h2 className="text-3xl md:text-5xl font-bold text-ws-text mb-6 leading-tight">
             {title}
             {titleBreak && (
               <>
@@ -47,8 +47,8 @@ export function Testimonials({
             )}
           </h2>
           {featuredQuote && (
-            <div className="border-l-2 border-yellow-400 pl-6">
-              <p className="text-gray-600 leading-relaxed">
+            <div className="border-l-2 border-ws-primary-400 pl-6">
+              <p className="text-ws-text-muted leading-relaxed">
                 &ldquo;{featuredQuote}&rdquo;
               </p>
             </div>
@@ -60,7 +60,7 @@ export function Testimonials({
           {items.map((t, i) => (
             <div
               key={i}
-              className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm"
+              className="bg-white border border-ws-border rounded-xl p-8 shadow-sm"
             >
               {/* Star Rating */}
               <div className="flex gap-1 mb-4">
@@ -68,10 +68,10 @@ export function Testimonials({
                   <StarIcon key={j} />
                 ))}
               </div>
-              <p className="text-gray-600 mb-4 leading-relaxed">
+              <p className="text-ws-text-muted mb-4 leading-relaxed">
                 &ldquo;{t.quote}&rdquo;
               </p>
-              <p className="font-bold text-gray-900">{t.author}</p>
+              <p className="font-bold text-ws-text">{t.author}</p>
             </div>
           ))}
         </div>

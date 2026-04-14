@@ -15,7 +15,7 @@ function CardIcon({ type }: { type?: "seo" | "review" | "instagram" }) {
   if (type === "seo") {
     return (
       <svg
-        className="w-6 h-6 text-yellow-500"
+        className="w-6 h-6 text-ws-primary-500"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -32,7 +32,7 @@ function CardIcon({ type }: { type?: "seo" | "review" | "instagram" }) {
   if (type === "review") {
     return (
       <svg
-        className="w-6 h-6 text-yellow-500"
+        className="w-6 h-6 text-ws-primary-500"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -50,7 +50,7 @@ function CardIcon({ type }: { type?: "seo" | "review" | "instagram" }) {
   if (type === "instagram") {
     return (
       <svg
-        className="w-6 h-6 text-yellow-500"
+        className="w-6 h-6 text-ws-primary-500"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -68,7 +68,7 @@ function CardIcon({ type }: { type?: "seo" | "review" | "instagram" }) {
   // Default: sparkles
   return (
     <svg
-      className="w-6 h-6 text-yellow-500"
+      className="w-6 h-6 text-ws-primary-500"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -87,25 +87,25 @@ function CardIcon({ type }: { type?: "seo" | "review" | "instagram" }) {
 function RichContent({ type }: { type?: "seo" | "review" | "instagram" }) {
   if (type === "seo") {
     return (
-      <div className="bg-yellow-50 rounded-xl p-4">
+      <div className="bg-ws-primary-50 rounded-xl p-4">
         <div className="flex justify-between text-sm">
           <div>
-            <div className="text-yellow-700 uppercase text-xs font-semibold mb-2">
+            <div className="text-ws-primary-700 uppercase text-xs font-semibold mb-2">
               Keywords
             </div>
-            <div className="font-bold text-gray-900 text-sm mb-1">
+            <div className="font-bold text-ws-text text-sm mb-1">
               Italian restaurant near me
             </div>
-            <div className="font-bold text-gray-900 text-sm">
+            <div className="font-bold text-ws-text text-sm">
               Best Pasta in LA
             </div>
           </div>
           <div className="text-right">
-            <div className="text-yellow-700 uppercase text-xs font-semibold mb-2">
+            <div className="text-ws-primary-700 uppercase text-xs font-semibold mb-2">
               Rank
             </div>
-            <div className="font-bold text-gray-900 text-sm mb-1">#1</div>
-            <div className="font-bold text-gray-900 text-sm">#2</div>
+            <div className="font-bold text-ws-text text-sm mb-1">#1</div>
+            <div className="font-bold text-ws-text text-sm">#2</div>
           </div>
         </div>
       </div>
@@ -116,13 +116,13 @@ function RichContent({ type }: { type?: "seo" | "review" | "instagram" }) {
     return (
       <div className="space-y-3">
         <div className="bg-gray-100 border-l-4 border-red-300 rounded-lg p-3">
-          <p className="text-gray-500 text-sm">
+          <p className="text-ws-text-muted text-sm">
             &ldquo;...unfortunately it&apos;s been a miss the last couple of
             times I ordered ....&rdquo;
           </p>
         </div>
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-3">
-          <p className="text-yellow-700 text-sm font-medium">
+        <div className="bg-ws-primary-50 border-l-4 border-ws-primary-400 rounded-lg p-3">
+          <p className="text-ws-primary-700 text-sm font-medium">
             Draft: &ldquo;We&apos;re truly sorry for the miss, we&apos;d like to
             make it right...&rdquo;
           </p>
@@ -138,12 +138,12 @@ function RichContent({ type }: { type?: "seo" | "review" | "instagram" }) {
           <span className="text-2xl">&#127837;</span>
         </div>
         <div className="flex-1">
-          <div className="text-xs font-bold text-gray-600 uppercase mb-1.5">
+          <div className="text-xs font-bold text-ws-text-muted uppercase mb-1.5">
             New post is uploading
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-yellow-400 h-2 rounded-full"
+              className="bg-ws-primary-400 h-2 rounded-full"
               style={{ width: "75%" }}
             />
           </div>
@@ -162,20 +162,20 @@ export function AutoPilot({
   cards,
 }: AutoPilotProps) {
   return (
-    <section id="autopilot" className="relative bg-gray-50 px-6 md:px-16 py-24">
+    <section id="autopilot" className="relative bg-ws-bg-subtle px-6 md:px-16 py-24">
       <div className="max-w-7xl mx-auto text-center mb-16">
         {eyebrow && (
           <div className="mb-4">
-            <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest">
+            <span className="text-xs font-bold text-ws-primary-500 uppercase tracking-widest">
               {eyebrow}
             </span>
           </div>
         )}
-        <h2 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900 tracking-tight">
+        <h2 className="text-3xl md:text-5xl font-bold mb-4 text-ws-text tracking-tight">
           {title}
         </h2>
         {description && (
-          <p className="text-lg md:text-xl text-gray-600 font-medium max-w-3xl mx-auto">
+          <p className="text-lg md:text-xl text-ws-text-muted font-medium max-w-3xl mx-auto">
             {description}
           </p>
         )}
@@ -185,17 +185,17 @@ export function AutoPilot({
         {cards.map((card, i) => (
           <div
             key={i}
-            className="bg-white border border-gray-200 rounded-2xl p-8 flex flex-col justify-between min-h-[410px]"
+            className="bg-white border border-ws-border rounded-2xl p-8 flex flex-col justify-between min-h-[410px]"
           >
             {/* Top Section */}
             <div>
-              <div className="w-14 h-14 bg-yellow-50 rounded-xl flex items-center justify-center mb-6">
+              <div className="w-14 h-14 bg-ws-primary-50 rounded-xl flex items-center justify-center mb-6">
                 <CardIcon type={card.richContent} />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+              <h3 className="text-2xl font-bold text-ws-text mb-3">
                 {card.title}
               </h3>
-              <p className="text-gray-600 mb-6 leading-relaxed text-base">
+              <p className="text-ws-text-muted mb-6 leading-relaxed text-base">
                 {card.description}
               </p>
             </div>

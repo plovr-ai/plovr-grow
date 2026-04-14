@@ -41,7 +41,7 @@ function FeatureIcon({ icon }: { icon: string }) {
   const paths = featureIcons[icon] || featureIcons["zap"];
   return (
     <svg
-      className="w-5 h-5 text-yellow-500"
+      className="w-5 h-5 text-ws-primary-500"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -60,14 +60,14 @@ function FeatureIcon({ icon }: { icon: string }) {
 function FeatureItem({ feature }: { feature: HeroFeature }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="w-10 h-10 bg-yellow-50 rounded-full flex items-center justify-center flex-shrink-0">
+      <div className="w-10 h-10 bg-ws-primary-50 rounded-full flex items-center justify-center flex-shrink-0">
         <FeatureIcon icon={feature.icon} />
       </div>
       <div className="flex-1 text-left">
-        <div className="text-sm font-bold text-gray-900 mb-1">
+        <div className="text-sm font-bold text-ws-text mb-1">
           {feature.label}
         </div>
-        <div className="text-xs text-gray-600">{feature.caption}</div>
+        <div className="text-xs text-ws-text-muted">{feature.caption}</div>
       </div>
     </div>
   );
@@ -91,7 +91,7 @@ export function HomeHero({
       <div className="max-w-7xl mx-auto text-center">
         {/* Trust Badge */}
         <div className="mb-10">
-          <span className="inline-block px-4 py-1 bg-yellow-50 text-yellow-700 text-xs font-bold uppercase tracking-wider rounded-full">
+          <span className="inline-block px-4 py-1 bg-ws-primary-50 text-ws-primary-700 text-xs font-bold uppercase tracking-wider rounded-full">
             {eyebrow}
           </span>
         </div>
@@ -110,25 +110,25 @@ export function HomeHero({
 
         {/* Promotional Card */}
         <div className="mb-12 mx-auto" style={{ maxWidth: 896 }}>
-          <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-6 md:px-10 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="bg-white border border-ws-border rounded-lg shadow-lg px-6 md:px-10 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Left Column - Pricing */}
             <div className="flex flex-col items-center justify-center">
-              <div className="text-xs font-bold text-yellow-700 uppercase tracking-wider mb-3">
+              <div className="text-xs font-bold text-ws-primary-700 uppercase tracking-wider mb-3">
                 {pricingLabel}
               </div>
               <div className="flex items-end justify-center mb-2">
-                <div className="text-6xl font-extrabold text-gray-900">
+                <div className="text-6xl font-extrabold text-ws-text">
                   {pricingValue}
                 </div>
-                <div className="text-base font-medium text-gray-600 ml-2 mb-2">
+                <div className="text-base font-medium text-ws-text-muted ml-2 mb-2">
                   / 7 days
                 </div>
               </div>
-              <div className="text-xs text-gray-400 line-through mb-4 text-center">
+              <div className="text-xs text-ws-text-subtle line-through mb-4 text-center">
                 {pricingOriginal}
               </div>
               <div className="text-center">
-                <span className="inline-block px-4 py-2 bg-yellow-50 text-yellow-700 text-xs font-bold uppercase tracking-wide rounded-full">
+                <span className="inline-block px-4 py-2 bg-ws-primary-50 text-ws-primary-700 text-xs font-bold uppercase tracking-wide rounded-full">
                   {pricingBadge}
                 </span>
               </div>
@@ -160,7 +160,7 @@ export function HomeHero({
             <input
               type="text"
               placeholder={inputPlaceholder}
-              className="w-full px-6 py-5 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+              className="w-full px-6 py-5 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ws-primary-400 focus:border-transparent"
               autoComplete="off"
             />
           </div>
@@ -168,14 +168,14 @@ export function HomeHero({
             href={primaryCta.href}
             rel={primaryCta.external ? "noopener noreferrer" : undefined}
             target={primaryCta.external ? "_blank" : undefined}
-            className="px-8 py-5 bg-yellow-400 text-yellow-900 font-bold text-base rounded-lg shadow-lg shadow-yellow-400/20 hover:bg-yellow-500 whitespace-nowrap transition-colors"
+            className="px-8 py-5 bg-ws-primary-400 text-ws-primary-700 font-bold text-base rounded-lg shadow-lg shadow-ws-primary-400/20 hover:bg-ws-primary-500 whitespace-nowrap transition-colors"
           >
             {primaryCta.label}
           </a>
         </div>
 
         {/* Scroll Indicator */}
-        <div className="mt-16 text-sm text-gray-400">&darr; Scroll to explore</div>
+        <div className="mt-16 text-sm text-ws-text-subtle">&darr; Scroll to explore</div>
       </div>
     </section>
   );

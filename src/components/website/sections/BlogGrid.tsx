@@ -22,23 +22,23 @@ export function BlogGrid({ posts }: BlogGridProps) {
             <Link
               key={post.slug}
               href={`/blog/${post.slug}`}
-              className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+              className="group flex flex-col overflow-hidden rounded-xl border border-ws-border bg-white shadow-sm transition-shadow hover:shadow-md"
             >
-              <div className="aspect-[16/9] bg-gradient-to-br from-amber-100 via-amber-50 to-amber-200" />
+              <div className="aspect-[16/9] bg-gradient-to-br from-ws-primary-100 via-ws-primary-50 to-ws-primary-200" />
               <div className="flex flex-1 flex-col p-6">
-                <div className="text-xs font-semibold uppercase tracking-wider text-amber-600">
+                <div className="text-xs font-semibold uppercase tracking-wider text-ws-primary-600">
                   {formatter.format(new Date(post.frontmatter.date))}
                 </div>
-                <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold group-hover:text-amber-600">
+                <h3 className="mt-2 font-[family-name:var(--font-manrope)] text-xl font-bold group-hover:text-ws-primary-600">
                   {post.frontmatter.title}
                 </h3>
-                <p className="mt-3 flex-1 text-sm text-gray-500">
+                <p className="mt-3 flex-1 text-sm text-ws-text-muted">
                   {post.frontmatter.description}
                 </p>
-                <div className="mt-6 text-sm font-medium text-gray-900">
+                <div className="mt-6 text-sm font-medium text-ws-text">
                   {post.frontmatter.author.name}
                   {post.frontmatter.author.role && (
-                    <span className="text-gray-500">
+                    <span className="text-ws-text-muted">
                       {" "}
                       &middot; {post.frontmatter.author.role}
                     </span>

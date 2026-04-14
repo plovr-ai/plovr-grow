@@ -34,25 +34,25 @@ export function VoiceAgent({
   secondaryCta,
 }: VoiceAgentProps) {
   return (
-    <section id="voice-agent" className="relative bg-gray-50 px-6 md:px-16 py-24">
+    <section id="voice-agent" className="relative bg-ws-bg-subtle px-6 md:px-16 py-24">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8">
         {/* Left Content */}
         <div className="md:col-span-6 flex flex-col justify-center">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-px bg-yellow-400" />
-            <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest">
+            <div className="w-8 h-px bg-ws-primary-400" />
+            <span className="text-xs font-bold text-ws-primary-500 uppercase tracking-widest">
               {eyebrow}
             </span>
           </div>
 
           <h2 className="text-3xl md:text-5xl font-semibold mb-6 leading-tight">
-            <span className="block text-gray-900">{title}</span>
+            <span className="block text-ws-text">{title}</span>
             {titleAccent && (
-              <span className="block text-gray-900">{titleAccent}</span>
+              <span className="block text-ws-text">{titleAccent}</span>
             )}
           </h2>
 
-          <p className="text-lg text-gray-600 mb-8 leading-relaxed">
+          <p className="text-lg text-ws-text-muted mb-8 leading-relaxed">
             {description}
           </p>
 
@@ -61,7 +61,7 @@ export function VoiceAgent({
               <div key={i} className="flex items-center gap-3">
                 {/* Lucide: circle-check */}
                 <svg
-                  className="w-5 h-5 text-yellow-500 flex-shrink-0"
+                  className="w-5 h-5 text-ws-primary-500 flex-shrink-0"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -73,7 +73,7 @@ export function VoiceAgent({
                   <circle cx="12" cy="12" r="10" />
                   <path d="m9 12 2 2 4-4" />
                 </svg>
-                <span className="text-base font-medium text-gray-900">
+                <span className="text-base font-medium text-ws-text">
                   {b.label}
                 </span>
               </div>
@@ -83,22 +83,22 @@ export function VoiceAgent({
 
         {/* Right Interactive Card */}
         <div className="md:col-span-6 flex items-center justify-center">
-          <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-8 max-w-md w-full relative">
+          <div className="bg-white border border-ws-border rounded-xl shadow-lg p-8 max-w-md w-full relative">
             {/* LIVE Badge */}
-            <div className="absolute -top-3 -right-3 bg-yellow-400 text-yellow-900 text-xs font-extrabold px-3 py-1 rounded-full shadow-md flex items-center gap-1.5">
+            <div className="absolute -top-3 -right-3 bg-ws-primary-400 text-ws-primary-700 text-xs font-extrabold px-3 py-1 rounded-full shadow-md flex items-center gap-1.5">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-700 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-700" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-ws-primary-700 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-ws-primary-700" />
               </span>
               LIVE
             </div>
 
             {/* Voice Agent Header */}
             <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center border-2 border-yellow-400/30">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center border-2 border-ws-primary-400/30">
                 {/* Lucide: mic */}
                 <svg
-                  className="w-7 h-7 text-yellow-500"
+                  className="w-7 h-7 text-ws-primary-500"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -113,10 +113,10 @@ export function VoiceAgent({
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">
+                <h3 className="text-lg font-bold text-ws-text">
                   Speak with {agentName}
                 </h3>
-                <div className="flex items-center gap-2 text-yellow-600">
+                <div className="flex items-center gap-2 text-ws-primary-600">
                   {/* Lucide: audio-lines */}
                   <svg
                     className="w-4 h-4"
@@ -151,12 +151,12 @@ export function VoiceAgent({
                 {audioBars.map((bar, i) => (
                   <div
                     key={i}
-                    className="w-1 bg-yellow-400 rounded-full animate-pulse"
+                    className="w-1 bg-ws-primary-400 rounded-full animate-pulse"
                     style={{ height: bar.height, animationDelay: bar.delay }}
                   />
                 ))}
               </div>
-              <p className="text-sm text-gray-600 text-center">
+              <p className="text-sm text-ws-text-muted text-center">
                 &ldquo;How can I help you with your order today?&rdquo;
               </p>
             </div>
@@ -168,7 +168,7 @@ export function VoiceAgent({
                   href={primaryCta.href}
                   rel={primaryCta.external ? "noopener noreferrer" : undefined}
                   target={primaryCta.external ? "_blank" : undefined}
-                  className="bg-yellow-400 text-yellow-900 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-yellow-500 transition-colors text-sm"
+                  className="bg-ws-primary-400 text-ws-primary-700 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-ws-primary-500 transition-colors text-sm"
                 >
                   {/* Lucide: phone */}
                   <svg
@@ -193,7 +193,7 @@ export function VoiceAgent({
                     secondaryCta.external ? "noopener noreferrer" : undefined
                   }
                   target={secondaryCta.external ? "_blank" : undefined}
-                  className="bg-gray-200 text-gray-900 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-300 transition-colors text-sm"
+                  className="bg-gray-200 text-ws-text font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-300 transition-colors text-sm"
                 >
                   {/* Lucide: phone-incoming */}
                   <svg

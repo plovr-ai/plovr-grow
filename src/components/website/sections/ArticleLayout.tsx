@@ -25,17 +25,17 @@ export function ArticleLayout({
     <article className="py-16 md:py-24">
       <Container size="narrow">
         <header className="mx-auto max-w-3xl text-center">
-          <div className="text-xs font-semibold uppercase tracking-wider text-amber-600">
+          <div className="text-xs font-semibold uppercase tracking-wider text-ws-primary-600">
             {formatter.format(new Date(date))}
           </div>
           <h1 className="mt-3 font-[family-name:var(--font-manrope)] text-4xl font-bold md:text-5xl">
             {title}
           </h1>
-          <p className="mt-4 text-lg text-gray-500">{description}</p>
-          <div className="mt-6 text-sm text-gray-900">
+          <p className="mt-4 text-lg text-ws-text-muted">{description}</p>
+          <div className="mt-6 text-sm text-ws-text">
             <strong>{author.name}</strong>
             {author.role && (
-              <span className="text-gray-500"> &middot; {author.role}</span>
+              <span className="text-ws-text-muted"> &middot; {author.role}</span>
             )}
           </div>
         </header>

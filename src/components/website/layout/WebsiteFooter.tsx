@@ -30,13 +30,13 @@ export function WebsiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-gray-900 text-white px-0 py-12">
+    <footer className="bg-ws-dark text-white px-0 py-12">
       <Container>
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Brand */}
           <div>
             <h3 className="text-lg font-bold">{siteConfig.name}</h3>
-            <p className="mt-4 text-sm text-gray-400">
+            <p className="mt-4 text-sm text-ws-text-subtle">
               AI-powered voice agents for modern restaurants.
             </p>
           </div>
@@ -44,7 +44,7 @@ export function WebsiteFooter() {
           {/* Product */}
           <div>
             <h4 className="font-semibold mb-4">Product</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
+            <ul className="space-y-2 text-sm text-ws-text-subtle">
               {siteConfig.footer.product.map((link) => (
                 <FooterLink key={link.href} link={link} />
               ))}
@@ -69,7 +69,7 @@ export function WebsiteFooter() {
           {/* Company */}
           <div>
             <h4 className="font-semibold mb-4">Company</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
+            <ul className="space-y-2 text-sm text-ws-text-subtle">
               {siteConfig.footer.company.map((link) => (
                 <FooterLink key={link.href} link={link} />
               ))}
@@ -84,7 +84,7 @@ export function WebsiteFooter() {
           {/* Legal */}
           <div>
             <h4 className="font-semibold mb-4">Legal</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
+            <ul className="space-y-2 text-sm text-ws-text-subtle">
               {siteConfig.footer.legal.map((link) => (
                 <FooterLink key={link.href} link={link} />
               ))}
@@ -92,7 +92,7 @@ export function WebsiteFooter() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-gray-800 text-center text-sm text-gray-400">
+        <div className="mt-12 pt-8 border-t border-ws-dark-muted text-center text-sm text-ws-text-subtle">
           &copy; {year} {siteConfig.name}. All rights reserved.
         </div>
       </Container>
