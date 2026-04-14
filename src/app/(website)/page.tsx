@@ -96,7 +96,7 @@ export default function HomePage() {
     <>
       <HomeHero
         eyebrow="Trusted by 100+ Restaurants"
-        title="You are losing orders Due to"
+        title="You are losing orders due to"
         titleAccent="missed calls."
         description="See how many orders you're losing on the phone. AI audits your call quality and stop negative reviews before they happen."
         features={heroFeatures}
