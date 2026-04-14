@@ -6,7 +6,7 @@ interface FeatureCard {
 
 interface AvaAdvantageProps {
   eyebrow?: string;
-  title: string;
+  title?: string;
   cards: FeatureCard[];
 }
 
