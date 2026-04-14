@@ -68,36 +68,17 @@ function patchShadowDomForLightTheme() {
     if (this.localName === "gmp-place-autocomplete") {
       const style = document.createElement("style");
       style.textContent = `
-        :host, *, ::before, ::after {
+        *, *::before, *::after {
           color-scheme: light !important;
+          background-color: transparent !important;
         }
         :host {
-          --gmp-mat-color-surface: #ffffff !important;
-          --gmp-mat-color-on-surface: #1f2937 !important;
-          --gmp-mat-color-on-surface-variant: #6b7280 !important;
-          --gmp-mat-color-outline: #d1d5db !important;
-        }
-        :host {
-          display: block !important;
-          width: 100% !important;
-        }
-        .search-container, .input-container, form {
-          width: 100% !important;
+          color-scheme: light !important;
+          background-color: transparent !important;
         }
         input {
-          background-color: #ffffff !important;
+          background-color: transparent !important;
           color: #1f2937 !important;
-          border: 1px solid #d1d5db !important;
-          border-radius: 0.5rem !important;
-          padding: 0.75rem 1rem 0.75rem 2.5rem !important;
-          font-size: 1.125rem !important;
-          width: 100% !important;
-          outline: none !important;
-          box-sizing: border-box !important;
-        }
-        input:focus {
-          border-color: #ffbf00 !important;
-          box-shadow: 0 0 0 1px #ffbf00 !important;
         }
       `;
       shadow.appendChild(style);
@@ -180,7 +161,7 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
     <div
       ref={containerRef}
       style={{ colorScheme: "light" }}
-      className="w-full"
+      className="rounded-lg border border-gray-300 bg-white focus-within:border-[#ffbf00] focus-within:ring-1 focus-within:ring-[#ffbf00] [&_gmp-place-autocomplete]:w-full [&_input]:w-full [&_input]:border-none [&_input]:bg-transparent [&_input]:px-4 [&_input]:py-3 [&_input]:text-lg [&_input]:text-gray-900 [&_input]:outline-none"
     />
   );
 }
