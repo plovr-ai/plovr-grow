@@ -2,7 +2,6 @@ import { siteConfig } from "@/config/site";
 import { CallDemoCard } from "./CallDemoCard";
 
 interface HomeHeroProps {
-  badge?: string;
   title?: string;
   titleHighlight?: string;
   subtitle?: string;
@@ -10,7 +9,6 @@ interface HomeHeroProps {
 }
 
 export function HomeHero({
-  badge = "0 Busy signals",
   title = "Stop Losing Revenue To",
   titleHighlight = "Missed Calls",
   subtitle = "Our AI Voice Agent that handles 100% of your phone orders with human-like precision, 24/7.",
@@ -19,17 +17,6 @@ export function HomeHero({
   return (
     <section className="relative bg-ws-bg-page px-6 md:px-8">
       <div className="mx-auto flex max-w-5xl flex-col items-center pt-16 pb-12">
-        {/* Badge */}
-        <div className="relative mb-6 inline-flex items-center justify-center rounded-full bg-[rgba(121,89,0,0.05)] px-5 py-2">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 rounded-full border border-[rgba(121,89,0,0.2)]"
-          />
-          <span className="text-[10px] font-bold uppercase tracking-[2.5px] text-ws-text-amber">
-            {badge}
-          </span>
-        </div>
-
         {/* Title */}
         <h1 className="relative max-w-5xl text-center text-5xl font-extrabold leading-tight tracking-tight md:text-7xl lg:text-[96px] lg:leading-[1.1]">
           <span className="text-ws-text-heading">{title} </span>
