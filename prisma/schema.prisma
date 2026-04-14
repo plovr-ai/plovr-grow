@@ -1000,6 +1000,7 @@ model Lead {
   utmTerm        String?  @map("utm_term")
   utmContent     String?  @map("utm_content")
   lgref          String?
+  landingPage    String?  @map("landing_page")
 
   deleted     Boolean  @default(false)
   createdAt   DateTime @default(now()) @map("created_at")

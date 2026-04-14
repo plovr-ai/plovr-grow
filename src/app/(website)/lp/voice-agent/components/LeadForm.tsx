@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { PlaceSearch } from "@/app/(website)/generator/components/PlaceSearch";
 
@@ -35,6 +35,7 @@ interface LeadFormProps {
 
 export function LeadForm({ redirectPath = "/lp/voice-agent/thank-you" }: LeadFormProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
@@ -108,6 +109,7 @@ export function LeadForm({ redirectPath = "/lp/voice-agent/thank-you" }: LeadFor
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          landingPage: pathname,
           utmSource: searchParams.get("utm_source") ?? undefined,
           utmMedium: searchParams.get("utm_medium") ?? undefined,
           utmCampaign: searchParams.get("utm_campaign") ?? undefined,
