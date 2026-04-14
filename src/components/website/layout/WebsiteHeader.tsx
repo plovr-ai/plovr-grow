@@ -20,7 +20,7 @@ export function WebsiteHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-ws-border">
       <Container>
         <div className="flex h-16 items-center justify-between">
           <Logo />
@@ -35,13 +35,13 @@ export function WebsiteHeader() {
                       href={link.href}
                       className={`text-sm transition-colors ${
                         isActive(pathname, link.href)
-                          ? "font-semibold text-gray-900"
-                          : "text-gray-600 hover:text-gray-900"
+                          ? "font-semibold text-ws-text"
+                          : "text-ws-text-muted hover:text-ws-text"
                       }`}
                     >
                       {link.label}
                     </Link>
-                    <div className="absolute left-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div className="absolute left-0 top-full mt-2 w-56 bg-white border border-ws-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                       <div className="py-2">
                         {link.children.map((child) => (
                           <Link
@@ -63,8 +63,8 @@ export function WebsiteHeader() {
                   href={link.href}
                   className={`text-sm transition-colors ${
                     isActive(pathname, link.href)
-                      ? "font-semibold text-gray-900"
-                      : "text-gray-600 hover:text-gray-900"
+                      ? "font-semibold text-ws-text"
+                      : "text-ws-text-muted hover:text-ws-text"
                   }`}
                 >
                   {link.label}
@@ -77,7 +77,7 @@ export function WebsiteHeader() {
           <div className="hidden items-center gap-4 md:flex">
             <Link
               href={siteConfig.cta.primary.href}
-              className="px-6 py-2 bg-yellow-400 text-yellow-900 font-bold text-sm rounded-lg hover:bg-yellow-500 transition-colors"
+              className="px-6 py-2 bg-ws-primary-400 text-ws-primary-700 font-bold text-sm rounded-lg hover:bg-ws-primary-500 transition-colors"
             >
               Get Started
             </Link>
@@ -86,7 +86,7 @@ export function WebsiteHeader() {
           {/* Mobile menu button */}
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md text-gray-900 md:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md text-ws-text md:hidden"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -98,7 +98,7 @@ export function WebsiteHeader() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="border-t border-gray-100 bg-white md:hidden">
+        <div className="border-t border-ws-border bg-white md:hidden">
           <Container>
             <nav className="flex flex-col gap-2 py-4" aria-label="Mobile">
               {siteConfig.nav.map((link) => {
@@ -110,7 +110,7 @@ export function WebsiteHeader() {
                       aria-current={active ? "page" : undefined}
                       className={`block rounded-md px-3 py-3 text-base font-medium ${
                         active
-                          ? "bg-yellow-50 text-yellow-900"
+                          ? "bg-ws-primary-50 text-ws-primary-700"
                           : "text-gray-700 hover:bg-gray-50"
                       }`}
                       onClick={() => setMobileOpen(false)}
@@ -123,7 +123,7 @@ export function WebsiteHeader() {
                           <Link
                             key={child.href}
                             href={child.href}
-                            className="rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                            className="rounded-md px-3 py-2 text-sm text-ws-text-muted hover:bg-gray-50"
                             onClick={() => setMobileOpen(false)}
                           >
                             {child.label}
@@ -134,10 +134,10 @@ export function WebsiteHeader() {
                   </div>
                 );
               })}
-              <div className="mt-2 flex flex-col gap-2 border-t border-gray-100 pt-4">
+              <div className="mt-2 flex flex-col gap-2 border-t border-ws-border pt-4">
                 <Link
                   href={siteConfig.cta.primary.href}
-                  className="rounded-lg bg-yellow-400 px-4 py-3 text-center font-bold text-yellow-900 hover:bg-yellow-500"
+                  className="rounded-lg bg-ws-primary-400 px-4 py-3 text-center font-bold text-ws-primary-700 hover:bg-ws-primary-500"
                   onClick={() => setMobileOpen(false)}
                 >
                   Get Started

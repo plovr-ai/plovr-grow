@@ -22,10 +22,10 @@ export function ReleaseTimeline({ releases }: ReleaseTimelineProps) {
             <article
               key={r.slug}
               className={`grid gap-8 md:grid-cols-[140px_1fr] ${
-                i > 0 ? "mt-16 border-t border-gray-200 pt-16" : ""
+                i > 0 ? "mt-16 border-t border-ws-border pt-16" : ""
               }`}
             >
-              <div className="text-sm text-gray-400">
+              <div className="text-sm text-ws-text-subtle">
                 {formatter.format(new Date(r.frontmatter.date))}
               </div>
 
@@ -35,7 +35,7 @@ export function ReleaseTimeline({ releases }: ReleaseTimelineProps) {
                 </h2>
 
                 {i === 0 && (
-                  <div className="relative mt-6 aspect-[16/9] overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 shadow-md">
+                  <div className="relative mt-6 aspect-[16/9] overflow-hidden rounded-xl border border-ws-border bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 shadow-md">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(245,184,0,0.15),transparent_50%)]" />
                     <div className="absolute inset-x-0 top-0 flex h-8 items-center gap-1.5 border-b border-white/5 px-3">
                       <span className="h-2 w-2 rounded-full bg-white/20" />
@@ -47,7 +47,7 @@ export function ReleaseTimeline({ releases }: ReleaseTimelineProps) {
                         <div
                           key={k}
                           className={`rounded-md ${
-                            k % 3 === 0 ? "bg-amber-500/30" : "bg-white/5"
+                            k % 3 === 0 ? "bg-ws-primary-500/30" : "bg-white/5"
                           }`}
                         />
                       ))}
@@ -55,14 +55,14 @@ export function ReleaseTimeline({ releases }: ReleaseTimelineProps) {
                   </div>
                 )}
 
-                <div className="prose prose-sm mt-6 max-w-none text-gray-500">
+                <div className="prose prose-sm mt-6 max-w-none text-ws-text-muted">
                   <p>{r.content.trim()}</p>
                 </div>
 
                 <ul className="mt-6 space-y-3">
                   {r.frontmatter.highlights.map((h) => (
-                    <li key={h} className="flex gap-3 text-sm text-gray-500">
-                      <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-amber-500 text-gray-900">
+                    <li key={h} className="flex gap-3 text-sm text-ws-text-muted">
+                      <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-ws-primary-500 text-ws-text">
                         <Icon name="check" className="h-3 w-3" />
                       </span>
                       <span>{h}</span>
