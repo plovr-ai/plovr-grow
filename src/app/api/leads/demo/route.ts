@@ -8,6 +8,7 @@ const demoLeadSchema = z.object({
   placeId: z.string().max(200).optional(),
   address: z.string().max(500).optional(),
   locations: z.string().max(10).optional(),
+  posSystem: z.string().max(50).optional(),
 
   // Step 2 fields
   email: z.string().email("Invalid email format").max(200),

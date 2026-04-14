@@ -17,6 +17,7 @@ interface FormData {
   placeId: string;
   address: string;
   locations: string;
+  posSystem: string;
   // Step 2
   email: string;
   firstName: string;
@@ -26,6 +27,7 @@ interface FormData {
 }
 
 const LOCATION_OPTIONS = ["1", "2-5", "6-10", "11-25", "26+"];
+const POS_OPTIONS = ["Toast", "Square", "Clover", "Aloha", "Revel", "SpotOn", "Lightspeed", "Other", "None"];
 
 export function LeadForm() {
   const router = useRouter();
@@ -38,6 +40,7 @@ export function LeadForm() {
     placeId: "",
     address: "",
     locations: "1",
+    posSystem: "",
     email: "",
     firstName: "",
     lastName: "",
@@ -154,6 +157,25 @@ export function LeadForm() {
               className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-[#ffbf00] focus:outline-none focus:ring-1 focus:ring-[#ffbf00]"
             >
               {LOCATION_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* POS System */}
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-gray-900">
+              What POS system do you currently use?
+            </label>
+            <select
+              value={formData.posSystem}
+              onChange={(e) => updateField("posSystem", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-[#ffbf00] focus:outline-none focus:ring-1 focus:ring-[#ffbf00]"
+            >
+              <option value="">Select one...</option>
+              {POS_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>
                   {opt}
                 </option>
