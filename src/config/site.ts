@@ -16,6 +16,12 @@ export interface CTA {
   external?: boolean;
 }
 
+interface SocialLink {
+  platform: string;
+  url: string;
+  label: string;
+}
+
 interface SiteConfig {
   name: string;
   tagline: string;
@@ -29,6 +35,7 @@ interface SiteConfig {
     company?: NavLink[];
     resources?: NavLink[];
     legal: NavLink[];
+    social: SocialLink[];
   };
   cta: {
     primary: CTA;
@@ -76,6 +83,18 @@ export const siteConfig: SiteConfig = {
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Terms of Service", href: "/terms" },
       { label: "Cookie Policy", href: "/cookies" },
+    ],
+    social: [
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/localgrowai1/",
+        label: "Follow us on Instagram",
+      },
+      {
+        platform: "linkedin",
+        url: "https://www.linkedin.com/company/localgrowai/",
+        label: "Follow us on LinkedIn",
+      },
     ],
   },
   cta: {
