@@ -51,6 +51,7 @@ export const siteConfig: SiteConfig = {
       href: "/",
       children: [
         { label: "Voice Agent", href: "/#voice-agent" },
+        { label: "Grow Agent", href: "/grow-agent" },
         { label: "Manager Agent", href: "/#manager" },
         { label: "Marketing Suite", href: "/#autopilot" },
         { label: "Analytics", href: "/#analytics" },

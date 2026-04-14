@@ -6,13 +6,142 @@ import { usePathname } from "next/navigation";
 import { Container } from "@/components/website/ui/Container";
 import { Logo } from "@/components/website/ui/Logo";
 import { Icon } from "@/components/website/ui/Icon";
-import { siteConfig } from "@/config/site";
+import { siteConfig, type NavLink } from "@/config/site";
 
 function isActive(pathname: string, href: string): boolean {
   const normalized = pathname.replace(/\/$/, "") || "/";
   if (href === "/") return normalized === "/";
   const normalizedHref = href.replace(/\/$/, "");
   return normalized === normalizedHref || normalized.startsWith(normalizedHref + "/");
+}
+
+function ChevronDown({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      className={`size-3 ${className}`}
+      viewBox="0 0 12 7.4"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6L1.41 0z" />
+    </svg>
+  );
+}
+
+function DesktopNavItem({ link, pathname }: { link: NavLink; pathname: string }) {
+  const active = isActive(pathname, link.href);
+  const baseClass = `text-sm font-medium tracking-tight transition-colors ${
+    active
+      ? "font-semibold text-ws-text-amber"
+      : "text-ws-text-body hover:text-ws-text-heading"
+  }`;
+
+  if (!link.children?.length) {
+    return (
+      <Link href={link.href} className={baseClass}>
+        {link.label}
+      </Link>
+    );
+  }
+
+  return (
+    <div className="group relative">
+      <Link
+        href={link.href}
+        className={`inline-flex items-center gap-1 ${baseClass}`}
+      >
+        {link.label}
+        <ChevronDown className="transition-transform group-hover:rotate-180" />
+      </Link>
+
+      {/* Dropdown */}
+      <div className="invisible absolute left-1/2 top-full z-50 w-48 -translate-x-1/2 pt-2 opacity-0 transition-all group-hover:visible group-hover:opacity-100">
+        <div className="rounded-xl border border-ws-border bg-white py-2 shadow-lg">
+          {link.children.map((child) => (
+            <Link
+              key={child.label}
+              href={child.href}
+              className={`block px-4 py-2 text-sm transition-colors ${
+                isActive(pathname, child.href)
+                  ? "font-semibold text-ws-text-amber"
+                  : "text-ws-text-body hover:bg-gray-50 hover:text-ws-text-heading"
+              }`}
+            >
+              {child.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileNavItem({
+  link,
+  pathname,
+  onNavigate,
+}: {
+  link: NavLink;
+  pathname: string;
+  onNavigate: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const active = isActive(pathname, link.href);
+
+  if (!link.children?.length) {
+    return (
+      <Link
+        href={link.href}
+        aria-current={active ? "page" : undefined}
+        className={`block rounded-md px-3 py-3 text-base font-medium ${
+          active
+            ? "bg-ws-primary-50 text-ws-primary-700"
+            : "text-ws-text-body hover:bg-gray-50"
+        }`}
+        onClick={onNavigate}
+      >
+        {link.label}
+      </Link>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        className={`flex w-full items-center justify-between rounded-md px-3 py-3 text-base font-medium ${
+          active
+            ? "bg-ws-primary-50 text-ws-primary-700"
+            : "text-ws-text-body hover:bg-gray-50"
+        }`}
+        onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+      >
+        {link.label}
+        <ChevronDown
+          className={`transition-transform ${expanded ? "rotate-180" : ""}`}
+        />
+      </button>
+      {expanded && (
+        <div className="ml-4 flex flex-col gap-1 py-1">
+          {link.children.map((child) => (
+            <Link
+              key={child.label}
+              href={child.href}
+              className={`block rounded-md px-3 py-2 text-sm ${
+                isActive(pathname, child.href)
+                  ? "font-semibold text-ws-text-amber"
+                  : "text-ws-text-body hover:bg-gray-50"
+              }`}
+              onClick={onNavigate}
+            >
+              {child.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function WebsiteHeader() {
@@ -28,17 +157,11 @@ export function WebsiteHeader() {
           {/* Desktop nav */}
           <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
             {siteConfig.nav.map((link) => (
-              <Link
+              <DesktopNavItem
                 key={link.label}
-                href={link.href}
-                className={`text-sm font-medium tracking-tight transition-colors ${
-                  isActive(pathname, link.href)
-                    ? "font-semibold text-ws-text-amber"
-                    : "text-ws-text-body hover:text-ws-text-heading"
-                }`}
-              >
-                {link.label}
-              </Link>
+                link={link}
+                pathname={pathname}
+              />
             ))}
           </nav>
 
@@ -70,24 +193,14 @@ export function WebsiteHeader() {
         <div className="border-t border-ws-border bg-white md:hidden">
           <Container>
             <nav className="flex flex-col gap-2 py-4" aria-label="Mobile">
-              {siteConfig.nav.map((link) => {
-                const active = isActive(pathname, link.href);
-                return (
-                  <Link
-                    key={link.label}
-                    href={link.href}
-                    aria-current={active ? "page" : undefined}
-                    className={`block rounded-md px-3 py-3 text-base font-medium ${
-                      active
-                        ? "bg-ws-primary-50 text-ws-primary-700"
-                        : "text-ws-text-body hover:bg-gray-50"
-                    }`}
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
+              {siteConfig.nav.map((link) => (
+                <MobileNavItem
+                  key={link.label}
+                  link={link}
+                  pathname={pathname}
+                  onNavigate={() => setMobileOpen(false)}
+                />
+              ))}
               <div className="mt-2 flex flex-col gap-2 border-t border-ws-border pt-4">
                 <Link
                   href={siteConfig.cta.primary.href}
