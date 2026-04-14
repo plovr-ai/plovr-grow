@@ -55,6 +55,11 @@ function parseFile<T>(subdir: string, filename: string): { slug: string; frontma
     data.date = data.date.toISOString();
   }
 
+  // Default author for blog posts
+  if (subdir === "blog" && !data.author) {
+    data.author = { name: "The Localgrow Team" };
+  }
+
   return { slug, frontmatter: data as T, content };
 }
 
