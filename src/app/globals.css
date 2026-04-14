@@ -6,21 +6,21 @@
   --background: #ffffff;
   --foreground: #171717;
 
-  /* Theme colors - defaults (amber) */
-  --theme-primary: 45 100% 48%;
-  --theme-primary-hover: 38 100% 35%;
-  --theme-primary-light: 45 100% 97%;
-  --theme-primary-foreground: 0 0% 100%;
+  /* Theme colors - defaults (gold) */
+  --theme-primary: 45 100% 50%;
+  --theme-primary-hover: 42 100% 40%;
+  --theme-primary-light: 48 100% 96%;
+  --theme-primary-foreground: 42 100% 13%;
 
-  /* Website theme — amber/yellow (from website-ava) */
-  --color-primary-50: #fffaeb;
-  --color-primary-100: #fef0c7;
-  --color-primary-200: #fedf89;
-  --color-primary-300: #fec84b;
-  --color-primary-400: #fdb022;
-  --color-primary-500: #f5b800;
-  --color-primary-600: #dc9b00;
-  --color-primary-700: #b27900;
+  /* Website theme — gold (#FFBF00) */
+  --color-primary-50: #fffbeb;
+  --color-primary-100: #fff2cc;
+  --color-primary-200: #ffe699;
+  --color-primary-300: #ffd966;
+  --color-primary-400: #ffcc33;
+  --color-primary-500: #FFBF00;
+  --color-primary-600: #e6ac00;
+  --color-primary-700: #b38600;
   --color-bg-subtle: #fafaf7;
   --color-bg-warm: #fff8e9;
   --color-surface: #ffffff;
@@ -33,7 +33,7 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08);
-  --shadow-glow: 0 12px 48px rgba(245, 184, 0, 0.2);
+  --shadow-glow: 0 12px 48px rgba(255, 191, 0, 0.2);
 }
 
 @theme inline {
@@ -113,8 +113,8 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #fdb022;
-  --primary-foreground: #b27900;
+  --primary: #FFBF00;
+  --primary-foreground: #402D00;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
