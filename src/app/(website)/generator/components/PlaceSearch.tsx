@@ -162,7 +162,7 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
     <div
       ref={containerRef}
       style={{ colorScheme: "light" }}
-      className="border border-gray-300 rounded-lg bg-white [&_input]:w-full [&_input]:bg-white [&_input]:text-gray-900 [&_input]:text-lg [&_input]:px-4 [&_input]:py-3 [&_input]:border-none [&_input]:focus:outline-none [&_input]:focus:ring-0"
+      className="overflow-hidden rounded-lg bg-white [&_input]:w-full [&_input]:bg-white [&_input]:text-gray-900 [&_input]:text-lg [&_input]:px-4 [&_input]:py-3 [&_input]:border [&_input]:border-gray-300 [&_input]:rounded-lg [&_input]:focus:outline-none [&_input]:focus:ring-1 [&_input]:focus:ring-[#ffbf00] [&_input]:focus:border-[#ffbf00]"
     />
   );
 }
