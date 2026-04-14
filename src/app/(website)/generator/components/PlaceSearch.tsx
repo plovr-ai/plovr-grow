@@ -77,12 +77,19 @@ function patchShadowDomForLightTheme() {
           --gmp-mat-color-on-surface-variant: #6b7280 !important;
           --gmp-mat-color-outline: #d1d5db !important;
         }
+        :host {
+          display: block !important;
+          width: 100% !important;
+        }
+        .search-container, .input-container, form {
+          width: 100% !important;
+        }
         input {
           background-color: #ffffff !important;
           color: #1f2937 !important;
           border: 1px solid #d1d5db !important;
           border-radius: 0.5rem !important;
-          padding: 0.75rem 1rem !important;
+          padding: 0.75rem 1rem 0.75rem 2.5rem !important;
           font-size: 1.125rem !important;
           width: 100% !important;
           outline: none !important;
