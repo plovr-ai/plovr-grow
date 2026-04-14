@@ -17,6 +17,9 @@ const demoLeadSchema = z.object({
   phone: z.string().min(1, "Phone number is required").max(20),
   smsConsent: z.boolean().optional().default(false),
 
+  // Landing page path
+  landingPage: z.string().max(200).optional(),
+
   // UTM tracking
   utmSource: z.string().max(200).optional(),
   utmMedium: z.string().max(200).optional(),
