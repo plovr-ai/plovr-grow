@@ -97,8 +97,8 @@ export function HomeHero({
         </div>
 
         {/* Main Heading */}
-        <h1 className="text-4xl md:text-7xl font-extrabold mb-6 tracking-tight text-gradient-hero">
-          <span className="block leading-tight">{title}</span>
+        <h1 className="text-4xl md:text-7xl font-extrabold mb-6 tracking-tight">
+          <span className="block leading-tight text-gradient-hero">{title}</span>
           {titleAccent && (
             <span className="block leading-tight text-theme-primary">{titleAccent}</span>
           )}
