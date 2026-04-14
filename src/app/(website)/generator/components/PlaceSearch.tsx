@@ -51,46 +51,6 @@ function loadGoogleMapsScript(): Promise<void> {
   });
 }
 
-/**
- * Patch attachShadow to force light theme styles into the Google Places
- * autocomplete Web Component. Its Shadow DOM is closed, so external CSS
- * and custom properties cannot reach it.
- */
-let shadowPatched = false;
-function patchShadowDomForLightTheme() {
-  if (shadowPatched) return;
-  shadowPatched = true;
-
-  const original = Element.prototype.attachShadow;
-  Element.prototype.attachShadow = function (init) {
-    const shadow = original.call(this, { ...init, mode: "open" });
-
-    if (this.localName === "gmp-place-autocomplete") {
-      const style = document.createElement("style");
-      style.textContent = `
-        *, *::before, *::after {
-          color-scheme: light !important;
-        }
-        :host {
-          color-scheme: light !important;
-        }
-        * {
-          background-color: transparent !important;
-          border-color: transparent !important;
-          outline: none !important;
-          box-shadow: none !important;
-        }
-        input {
-          color: #1f2937 !important;
-        }
-      `;
-      shadow.appendChild(style);
-    }
-
-    return shadow;
-  };
-}
-
 export function PlaceSearch({ onSelect }: PlaceSearchProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const elementRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(
@@ -99,9 +59,6 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
 
   const initAutocomplete = useCallback(async () => {
     if (!containerRef.current || elementRef.current) return;
-
-    // Patch Shadow DOM before loading Google Maps
-    patchShadowDomForLightTheme();
 
     try {
       await loadGoogleMapsScript();
@@ -163,8 +120,7 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
   return (
     <div
       ref={containerRef}
-      style={{ colorScheme: "light" }}
-      className="relative z-50 rounded-lg border border-gray-300 bg-white focus-within:border-[#ffbf00] focus-within:ring-1 focus-within:ring-[#ffbf00] [&_gmp-place-autocomplete]:w-full [&_input]:w-full [&_input]:border-none [&_input]:bg-transparent [&_input]:px-4 [&_input]:py-3 [&_input]:text-lg [&_input]:text-gray-900 [&_input]:outline-none"
+      className="border border-gray-300 rounded-lg [&_input]:w-full [&_input]:text-lg [&_input]:px-4 [&_input]:py-3 [&_input]:border-none [&_input]:focus:outline-none [&_input]:focus:ring-0"
     />
   );
 }
