@@ -164,7 +164,7 @@ export function PlaceSearch({ onSelect }: PlaceSearchProps) {
     <div
       ref={containerRef}
       style={{ colorScheme: "light" }}
-      className="rounded-lg border border-gray-300 bg-white focus-within:border-[#ffbf00] focus-within:ring-1 focus-within:ring-[#ffbf00] [&_gmp-place-autocomplete]:w-full [&_input]:w-full [&_input]:border-none [&_input]:bg-transparent [&_input]:px-4 [&_input]:py-3 [&_input]:text-lg [&_input]:text-gray-900 [&_input]:outline-none"
+      className="relative z-50 rounded-lg border border-gray-300 bg-white focus-within:border-[#ffbf00] focus-within:ring-1 focus-within:ring-[#ffbf00] [&_gmp-place-autocomplete]:w-full [&_input]:w-full [&_input]:border-none [&_input]:bg-transparent [&_input]:px-4 [&_input]:py-3 [&_input]:text-lg [&_input]:text-gray-900 [&_input]:outline-none"
     />
   );
 }
