@@ -71,6 +71,7 @@ const salesChannelLabels: Record<SalesChannel, string> = {
   online_order: "Online Order",
   catering: "Catering",
   giftcard: "Gift Card",
+  phone_order: "Phone Order",
 };
 
 // ==================== Order Status Progress ====================
