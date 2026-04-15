@@ -31,7 +31,6 @@ export function PhoneSimulator() {
   // Call duration timer
   useEffect(() => {
     if (status === CALL_STATUS.CONNECTED) {
-      setElapsed(0);
       timerRef.current = setInterval(() => {
         setElapsed((prev) => prev + 1);
       }, 1000);
@@ -55,6 +54,7 @@ export function PhoneSimulator() {
   const handleStart = useCallback(async () => {
     setError(null);
     setMessages([]);
+    setElapsed(0);
 
     if (!config.apiUrl || !config.tenantId || !config.merchantId) {
       setError("Playground environment variables not configured");
