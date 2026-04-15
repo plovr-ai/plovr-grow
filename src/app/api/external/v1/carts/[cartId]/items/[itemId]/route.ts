@@ -10,7 +10,7 @@ const modifierSchema = z.object({
   modifierOptionId: z.string().min(1),
   groupName: z.string().min(1),
   name: z.string().min(1),
-  price: z.number(),
+  price: z.number().min(0),
   quantity: z.number().int().positive().optional(),
 });
 

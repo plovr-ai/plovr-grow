@@ -134,41 +134,39 @@ export class CartRepository {
       quantity: number;
     }>
   ) {
-    await prisma.cartItemModifier.updateMany({
-      where: { cartItemId: itemId, deleted: false },
-      data: { deleted: true },
-    });
-
-    if (modifiers.length > 0) {
-      await prisma.cartItemModifier.createMany({
-        data: modifiers.map((m) => ({
-          id: generateEntityId(),
-          cartItemId: itemId,
-          modifierGroupId: m.modifierGroupId,
-          modifierOptionId: m.modifierOptionId,
-          groupName: m.groupName,
-          name: m.name,
-          price: m.price,
-          quantity: m.quantity,
-        })),
+    await prisma.$transaction(async (tx) => {
+      await tx.cartItemModifier.updateMany({
+        where: { cartItemId: itemId, deleted: false },
+        data: { deleted: true },
       });
-    }
+
+      if (modifiers.length > 0) {
+        await tx.cartItemModifier.createMany({
+          data: modifiers.map((m) => ({
+            id: generateEntityId(),
+            cartItemId: itemId,
+            modifierGroupId: m.modifierGroupId,
+            modifierOptionId: m.modifierOptionId,
+            groupName: m.groupName,
+            name: m.name,
+            price: m.price,
+            quantity: m.quantity,
+          })),
+        });
+      }
+    });
   }
 
   async softDeleteItem(itemId: string) {
-    await prisma.cartItemModifier.updateMany({
-      where: { cartItemId: itemId, deleted: false },
-      data: { deleted: true },
-    });
-    await prisma.cartItem.update({
-      where: { id: itemId },
-      data: { deleted: true },
-    });
-  }
-
-  async getItemCount(cartId: string) {
-    return prisma.cartItem.count({
-      where: { cartId, deleted: false },
+    await prisma.$transaction(async (tx) => {
+      await tx.cartItemModifier.updateMany({
+        where: { cartItemId: itemId, deleted: false },
+        data: { deleted: true },
+      });
+      await tx.cartItem.update({
+        where: { id: itemId },
+        data: { deleted: true },
+      });
     });
   }
 

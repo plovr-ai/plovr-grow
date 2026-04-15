@@ -16,7 +16,6 @@ vi.mock("@/repositories/cart.repository", () => ({
     replaceItemModifiers: vi.fn(),
     softDeleteItem: vi.fn(),
     getNextSortOrder: vi.fn(),
-    getItemCount: vi.fn(),
   },
 }));
 
