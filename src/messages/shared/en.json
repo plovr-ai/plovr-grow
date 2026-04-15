@@ -86,6 +86,11 @@
     "CLAIM_TENANT_NOT_FOUND": "Tenant not found",
     "CLAIM_TENANT_NOT_TRIAL": "Tenant is not in trial status",
     "CLAIM_EMAIL_EXISTS": "An account with this email already exists",
+    "CART_NOT_FOUND": "Cart not found",
+    "CART_NOT_ACTIVE": "Cart is not active",
+    "CART_EMPTY": "Cart has no items",
+    "CART_ITEM_NOT_FOUND": "Cart item not found",
+    "CART_MENU_ITEM_NOT_FOUND": "Menu item not found in the menu",
     "VALIDATION_FAILED": "Validation failed",
     "INTERNAL_ERROR": "An unexpected error occurred. Please try again.",
     "NETWORK_ERROR": "Network error. Please check your connection."
