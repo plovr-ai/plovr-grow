@@ -32,22 +32,25 @@ export function withApiHandler<
         );
       }
 
-      // Extract request info for Sentry context.
-      // Some callers (e.g. cron routes in tests) cast a plain Request
-      // to NextRequest, so nextUrl may be unavailable.
+      // Report unexpected errors to Sentry with request context.
+      // Use withScope to avoid leaking context between requests.
       const pathname = req.nextUrl?.pathname ?? new URL(req.url).pathname;
       const pathSegments = pathname.split("/");
       const tenantIdx = pathSegments.indexOf("tenants");
       const tenantId =
         tenantIdx !== -1 ? pathSegments[tenantIdx + 1] : undefined;
 
-      Sentry.setContext("request", {
-        method: req.method,
-        path: pathname,
-        ...(tenantId && { tenantId }),
+      Sentry.withScope((scope) => {
+        scope.setTag("api_path", pathname);
+        if (tenantId) {
+          scope.setTag("tenant_id", tenantId);
+        }
+        scope.setContext("request", {
+          method: req.method,
+          path: pathname,
+        });
+        Sentry.captureException(error);
       });
-
-      Sentry.captureException(error);
 
       console.error("Unhandled error:", error);
       return NextResponse.json(
