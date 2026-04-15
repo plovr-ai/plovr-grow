@@ -173,7 +173,7 @@ export class PaymentService {
     }
 
     Sentry.metrics.count("payment.result", 1, {
-      tags: { status: "succeeded", provider: data.provider },
+      attributes: { status: "succeeded", provider: data.provider },
     });
 
     console.log(
@@ -206,7 +206,7 @@ export class PaymentService {
     }
 
     Sentry.metrics.count("payment.result", 1, {
-      tags: { status: "failed", provider: data.provider },
+      attributes: { status: "failed", provider: data.provider },
     });
 
     console.log(
