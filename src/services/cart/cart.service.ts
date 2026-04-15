@@ -13,7 +13,7 @@ import type {
   CartItemModifierData,
   CheckoutResult,
 } from "./cart.types";
-import type { OrderItemData, SelectedModifier } from "@/types";
+import type { OrderItemData, SelectedModifier, SalesChannel } from "@/types";
 
 export class CartService {
   async createCart(tenantId: string, merchantId: string, input: CreateCartInput) {
@@ -252,7 +252,7 @@ export class CartService {
       customerPhone: input.customerPhone,
       customerEmail: input.customerEmail,
       orderMode: input.orderMode,
-      salesChannel: "phone_order",
+      salesChannel: cart.salesChannel as Exclude<SalesChannel, "giftcard">,
       paymentType: "in_store",
       items: orderItems,
       deliveryAddress: input.deliveryAddress,
