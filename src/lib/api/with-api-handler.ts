@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { AppError } from "@/lib/errors/app-error";
 import { ErrorCodes } from "@/lib/errors/error-codes";
@@ -43,6 +44,26 @@ export function withApiHandler<
           { status: error.statusCode }
         );
       }
+
+      // Report unexpected errors to Sentry with request context.
+      // Use withScope to avoid leaking context between requests.
+      const pathname = req.nextUrl?.pathname ?? new URL(req.url).pathname;
+      const pathSegments = pathname.split("/");
+      const tenantIdx = pathSegments.indexOf("tenants");
+      const tenantId =
+        tenantIdx !== -1 ? pathSegments[tenantIdx + 1] : undefined;
+
+      Sentry.withScope((scope) => {
+        scope.setTag("api_path", pathname);
+        if (tenantId) {
+          scope.setTag("tenant_id", tenantId);
+        }
+        scope.setContext("request", {
+          method: req.method,
+          path: pathname,
+        });
+        Sentry.captureException(error);
+      });
 
       reqLogger.error({ err: error, duration }, "Unhandled error");
       return NextResponse.json(
