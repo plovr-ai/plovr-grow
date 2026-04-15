@@ -1,5 +1,21 @@
 # Mistakes Log
 
+## [260] Sentry SDK v10 metrics use `attributes` not `tags`
+
+**Date**: 2026-04-15
+**Category**: api-misuse
+
+### What went wrong
+Used `tags` property in `Sentry.metrics.count()` options, which matched older Sentry SDK documentation. Sentry v10 `MetricOptions` interface uses `attributes` instead of `tags`, causing a TypeScript compilation error.
+
+### Correct approach
+Check the actual TypeScript type definitions in `node_modules/@sentry/core/build/types/metrics/public-api.d.ts` for the `MetricOptions` interface. In v10: `{ attributes: { key: value } }`.
+
+### How to avoid
+Before using any Sentry API, verify the type signature in the installed SDK's `.d.ts` files, not from docs or memory.
+
+---
+
 ## [200] Prisma model field names don't always match intuitive names
 
 **Date**: 2026-04-13
