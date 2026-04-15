@@ -1,3 +1,5 @@
+import { AppError } from "@/lib/errors/app-error";
+import { ErrorCodes } from "@/lib/errors/error-codes";
 import { stripeService } from "@/services/stripe/stripe.service";
 import {
   subscriptionRepository,
@@ -110,12 +112,12 @@ export class SubscriptionService {
   ): Promise<{ url: string; sessionId: string }> {
     const plan = getPlanByCode(planCode);
     if (!plan) {
-      throw new Error("Invalid plan code: " + planCode);
+      throw new AppError(ErrorCodes.INVALID_PLAN_CODE, { planCode }, 400);
     }
 
     const stripePriceId = getStripePriceId(planCode);
     if (!stripePriceId) {
-      throw new Error("Stripe price ID not configured for plan: " + planCode);
+      throw new AppError(ErrorCodes.STRIPE_PRICE_NOT_CONFIGURED, { planCode }, 500);
     }
 
     const stripeCustomerId = await this.getOrCreateStripeCustomer(tenantId);
@@ -149,7 +151,7 @@ export class SubscriptionService {
   ): Promise<{ url: string }> {
     const subscription = await subscriptionRepository.getByTenantId(tenantId);
     if (!subscription) {
-      throw new Error("No subscription found for tenant");
+      throw new AppError(ErrorCodes.SUBSCRIPTION_NOT_FOUND, undefined, 404);
     }
 
     const result = await stripeService.createBillingPortalSession({
@@ -169,7 +171,7 @@ export class SubscriptionService {
   ): Promise<void> {
     const subscription = await subscriptionRepository.getByTenantId(tenantId);
     if (!subscription || !subscription.stripeSubscriptionId) {
-      throw new Error("No active subscription found");
+      throw new AppError(ErrorCodes.SUBSCRIPTION_NOT_FOUND, undefined, 404);
     }
 
     await stripeService.cancelSubscription(
@@ -190,11 +192,11 @@ export class SubscriptionService {
   async resumeSubscription(tenantId: string): Promise<void> {
     const subscription = await subscriptionRepository.getByTenantId(tenantId);
     if (!subscription || !subscription.stripeSubscriptionId) {
-      throw new Error("No subscription found");
+      throw new AppError(ErrorCodes.SUBSCRIPTION_NOT_FOUND, undefined, 404);
     }
 
     if (!subscription.cancelAtPeriodEnd) {
-      throw new Error("Subscription is not scheduled for cancellation");
+      throw new AppError(ErrorCodes.SUBSCRIPTION_NOT_CANCELLING, undefined, 400);
     }
 
     await stripeService.resumeSubscription(subscription.stripeSubscriptionId);
@@ -212,29 +214,29 @@ export class SubscriptionService {
   async changePlan(tenantId: string, newPlanCode: string): Promise<void> {
     const plan = getPlanByCode(newPlanCode);
     if (!plan) {
-      throw new Error("Invalid plan code: " + newPlanCode);
+      throw new AppError(ErrorCodes.INVALID_PLAN_CODE, { planCode: newPlanCode }, 400);
     }
 
     const newStripePriceId = getStripePriceId(newPlanCode);
     if (!newStripePriceId) {
-      throw new Error("Stripe price ID not configured for plan: " + newPlanCode);
+      throw new AppError(ErrorCodes.STRIPE_PRICE_NOT_CONFIGURED, { planCode: newPlanCode }, 500);
     }
 
     const subscription = await subscriptionRepository.getByTenantId(tenantId);
     if (!subscription || !subscription.stripeSubscriptionId) {
-      throw new Error("No active subscription found");
+      throw new AppError(ErrorCodes.SUBSCRIPTION_NOT_FOUND, undefined, 404);
     }
 
     if (subscription.status !== "active" && subscription.status !== "trialing") {
-      throw new Error("Subscription is not active");
+      throw new AppError(ErrorCodes.SUBSCRIPTION_NOT_FOUND, undefined, 404);
     }
 
     if (subscription.plan === newPlanCode) {
-      throw new Error("Already on this plan");
+      throw new AppError(ErrorCodes.INVALID_PLAN_CODE, { planCode: newPlanCode }, 400);
     }
 
     if (!subscription.stripePriceId) {
-      throw new Error("Current subscription has no price ID");
+      throw new AppError(ErrorCodes.STRIPE_PRICE_NOT_CONFIGURED, { planCode: subscription.plan }, 500);
     }
 
     const updated = await stripeService.updateSubscriptionPrice({
@@ -244,7 +246,7 @@ export class SubscriptionService {
     });
 
     if (!updated) {
-      throw new Error("Failed to update subscription in Stripe");
+      throw new AppError(ErrorCodes.INTERNAL_ERROR, undefined, 500);
     }
 
     await subscriptionRepository.update(subscription.id, {
@@ -583,7 +585,7 @@ export class SubscriptionService {
     // Get tenant info for customer creation
     const tenant = await this.getTenantInfo(tenantId);
     if (!tenant) {
-      throw new Error("Tenant not found");
+      throw new AppError(ErrorCodes.TENANT_NOT_FOUND, undefined, 404);
     }
 
     // Create new Stripe customer

@@ -1,3 +1,5 @@
+import { AppError } from "@/lib/errors/app-error";
+import { ErrorCodes } from "@/lib/errors/error-codes";
 import {
   giftCardRepository,
   type GiftCardRepository,
@@ -46,7 +48,7 @@ export class GiftCardService {
       cardNumber = generateGiftCardNumber();
       attempts++;
       if (attempts >= maxAttempts) {
-        throw new Error("Failed to generate unique gift card number");
+        throw new AppError(ErrorCodes.GIFTCARD_GENERATION_FAILED, undefined, 500);
       }
     }
 
@@ -132,13 +134,13 @@ export class GiftCardService {
       : await this.repository.getById(tenantId, giftCardId);
 
     if (!giftCard) {
-      throw new Error("Gift card not found");
+      throw new AppError(ErrorCodes.GIFTCARD_NOT_FOUND, undefined, 404);
     }
 
     const currentBalance = Number(giftCard.currentBalance);
 
     if (currentBalance <= 0) {
-      throw new Error("Gift card has no balance");
+      throw new AppError(ErrorCodes.GIFTCARD_NO_BALANCE, undefined, 400);
     }
 
     // Calculate actual redemption amount (can't redeem more than balance)

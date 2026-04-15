@@ -1,3 +1,5 @@
+import { AppError } from "@/lib/errors/app-error";
+import { ErrorCodes } from "@/lib/errors/error-codes";
 import { invoiceRepository } from "@/repositories/invoice.repository";
 import { cateringOrderRepository } from "@/repositories/catering-order.repository";
 import { sequenceRepository } from "@/repositories/sequence.repository";
@@ -22,7 +24,7 @@ export class InvoiceService {
     // Get the catering order
     const order = await cateringOrderRepository.getById(tenantId, cateringOrderId);
     if (!order) {
-      throw new Error(`Catering order not found: ${cateringOrderId}`);
+      throw new AppError(ErrorCodes.CATERING_ORDER_NOT_FOUND, { cateringOrderId }, 404);
     }
 
     // Check if invoice already exists
@@ -31,7 +33,7 @@ export class InvoiceService {
       cateringOrderId
     );
     if (existingInvoice) {
-      throw new Error("Invoice already exists for this order");
+      throw new AppError(ErrorCodes.INVOICE_ALREADY_EXISTS, undefined, 409);
     }
 
     // Generate invoice number using atomic sequence (tenant-level, never resets)
@@ -100,7 +102,7 @@ export class InvoiceService {
   async sendInvoice(tenantId: string, invoiceId: string): Promise<void> {
     const invoice = await invoiceRepository.getById(tenantId, invoiceId);
     if (!invoice) {
-      throw new Error(`Invoice not found: ${invoiceId}`);
+      throw new AppError(ErrorCodes.INVOICE_NOT_FOUND, { invoiceId }, 404);
     }
 
     // Send email
