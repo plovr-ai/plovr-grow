@@ -127,22 +127,9 @@ npm run lint             # 代码检查
 - 在 `bg-theme-primary-light` 上使用 `text-theme-primary-hover`（深色）
 - 避免在浅色背景上使用 `text-theme-primary`（对比度可能不足）
 
-### URL 路由规范（速查）
+### URL 路由规范
 
-**必须严格区分品牌级 (`/{companySlug}`) 和门店级 (`/r/{merchantSlug}`) 路由**：
-
-```typescript
-// 品牌级
-const homeLink = `/${companySlug}`;
-const locationsLink = `/${companySlug}/locations`;
-
-// 门店级
-const menuLink = `/r/${merchantSlug}/menu`;
-const cartLink = `/r/${merchantSlug}/cart`;
-const checkoutLink = `/r/${merchantSlug}/checkout`;
-```
-
-详细规范见 [routing.md](.claude/docs/routing.md)。
+**必须严格区分品牌级 (`/{companySlug}`) 和门店级 (`/r/{merchantSlug}`) 路由**。详细规范和代码示例见 [routing.md](.claude/docs/routing.md)。
 
 ## Claude Code Skills
 
