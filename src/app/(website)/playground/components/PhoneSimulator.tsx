@@ -76,7 +76,11 @@ export function PhoneSimulator() {
 
   const handleEnd = useCallback(async () => {
     if (clientRef.current) {
-      await endCall(clientRef.current);
+      try {
+        await endCall(clientRef.current);
+      } catch {
+        // WebSocket may already be closed — ignore
+      }
       clientRef.current = null;
     }
   }, []);
