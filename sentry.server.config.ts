@@ -13,5 +13,6 @@ if (SENTRY_ENABLED) {
     environment: SENTRY_ENVIRONMENT,
     release: SENTRY_RELEASE,
     tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
+    integrations: [Sentry.prismaIntegration()],
   });
 }
