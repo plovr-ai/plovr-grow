@@ -2,7 +2,7 @@ import { PrismaClient, type Prisma } from "@prisma/client";
 import prisma from "@/lib/db";
 import type { DbClient } from "@/lib/db";
 import { generateEntityId } from "@/lib/id";
-import { computeNextRetryAt } from "@/services/square/square.types";
+import { computeNextRetryAt } from "@/lib/retry";
 import type { CatalogSyncStats } from "./integration.types";
 
 export interface UpsertConnectionInput {

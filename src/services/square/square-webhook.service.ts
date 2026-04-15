@@ -3,11 +3,10 @@ import { squareService } from "./square.service";
 import prisma from "@/lib/db";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import type { SquareWebhookPayload } from "./square.types";
+import { WEBHOOK_RETRY_POLICY, computeNextRetryAt } from "@/lib/retry";
 import {
   REVERSE_FULFILLMENT_STATUS_MAP,
   FULFILLMENT_STATUS_RANK,
-  WEBHOOK_RETRY_POLICY,
-  computeNextRetryAt,
 } from "./square.types";
 
 export class SquareWebhookService {

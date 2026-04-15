@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { DashboardLayoutClient } from "@/components/dashboard";
 import { merchantService } from "@/services/merchant";
-import { tenantRepository } from "@/repositories/tenant.repository";
 import { subscriptionService } from "@/services/subscription";
 import { tenantService } from "@/services/tenant/tenant.service";
 import type { OnboardingData, OnboardingStatus } from "@/types/onboarding";
@@ -23,7 +22,7 @@ export default async function ProtectedLayout({
 
   // Fetch company, merchants, and subscription data
   const [initialCompany, merchants, subscription] = await Promise.all([
-    tenantRepository.getById(tenantId),
+    tenantService.getTenant(tenantId),
     merchantService.getMerchantsByTenantId(tenantId),
     subscriptionService.getSubscriptionForDashboard(tenantId),
   ]);
@@ -39,7 +38,7 @@ export default async function ProtectedLayout({
   let company = initialCompany;
   if (company.onboardingStatus === "not_started") {
     await tenantService.initializeOnboarding(tenantId);
-    const updated = await tenantRepository.getById(tenantId);
+    const updated = await tenantService.getTenant(tenantId);
     if (updated) {
       company = updated;
     }

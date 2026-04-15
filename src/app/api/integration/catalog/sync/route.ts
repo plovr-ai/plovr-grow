@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { integrationRepository } from "@/repositories/integration.repository";
 import { posProviderRegistry } from "@/services/integration/pos-provider-registry";
 import { AppError } from "@/lib/errors";
 import { z } from "zod";
@@ -37,7 +36,7 @@ export async function POST(request: NextRequest) {
     const { tenantId } = session.user;
 
     // Look up the active POS connection for this merchant
-    const connection = await integrationRepository.getActivePosConnection(
+    const connection = await posProviderRegistry.getActivePosConnection(
       tenantId,
       merchantId
     );

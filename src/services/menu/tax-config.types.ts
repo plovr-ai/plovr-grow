@@ -3,8 +3,9 @@
  * 税率配置类型定义
  */
 
-// Tax inclusion types for Square compatibility
-export type TaxInclusionType = "additive" | "inclusive";
+// Import from canonical location and re-export for backward compatibility
+import type { TaxInclusionType } from "@/types";
+export type { TaxInclusionType } from "@/types";
 
 // Rounding methods for tax calculation
 export const ROUNDING_METHODS = [

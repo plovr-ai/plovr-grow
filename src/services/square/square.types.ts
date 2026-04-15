@@ -161,31 +161,9 @@ export const WEBHOOK_EVENT_STATUS = {
   DEAD_LETTER: "dead_letter",
 } as const;
 
-/**
- * Retry policy for failed webhook events.
- * Exponential backoff: delay = BASE_DELAY_MS * 2^retryCount, capped at MAX_DELAY_MS.
- * After MAX_RETRIES attempts, events transition to dead_letter.
- */
-export const WEBHOOK_RETRY_POLICY = {
-  MAX_RETRIES: 5,
-  BASE_DELAY_MS: 60_000,
-  MAX_DELAY_MS: 60 * 60 * 1000,
-  // A claimed retry job must complete within this window or it becomes
-  // reclaimable by a subsequent cron run. Needs to exceed the cron execution
-  // timeout; 10 minutes is comfortably above Vercel's default function limit.
-  LEASE_MS: 10 * 60 * 1000,
-} as const;
-
-export function computeNextRetryAt(
-  retryCount: number,
-  now: Date = new Date()
-): Date {
-  const delay = Math.min(
-    WEBHOOK_RETRY_POLICY.BASE_DELAY_MS * Math.pow(2, retryCount),
-    WEBHOOK_RETRY_POLICY.MAX_DELAY_MS
-  );
-  return new Date(now.getTime() + delay);
-}
+// Re-export retry utilities from @/lib/retry (canonical location).
+// Kept here for backward compatibility with existing imports.
+export { WEBHOOK_RETRY_POLICY, computeNextRetryAt } from "@/lib/retry";
 
 /**
  * Reverse fulfillment status mapping: Square FulfillmentState → internal status.

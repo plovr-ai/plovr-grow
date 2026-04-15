@@ -1454,7 +1454,7 @@ describe("SquareWebhookService", () => {
   describe("computeNextRetryAt", () => {
     it("should use exponential backoff capped at MAX_DELAY_MS", async () => {
       const { computeNextRetryAt, WEBHOOK_RETRY_POLICY } = await import(
-        "../square.types"
+        "@/lib/retry"
       );
       const now = new Date("2026-04-11T12:00:00Z");
 

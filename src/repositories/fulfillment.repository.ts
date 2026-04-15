@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/db";
 import type { DbClient } from "@/lib/db";
 import type { FulfillmentStatus } from "@/types";
-import type { FulfillmentChangeSource } from "@/services/order/fulfillment.types";
+import type { FulfillmentChangeSource } from "@/types";
 import { AppError, ErrorCodes } from "@/lib/errors";
 
 export class FulfillmentRepository {

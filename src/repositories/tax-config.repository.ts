@@ -1,7 +1,7 @@
 import prisma from "@/lib/db";
 import type { Prisma, TaxConfig } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
-import type { TaxInclusionType } from "@/services/menu/tax-config.types";
+import type { TaxInclusionType } from "@/types";
 
 // Normalize a raw DB row so that null inclusionType defaults to "additive"
 function normalizeTaxConfig<T extends TaxConfig>(row: T): T & { inclusionType: TaxInclusionType } {
