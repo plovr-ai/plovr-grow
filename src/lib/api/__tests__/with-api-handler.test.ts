@@ -4,12 +4,27 @@ import { withApiHandler } from "../with-api-handler";
 import { AppError } from "@/lib/errors/app-error";
 import { ErrorCodes } from "@/lib/errors/error-codes";
 
+const mockLoggerError = vi.fn();
+const mockLoggerWarn = vi.fn();
+const mockLoggerInfo = vi.fn();
+
+vi.mock("@/lib/logger", () => ({
+  createRequestLogger: () => ({
+    info: mockLoggerInfo,
+    warn: mockLoggerWarn,
+    error: mockLoggerError,
+  }),
+}));
+
 const mockRequest = new NextRequest("http://localhost/api/test");
 const mockContext = { params: Promise.resolve({}) };
 
 describe("withApiHandler", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockLoggerError.mockClear();
+    mockLoggerWarn.mockClear();
+    mockLoggerInfo.mockClear();
   });
 
   it("should pass through the response when handler succeeds", async () => {
@@ -80,7 +95,6 @@ describe("withApiHandler", () => {
   );
 
   it("should return 500 with INTERNAL_ERROR when handler throws a generic Error", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const handler = vi.fn().mockRejectedValue(new Error("something broke"));
 
     const wrapped = withApiHandler(handler);
@@ -92,12 +106,9 @@ describe("withApiHandler", () => {
       success: false,
       error: { code: "INTERNAL_ERROR" },
     });
-
-    consoleSpy.mockRestore();
   });
 
   it("should return 500 with INTERNAL_ERROR when handler throws a non-Error value", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const handler = vi.fn().mockRejectedValue("string error");
 
     const wrapped = withApiHandler(handler);
@@ -109,21 +120,19 @@ describe("withApiHandler", () => {
       success: false,
       error: { code: "INTERNAL_ERROR" },
     });
-
-    consoleSpy.mockRestore();
   });
 
-  it("should call console.error for unhandled errors", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("should log unhandled errors via logger.error", async () => {
     const thrownError = new Error("unexpected");
     const handler = vi.fn().mockRejectedValue(thrownError);
 
     const wrapped = withApiHandler(handler);
     await wrapped(mockRequest, mockContext);
 
-    expect(consoleSpy).toHaveBeenCalledWith("Unhandled error:", thrownError);
-
-    consoleSpy.mockRestore();
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      expect.objectContaining({ err: thrownError, duration: expect.any(Number) }),
+      "Unhandled error"
+    );
   });
 
   it("should not include params field when AppError has no params", async () => {

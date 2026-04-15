@@ -1,4 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const { mockLoggerError, mockLoggerDebug } = vi.hoisted(() => ({
+  mockLoggerError: vi.fn(),
+  mockLoggerDebug: vi.fn(),
+}));
+
+vi.mock("@/lib/logger", () => ({
+  logger: {
+    error: mockLoggerError,
+    debug: mockLoggerDebug,
+    child: () => ({ error: mockLoggerError, debug: mockLoggerDebug }),
+  },
+}));
+
 import { orderEventEmitter } from "../order-events";
 import type {
   OrderCreatedEvent,
@@ -249,7 +263,7 @@ describe("OrderEventEmitter", () => {
         throw new Error("Async handler error");
       });
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockLoggerError.mockClear();
 
       const unsubscribe = orderEventEmitter.on("order.partial_paid", asyncErrorHandler);
 
@@ -269,9 +283,8 @@ describe("OrderEventEmitter", () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(asyncErrorHandler).toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalled();
+      expect(mockLoggerError).toHaveBeenCalled();
 
-      consoleSpy.mockRestore();
       unsubscribe();
     });
 
@@ -298,7 +311,7 @@ describe("OrderEventEmitter", () => {
       });
       const normalHandler = vi.fn();
 
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockLoggerError.mockClear();
 
       const unsubscribe1 = orderEventEmitter.on("order.fulfillment.preparing", errorHandler);
       const unsubscribe2 = orderEventEmitter.on("order.fulfillment.preparing", normalHandler);
@@ -323,10 +336,9 @@ describe("OrderEventEmitter", () => {
       expect(errorHandler).toHaveBeenCalled();
       expect(normalHandler).toHaveBeenCalled();
 
-      // Error should be logged
-      expect(consoleSpy).toHaveBeenCalled();
+      // Error should be logged via logger
+      expect(mockLoggerError).toHaveBeenCalled();
 
-      consoleSpy.mockRestore();
       unsubscribe1();
       unsubscribe2();
     });
@@ -340,7 +352,7 @@ describe("OrderEventEmitter", () => {
       // Reset modules to re-trigger module-level code with NODE_ENV=development
       vi.resetModules();
 
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      mockLoggerDebug.mockClear();
 
       const { orderEventEmitter: devEmitter } = await import("../order-events");
 
@@ -363,13 +375,12 @@ describe("OrderEventEmitter", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 20));
 
-      // The dev logger should have logged [OrderEvent]
-      const orderEventCalls = consoleSpy.mock.calls.filter(
-        (call) => typeof call[0] === "string" && call[0].includes("[OrderEvent]")
+      // The dev logger should have logged via logger.debug
+      expect(mockLoggerDebug).toHaveBeenCalledWith(
+        expect.objectContaining({ orderId: "dev-order-1" }),
+        "Order event emitted"
       );
-      expect(orderEventCalls.length).toBeGreaterThan(0);
 
-      consoleSpy.mockRestore();
       (process.env as Record<string, string | undefined>).NODE_ENV = originalNodeEnv;
     });
   });

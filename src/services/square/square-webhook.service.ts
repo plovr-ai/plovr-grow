@@ -8,6 +8,9 @@ import {
   REVERSE_FULFILLMENT_STATUS_MAP,
   FULFILLMENT_STATUS_RANK,
 } from "./square.types";
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ module: "square-webhook" });
 
 export class SquareWebhookService {
 
@@ -56,9 +59,9 @@ export class SquareWebhookService {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
         const nextCount = event.retryCount + 1;
-        console.error(
-          `[Square Webhook] Retry ${nextCount}/${WEBHOOK_RETRY_POLICY.MAX_RETRIES} failed for ${event.eventType} (${event.id}):`,
-          errorMessage
+        log.error(
+          { eventId: event.id, eventType: event.eventType, retryCount: nextCount, maxRetries: WEBHOOK_RETRY_POLICY.MAX_RETRIES, error: errorMessage },
+          "Webhook retry failed"
         );
 
         if (nextCount >= WEBHOOK_RETRY_POLICY.MAX_RETRIES) {
@@ -100,9 +103,7 @@ export class SquareWebhookService {
         await this.handlePaymentEvent(payload, connection.tenantId);
         break;
       default:
-        console.log(
-          `[Square Webhook] Unhandled event type: ${eventType}`
-        );
+        log.info({ eventType }, "Unhandled event type");
     }
   }
 
@@ -115,14 +116,10 @@ export class SquareWebhookService {
       select: { tenantId: true },
     });
     if (!merchant) {
-      console.error(
-        `[Square Webhook] Merchant not found: ${connection.merchantId}`
-      );
+      log.error({ merchantId: connection.merchantId }, "Merchant not found");
       return;
     }
-    console.log(
-      `[Square Webhook] Triggering catalog re-sync for merchant: ${connection.merchantId}`
-    );
+    log.info({ merchantId: connection.merchantId }, "Triggering catalog re-sync");
     try {
       await squareService.syncCatalog(
         connection.tenantId,
@@ -134,7 +131,7 @@ export class SquareWebhookService {
       if (!message.includes("ALREADY_RUNNING")) {
         throw error;
       }
-      console.log("[Square Webhook] Catalog sync already running, skipped");
+      log.info({ merchantId: connection.merchantId }, "Catalog sync already running, skipped");
     }
   }
 
@@ -161,9 +158,7 @@ export class SquareWebhookService {
     const squareFulfillment = orderObj?.fulfillments?.[0];
     const squareFulfillmentState = squareFulfillment?.state;
     if (!squareFulfillmentState) {
-      console.log(
-        "[Square Webhook] No fulfillment state in order update, skipping"
-      );
+      log.info({ squareOrderId }, "No fulfillment state in order update, skipping");
       return;
     }
 
@@ -174,9 +169,7 @@ export class SquareWebhookService {
       !isCancellation &&
       !REVERSE_FULFILLMENT_STATUS_MAP[squareFulfillmentState]
     ) {
-      console.log(
-        `[Square Webhook] Unknown Square fulfillment state: ${squareFulfillmentState}`
-      );
+      log.info({ squareOrderId, squareFulfillmentState }, "Unknown Square fulfillment state");
       return;
     }
 
@@ -186,8 +179,9 @@ export class SquareWebhookService {
       squareOrderId
     );
     if (!mapping) {
-      console.warn(
-        `[Square Webhook] MAPPING_MISS: No ExternalIdMapping for Square order ${squareOrderId} (tenant: ${tenantId}, event: order.updated). This order may not have been pushed from plovr.`
+      log.warn(
+        { squareOrderId, tenantId, event: "order.updated" },
+        "MAPPING_MISS: No ExternalIdMapping for Square order. This order may not have been pushed from plovr."
       );
       return;
     }
@@ -196,9 +190,7 @@ export class SquareWebhookService {
     const { fulfillmentService } = await import("@/services/order/fulfillment.service");
     const fulfillment = await fulfillmentService.getFulfillmentByOrderId(tenantId, mapping.internalId);
     if (!fulfillment) {
-      console.log(
-        `[Square Webhook] No fulfillment found for order: ${mapping.internalId}, skipping`
-      );
+      log.info({ orderId: mapping.internalId }, "No fulfillment found for order, skipping");
       return;
     }
 
@@ -208,9 +200,7 @@ export class SquareWebhookService {
       select: { status: true },
     });
     if (!order) {
-      console.log(
-        `[Square Webhook] Order not found for mapping: ${mapping.internalId}, skipping`
-      );
+      log.info({ orderId: mapping.internalId }, "Order not found for mapping, skipping");
       return;
     }
 
@@ -222,8 +212,9 @@ export class SquareWebhookService {
       fulfillment.externalVersion !== null &&
       incomingVersion <= fulfillment.externalVersion
     ) {
-      console.log(
-        `[Square Webhook] Ignoring stale webhook for ${mapping.internalId}: incoming v${incomingVersion} <= current v${fulfillment.externalVersion}`
+      log.info(
+        { orderId: mapping.internalId, incomingVersion, currentVersion: fulfillment.externalVersion },
+        "Ignoring stale webhook"
       );
       return;
     }
@@ -272,8 +263,9 @@ export class SquareWebhookService {
       await orderService.cancelOrder(tenantId, mapping.internalId, cancelReason, {
         source: "square_webhook",
       });
-      console.log(
-        `[Square Webhook] Order ${mapping.internalId} canceled via Square (${squareFulfillmentState})`
+      log.info(
+        { orderId: mapping.internalId, squareFulfillmentState },
+        "Order canceled via Square"
       );
       return;
     }
@@ -289,8 +281,9 @@ export class SquareWebhookService {
     const currentRank = FULFILLMENT_STATUS_RANK[fulfillment.status] ?? -1;
     const incomingRank = FULFILLMENT_STATUS_RANK[internalStatus] ?? -1;
     if (incomingRank < currentRank) {
-      console.log(
-        `[Square Webhook] Ignoring regressive fulfillment state for ${mapping.internalId}: ${fulfillment.status} → ${internalStatus}`
+      log.info(
+        { orderId: mapping.internalId, currentStatus: fulfillment.status, incomingStatus: internalStatus },
+        "Ignoring regressive fulfillment state"
       );
       await bumpVersionIfNewer();
       return;
@@ -310,8 +303,9 @@ export class SquareWebhookService {
       }
     );
 
-    console.log(
-      `[Square Webhook] Order ${mapping.internalId} fulfillment updated to: ${internalStatus}`
+    log.info(
+      { orderId: mapping.internalId, fulfillmentStatus: internalStatus },
+      "Order fulfillment updated"
     );
   }
 
@@ -327,9 +321,7 @@ export class SquareWebhookService {
 
     const squareOrderId = paymentObj?.order_id;
     if (!squareOrderId) {
-      console.log(
-        "[Square Webhook] No order_id in payment event, skipping"
-      );
+      log.info("No order_id in payment event, skipping");
       return;
     }
 
@@ -339,8 +331,9 @@ export class SquareWebhookService {
       squareOrderId
     );
     if (!mapping) {
-      console.warn(
-        `[Square Webhook] MAPPING_MISS: No ExternalIdMapping for Square order ${squareOrderId} (tenant: ${tenantId}, event: payment). This order may not have been pushed from plovr.`
+      log.warn(
+        { squareOrderId, tenantId, event: "payment" },
+        "MAPPING_MISS: No ExternalIdMapping for Square order. This order may not have been pushed from plovr."
       );
       return;
     }
@@ -351,9 +344,7 @@ export class SquareWebhookService {
       await orderService.updatePaymentStatus(tenantId, mapping.internalId, "completed", {
         source: "square_webhook",
       });
-      console.log(
-        `[Square Webhook] Order ${mapping.internalId} payment completed`
-      );
+      log.info({ orderId: mapping.internalId }, "Order payment completed");
       return;
     }
 
@@ -362,9 +353,7 @@ export class SquareWebhookService {
       await orderService.updatePaymentStatus(tenantId, mapping.internalId, "payment_failed", {
         source: "square_webhook",
       });
-      console.log(
-        `[Square Webhook] Order ${mapping.internalId} payment_failed via Square`
-      );
+      log.info({ orderId: mapping.internalId }, "Order payment failed via Square");
     }
   }
 }

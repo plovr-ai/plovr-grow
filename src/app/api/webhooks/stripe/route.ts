@@ -8,6 +8,9 @@ import type {
   StripeCheckoutSessionData,
 } from "@/services/subscription/subscription.types";
 import { withApiHandler } from "@/lib/api";
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ module: "stripe-webhook" });
 
 export const POST = withApiHandler(async (request: NextRequest) => {
   const payload = await request.text();
@@ -16,14 +19,14 @@ export const POST = withApiHandler(async (request: NextRequest) => {
   // Verify webhook signature
   const event = stripeService.verifyWebhookSignature(payload, signature);
   if (!event) {
-    console.error("[Stripe Webhook] Invalid signature");
+    log.error("Invalid webhook signature");
     return NextResponse.json(
       { error: "Invalid signature" },
       { status: 400 }
     );
   }
 
-  console.log(`[Stripe Webhook] Received event: ${event.type}`);
+  log.info({ eventType: event.type }, "Received event");
 
   // Handle different event types
   switch (event.type) {
@@ -32,14 +35,14 @@ export const POST = withApiHandler(async (request: NextRequest) => {
 
       // Handle subscription checkout
       if (session.mode === "subscription" && session.subscription) {
-        console.log(`[Stripe Webhook] Subscription checkout completed for tenant: ${session.metadata?.tenantId}`);
+        log.info({ tenantId: session.metadata?.tenantId }, "Subscription checkout completed");
         await subscriptionService.handleCheckoutSessionCompleted(session);
       }
 
       // Handle invoice payment (catering)
       const invoiceNumber = (session as { metadata?: { invoiceNumber?: string } }).metadata?.invoiceNumber;
       if (invoiceNumber) {
-        console.log(`[Stripe Webhook] Payment completed for invoice: ${invoiceNumber}`);
+        log.info({ invoiceNumber }, "Payment completed for invoice");
         await invoiceService.handlePaymentCompleted(invoiceNumber);
       }
       break;
@@ -49,21 +52,21 @@ export const POST = withApiHandler(async (request: NextRequest) => {
 
     case "customer.subscription.created": {
       const subscription = event.data.object as unknown as StripeSubscriptionData;
-      console.log(`[Stripe Webhook] Subscription created: ${subscription.id}`);
+      log.info({ subscriptionId: subscription.id }, "Subscription created");
       await subscriptionService.handleSubscriptionCreated(subscription);
       break;
     }
 
     case "customer.subscription.updated": {
       const subscription = event.data.object as unknown as StripeSubscriptionData;
-      console.log(`[Stripe Webhook] Subscription updated: ${subscription.id}, status: ${subscription.status}`);
+      log.info({ subscriptionId: subscription.id, status: subscription.status }, "Subscription updated");
       await subscriptionService.handleSubscriptionUpdated(subscription);
       break;
     }
 
     case "customer.subscription.deleted": {
       const subscription = event.data.object as unknown as StripeSubscriptionData;
-      console.log(`[Stripe Webhook] Subscription deleted: ${subscription.id}`);
+      log.info({ subscriptionId: subscription.id }, "Subscription deleted");
       await subscriptionService.handleSubscriptionDeleted(subscription);
       break;
     }
@@ -73,7 +76,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
 
       // Handle subscription invoice payment
       if (invoice.subscription) {
-        console.log(`[Stripe Webhook] Subscription invoice payment succeeded: ${invoice.id}`);
+        log.info({ invoiceId: invoice.id }, "Subscription invoice payment succeeded");
         await subscriptionService.handleInvoicePaymentSucceeded(invoice);
       }
       break;
@@ -84,14 +87,14 @@ export const POST = withApiHandler(async (request: NextRequest) => {
 
       // Handle subscription invoice payment failure
       if (invoice.subscription) {
-        console.log(`[Stripe Webhook] Subscription invoice payment failed: ${invoice.id}`);
+        log.warn({ invoiceId: invoice.id }, "Subscription invoice payment failed");
         await subscriptionService.handleInvoicePaymentFailed(invoice);
       }
       break;
     }
 
     default:
-      console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
+      log.info({ eventType: event.type }, "Unhandled event type");
   }
 
   return NextResponse.json({ received: true });

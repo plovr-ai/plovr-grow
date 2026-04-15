@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import type { DbClient } from "@/lib/db";
 import {
   paymentRepository,
@@ -165,14 +166,16 @@ export class PaymentService {
     );
 
     if (count === 0) {
-      console.log(
-        `Payment already processed or not found for ${data.provider}:${data.providerPaymentId}`
+      logger.info(
+        { provider: data.provider, providerPaymentId: data.providerPaymentId },
+        "Payment already processed or not found"
       );
       return;
     }
 
-    console.log(
-      `Payment succeeded: ${data.provider}:${data.providerPaymentId}`
+    logger.info(
+      { provider: data.provider, providerPaymentId: data.providerPaymentId },
+      "Payment succeeded"
     );
   }
 
@@ -194,14 +197,16 @@ export class PaymentService {
     );
 
     if (count === 0) {
-      console.log(
-        `Payment already processed or not found for ${data.provider}:${data.providerPaymentId}`
+      logger.info(
+        { provider: data.provider, providerPaymentId: data.providerPaymentId },
+        "Payment already processed or not found"
       );
       return;
     }
 
-    console.log(
-      `Payment failed: ${data.provider}:${data.providerPaymentId}`
+    logger.info(
+      { provider: data.provider, providerPaymentId: data.providerPaymentId },
+      "Payment failed"
     );
   }
 

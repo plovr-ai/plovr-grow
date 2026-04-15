@@ -29,6 +29,9 @@ const eslintConfig = defineConfig([
       "@typescript-eslint": tseslint.plugin,
     },
     rules: {
+      // 禁止 console，使用 pino logger
+      "no-console": "warn",
+
       // 禁止显式 any
       "@typescript-eslint/no-explicit-any": "error",
 
