@@ -1,5 +1,21 @@
 # Mistakes Log
 
+## [262] Pipecat JS SDK API differs from documentation examples
+
+**Date**: 2026-04-15
+**Category**: api-misuse
+
+### What went wrong
+Planned code used `RTVIClient`, `WebSocketTransport({ url })`, and event names `transcript`/`botText` based on the Pipecat SDK README. The actual installed SDK exports `PipecatClient`, uses `{ wsUrl }` for transport config, and fires `userTranscript`/`botTranscript` events with different data types (`TranscriptData`, `BotLLMTextData`).
+
+### Correct approach
+After installing an unfamiliar SDK, check the actual TypeScript type definitions (`node_modules/@pipecat-ai/client-js/dist/`) before writing code. Don't rely solely on README examples.
+
+### How to avoid
+For any new third-party SDK, run `npx tsc --noEmit` early and inspect actual exported types rather than trusting documentation examples.
+
+---
+
 ## [200] Prisma model field names don't always match intuitive names
 
 **Date**: 2026-04-13
