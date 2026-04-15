@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { AppError } from "@/lib/errors/app-error";
 import { ErrorCodes } from "@/lib/errors/error-codes";
@@ -30,6 +31,23 @@ export function withApiHandler<
           { status: error.statusCode }
         );
       }
+
+      // Extract request info for Sentry context.
+      // Some callers (e.g. cron routes in tests) cast a plain Request
+      // to NextRequest, so nextUrl may be unavailable.
+      const pathname = req.nextUrl?.pathname ?? new URL(req.url).pathname;
+      const pathSegments = pathname.split("/");
+      const tenantIdx = pathSegments.indexOf("tenants");
+      const tenantId =
+        tenantIdx !== -1 ? pathSegments[tenantIdx + 1] : undefined;
+
+      Sentry.setContext("request", {
+        method: req.method,
+        path: pathname,
+        ...(tenantId && { tenantId }),
+      });
+
+      Sentry.captureException(error);
 
       console.error("Unhandled error:", error);
       return NextResponse.json(
