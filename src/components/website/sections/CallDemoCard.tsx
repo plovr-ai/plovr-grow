@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { siteConfig } from "@/config/site";
+import Link from "next/link";
 
 interface CallDemoCardProps {
   compact?: boolean;
@@ -203,7 +203,7 @@ export function CallDemoCard({ compact = false }: CallDemoCardProps) {
         </div>
 
         {/* CTA Button */}
-        <a
+        <Link
           href="/playground"
           className="mt-1 flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#ffbf00] px-6 py-3.5 font-bold text-[#1c1b1b] shadow-md transition-all hover:shadow-lg hover:brightness-105"
         >
@@ -216,7 +216,7 @@ export function CallDemoCard({ compact = false }: CallDemoCardProps) {
             <path d="M17.45 13.52L13.1 11.34a1.16 1.16 0 00-1.34.34L10.08 13.74a8.87 8.87 0 01-4.23-4.23l2.06-1.69a1.14 1.14 0 00.34-1.34L6.07.13A1.15 1.15 0 004.73.01L.9.99A1.15 1.15 0 000 2.13 16.27 16.27 0 0016.27 18.4a1.15 1.15 0 001.14-.9l.98-3.83a1.16 1.16 0 00-.94-1.15z" />
           </svg>
           Try It Yourself — Call Now
-        </a>
+        </Link>
       </div>
     </div>
   );
