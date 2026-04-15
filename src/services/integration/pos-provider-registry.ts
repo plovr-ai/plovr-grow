@@ -1,4 +1,5 @@
 import { AppError, ErrorCodes } from "@/lib/errors";
+import { integrationRepository } from "@/repositories/integration.repository";
 import type { PosProvider } from "./pos-provider.types";
 
 /**
@@ -27,6 +28,11 @@ class PosProviderRegistry {
   /** Check whether a provider is registered. */
   hasProvider(type: string): boolean {
     return this.providers.has(type);
+  }
+
+  /** Get the active POS connection for a merchant (service-layer wrapper). */
+  async getActivePosConnection(tenantId: string, merchantId: string) {
+    return integrationRepository.getActivePosConnection(tenantId, merchantId);
   }
 }
 

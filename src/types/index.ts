@@ -10,6 +10,14 @@ type ItemTaxInfo = _ItemTaxInfo;
 export * from "./tenant";
 export * from "./merchant";
 
+// ==================== Shared Domain Types ====================
+
+/** Source of a fulfillment status change */
+export type FulfillmentChangeSource = "internal" | "square_webhook" | "toast_webhook" | "manual";
+
+/** Tax inclusion types for Square compatibility */
+export type TaxInclusionType = "additive" | "inclusive";
+
 // ==================== Modifier Types ====================
 
 export interface Modifier {

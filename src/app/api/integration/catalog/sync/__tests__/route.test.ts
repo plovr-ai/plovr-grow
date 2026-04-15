@@ -8,13 +8,6 @@ vi.mock("@/lib/auth", () => ({
   auth: () => mockAuth(),
 }));
 
-// Mock integration repository
-vi.mock("@/repositories/integration.repository", () => ({
-  integrationRepository: {
-    getActivePosConnection: vi.fn(),
-  },
-}));
-
 // Mock POS provider registry
 const mockSyncCatalog = vi.fn();
 vi.mock("@/services/integration/pos-provider-registry", () => ({
@@ -22,15 +15,15 @@ vi.mock("@/services/integration/pos-provider-registry", () => ({
     getProvider: vi.fn(() => ({
       syncCatalog: mockSyncCatalog,
     })),
+    getActivePosConnection: vi.fn(),
   },
 }));
 
-import { integrationRepository } from "@/repositories/integration.repository";
 import { posProviderRegistry } from "@/services/integration/pos-provider-registry";
 import { AppError, ErrorCodes } from "@/lib/errors";
 
 const mockGetActivePosConnection = vi.mocked(
-  integrationRepository.getActivePosConnection
+  posProviderRegistry.getActivePosConnection
 );
 const mockGetProvider = vi.mocked(posProviderRegistry.getProvider);
 

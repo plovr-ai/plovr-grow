@@ -1,7 +1,8 @@
 import type { FulfillmentStatus } from "@/types";
 
-/** Source of a fulfillment status change */
-export type FulfillmentChangeSource = "internal" | "square_webhook" | "toast_webhook" | "manual";
+// Import from canonical location and re-export for backward compatibility
+import type { FulfillmentChangeSource } from "@/types";
+export type { FulfillmentChangeSource } from "@/types";
 
 /** Input for creating a fulfillment (typically during order creation) */
 export interface CreateFulfillmentInput {

@@ -1,8 +1,7 @@
 import { integrationRepository } from "@/repositories/integration.repository";
 import { squareOrderService } from "./square-order.service";
+import { WEBHOOK_RETRY_POLICY, computeNextRetryAt } from "@/lib/retry";
 import {
-  WEBHOOK_RETRY_POLICY,
-  computeNextRetryAt,
   SQUARE_ORDER_SYNC_TYPE,
   ORDER_PUSH_OPERATION,
 } from "./square.types";

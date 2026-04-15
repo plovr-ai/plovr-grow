@@ -1,9 +1,7 @@
 import { integrationRepository } from "@/repositories/integration.repository";
 import type { PosWebhookProvider } from "./pos-webhook-provider.interface";
-import {
-  WEBHOOK_EVENT_STATUS,
-  computeNextRetryAt,
-} from "@/services/square/square.types";
+import { computeNextRetryAt } from "@/lib/retry";
+import { WEBHOOK_EVENT_STATUS } from "@/services/square/square.types";
 
 export interface WebhookDispatchResult {
   status: number;

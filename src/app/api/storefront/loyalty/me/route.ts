@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLoyaltySession } from "@/lib/loyalty-session";
 import { loyaltyMemberService, loyaltyConfigService } from "@/services/loyalty";
-import { tenantRepository } from "@/repositories/tenant.repository";
+import { tenantService } from "@/services/tenant";
 
 /**
  * GET /api/storefront/loyalty/me
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify tenant exists
-    const tenant = await tenantRepository.getById(tenantId);
+    const tenant = await tenantService.getTenant(tenantId);
     if (!tenant) {
       return NextResponse.json(
         {
