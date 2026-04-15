@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteTaxConfigAction } from "@/app/(dashboard)/dashboard/(protected)/menu/tax/actions";
+import { getApiErrorMessage } from "@/lib/api";
 import type { TaxConfigWithRates } from "@/services/menu/tax-config.types";
 
 interface TaxConfigListProps {
@@ -40,7 +41,7 @@ export function TaxConfigList({ taxConfigs, merchants, onEdit }: TaxConfigListPr
     startTransition(async () => {
       const result = await deleteTaxConfigAction(taxConfigToDelete);
       if (!result.success) {
-        alert(result.error || "Failed to delete tax type");
+        alert(getApiErrorMessage(result.error, "Failed to delete tax type"));
       }
       setDeletingId(null);
       setTaxConfigToDelete(null);

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { TextField, RadioGroupField } from "@/components/dashboard/Form";
 import { updateLoyaltyConfigAction } from "@/app/(dashboard)/dashboard/(protected)/loyalty/rules/actions";
+import { getApiErrorMessage } from "@/lib/api";
 import type { LoyaltyConfigData } from "@/services/loyalty/loyalty.types";
 
 interface LoyaltyRulesClientProps {
@@ -46,7 +47,7 @@ export function LoyaltyRulesClient({ initialConfig }: LoyaltyRulesClientProps) {
         setSuccess(true);
         router.refresh();
       } else {
-        setError(result.error ?? "Failed to update loyalty configuration");
+        setError(getApiErrorMessage(result.error, "Failed to update loyalty configuration"));
       }
     });
   };

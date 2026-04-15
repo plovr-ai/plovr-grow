@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getApiErrorMessage } from "@/lib/api";
 import { useLoyalty, useCompanySlug } from "@/contexts";
 import { usePhoneInput } from "@/hooks";
 import { OtpModal } from "@storefront/components/checkout/OtpModal";
@@ -189,7 +190,7 @@ export function LoyaltyRegistrationCTA({
       const data = await response.json();
 
       if (!data.success) {
-        setSendError(data.error || "Failed to send verification code");
+        setSendError(getApiErrorMessage(data.error, "Failed to send verification code"));
         return;
       }
 
@@ -225,7 +226,7 @@ export function LoyaltyRegistrationCTA({
       const data = await response.json();
 
       if (!data.success) {
-        setVerifyError(data.error || "Verification failed");
+        setVerifyError(getApiErrorMessage(data.error, "Verification failed"));
         return;
       }
 
@@ -277,7 +278,7 @@ export function LoyaltyRegistrationCTA({
 
     const data = await response.json();
     if (!data.success) {
-      throw new Error(data.error);
+      throw new Error(getApiErrorMessage(data.error));
     }
   };
 

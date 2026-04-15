@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { getApiErrorMessage } from "@/lib/api";
 import { PlaceSearch } from "./components/PlaceSearch";
 
 interface SelectedPlace {
@@ -34,7 +35,7 @@ export default function GeneratorPage() {
       const data = await res.json();
 
       if (!data.success) {
-        setError(data.error ?? "Failed to start generation");
+        setError(getApiErrorMessage(data.error, "Failed to start generation"));
         return;
       }
 

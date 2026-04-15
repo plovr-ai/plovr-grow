@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { PlaceSearch } from "@/app/(website)/generator/components/PlaceSearch";
 import { useDashboard } from "@/contexts/DashboardContext";
+import { getApiErrorMessage } from "@/lib/api";
 
 interface SelectedPlace {
   placeId: string;
@@ -64,7 +65,7 @@ export function WebsiteStep({ status }: WebsiteStepProps) {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setError(data.error ?? "Failed to set up website");
+        setError(getApiErrorMessage(data.error, "Failed to set up website"));
         setProgress(null);
         return;
       }

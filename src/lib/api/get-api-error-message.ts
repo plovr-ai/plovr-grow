@@ -12,8 +12,8 @@ export function getApiErrorMessage(
   error: unknown,
   fallback?: string
 ): string {
-  // Legacy: plain string error
-  if (typeof error === "string") return error;
+  // Legacy: plain string error (non-empty)
+  if (typeof error === "string" && error.length > 0) return error;
 
   // New format: { code: "ERROR_CODE", params?: {...} }
   if (

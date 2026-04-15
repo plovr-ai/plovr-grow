@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { getApiErrorMessage } from "@/lib/api";
 import { useFormatPrice, usePhoneInput } from "@/hooks";
 import { useLoyalty } from "@/contexts/LoyaltyContext";
 import {
@@ -221,7 +222,7 @@ export function GiftcardPageClient({
       // Step 1: Confirm Stripe payment
       const paymentResult = await cardPaymentFormRef.current.confirmPayment();
       if (!paymentResult.success) {
-        setSubmitError(paymentResult.error || "Payment failed");
+        setSubmitError(getApiErrorMessage(paymentResult.error, "Payment failed"));
         setIsSubmitting(false);
         return;
       }
@@ -246,7 +247,7 @@ export function GiftcardPageClient({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create order");
+        throw new Error(getApiErrorMessage(data.error, "Failed to create order"));
       }
 
       // Redirect to success page

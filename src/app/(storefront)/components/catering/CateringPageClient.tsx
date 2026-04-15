@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getApiErrorMessage } from "@/lib/api";
 import { usePhoneInput } from "@/hooks";
 
 interface CateringPageClientProps {
@@ -60,7 +61,7 @@ export function CateringPageClient({ merchantSlug }: CateringPageClientProps) {
         if (result.fieldErrors) {
           setErrors(result.fieldErrors);
         } else {
-          alert(result.error || "Failed to submit. Please try again.");
+          alert(getApiErrorMessage(result.error, "Failed to submit. Please try again."));
         }
         return;
       }

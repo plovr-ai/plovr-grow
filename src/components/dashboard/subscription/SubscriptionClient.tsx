@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CreditCard, CheckCircle, AlertTriangle, XCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SubscriptionInfo } from "@/services/subscription";
+import { getApiErrorMessage } from "@/lib/api";
 import { SubscriptionStatusBadge } from "./SubscriptionStatusBadge";
 import { PricingCard } from "./PricingCard";
 
@@ -68,7 +69,7 @@ export function SubscriptionClient({ subscription }: SubscriptionClientProps) {
 
       const data = await response.json();
       if (!data.success) {
-        throw new Error(data.error || "Failed to create checkout session");
+        throw new Error(getApiErrorMessage(data.error, "Failed to create checkout session"));
       }
 
       window.location.href = data.data.url;
@@ -103,7 +104,7 @@ export function SubscriptionClient({ subscription }: SubscriptionClientProps) {
 
       const data = await response.json();
       if (!data.success) {
-        throw new Error(data.error || "Failed to change plan");
+        throw new Error(getApiErrorMessage(data.error, "Failed to change plan"));
       }
 
       router.refresh();
@@ -126,7 +127,7 @@ export function SubscriptionClient({ subscription }: SubscriptionClientProps) {
 
       const data = await response.json();
       if (!data.success) {
-        throw new Error(data.error || "Failed to open billing portal");
+        throw new Error(getApiErrorMessage(data.error, "Failed to open billing portal"));
       }
 
       window.location.href = data.data.url;
@@ -157,7 +158,7 @@ export function SubscriptionClient({ subscription }: SubscriptionClientProps) {
 
       const data = await response.json();
       if (!data.success) {
-        throw new Error(data.error || "Failed to cancel subscription");
+        throw new Error(getApiErrorMessage(data.error, "Failed to cancel subscription"));
       }
 
       router.refresh();
@@ -180,7 +181,7 @@ export function SubscriptionClient({ subscription }: SubscriptionClientProps) {
 
       const data = await response.json();
       if (!data.success) {
-        throw new Error(data.error || "Failed to resume subscription");
+        throw new Error(getApiErrorMessage(data.error, "Failed to resume subscription"));
       }
 
       router.refresh();

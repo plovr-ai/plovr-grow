@@ -10,6 +10,7 @@ import {
   updateMenuAction,
   deleteMenuAction,
 } from "@/app/(dashboard)/dashboard/(protected)/menu/actions";
+import { getApiErrorMessage } from "@/lib/api";
 import type { MenuInfo } from "@/services/menu/menu.types";
 
 interface MenuFormProps {
@@ -51,7 +52,7 @@ export function MenuForm({ menu, onClose, canDelete = true }: MenuFormProps) {
       if (result.success) {
         onClose();
       } else {
-        setError(result.error || "An error occurred");
+        setError(getApiErrorMessage(result.error, "An error occurred"));
       }
     });
   };
@@ -69,7 +70,7 @@ export function MenuForm({ menu, onClose, canDelete = true }: MenuFormProps) {
       if (result.success) {
         onClose();
       } else {
-        setError(result.error || "Failed to delete menu");
+        setError(getApiErrorMessage(result.error, "Failed to delete menu"));
       }
     });
   };
