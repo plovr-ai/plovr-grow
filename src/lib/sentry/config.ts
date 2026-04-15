@@ -8,14 +8,20 @@
 export const SENTRY_DSN = process.env.NEXT_PUBLIC_SENTRY_DSN ?? "";
 
 export const SENTRY_ENVIRONMENT =
-  process.env.NODE_ENV === "production" ? "production" : "development";
+  process.env.VERCEL_ENV ?? "development";
+
+/**
+ * Git commit SHA for release tracking.
+ * Automatically provided by Vercel during builds.
+ */
+export const SENTRY_RELEASE = process.env.VERCEL_GIT_COMMIT_SHA;
 
 /**
  * Performance tracing sample rate.
  * Keep low in production to avoid excessive billing.
  */
 export const SENTRY_TRACES_SAMPLE_RATE =
-  process.env.NODE_ENV === "production" ? 0.1 : 1.0;
+  process.env.VERCEL_ENV === "production" ? 0.1 : 1.0;
 
 /**
  * Whether Sentry is enabled — requires a non-empty DSN.
