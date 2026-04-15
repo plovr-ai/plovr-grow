@@ -78,7 +78,7 @@ export class OrderService {
     const menuItems = await menuService.getMenuItemsByIds(tenantId, merchantId, itemIds);
 
     if (menuItems.length !== itemIds.length) {
-      throw new Error("Some menu items are not available");
+      throw new AppError(ErrorCodes.MENU_ITEMS_UNAVAILABLE, undefined, 400);
     }
 
     // Calculate order totals
