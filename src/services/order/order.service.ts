@@ -196,7 +196,7 @@ export class OrderService {
       try {
         const result = await this._createMerchantOrderAtomicInner(tenantId, input, options);
         Sentry.metrics.count("order.created", 1, {
-          tags: { tenant_id: tenantId, merchant_id: input.merchantId },
+          attributes: { tenant_id: tenantId, merchant_id: input.merchantId },
         });
         return result;
       } catch (error) {

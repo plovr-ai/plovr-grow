@@ -92,7 +92,7 @@ export class WebhookDispatcherService {
           `[Webhook ${providerName}] Duplicate event skipped: ${event.eventId}`
         );
         Sentry.metrics.count("webhook.processed", 1, {
-          tags: { status: "deduplicated", provider: providerName },
+          attributes: { status: "deduplicated", provider: providerName },
         });
         return { status: 200, body: { received: true, deduplicated: true } };
       }
@@ -119,7 +119,7 @@ export class WebhookDispatcherService {
           WEBHOOK_EVENT_STATUS.PROCESSED
         );
         Sentry.metrics.count("webhook.processed", 1, {
-          tags: { status: "processed", provider: providerName },
+          attributes: { status: "processed", provider: providerName },
         });
       } catch (error) {
         const errorMessage =
@@ -136,7 +136,7 @@ export class WebhookDispatcherService {
           errorMessage
         );
         Sentry.metrics.count("webhook.processed", 1, {
-          tags: { status: "failed", provider: providerName },
+          attributes: { status: "failed", provider: providerName },
         });
       }
     } catch (error) {
