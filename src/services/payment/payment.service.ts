@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import type { DbClient } from "@/lib/db";
 import {
   paymentRepository,
@@ -171,6 +172,10 @@ export class PaymentService {
       return;
     }
 
+    Sentry.metrics.count("payment.result", 1, {
+      tags: { status: "succeeded", provider: data.provider },
+    });
+
     console.log(
       `Payment succeeded: ${data.provider}:${data.providerPaymentId}`
     );
@@ -199,6 +204,10 @@ export class PaymentService {
       );
       return;
     }
+
+    Sentry.metrics.count("payment.result", 1, {
+      tags: { status: "failed", provider: data.provider },
+    });
 
     console.log(
       `Payment failed: ${data.provider}:${data.providerPaymentId}`

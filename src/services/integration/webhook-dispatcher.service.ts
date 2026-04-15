@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { integrationRepository } from "@/repositories/integration.repository";
 import type { PosWebhookProvider } from "./pos-webhook-provider.interface";
 import { computeNextRetryAt } from "@/lib/retry";
@@ -90,6 +91,9 @@ export class WebhookDispatcherService {
         console.log(
           `[Webhook ${providerName}] Duplicate event skipped: ${event.eventId}`
         );
+        Sentry.metrics.count("webhook.processed", 1, {
+          tags: { status: "deduplicated", provider: providerName },
+        });
         return { status: 200, body: { received: true, deduplicated: true } };
       }
 
@@ -114,6 +118,9 @@ export class WebhookDispatcherService {
           webhookEvent.id,
           WEBHOOK_EVENT_STATUS.PROCESSED
         );
+        Sentry.metrics.count("webhook.processed", 1, {
+          tags: { status: "processed", provider: providerName },
+        });
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
@@ -128,6 +135,9 @@ export class WebhookDispatcherService {
           nextRetryAt,
           errorMessage
         );
+        Sentry.metrics.count("webhook.processed", 1, {
+          tags: { status: "failed", provider: providerName },
+        });
       }
     } catch (error) {
       console.error(

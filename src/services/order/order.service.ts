@@ -1,6 +1,7 @@
 // ==================== Order Service ====================
 // Uses OrderRepository (Prisma) for database operations.
 
+import * as Sentry from "@sentry/nextjs";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/db";
 import type { DbClient } from "@/lib/db";
@@ -193,7 +194,11 @@ export class OrderService {
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
-        return await this._createMerchantOrderAtomicInner(tenantId, input, options);
+        const result = await this._createMerchantOrderAtomicInner(tenantId, input, options);
+        Sentry.metrics.count("order.created", 1, {
+          tags: { tenant_id: tenantId, merchant_id: input.merchantId },
+        });
+        return result;
       } catch (error) {
         lastError = error;
         // Retriable Prisma errors under concurrent order creation:
