@@ -113,7 +113,7 @@ export type FulfillmentStatus =
   | "fulfilled"     // Order fulfilled
   | "canceled";     // Fulfillment canceled
 
-export type SalesChannel = "online_order" | "catering" | "giftcard";
+export type SalesChannel = "online_order" | "catering" | "giftcard" | "phone_order";
 
 export type PaymentType = "online" | "in_store";
 

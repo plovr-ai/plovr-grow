@@ -68,6 +68,7 @@ model Tenant {
   modifierOptions        ModifierOption[]
   orderFulfillments      OrderFulfillment[]
   fulfillmentStatusLogs  FulfillmentStatusLog[]
+  carts                  Cart[]
 
   @@index([slug])
   @@map("tenants")
@@ -248,6 +249,7 @@ model Merchant {
   cateringOrderSequences CateringOrderSequence[]
   integrationConnections IntegrationConnection[]
   webhookEvents          WebhookEvent[]
+  carts                  Cart[]
 
   @@index([tenantId])
   @@index([slug])
@@ -351,6 +353,66 @@ model OrderItemModifier {
 
   @@index([orderItemId])
   @@map("order_item_modifiers")
+}
+
+model Cart {
+  id           String     @id
+  tenantId     String     @map("tenant_id")
+  merchantId   String     @map("merchant_id")
+  status       String     @default("active")
+  salesChannel String     @map("sales_channel")
+  notes        String?    @db.Text
+  deleted      Boolean    @default(false)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+  merchant     Merchant   @relation(fields: [merchantId], references: [id])
+  cartItems    CartItem[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([merchantId])
+  @@map("carts")
+}
+
+model CartItem {
+  id                  String             @id
+  cartId              String             @map("cart_id")
+  menuItemId          String             @map("menu_item_id")
+  name                String
+  unitPrice           Decimal            @map("unit_price") @db.Decimal(10, 2)
+  quantity            Int
+  totalPrice          Decimal            @map("total_price") @db.Decimal(10, 2)
+  specialInstructions String?            @map("special_instructions") @db.Text
+  imageUrl            String?            @map("image_url")
+  sortOrder           Int                @default(0) @map("sort_order")
+  deleted             Boolean            @default(false)
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  cart                Cart               @relation(fields: [cartId], references: [id])
+  modifiers           CartItemModifier[]
+
+  @@index([cartId])
+  @@index([menuItemId])
+  @@map("cart_items")
+}
+
+model CartItemModifier {
+  id               String   @id
+  cartItemId       String   @map("cart_item_id")
+  modifierGroupId  String   @map("modifier_group_id")
+  modifierOptionId String   @map("modifier_option_id")
+  groupName        String   @map("group_name")
+  name             String
+  price            Decimal  @db.Decimal(10, 2)
+  quantity         Int      @default(1)
+  deleted          Boolean  @default(false)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  cartItem         CartItem @relation(fields: [cartItemId], references: [id])
+
+  @@index([cartItemId])
+  @@map("cart_item_modifiers")
 }
 
 model OrderFulfillment {
