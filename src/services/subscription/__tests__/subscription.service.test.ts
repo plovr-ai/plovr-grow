@@ -367,7 +367,7 @@ describe("SubscriptionService", () => {
     it("should throw on invalid plan code", async () => {
       await expect(
         subscriptionService.createCheckoutSession("tenant-1", "nonexistent")
-      ).rejects.toThrow("Invalid plan code: nonexistent");
+      ).rejects.toThrow("INVALID_PLAN_CODE");
     });
 
     it("should throw when env var is not configured", async () => {
@@ -376,7 +376,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.createCheckoutSession("tenant-1", "starter")
-      ).rejects.toThrow("Stripe price ID not configured for plan: starter");
+      ).rejects.toThrow("STRIPE_PRICE_NOT_CONFIGURED");
 
       process.env.STRIPE_STARTER_PRICE_ID = original;
     });
@@ -472,7 +472,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.createCheckoutSession("tenant-1", "starter")
-      ).rejects.toThrow("Tenant not found");
+      ).rejects.toThrow("TENANT_NOT_FOUND");
     });
   });
 
@@ -511,7 +511,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.createBillingPortalSession("tenant-1")
-      ).rejects.toThrow("No subscription found for tenant");
+      ).rejects.toThrow("SUBSCRIPTION_NOT_FOUND");
     });
   });
 
@@ -554,7 +554,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.cancelSubscription("tenant-1")
-      ).rejects.toThrow("No active subscription found");
+      ).rejects.toThrow("SUBSCRIPTION_NOT_FOUND");
     });
 
     it("should throw when subscription has no stripeSubscriptionId", async () => {
@@ -565,7 +565,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.cancelSubscription("tenant-1")
-      ).rejects.toThrow("No active subscription found");
+      ).rejects.toThrow("SUBSCRIPTION_NOT_FOUND");
     });
   });
 
@@ -590,7 +590,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.resumeSubscription("tenant-1")
-      ).rejects.toThrow("No subscription found");
+      ).rejects.toThrow("SUBSCRIPTION_NOT_FOUND");
     });
 
     it("should throw when subscription has no stripeSubscriptionId", async () => {
@@ -601,7 +601,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.resumeSubscription("tenant-1")
-      ).rejects.toThrow("No subscription found");
+      ).rejects.toThrow("SUBSCRIPTION_NOT_FOUND");
     });
 
     it("should throw when subscription is not scheduled for cancellation", async () => {
@@ -609,7 +609,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.resumeSubscription("tenant-1")
-      ).rejects.toThrow("Subscription is not scheduled for cancellation");
+      ).rejects.toThrow("SUBSCRIPTION_NOT_CANCELLING");
     });
   });
 
@@ -652,7 +652,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.changePlan("tenant-1", "pro")
-      ).rejects.toThrow("No active subscription found");
+      ).rejects.toThrow("SUBSCRIPTION_NOT_FOUND");
     });
 
     it("should throw when subscription is canceled", async () => {
@@ -663,7 +663,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.changePlan("tenant-1", "pro")
-      ).rejects.toThrow("Subscription is not active");
+      ).rejects.toThrow("SUBSCRIPTION_NOT_FOUND");
     });
 
     it("should throw when already on the same plan", async () => {
@@ -671,7 +671,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.changePlan("tenant-1", "starter")
-      ).rejects.toThrow("Already on this plan");
+      ).rejects.toThrow("INVALID_PLAN_CODE");
     });
 
     it("should throw when Stripe update fails", async () => {
@@ -680,13 +680,13 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.changePlan("tenant-1", "pro")
-      ).rejects.toThrow("Failed to update subscription in Stripe");
+      ).rejects.toThrow("INTERNAL_ERROR");
     });
 
     it("should throw for invalid plan code", async () => {
       await expect(
         subscriptionService.changePlan("tenant-1", "nonexistent")
-      ).rejects.toThrow("Invalid plan code: nonexistent");
+      ).rejects.toThrow("INVALID_PLAN_CODE");
     });
 
     it("should throw when plan env var is not configured", async () => {
@@ -695,7 +695,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.changePlan("tenant-1", "pro")
-      ).rejects.toThrow("Stripe price ID not configured for plan: pro");
+      ).rejects.toThrow("STRIPE_PRICE_NOT_CONFIGURED");
 
       process.env.STRIPE_PRO_PRICE_ID = original;
     });
@@ -708,7 +708,7 @@ describe("SubscriptionService", () => {
 
       await expect(
         subscriptionService.changePlan("tenant-1", "pro")
-      ).rejects.toThrow("Current subscription has no price ID");
+      ).rejects.toThrow("STRIPE_PRICE_NOT_CONFIGURED");
     });
 
     it("should allow change for trialing subscription", async () => {

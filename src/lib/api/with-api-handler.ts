@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { AppError } from "@/lib/errors/app-error";
 import { ErrorCodes } from "@/lib/errors/error-codes";
 
-type RouteContext = { params: Promise<Record<string, string>> };
-type ApiHandler = (
+type RouteContext<T extends Record<string, string> = Record<string, string>> = {
+  params: Promise<T>;
+};
+
+type ApiHandler<T extends Record<string, string> = Record<string, string>> = (
   req: NextRequest,
-  context: RouteContext
+  context: RouteContext<T>
 ) => Promise<NextResponse>;
 
-export function withApiHandler(handler: ApiHandler): ApiHandler {
+export function withApiHandler<
+  T extends Record<string, string> = Record<string, string>,
+>(handler: ApiHandler<T>): ApiHandler<T> {
   return async (req, context) => {
     try {
       return await handler(req, context);

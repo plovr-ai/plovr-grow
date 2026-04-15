@@ -29,7 +29,7 @@ describe("GET /api/storefront/loyalty/order-points-status", () => {
       "http://localhost:3000/api/storefront/loyalty/order-points-status?companySlug=test-company"
     );
 
-    const response = await GET(request);
+    const response = await GET(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -42,7 +42,7 @@ describe("GET /api/storefront/loyalty/order-points-status", () => {
       "http://localhost:3000/api/storefront/loyalty/order-points-status?orderId=order-123"
     );
 
-    const response = await GET(request);
+    const response = await GET(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -57,7 +57,7 @@ describe("GET /api/storefront/loyalty/order-points-status", () => {
       "http://localhost:3000/api/storefront/loyalty/order-points-status?orderId=order-123&companySlug=non-existent"
     );
 
-    const response = await GET(request);
+    const response = await GET(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(404);
@@ -80,7 +80,7 @@ describe("GET /api/storefront/loyalty/order-points-status", () => {
       "http://localhost:3000/api/storefront/loyalty/order-points-status?orderId=order-123&companySlug=test-company"
     );
 
-    const response = await GET(request);
+    const response = await GET(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -107,7 +107,7 @@ describe("GET /api/storefront/loyalty/order-points-status", () => {
       "http://localhost:3000/api/storefront/loyalty/order-points-status?orderId=order-123&companySlug=test-company"
     );
 
-    const response = await GET(request);
+    const response = await GET(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -124,11 +124,11 @@ describe("GET /api/storefront/loyalty/order-points-status", () => {
       "http://localhost:3000/api/storefront/loyalty/order-points-status?orderId=order-123&companySlug=test-company"
     );
 
-    const response = await GET(request);
+    const response = await GET(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(500);
     expect(data.success).toBe(false);
-    expect(data.error).toBe("Failed to check points status");
+    expect(data.error).toEqual({ code: "INTERNAL_ERROR" });
   });
 });

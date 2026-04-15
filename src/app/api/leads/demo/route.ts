@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import prisma from "@/lib/db";
+import { withApiHandler } from "@/lib/api";
 
 const demoLeadSchema = z.object({
   // Step 1 fields
@@ -29,35 +30,27 @@ const demoLeadSchema = z.object({
   lgref: z.string().max(200).optional(),
 });
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const parsed = demoLeadSchema.safeParse(body);
+export const POST = withApiHandler(async (request: NextRequest) => {
+  const body = await request.json();
+  const parsed = demoLeadSchema.safeParse(body);
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Validation failed",
-          fieldErrors: parsed.error.flatten().fieldErrors,
-        },
-        { status: 400 }
-      );
-    }
-
-    await prisma.lead.create({
-      data: {
-        ...parsed.data,
-        source: "landing-page",
-      },
-    });
-
-    return NextResponse.json({ success: true }, { status: 201 });
-  } catch (error) {
-    console.error("[Leads/Demo] Create error:", error);
+  if (!parsed.success) {
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
+      {
+        success: false,
+        error: "Validation failed",
+        fieldErrors: parsed.error.flatten().fieldErrors,
+      },
+      { status: 400 }
     );
   }
-}
+
+  await prisma.lead.create({
+    data: {
+      ...parsed.data,
+      source: "landing-page",
+    },
+  });
+
+  return NextResponse.json({ success: true }, { status: 201 });
+});

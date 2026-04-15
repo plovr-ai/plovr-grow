@@ -38,7 +38,7 @@ describe("POST /api/leads", () => {
 
   it("creates a lead and returns success", async () => {
     mockCreate.mockResolvedValue({ id: "lead-1", ...validBody });
-    const res = await POST(makeRequest(validBody));
+    const res = await POST(makeRequest(validBody), { params: Promise.resolve({}) });
     const data = await res.json();
     expect(res.status).toBe(201);
     expect(data).toEqual({ success: true });
@@ -56,7 +56,7 @@ describe("POST /api/leads", () => {
 
   it("returns 400 for missing email", async () => {
     const { email: _, ...noEmail } = validBody;
-    const res = await POST(makeRequest(noEmail));
+    const res = await POST(makeRequest(noEmail), { params: Promise.resolve({}) });
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data.success).toBe(false);
@@ -64,26 +64,28 @@ describe("POST /api/leads", () => {
 
   it("returns 400 for invalid email format", async () => {
     const res = await POST(
-      makeRequest({ ...validBody, email: "not-an-email" })
+      makeRequest({ ...validBody, email: "not-an-email" }),
+      { params: Promise.resolve({}) }
     );
     expect(res.status).toBe(400);
   });
 
   it("returns 400 for negative revenue", async () => {
-    const res = await POST(makeRequest({ ...validBody, revenue: -100 }));
+    const res = await POST(makeRequest({ ...validBody, revenue: -100 }), { params: Promise.resolve({}) });
     expect(res.status).toBe(400);
   });
 
   it("returns 400 for invalid platform", async () => {
     const res = await POST(
-      makeRequest({ ...validBody, platform: "grubhub" })
+      makeRequest({ ...validBody, platform: "grubhub" }),
+      { params: Promise.resolve({}) }
     );
     expect(res.status).toBe(400);
   });
 
   it("returns 500 when database fails", async () => {
     mockCreate.mockRejectedValue(new Error("DB connection failed"));
-    const res = await POST(makeRequest(validBody));
+    const res = await POST(makeRequest(validBody), { params: Promise.resolve({}) });
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.success).toBe(false);
@@ -91,7 +93,7 @@ describe("POST /api/leads", () => {
 
   it("accepts customer-loss source", async () => {
     mockCreate.mockResolvedValue({ id: "lead-2", ...validBody, source: "customer-loss" });
-    const res = await POST(makeRequest({ ...validBody, source: "customer-loss" }));
+    const res = await POST(makeRequest({ ...validBody, source: "customer-loss" }), { params: Promise.resolve({}) });
     expect(res.status).toBe(201);
     expect(mockCreate).toHaveBeenCalledWith({
       data: { ...validBody, source: "customer-loss" },
@@ -100,7 +102,7 @@ describe("POST /api/leads", () => {
 
   it("defaults source to calculator when not provided", async () => {
     mockCreate.mockResolvedValue({ id: "lead-3", ...validBody, source: "calculator" });
-    const res = await POST(makeRequest(validBody));
+    const res = await POST(makeRequest(validBody), { params: Promise.resolve({}) });
     expect(res.status).toBe(201);
     expect(mockCreate).toHaveBeenCalledWith({
       data: { ...validBody, source: "calculator" },
@@ -108,7 +110,7 @@ describe("POST /api/leads", () => {
   });
 
   it("returns 400 for invalid source", async () => {
-    const res = await POST(makeRequest({ ...validBody, source: "unknown" }));
+    const res = await POST(makeRequest({ ...validBody, source: "unknown" }), { params: Promise.resolve({}) });
     expect(res.status).toBe(400);
   });
 });

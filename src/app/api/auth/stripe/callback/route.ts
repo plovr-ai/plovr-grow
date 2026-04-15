@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { stripeConnectService } from "@/services/stripe-connect"
+import { withApiHandler } from "@/lib/api";
 
-export async function GET(request: Request) {
+export const GET = withApiHandler(async (request: NextRequest) => {
   const url = new URL(request.url)
   const code = url.searchParams.get("code")
   const state = url.searchParams.get("state")
@@ -23,4 +24,4 @@ export async function GET(request: Request) {
     const message = err instanceof Error ? err.message : "Connection failed"
     return NextResponse.redirect(`${dashboardUrl}?stripe_connect=error&message=${encodeURIComponent(message)}`)
   }
-}
+});

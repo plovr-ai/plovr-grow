@@ -128,7 +128,7 @@ describe("POST /api/dashboard/[merchantId]/orders/[orderId]/mark-paid", () => {
   it("should return 404 for ORDER_NOT_FOUND AppError", async () => {
     mockMerchantService.getMerchantById.mockResolvedValue(mockMerchant as never);
     mockOrderService.markCashOrderPaid.mockRejectedValue(
-      new AppError("ORDER_NOT_FOUND", { orderId: "order-1" })
+      new AppError("ORDER_NOT_FOUND", { orderId: "order-1" }, 404)
     );
 
     const request = createRequest({});
@@ -136,13 +136,14 @@ describe("POST /api/dashboard/[merchantId]/orders/[orderId]/mark-paid", () => {
     const data = await response.json();
 
     expect(response.status).toBe(404);
-    expect(data.error).toBe("ORDER_NOT_FOUND");
+    expect(data.success).toBe(false);
+    expect(data.error).toEqual({ code: "ORDER_NOT_FOUND", params: { orderId: "order-1" } });
   });
 
   it("should return 422 for ORDER_NOT_ELIGIBLE_FOR_MARK_PAID AppError", async () => {
     mockMerchantService.getMerchantById.mockResolvedValue(mockMerchant as never);
     mockOrderService.markCashOrderPaid.mockRejectedValue(
-      new AppError("ORDER_NOT_ELIGIBLE_FOR_MARK_PAID", { orderId: "order-1" })
+      new AppError("ORDER_NOT_ELIGIBLE_FOR_MARK_PAID", { orderId: "order-1" }, 422)
     );
 
     const request = createRequest({});
@@ -150,7 +151,8 @@ describe("POST /api/dashboard/[merchantId]/orders/[orderId]/mark-paid", () => {
     const data = await response.json();
 
     expect(response.status).toBe(422);
-    expect(data.error).toBe("ORDER_NOT_ELIGIBLE_FOR_MARK_PAID");
+    expect(data.success).toBe(false);
+    expect(data.error).toEqual({ code: "ORDER_NOT_ELIGIBLE_FOR_MARK_PAID", params: { orderId: "order-1" } });
   });
 
   it("should return 500 for unexpected errors", async () => {
@@ -162,6 +164,7 @@ describe("POST /api/dashboard/[merchantId]/orders/[orderId]/mark-paid", () => {
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe("Internal server error");
+    expect(data.success).toBe(false);
+    expect(data.error).toEqual({ code: "INTERNAL_ERROR" });
   });
 });

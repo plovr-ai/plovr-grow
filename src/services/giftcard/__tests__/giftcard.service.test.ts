@@ -106,7 +106,7 @@ describe("GiftCardService", () => {
 
       await expect(
         service.redeemGiftCard("tenant-1", "gc-1", "order-1", 20)
-      ).rejects.toThrow("Gift card not found");
+      ).rejects.toThrow("GIFTCARD_NOT_FOUND");
     });
 
     it("should throw if gift card has no balance", async () => {
@@ -117,7 +117,7 @@ describe("GiftCardService", () => {
 
       await expect(
         service.redeemGiftCard("tenant-1", "gc-1", "order-1", 20)
-      ).rejects.toThrow("Gift card has no balance");
+      ).rejects.toThrow("GIFTCARD_NO_BALANCE");
     });
 
     it("should redeem only up to available balance", async () => {
@@ -213,7 +213,7 @@ describe("GiftCardService", () => {
           amount: 50,
           purchaseOrderId: "order-0",
         })
-      ).rejects.toThrow("Failed to generate unique gift card number");
+      ).rejects.toThrow("GIFTCARD_GENERATION_FAILED");
     });
   });
 

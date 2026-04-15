@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { squareWebhookService } from "@/services/square/square-webhook.service";
+import { withApiHandler } from "@/lib/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+export const GET = withApiHandler(async (request: NextRequest) => {
   // Vercel cron invocations include an Authorization header with CRON_SECRET.
   // Fail closed: without a configured secret, refuse to run the retry worker
   // so a misconfigured preview/local deployment can't be spammed anonymously.
@@ -23,17 +24,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    const result = await squareWebhookService.retryFailedEvents();
-    return NextResponse.json({ ok: true, ...result });
-  } catch (error) {
-    console.error("[Square Webhook Retry Cron] Failed:", error);
-    return NextResponse.json(
-      {
-        ok: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
-  }
-}
+  const result = await squareWebhookService.retryFailedEvents();
+  return NextResponse.json({ ok: true, ...result });
+});

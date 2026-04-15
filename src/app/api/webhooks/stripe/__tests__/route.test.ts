@@ -50,7 +50,7 @@ describe("POST /api/webhooks/stripe", () => {
         }
       );
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(400);
@@ -90,7 +90,7 @@ describe("POST /api/webhooks/stripe", () => {
         }
       );
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -126,7 +126,7 @@ describe("POST /api/webhooks/stripe", () => {
         }
       );
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -161,7 +161,7 @@ describe("POST /api/webhooks/stripe", () => {
         }
       );
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -191,7 +191,7 @@ describe("POST /api/webhooks/stripe", () => {
         headers: { "stripe-signature": "valid_sig" },
       });
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       expect(response.status).toBe(200);
       expect(subscriptionService.handleCheckoutSessionCompleted).toHaveBeenCalled();
     });
@@ -209,7 +209,7 @@ describe("POST /api/webhooks/stripe", () => {
         headers: { "stripe-signature": "valid_sig" },
       });
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       expect(response.status).toBe(200);
       expect(subscriptionService.handleSubscriptionCreated).toHaveBeenCalled();
     });
@@ -227,7 +227,7 @@ describe("POST /api/webhooks/stripe", () => {
         headers: { "stripe-signature": "valid_sig" },
       });
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       expect(response.status).toBe(200);
       expect(subscriptionService.handleSubscriptionUpdated).toHaveBeenCalled();
     });
@@ -245,7 +245,7 @@ describe("POST /api/webhooks/stripe", () => {
         headers: { "stripe-signature": "valid_sig" },
       });
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       expect(response.status).toBe(200);
       expect(subscriptionService.handleSubscriptionDeleted).toHaveBeenCalled();
     });
@@ -263,7 +263,7 @@ describe("POST /api/webhooks/stripe", () => {
         headers: { "stripe-signature": "valid_sig" },
       });
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       expect(response.status).toBe(200);
       expect(subscriptionService.handleInvoicePaymentSucceeded).toHaveBeenCalled();
     });
@@ -281,7 +281,7 @@ describe("POST /api/webhooks/stripe", () => {
         headers: { "stripe-signature": "valid_sig" },
       });
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       expect(response.status).toBe(200);
       expect(subscriptionService.handleInvoicePaymentSucceeded).not.toHaveBeenCalled();
     });
@@ -299,7 +299,7 @@ describe("POST /api/webhooks/stripe", () => {
         headers: { "stripe-signature": "valid_sig" },
       });
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       expect(response.status).toBe(200);
       expect(subscriptionService.handleInvoicePaymentFailed).toHaveBeenCalled();
     });
@@ -317,7 +317,7 @@ describe("POST /api/webhooks/stripe", () => {
         headers: { "stripe-signature": "valid_sig" },
       });
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       expect(response.status).toBe(200);
       expect(subscriptionService.handleInvoicePaymentFailed).not.toHaveBeenCalled();
     });
@@ -355,11 +355,12 @@ describe("POST /api/webhooks/stripe", () => {
         }
       );
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(500);
-      expect(data.error).toBe("Webhook handler failed");
+      expect(data.success).toBe(false);
+      expect(data.error.code).toBe("INTERNAL_ERROR");
     });
   });
 });

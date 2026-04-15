@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
 import { ErrorCodes } from "@/lib/errors/error-codes";
 
 const mockAuthenticate = vi.fn();
@@ -28,13 +29,13 @@ describe("POST /api/auth/stytch/callback", () => {
   it("returns 400 with AUTH_MISSING_SESSION_TOKEN if session_token is missing", async () => {
     const { POST } = await import("@/app/api/auth/stytch/callback/route");
 
-    const request = new Request("http://localhost/api/auth/stytch/callback", {
+    const request = new NextRequest("http://localhost/api/auth/stytch/callback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     expect(response.status).toBe(400);
 
     const data = await response.json();
@@ -49,13 +50,13 @@ describe("POST /api/auth/stytch/callback", () => {
 
     const { POST } = await import("@/app/api/auth/stytch/callback/route");
 
-    const request = new Request("http://localhost/api/auth/stytch/callback", {
+    const request = new NextRequest("http://localhost/api/auth/stytch/callback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session_token: "invalid-token" }),
     });
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     expect(response.status).toBe(401);
 
     const data = await response.json();
@@ -75,13 +76,13 @@ describe("POST /api/auth/stytch/callback", () => {
 
     const { POST } = await import("@/app/api/auth/stytch/callback/route");
 
-    const request = new Request("http://localhost/api/auth/stytch/callback", {
+    const request = new NextRequest("http://localhost/api/auth/stytch/callback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session_token: "valid-token" }),
     });
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     expect(response.status).toBe(400);
 
     const data = await response.json();
@@ -115,13 +116,13 @@ describe("POST /api/auth/stytch/callback", () => {
 
     const { POST } = await import("@/app/api/auth/stytch/callback/route");
 
-    const request = new Request("http://localhost/api/auth/stytch/callback", {
+    const request = new NextRequest("http://localhost/api/auth/stytch/callback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session_token: "valid-token" }),
     });
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     expect(response.status).toBe(200);
 
     const data = await response.json();
@@ -144,19 +145,19 @@ describe("POST /api/auth/stytch/callback", () => {
 
     const { POST } = await import("@/app/api/auth/stytch/callback/route");
 
-    const request = new Request("http://localhost/api/auth/stytch/callback", {
+    const request = new NextRequest("http://localhost/api/auth/stytch/callback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session_token: "valid-token" }),
     });
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     expect(response.status).toBe(500);
 
     const data = await response.json();
     expect(data).toEqual({
       success: false,
-      error: { code: ErrorCodes.AUTH_STYTCH_CALLBACK_FAILED },
+      error: { code: ErrorCodes.INTERNAL_ERROR },
     });
   });
 });

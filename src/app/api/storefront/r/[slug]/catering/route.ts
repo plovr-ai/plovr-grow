@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withApiHandler } from "@/lib/api";
 import { z } from "zod";
 import { cateringService } from "@/services/catering";
 import { merchantService } from "@/services/merchant";
@@ -25,66 +26,51 @@ const cateringFormSchema = z.object({
   notes: z.string().max(1000, "Notes are too long").optional().or(z.literal("")),
 });
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
-  try {
-    const { slug } = await params;
-    const body = await request.json();
+export const POST = withApiHandler(async (request: NextRequest, context) => {
+  const { slug } = await context.params;
+  const body = await request.json();
 
-    // Validate input
-    const validation = cateringFormSchema.safeParse(body);
-    if (!validation.success) {
-      const errors = validation.error.flatten().fieldErrors;
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Validation failed",
-          fieldErrors: errors,
-        },
-        { status: 400 }
-      );
-    }
-
-    const { firstName, lastName, phone, email, notes } = validation.data;
-
-    // Get merchant by slug
-    const merchant = await merchantService.getMerchantBySlug(slug);
-    if (!merchant) {
-      return NextResponse.json(
-        { success: false, error: "Restaurant not found" },
-        { status: 404 }
-      );
-    }
-
-    const tenantId = merchant.tenant.tenantId;
-
-    // Create catering lead
-    const lead = await cateringService.createLead(tenantId, merchant.id, {
-      firstName,
-      lastName,
-      phone,
-      email,
-      notes: notes || undefined,
-    });
-
+  // Validate input
+  const validation = cateringFormSchema.safeParse(body);
+  if (!validation.success) {
+    const errors = validation.error.flatten().fieldErrors;
     return NextResponse.json(
       {
-        success: true,
-        data: { leadId: lead.id },
+        success: false,
+        error: "Validation failed",
+        fieldErrors: errors,
       },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("Catering lead creation failed:", error);
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Failed to submit catering inquiry";
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: 500 }
+      { status: 400 }
     );
   }
-}
+
+  const { firstName, lastName, phone, email, notes } = validation.data;
+
+  // Get merchant by slug
+  const merchant = await merchantService.getMerchantBySlug(slug);
+  if (!merchant) {
+    return NextResponse.json(
+      { success: false, error: "Restaurant not found" },
+      { status: 404 }
+    );
+  }
+
+  const tenantId = merchant.tenant.tenantId;
+
+  // Create catering lead
+  const lead = await cateringService.createLead(tenantId, merchant.id, {
+    firstName,
+    lastName,
+    phone,
+    email,
+    notes: notes || undefined,
+  });
+
+  return NextResponse.json(
+    {
+      success: true,
+      data: { leadId: lead.id },
+    },
+    { status: 201 }
+  );
+});

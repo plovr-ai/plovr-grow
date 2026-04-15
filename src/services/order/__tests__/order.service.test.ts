@@ -281,7 +281,7 @@ describe("OrderService", () => {
       vi.mocked(menuService.getMenuItemsByIds).mockResolvedValue([]);
 
       await expect(orderService.createMerchantOrder("tenant-1", mockInput)).rejects.toThrow(
-        "Some menu items are not available"
+        "MENU_ITEMS_UNAVAILABLE"
       );
     });
 

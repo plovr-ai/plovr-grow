@@ -49,7 +49,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -70,7 +70,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -90,7 +90,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -111,7 +111,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -134,7 +134,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(404);
@@ -165,7 +165,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -197,7 +197,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -230,7 +230,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(404);
@@ -278,7 +278,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -342,7 +342,7 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     expect(response.status).toBe(200);
 
     expect(pointsService.awardPoints).toHaveBeenCalledWith(
@@ -371,11 +371,11 @@ describe("POST /api/storefront/loyalty/award-order-points", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(500);
     expect(data.success).toBe(false);
-    expect(data.error).toBe("Failed to award points");
+    expect(data.error).toEqual({ code: "INTERNAL_ERROR" });
   });
 });

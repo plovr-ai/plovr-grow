@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
 import { POST } from "../route";
 import { ErrorCodes } from "@/lib/errors/error-codes";
 
@@ -21,12 +22,12 @@ describe("POST /api/auth/stytch/callback", () => {
   });
 
   it("should return 400 when session_token is missing", async () => {
-    const request = new Request("http://localhost/api/auth/stytch/callback", {
+    const request = new NextRequest("http://localhost/api/auth/stytch/callback", {
       method: "POST",
       body: JSON.stringify({}),
     });
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -43,12 +44,12 @@ describe("POST /api/auth/stytch/callback", () => {
       },
     } as never);
 
-    const request = new Request("http://localhost/api/auth/stytch/callback", {
+    const request = new NextRequest("http://localhost/api/auth/stytch/callback", {
       method: "POST",
       body: JSON.stringify({ session_token: "bad-token" }),
     });
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(401);
@@ -67,12 +68,12 @@ describe("POST /api/auth/stytch/callback", () => {
       },
     } as never);
 
-    const request = new Request("http://localhost/api/auth/stytch/callback", {
+    const request = new NextRequest("http://localhost/api/auth/stytch/callback", {
       method: "POST",
       body: JSON.stringify({ session_token: "valid-token" }),
     });
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -103,12 +104,12 @@ describe("POST /api/auth/stytch/callback", () => {
         tenantId: "t-1",      },
     } as never);
 
-    const request = new Request("http://localhost/api/auth/stytch/callback", {
+    const request = new NextRequest("http://localhost/api/auth/stytch/callback", {
       method: "POST",
       body: JSON.stringify({ session_token: "valid-token" }),
     });
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -120,18 +121,18 @@ describe("POST /api/auth/stytch/callback", () => {
       throw new Error("Unexpected");
     });
 
-    const request = new Request("http://localhost/api/auth/stytch/callback", {
+    const request = new NextRequest("http://localhost/api/auth/stytch/callback", {
       method: "POST",
       body: JSON.stringify({ session_token: "valid-token" }),
     });
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(500);
     expect(data).toEqual({
       success: false,
-      error: { code: ErrorCodes.AUTH_STYTCH_CALLBACK_FAILED },
+      error: { code: ErrorCodes.INTERNAL_ERROR },
     });
   });
 });

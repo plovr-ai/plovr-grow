@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { withApiHandler } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { getAllPlans } from "@/services/subscription";
 
 // GET: List available subscription plans
-export async function GET() {
+export const GET = withApiHandler(async () => {
   const session = await auth();
   if (!session?.user?.tenantId) {
     return NextResponse.json(
@@ -24,4 +25,4 @@ export async function GET() {
       features: plan.features,
     })),
   });
-}
+});

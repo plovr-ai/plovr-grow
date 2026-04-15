@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateExternalRequest } from "@/lib/external-auth";
+import { withApiHandler } from "@/lib/api";
 
-export async function GET(request: NextRequest) {
+export const GET = withApiHandler(async (request: NextRequest) => {
   const caller = await validateExternalRequest(request);
 
   if (!caller.authenticated) {
@@ -18,4 +19,4 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     },
   });
-}
+});

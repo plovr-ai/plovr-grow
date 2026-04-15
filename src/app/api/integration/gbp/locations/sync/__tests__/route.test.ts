@@ -58,7 +58,7 @@ describe("POST /api/integration/gbp/locations/sync", () => {
   it("should return 401 when not authenticated", async () => {
     mockAuth.mockResolvedValue(null);
 
-    const response = await POST(createRequest({ merchantId: "m1", locationName: "loc/1" }));
+    const response = await POST(createRequest({ merchantId: "m1", locationName: "loc/1" }), { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(401);
@@ -69,7 +69,7 @@ describe("POST /api/integration/gbp/locations/sync", () => {
   it("should return 401 when session has no tenantId", async () => {
     mockAuth.mockResolvedValue({ user: {} });
 
-    const response = await POST(createRequest({ merchantId: "m1", locationName: "loc/1" }));
+    const response = await POST(createRequest({ merchantId: "m1", locationName: "loc/1" }), { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(401);
@@ -79,7 +79,7 @@ describe("POST /api/integration/gbp/locations/sync", () => {
   it("should return 400 when merchantId is missing", async () => {
     mockAuth.mockResolvedValue(mockSession);
 
-    const response = await POST(createRequest({ locationName: "loc/1" }));
+    const response = await POST(createRequest({ locationName: "loc/1" }), { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -90,7 +90,7 @@ describe("POST /api/integration/gbp/locations/sync", () => {
   it("should return 400 when locationName is missing", async () => {
     mockAuth.mockResolvedValue(mockSession);
 
-    const response = await POST(createRequest({ merchantId: "m1" }));
+    const response = await POST(createRequest({ merchantId: "m1" }), { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -114,7 +114,8 @@ describe("POST /api/integration/gbp/locations/sync", () => {
     mockUpdateOnboardingStep.mockResolvedValue({} as ReturnType<typeof tenantService.updateOnboardingStep> extends Promise<infer T> ? T : never);
 
     const response = await POST(
-      createRequest({ merchantId: "m1", locationName: "locations/456" })
+      createRequest({ merchantId: "m1", locationName: "locations/456" }),
+      { params: Promise.resolve({}) }
     );
     const data = await response.json();
 
@@ -138,13 +139,14 @@ describe("POST /api/integration/gbp/locations/sync", () => {
     );
 
     const response = await POST(
-      createRequest({ merchantId: "m1", locationName: "locations/456" })
+      createRequest({ merchantId: "m1", locationName: "locations/456" }),
+      { params: Promise.resolve({}) }
     );
     const data = await response.json();
 
     expect(response.status).toBe(404);
     expect(data.success).toBe(false);
-    expect(data.error).toBe("INTEGRATION_NOT_CONNECTED");
+    expect(data.error.code).toBe("INTEGRATION_NOT_CONNECTED");
   });
 
   it("should return 500 for unexpected errors", async () => {
@@ -152,12 +154,13 @@ describe("POST /api/integration/gbp/locations/sync", () => {
     mockSyncLocation.mockRejectedValue(new Error("Network failure"));
 
     const response = await POST(
-      createRequest({ merchantId: "m1", locationName: "locations/456" })
+      createRequest({ merchantId: "m1", locationName: "locations/456" }),
+      { params: Promise.resolve({}) }
     );
     const data = await response.json();
 
     expect(response.status).toBe(500);
     expect(data.success).toBe(false);
-    expect(data.error).toBe("Failed to sync GBP location");
+    expect(data.error.code).toBe("INTERNAL_ERROR");
   });
 });
