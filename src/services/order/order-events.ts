@@ -8,6 +8,7 @@ import type {
   OrderEventHandler,
   OrderEventPayload,
 } from "./order-events.types";
+import { logger } from "@/lib/logger";
 
 type EventMap = {
   // Payment events
@@ -90,12 +91,12 @@ class OrderEventEmitter {
         try {
           const result = handler(payload);
           if (result instanceof Promise) {
-            result.catch((error) => {
-              console.error(`Error in order event handler for ${event}:`, error);
+            result.catch((error: unknown) => {
+              logger.error({ err: error, event }, "Error in order event handler");
             });
           }
         } catch (error) {
-          console.error(`Error in order event handler for ${event}:`, error);
+          logger.error({ err: error, event }, "Error in order event handler");
         }
       }, 0);
     });
@@ -113,10 +114,9 @@ export const orderEventEmitter = new OrderEventEmitter();
 
 if (process.env.NODE_ENV === "development") {
   orderEventEmitter.onAny((event: OrderEventPayload) => {
-    console.log(`[OrderEvent]`, {
-      orderId: event.orderId,
-      orderNumber: event.orderNumber,
-      merchantId: event.merchantId,
-    });
+    logger.debug(
+      { orderId: event.orderId, orderNumber: event.orderNumber, merchantId: event.merchantId },
+      "Order event emitted"
+    );
   });
 }

@@ -5,6 +5,9 @@ import { orderService } from "@/services/order";
 import { stripeConnectService } from "@/services/stripe-connect";
 import type { ConnectAccountStatus } from "@/services/stripe-connect/stripe-connect.types";
 import { withApiHandler } from "@/lib/api";
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ module: "stripe-connect-webhook" });
 
 export const runtime = "nodejs";
 
@@ -42,9 +45,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
       const paymentMethodType =
         paymentIntent.charges?.data[0]?.payment_method_details?.type;
 
-      console.log(
-        `[Stripe Connect Webhook] Payment intent succeeded: ${paymentIntent.id}`
-      );
+      log.info({ paymentIntentId: paymentIntent.id }, "Payment intent succeeded");
       await paymentService.handlePaymentSucceeded({
         provider: "stripe",
         providerPaymentId: paymentIntent.id,
@@ -70,9 +71,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
 
     case "payment_intent.payment_failed": {
       const paymentIntent = event.data.object;
-      console.log(
-        `[Stripe Connect Webhook] Payment intent failed: ${paymentIntent.id}`
-      );
+      log.warn({ paymentIntentId: paymentIntent.id }, "Payment intent failed");
       await paymentService.handlePaymentFailed({
         provider: "stripe",
         providerPaymentId: paymentIntent.id,
@@ -103,9 +102,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
         payoutsEnabled: account.payouts_enabled ?? false,
         detailsSubmitted: account.details_submitted ?? false,
       };
-      console.log(
-        `[Stripe Connect Webhook] Account updated: ${stripeAccountId}`
-      );
+      log.info({ stripeAccountId }, "Account updated");
       await stripeConnectService.handleAccountUpdated(
         stripeAccountId,
         status
@@ -114,9 +111,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
     }
 
     default:
-      console.log(
-        `[Stripe Connect Webhook] Unhandled event: ${event.type}`
-      );
+      log.info({ eventType: event.type }, "Unhandled event type");
   }
 
   return NextResponse.json({ received: true });

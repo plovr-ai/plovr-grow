@@ -2,6 +2,7 @@ import { integrationRepository } from "@/repositories/integration.repository";
 import type { PosWebhookProvider } from "./pos-webhook-provider.interface";
 import { computeNextRetryAt } from "@/lib/retry";
 import { WEBHOOK_EVENT_STATUS } from "@/services/square/square.types";
+import { logger } from "@/lib/logger";
 
 export interface WebhookDispatchResult {
   status: number;
@@ -54,7 +55,7 @@ export class WebhookDispatcherService {
 
     // 2. Signature verification
     if (!provider.verifyWebhook(rawBody, headers)) {
-      console.error(`[Webhook ${providerName}] Signature verification failed`);
+      logger.error({ provider: providerName }, "Webhook signature verification failed");
       return {
         status: 401,
         body: { error: "invalid_signature" },
@@ -75,8 +76,9 @@ export class WebhookDispatcherService {
           provider.type
         );
       if (!connection) {
-        console.error(
-          `[Webhook ${providerName}] No connection found for external account: ${event.externalAccountId}`
+        logger.error(
+          { provider: providerName, externalAccountId: event.externalAccountId },
+          "No connection found for external account"
         );
         return { status: 200, body: { received: true, error: "connection_not_found" } };
       }
@@ -87,8 +89,9 @@ export class WebhookDispatcherService {
         event.eventId
       );
       if (existing) {
-        console.log(
-          `[Webhook ${providerName}] Duplicate event skipped: ${event.eventId}`
+        logger.info(
+          { provider: providerName, eventId: event.eventId },
+          "Duplicate webhook event skipped"
         );
         return { status: 200, body: { received: true, deduplicated: true } };
       }
@@ -117,9 +120,9 @@ export class WebhookDispatcherService {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
-        console.error(
-          `[Webhook ${providerName}] Handler failed for ${event.eventType}:`,
-          errorMessage
+        logger.error(
+          { provider: providerName, eventType: event.eventType, error: errorMessage },
+          "Webhook handler failed"
         );
         const nextRetryAt = computeNextRetryAt(0);
         await integrationRepository.scheduleWebhookEventRetry(
@@ -130,9 +133,9 @@ export class WebhookDispatcherService {
         );
       }
     } catch (error) {
-      console.error(
-        `[Webhook ${providerName}] Pipeline error (acked):`,
-        error instanceof Error ? error.message : error
+      logger.error(
+        { provider: providerName, error: error instanceof Error ? error.message : error },
+        "Webhook pipeline error (acked)"
       );
     }
 
