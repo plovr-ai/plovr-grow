@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { getApiErrorMessage } from "@/lib/api";
 import { usePhoneInput } from "@/hooks";
 import { useCompanySlug, useLoyalty, type LoyaltyMember } from "@/contexts";
 import { OtpModal } from "../checkout/OtpModal";
@@ -84,7 +85,7 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
       const data = await response.json();
 
       if (!data.success) {
-        setPhoneError(data.error || "Failed to verify phone number");
+        setPhoneError(getApiErrorMessage(data.error, "Failed to verify phone number"));
         return;
       }
 
@@ -164,7 +165,7 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
         const data = await response.json();
 
         if (!data.success) {
-          setVerifyError(data.error || "Verification failed");
+          setVerifyError(getApiErrorMessage(data.error, "Verification failed"));
           return;
         }
 
@@ -217,7 +218,7 @@ export function SignInModal({ isOpen, onClose, onSuccess }: SignInModalProps) {
 
     const data = await response.json();
     if (!data.success) {
-      throw new Error(data.error);
+      throw new Error(getApiErrorMessage(data.error));
     }
   }, [companySlug, phone]);
 

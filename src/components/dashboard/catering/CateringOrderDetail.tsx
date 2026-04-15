@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Send, Check, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice, formatPhone } from "@/lib/utils";
+import { getApiErrorMessage } from "@/lib/api";
 import { formatCustomerName } from "@/lib/names";
 import type { CateringOrderWithRelations, CateringOrderItem } from "@/services/catering/catering-order.types";
 
@@ -57,7 +58,7 @@ export function CateringOrderDetail({ order }: CateringOrderDetailProps) {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to send invoice");
+        throw new Error(getApiErrorMessage(data.error, "Failed to send invoice"));
       }
 
       router.refresh();
@@ -83,7 +84,7 @@ export function CateringOrderDetail({ order }: CateringOrderDetailProps) {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to update status");
+        throw new Error(getApiErrorMessage(data.error, "Failed to update status"));
       }
 
       router.refresh();

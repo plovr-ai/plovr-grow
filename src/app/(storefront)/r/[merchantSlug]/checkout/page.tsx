@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { getApiErrorMessage } from "@/lib/api";
 import { useCartStore, useCartHydration } from "@/stores";
 import { usePricing } from "@/hooks";
 import { useFeeConfig, useLoyalty, useCountry, useTrial } from "@/contexts";
@@ -229,10 +230,12 @@ export default function CheckoutPage() {
         setPaymentIntentId(data.data.paymentIntentId);
         setStripeAccountId(data.data.stripeAccountId ?? null);
       } else {
-        const errMsg: string = data.error || "Failed to initialize payment";
+        const errMsg: string = getApiErrorMessage(data.error, "Failed to initialize payment");
+        const errorCode = typeof data.error === "object" && data.error?.code;
         setPaymentError(errMsg);
         // If Connect is not available, fall back to cash
-        if (errMsg.includes("STRIPE_CONNECT")) {
+        if (typeof errorCode === "string" && errorCode.startsWith("STRIPE_CONNECT")) {
+          setIsStripeConnectError(true);
           setFormState((prev) => ({ ...prev, paymentMethod: "cash" }));
         } else {
           setSubmitError(errMsg);
@@ -266,7 +269,8 @@ export default function CheckoutPage() {
   }, [amountDue]);
 
   // Determine if online (card) payment is available based on payment errors
-  const isOnlinePaymentAvailable = !paymentError?.includes("STRIPE_CONNECT");
+  const [isStripeConnectError, setIsStripeConnectError] = useState(false);
+  const isOnlinePaymentAvailable = !isStripeConnectError;
 
   // Handle form field changes
   const handleContactChange = (
@@ -441,7 +445,7 @@ export default function CheckoutPage() {
 
         const paymentResult = await cardPaymentFormRef.current.confirmPayment();
         if (!paymentResult.success) {
-          setSubmitError(paymentResult.error || "Payment failed");
+          setSubmitError(getApiErrorMessage(paymentResult.error, "Payment failed"));
           setIsSubmitting(false);
           return;
         }
@@ -481,7 +485,7 @@ export default function CheckoutPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to place order");
+        throw new Error(getApiErrorMessage(data.error, "Failed to place order"));
       }
 
       // Success - set flag first, then clear cart and redirect

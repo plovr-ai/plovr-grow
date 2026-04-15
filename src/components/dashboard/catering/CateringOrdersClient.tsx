@@ -11,6 +11,7 @@ import { Pagination } from "@/components/orders/Pagination";
 import { formatPhone } from "@/lib/utils";
 import { formatCustomerName } from "@/lib/names";
 import { useDashboardFormatPrice, useDashboardFormatDateTime } from "@/hooks";
+import { getApiErrorMessage } from "@/lib/api";
 import { OrderViewTabs } from "./OrderViewTabs";
 import { OrderCalendar } from "./OrderCalendar";
 import type { CateringOrderData, CateringOrderInvoice } from "@/services/catering/catering-order.types";
@@ -131,7 +132,7 @@ export function CateringOrdersClient({
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to send invoice");
+        throw new Error(getApiErrorMessage(data.error, "Failed to send invoice"));
       }
 
       // Refresh the page to show updated status

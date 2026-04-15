@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ArrowLeft, User, Phone, Mail, MapPin, FileText } from "lucide-react";
 import { useDashboardFormatPrice, useDashboardFormatDateTime } from "@/hooks";
 import { formatCustomerName } from "@/lib/names";
+import { getApiErrorMessage } from "@/lib/api";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { PaymentStatusBadge, FulfillmentStatusBadge } from "./StatusBadge";
 import type { OrderStatus, FulfillmentStatus, OrderMode, OrderItemData, DeliveryAddress, SalesChannel, PaymentType } from "@/types";
@@ -135,7 +136,7 @@ function OrderStatusProgress({
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || t("actions.markPaidFailed"));
+        throw new Error(getApiErrorMessage(data.error, t("actions.markPaidFailed")));
       }
 
       router.refresh();

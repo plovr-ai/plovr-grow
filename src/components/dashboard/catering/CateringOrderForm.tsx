@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { MenuItemPickerModal } from "./MenuItemPickerModal";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPrice } from "@/lib/utils";
+import { getApiErrorMessage } from "@/lib/api";
 import type { CateringOrderItem } from "@/services/catering/catering-order.types";
 
 interface MenuInfo {
@@ -196,7 +197,7 @@ export function CateringOrderForm({
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to create order");
+        throw new Error(getApiErrorMessage(data.error, "Failed to create order"));
       }
 
       const { data } = await response.json();

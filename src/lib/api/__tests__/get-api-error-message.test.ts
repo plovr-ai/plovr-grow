@@ -9,8 +9,14 @@ describe("getApiErrorMessage", () => {
       );
     });
 
-    it("should return empty string as-is", () => {
-      expect(getApiErrorMessage("")).toBe("");
+    it("should treat empty string as missing and return fallback", () => {
+      expect(getApiErrorMessage("", "Fallback")).toBe("Fallback");
+    });
+
+    it("should treat empty string as missing and return default", () => {
+      expect(getApiErrorMessage("")).toBe(
+        "An unexpected error occurred. Please try again."
+      );
     });
   });
 

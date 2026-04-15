@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState, useRef } from "react";
 import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getApiErrorMessage } from "@/lib/api";
 
 interface ImageUploaderProps {
   value: string;
@@ -46,7 +47,7 @@ export function ImageUploader({ value, onChange, disabled }: ImageUploaderProps)
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Upload failed");
+        throw new Error(getApiErrorMessage(data.error, "Upload failed"));
       }
 
       const data = await response.json();

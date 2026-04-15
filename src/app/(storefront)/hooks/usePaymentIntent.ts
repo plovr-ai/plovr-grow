@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { getApiErrorMessage } from "@/lib/api";
 
 interface UsePaymentIntentOptions {
   amount: number | null;
@@ -73,7 +74,7 @@ export function usePaymentIntent({
         setStripeAccountId(data.data.stripeAccountId ?? null);
         lastAmountRef.current = amount;
       } else {
-        setError(data.error || "Failed to initialize payment");
+        setError(getApiErrorMessage(data.error, "Failed to initialize payment"));
       }
     } catch (err) {
       console.error("Payment intent creation failed:", err);

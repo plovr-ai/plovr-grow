@@ -12,6 +12,7 @@ import {
   createCategoryAction,
   updateCategoryAction,
 } from "@/app/(dashboard)/dashboard/(protected)/menu/actions";
+import { getApiErrorMessage } from "@/lib/api";
 import type { DashboardCategory } from "@/services/menu/menu.types";
 
 interface CategoryFormProps {
@@ -57,7 +58,7 @@ export function CategoryForm({ menuId, category, onClose }: CategoryFormProps) {
       if (result.success) {
         onClose();
       } else {
-        setError(result.error || "An error occurred");
+        setError(getApiErrorMessage(result.error, "An error occurred"));
       }
     });
   };

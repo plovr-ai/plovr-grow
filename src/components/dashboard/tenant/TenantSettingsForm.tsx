@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SelectField } from "@/components/dashboard/Form";
 import { updateTenantSettingsAction } from "@/app/(dashboard)/dashboard/(protected)/tenant/actions";
+import { getApiErrorMessage } from "@/lib/api";
 import { CURRENCY_OPTIONS, LOCALE_OPTIONS } from "@/constants/i18n";
 
 interface TenantSettingsFormProps {
@@ -40,7 +41,7 @@ export function TenantSettingsForm({
         router.refresh();
         onClose();
       } else {
-        setError(result.error ?? "Failed to update settings");
+        setError(getApiErrorMessage(result.error, "Failed to update settings"));
       }
     });
   };

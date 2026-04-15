@@ -7,6 +7,7 @@ import {
   getAvailableItemsAction,
   linkItemToCategoryAction,
 } from "@/app/(dashboard)/dashboard/(protected)/menu/actions";
+import { getApiErrorMessage } from "@/lib/api";
 import type { AvailableItem } from "@/services/menu/menu.types";
 import { MenuItemRow } from "./MenuItemRow";
 import { MenuItemSearchList } from "./MenuItemSearchList";
@@ -36,7 +37,7 @@ export function AddExistingItemModal({
       if (result.success && result.data) {
         setItems(result.data);
       } else {
-        setError(result.error || "Failed to load items");
+        setError(getApiErrorMessage(result.error, "Failed to load items"));
       }
       setIsLoading(false);
     }
@@ -61,7 +62,7 @@ export function AddExistingItemModal({
       for (const itemId of selectedIds) {
         const result = await linkItemToCategoryAction(categoryId, itemId);
         if (!result.success) {
-          setError(result.error || "Failed to add item");
+          setError(getApiErrorMessage(result.error, "Failed to add item"));
           return;
         }
       }

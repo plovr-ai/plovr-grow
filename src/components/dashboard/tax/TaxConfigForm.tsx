@@ -12,6 +12,7 @@ import {
   createTaxConfigAction,
   updateTaxConfigAction,
 } from "@/app/(dashboard)/dashboard/(protected)/menu/tax/actions";
+import { getApiErrorMessage } from "@/lib/api";
 import type {
   TaxConfigWithRates,
   RoundingMethod,
@@ -130,7 +131,7 @@ export function TaxConfigForm({
       if (result.success) {
         onClose();
       } else {
-        setError(result.error || "An error occurred");
+        setError(getApiErrorMessage(result.error, "An error occurred"));
       }
     });
   };

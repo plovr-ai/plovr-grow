@@ -685,7 +685,7 @@ describe("CheckoutPage", () => {
             ok: true,
             json: async () => ({
               success: false,
-              error: "STRIPE_CONNECT not configured",
+              error: { code: "STRIPE_CONNECT_NOT_CONFIGURED" },
             }),
           });
         }

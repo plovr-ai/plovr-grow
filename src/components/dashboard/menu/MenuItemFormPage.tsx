@@ -18,6 +18,7 @@ import {
   createMenuItemAction,
   updateMenuItemAction,
 } from "@/app/(dashboard)/dashboard/(protected)/menu/actions";
+import { getApiErrorMessage } from "@/lib/api";
 import type {
   DashboardMenuItem,
   DashboardCategory,
@@ -104,7 +105,7 @@ export function MenuItemFormPage({
       if (result.success) {
         router.push(`/dashboard/menu?category=${categoryId}`);
       } else {
-        setError(result.error || "An error occurred");
+        setError(getApiErrorMessage(result.error, "An error occurred"));
       }
     });
   };

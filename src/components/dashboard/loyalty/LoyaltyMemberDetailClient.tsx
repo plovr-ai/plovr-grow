@@ -22,6 +22,7 @@ import {
 import { useMerchants } from "@/contexts";
 import { formatPhone } from "@/lib/utils";
 import { formatCustomerName } from "@/lib/names";
+import { getApiErrorMessage } from "@/lib/api";
 import { AdjustPointsModal } from "./AdjustPointsModal";
 import type { OrderStatus, OrderMode } from "@/types";
 
@@ -479,7 +480,7 @@ export function LoyaltyMemberDetailClient({
     const result = await response.json();
 
     if (!result.success) {
-      throw new Error(result.error || "Failed to adjust points");
+      throw new Error(getApiErrorMessage(result.error, "Failed to adjust points"));
     }
 
     // Refresh the page to show updated data

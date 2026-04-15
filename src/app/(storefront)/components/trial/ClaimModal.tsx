@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getApiErrorMessage } from "@/lib/api";
 import { claimSchema, type ClaimInput } from "@/lib/validations/auth";
 
 interface ClaimModalProps {
@@ -60,7 +61,7 @@ export function ClaimModal({ tenantId, companySlug, isOpen, onClose }: ClaimModa
       const data = await res.json();
 
       if (!data.success) {
-        setError(data.error ?? "Failed to claim website");
+        setError(getApiErrorMessage(data.error, "Failed to claim website"));
         return;
       }
 

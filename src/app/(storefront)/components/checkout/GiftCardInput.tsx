@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getApiErrorMessage } from "@/lib/api";
 import { useFormatPrice } from "@/hooks";
 import { useMerchantConfig } from "@/contexts";
 import { formatGiftCardNumber, normalizeGiftCardNumber } from "@/lib/giftcard";
@@ -68,7 +69,7 @@ export function GiftCardInput({
 
       if (!response.ok || !data.success) {
         setValidationState("error");
-        setErrorMessage(data.error || "Invalid gift card");
+        setErrorMessage(getApiErrorMessage(data.error, "Invalid gift card"));
         return;
       }
 

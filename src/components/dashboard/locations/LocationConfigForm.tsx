@@ -21,6 +21,7 @@ import {
   LOCALE_OPTIONS,
   TIMEZONE_OPTIONS,
 } from "@/constants/i18n";
+import { getApiErrorMessage } from "@/lib/api";
 import type { MerchantWithTenant } from "@/services/merchant/merchant.types";
 import type { BusinessHoursMap, MerchantStatus } from "@/types/merchant";
 import type { TipConfig, FeeConfig } from "@/types";
@@ -163,7 +164,7 @@ export function LocationConfigForm({ merchant }: LocationConfigFormProps) {
         setSuccessMessage("Location settings saved successfully!");
         router.refresh();
       } else {
-        setError(result.error || "Failed to save settings");
+        setError(getApiErrorMessage(result.error, "Failed to save settings"));
       }
     });
   };
