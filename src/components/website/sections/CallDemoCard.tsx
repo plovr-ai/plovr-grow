@@ -204,7 +204,7 @@ export function CallDemoCard({ compact = false }: CallDemoCardProps) {
 
         {/* CTA Button */}
         <a
-          href={siteConfig.cta.secondary.href}
+          href="/playground"
           className="mt-1 flex w-full items-center justify-center gap-2.5 rounded-2xl bg-[#ffbf00] px-6 py-3.5 font-bold text-[#1c1b1b] shadow-md transition-all hover:shadow-lg hover:brightness-105"
         >
           <svg
