@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { squareOrderRetryService } from "@/services/square/square-order-retry.service";
 import { withApiHandler } from "@/lib/api";
@@ -21,6 +22,15 @@ export const GET = withApiHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await squareOrderRetryService.retryFailedOrderPushes();
+  const result = await Sentry.withMonitor(
+    "square-order-push-retry",
+    async () => squareOrderRetryService.retryFailedOrderPushes(),
+    {
+      schedule: { type: "crontab", value: "*/5 * * * *" },
+      checkinMargin: 2,
+      maxRuntime: 10,
+      timezone: "America/New_York",
+    }
+  );
   return NextResponse.json({ ok: true, ...result });
 });

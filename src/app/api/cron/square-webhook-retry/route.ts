@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { squareWebhookService } from "@/services/square/square-webhook.service";
 import { withApiHandler } from "@/lib/api";
@@ -24,6 +25,15 @@ export const GET = withApiHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await squareWebhookService.retryFailedEvents();
+  const result = await Sentry.withMonitor(
+    "square-webhook-retry",
+    async () => squareWebhookService.retryFailedEvents(),
+    {
+      schedule: { type: "crontab", value: "*/5 * * * *" },
+      checkinMargin: 2,
+      maxRuntime: 10,
+      timezone: "America/New_York",
+    }
+  );
   return NextResponse.json({ ok: true, ...result });
 });
