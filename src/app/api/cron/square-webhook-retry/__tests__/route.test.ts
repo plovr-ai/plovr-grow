@@ -40,7 +40,7 @@ describe("GET /api/cron/square-webhook-retry", () => {
   it("returns 500 when CRON_SECRET is not configured", async () => {
     delete process.env.CRON_SECRET;
 
-    const response = await GET(buildRequest("Bearer anything"));
+    const response = await GET(buildRequest("Bearer anything"), { params: Promise.resolve({}) });
 
     expect(response.status).toBe(500);
     expect(mockRetryFailedEvents).not.toHaveBeenCalled();
@@ -51,7 +51,7 @@ describe("GET /api/cron/square-webhook-retry", () => {
   it("returns 401 when authorization header is missing", async () => {
     process.env.CRON_SECRET = "test-secret";
 
-    const response = await GET(buildRequest());
+    const response = await GET(buildRequest(), { params: Promise.resolve({}) });
 
     expect(response.status).toBe(401);
     expect(mockRetryFailedEvents).not.toHaveBeenCalled();
@@ -60,7 +60,7 @@ describe("GET /api/cron/square-webhook-retry", () => {
   it("returns 401 when authorization header is incorrect", async () => {
     process.env.CRON_SECRET = "test-secret";
 
-    const response = await GET(buildRequest("Bearer wrong-secret"));
+    const response = await GET(buildRequest("Bearer wrong-secret"), { params: Promise.resolve({}) });
 
     expect(response.status).toBe(401);
     expect(mockRetryFailedEvents).not.toHaveBeenCalled();
@@ -74,7 +74,7 @@ describe("GET /api/cron/square-webhook-retry", () => {
       deadLettered: 0,
     });
 
-    const response = await GET(buildRequest("Bearer test-secret"));
+    const response = await GET(buildRequest("Bearer test-secret"), { params: Promise.resolve({}) });
 
     expect(response.status).toBe(200);
     expect(mockRetryFailedEvents).toHaveBeenCalledTimes(1);
@@ -91,11 +91,11 @@ describe("GET /api/cron/square-webhook-retry", () => {
     process.env.CRON_SECRET = "test-secret";
     mockRetryFailedEvents.mockRejectedValue(new Error("db down"));
 
-    const response = await GET(buildRequest("Bearer test-secret"));
+    const response = await GET(buildRequest("Bearer test-secret"), { params: Promise.resolve({}) });
 
     expect(response.status).toBe(500);
     const body = await response.json();
-    expect(body.ok).toBe(false);
-    expect(body.error).toBe("db down");
+    expect(body.success).toBe(false);
+    expect(body.error).toEqual({ code: "INTERNAL_ERROR" });
   });
 });

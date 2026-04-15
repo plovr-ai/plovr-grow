@@ -21,7 +21,7 @@ describe("GET /api/external/v1/health", () => {
     const request = new NextRequest(
       "http://localhost/api/external/v1/health"
     );
-    const response = await GET(request);
+    const response = await GET(request, { params: Promise.resolve({}) });
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -38,7 +38,7 @@ describe("GET /api/external/v1/health", () => {
     const request = new NextRequest(
       "http://localhost/api/external/v1/health"
     );
-    const response = await GET(request);
+    const response = await GET(request, { params: Promise.resolve({}) });
     const body = await response.json();
 
     expect(response.status).toBe(401);

@@ -258,7 +258,7 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
 
     expect(response.status).toBe(500);
     expect(data.success).toBe(false);
-    expect(data.error).toBe("Stripe API error");
+    expect(data.error).toEqual({ code: "INTERNAL_ERROR" });
   });
 
   it("should handle non-Error exceptions", async () => {
@@ -287,6 +287,6 @@ describe("POST /api/storefront/[companySlug]/payment-intent", () => {
 
     expect(response.status).toBe(500);
     expect(data.success).toBe(false);
-    expect(data.error).toBe("Failed to create payment intent");
+    expect(data.error).toEqual({ code: "INTERNAL_ERROR" });
   });
 });

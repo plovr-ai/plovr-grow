@@ -625,7 +625,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
 
       expect(response.status).toBe(500);
       expect(data.success).toBe(false);
-      expect(data.error).toBe("Database error");
+      expect(data.error).toEqual({ code: "INTERNAL_ERROR" });
     });
 
     it("should return 500 when giftCardService throws error", async () => {
@@ -652,7 +652,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
 
       expect(response.status).toBe(500);
       expect(data.success).toBe(false);
-      expect(data.error).toBe("Card generation failed");
+      expect(data.error).toEqual({ code: "INTERNAL_ERROR" });
     });
 
     it("should handle non-Error exceptions", async () => {
@@ -676,7 +676,7 @@ describe("POST /api/storefront/[companySlug]/giftcard", () => {
 
       expect(response.status).toBe(500);
       expect(data.success).toBe(false);
-      expect(data.error).toBe("Failed to create order");
+      expect(data.error).toEqual({ code: "INTERNAL_ERROR" });
     });
   });
 });

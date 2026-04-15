@@ -92,7 +92,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -161,7 +161,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -195,7 +195,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -219,7 +219,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     // Null is not allowed by Zod schema
@@ -277,7 +277,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -349,7 +349,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -383,12 +383,12 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(500);
     expect(data.success).toBe(false);
-    expect(data.error).toBe("An error occurred while verifying OTP");
+    expect(data.error).toEqual({ code: "INTERNAL_ERROR" });
   });
 
   it("should return error when company not found", async () => {
@@ -409,7 +409,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(404);
@@ -449,7 +449,7 @@ describe("POST /api/storefront/loyalty/otp/verify", () => {
       }
     );
 
-    const response = await POST(request);
+    const response = await POST(request, { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);

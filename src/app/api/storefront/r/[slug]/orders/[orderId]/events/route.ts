@@ -1,4 +1,5 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { withApiHandler } from "@/lib/api";
 import { orderEventEmitter } from "@/services/order";
 import { merchantService } from "@/services/merchant";
 import type {
@@ -8,16 +9,13 @@ import type {
 
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string; orderId: string }> }
-) {
-  const { slug, orderId } = await params;
+export const GET = withApiHandler(async (request: NextRequest, context) => {
+  const { slug, orderId } = await context.params;
 
   // Validate merchant
   const merchant = await merchantService.getMerchantBySlug(slug);
   if (!merchant) {
-    return new Response("Restaurant not found", { status: 404 });
+    return new NextResponse("Restaurant not found", { status: 404 });
   }
 
   const encoder = new TextEncoder();
@@ -71,11 +69,11 @@ export async function GET(
     },
   });
 
-  return new Response(stream, {
+  return new NextResponse(stream, {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
     },
   });
-}
+});

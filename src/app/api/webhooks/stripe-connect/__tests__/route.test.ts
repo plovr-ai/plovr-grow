@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { POST } from "../route";
+import { NextRequest } from "next/server";
 
 // Mock services
 vi.mock("@/services/stripe", () => ({
@@ -33,8 +34,8 @@ import { paymentService } from "@/services/payment";
 import { orderService } from "@/services/order";
 import { stripeConnectService } from "@/services/stripe-connect";
 
-function makeRequest(body: unknown, signature?: string): Request {
-  return new Request("http://localhost:3000/api/webhooks/stripe-connect", {
+function makeRequest(body: unknown, signature?: string): NextRequest {
+  return new NextRequest("http://localhost:3000/api/webhooks/stripe-connect", {
     method: "POST",
     body: JSON.stringify(body),
     headers: signature ? { "stripe-signature": signature } : {},
@@ -57,7 +58,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
     it("should return 400 when stripe-signature header is missing", async () => {
       const request = makeRequest({ type: "test" });
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(400);
@@ -74,7 +75,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
 
       const request = makeRequest({ type: "test" }, "invalid_sig");
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(400);
@@ -116,7 +117,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
 
       const request = makeRequest(event, "valid_sig");
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -152,7 +153,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
 
       const request = makeRequest(event, "valid_sig");
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -192,7 +193,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
 
       const request = makeRequest(event, "valid_sig");
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -224,7 +225,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
 
       const request = makeRequest(event, "valid_sig");
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -262,7 +263,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
 
       const request = makeRequest(event, "valid_sig");
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -299,7 +300,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
       );
 
       const request = makeRequest(event, "valid_sig");
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -333,7 +334,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
 
       const request = makeRequest(event, "valid_sig");
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -370,7 +371,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
       );
 
       const request = makeRequest(event, "valid_sig");
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(200);
       expect(paymentService.handlePaymentSucceeded).toHaveBeenCalledWith(
@@ -400,7 +401,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
       );
 
       const request = makeRequest(event, "valid_sig");
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(200);
       expect(stripeConnectService.handleAccountUpdated).toHaveBeenCalledWith(
@@ -429,7 +430,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
 
       const request = makeRequest(event, "valid_sig");
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -454,7 +455,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
       vi.mocked(paymentService.handlePaymentSucceeded).mockResolvedValue(undefined);
 
       const request = makeRequest(event, "valid_sig");
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(200);
       expect(paymentService.getPaymentByProviderPaymentId).toHaveBeenCalledWith("stripe", "pi_test_order");
@@ -488,7 +489,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
       vi.mocked(paymentService.handlePaymentFailed).mockResolvedValue(undefined);
 
       const request = makeRequest(event, "valid_sig");
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(200);
       expect(paymentService.getPaymentByProviderPaymentId).toHaveBeenCalledWith("stripe", "pi_test_fail");
@@ -517,7 +518,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
       vi.mocked(paymentService.handlePaymentSucceeded).mockResolvedValue(undefined);
 
       const request = makeRequest(event, "valid_sig");
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(200);
       expect(orderService.updatePaymentStatus).not.toHaveBeenCalled();
@@ -543,7 +544,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
       vi.mocked(paymentService.handlePaymentSucceeded).mockResolvedValue(undefined);
 
       const request = makeRequest(event, "valid_sig");
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(200);
       expect(orderService.updatePaymentStatus).not.toHaveBeenCalled();
@@ -563,7 +564,7 @@ describe("POST /api/webhooks/stripe-connect", () => {
       vi.mocked(paymentService.handlePaymentSucceeded).mockResolvedValue(undefined);
 
       const request = makeRequest(event, "valid_sig");
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
 
       expect(response.status).toBe(200);
       expect(orderService.updatePaymentStatus).not.toHaveBeenCalled();
@@ -592,11 +593,12 @@ describe("POST /api/webhooks/stripe-connect", () => {
 
       const request = makeRequest(event, "valid_sig");
 
-      const response = await POST(request);
+      const response = await POST(request, { params: Promise.resolve({}) });
       const data = await response.json();
 
       expect(response.status).toBe(500);
-      expect(data.error).toBe("Webhook handler failed");
+      expect(data.success).toBe(false);
+      expect(data.error.code).toBe("INTERNAL_ERROR");
     });
   });
 });

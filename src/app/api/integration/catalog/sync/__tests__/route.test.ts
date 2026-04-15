@@ -55,7 +55,7 @@ describe("POST /api/integration/catalog/sync", () => {
   it("should return 401 when not authenticated", async () => {
     mockAuth.mockResolvedValue(null);
 
-    const response = await POST(createRequest({ merchantId: "m1" }));
+    const response = await POST(createRequest({ merchantId: "m1" }), { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(401);
@@ -66,7 +66,7 @@ describe("POST /api/integration/catalog/sync", () => {
   it("should return 401 when session has no tenantId", async () => {
     mockAuth.mockResolvedValue({ user: {} });
 
-    const response = await POST(createRequest({ merchantId: "m1" }));
+    const response = await POST(createRequest({ merchantId: "m1" }), { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(401);
@@ -76,7 +76,7 @@ describe("POST /api/integration/catalog/sync", () => {
   it("should return 400 when merchantId is missing", async () => {
     mockAuth.mockResolvedValue(mockSession);
 
-    const response = await POST(createRequest({}));
+    const response = await POST(createRequest({}), { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -88,7 +88,7 @@ describe("POST /api/integration/catalog/sync", () => {
   it("should return 400 when merchantId is empty", async () => {
     mockAuth.mockResolvedValue(mockSession);
 
-    const response = await POST(createRequest({ merchantId: "" }));
+    const response = await POST(createRequest({ merchantId: "" }), { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -99,7 +99,7 @@ describe("POST /api/integration/catalog/sync", () => {
     mockAuth.mockResolvedValue(mockSession);
     mockGetActivePosConnection.mockResolvedValue(null);
 
-    const response = await POST(createRequest({ merchantId: "m1" }));
+    const response = await POST(createRequest({ merchantId: "m1" }), { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(404);
@@ -119,7 +119,7 @@ describe("POST /api/integration/catalog/sync", () => {
       objectsMapped: 8,
     });
 
-    const response = await POST(createRequest({ merchantId: "m1" }));
+    const response = await POST(createRequest({ merchantId: "m1" }), { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -141,12 +141,12 @@ describe("POST /api/integration/catalog/sync", () => {
       new AppError(ErrorCodes.SQUARE_CATALOG_SYNC_FAILED, undefined, 500)
     );
 
-    const response = await POST(createRequest({ merchantId: "m1" }));
+    const response = await POST(createRequest({ merchantId: "m1" }), { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(500);
     expect(data.success).toBe(false);
-    expect(data.error).toBe("SQUARE_CATALOG_SYNC_FAILED");
+    expect(data.error.code).toBe("SQUARE_CATALOG_SYNC_FAILED");
   });
 
   it("should return 500 for unexpected errors", async () => {
@@ -157,12 +157,12 @@ describe("POST /api/integration/catalog/sync", () => {
     } as never);
     mockSyncCatalog.mockRejectedValue(new Error("Network failure"));
 
-    const response = await POST(createRequest({ merchantId: "m1" }));
+    const response = await POST(createRequest({ merchantId: "m1" }), { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(500);
     expect(data.success).toBe(false);
-    expect(data.error).toBe("Network failure");
+    expect(data.error.code).toBe("INTERNAL_ERROR");
   });
 
   it("should return AppError when provider is not registered", async () => {
@@ -175,11 +175,11 @@ describe("POST /api/integration/catalog/sync", () => {
       throw new AppError(ErrorCodes.POS_PROVIDER_NOT_FOUND, { type: "POS_UNKNOWN" }, 500);
     });
 
-    const response = await POST(createRequest({ merchantId: "m1" }));
+    const response = await POST(createRequest({ merchantId: "m1" }), { params: Promise.resolve({}) });
     const data = await response.json();
 
     expect(response.status).toBe(500);
     expect(data.success).toBe(false);
-    expect(data.error).toBe("POS_PROVIDER_NOT_FOUND");
+    expect(data.error.code).toBe("POS_PROVIDER_NOT_FOUND");
   });
 });

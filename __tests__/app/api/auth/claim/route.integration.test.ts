@@ -39,7 +39,8 @@ describe("POST /api/auth/claim (integration)", () => {
         tenantId,
         email: "claim-test@example.com",
         name: "Claim Tester",
-      }) as never
+      }) as never,
+      { params: Promise.resolve({}) }
     );
 
     expect(res.status).toBe(200);
@@ -68,7 +69,8 @@ describe("POST /api/auth/claim (integration)", () => {
         tenantId: "nonexistent-tenant-id",
         email: "claim-test@example.com",
         name: "Claim Tester",
-      }) as never
+      }) as never,
+      { params: Promise.resolve({}) }
     );
     expect(res.status).toBe(404);
   });
@@ -83,7 +85,8 @@ describe("POST /api/auth/claim (integration)", () => {
         tenantId,
         email: "claim-test@example.com",
         name: "Claim Tester",
-      }) as never
+      }) as never,
+      { params: Promise.resolve({}) }
     );
     expect(res.status).toBe(400);
   });
@@ -94,7 +97,8 @@ describe("POST /api/auth/claim (integration)", () => {
         tenantId,
         email: "claim-test@example.com",
         name: "Claim Tester",
-      }) as never
+      }) as never,
+      { params: Promise.resolve({}) }
     );
     // First claim flips status to active. Reset to trial so the second call
     // hits the duplicate-email branch instead of the not-trial branch.
@@ -108,7 +112,8 @@ describe("POST /api/auth/claim (integration)", () => {
         tenantId,
         email: "claim-test@example.com",
         name: "Claim Tester 2",
-      }) as never
+      }) as never,
+      { params: Promise.resolve({}) }
     );
     expect(res.status).toBe(409);
   });

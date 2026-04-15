@@ -210,7 +210,7 @@ function setupOrderCreationMocks() {
   mockCreatePaymentRecord.mockResolvedValue({ id: generateEntityId() });
 }
 
-function makeOrderInput(): CreateMerchantOrderInput {
+function makeOrderInput(overrides?: Partial<CreateMerchantOrderInput>): CreateMerchantOrderInput {
   return {
     merchantId: MERCHANT_ID,
     customerFirstName: "CG",
@@ -228,6 +228,7 @@ function makeOrderInput(): CreateMerchantOrderInput {
         selectedModifiers: [],
       },
     ],
+    ...overrides,
   };
 }
 

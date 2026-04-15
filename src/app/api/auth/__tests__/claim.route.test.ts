@@ -36,7 +36,7 @@ describe("POST /api/auth/claim", () => {
 
     const res = await POST(makeRequest({
       tenantId: "tenant1", email: "owner@test.com", name: "Owner",
-    }));
+    }), { params: Promise.resolve({}) });
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data).toEqual({ success: true, companySlug: "test-slug" });
@@ -55,7 +55,7 @@ describe("POST /api/auth/claim", () => {
     } as never);
     const res = await POST(makeRequest({
       tenantId: "tenant1", email: "owner@test.com", name: "Owner",
-    }));
+    }), { params: Promise.resolve({}) });
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data).toEqual({
@@ -68,7 +68,7 @@ describe("POST /api/auth/claim", () => {
     vi.mocked(prisma.tenant.findUnique).mockResolvedValue(null);
     const res = await POST(makeRequest({
       tenantId: "fake", email: "owner@test.com", name: "Owner",
-    }));
+    }), { params: Promise.resolve({}) });
     expect(res.status).toBe(404);
     const data = await res.json();
     expect(data).toEqual({
@@ -84,7 +84,7 @@ describe("POST /api/auth/claim", () => {
     vi.mocked(prisma.user.findFirst).mockResolvedValue({ id: "existing-user" } as never);
     const res = await POST(makeRequest({
       tenantId: "tenant1", email: "owner@test.com", name: "Owner",
-    }));
+    }), { params: Promise.resolve({}) });
     expect(res.status).toBe(409);
     const data = await res.json();
     expect(data).toEqual({
@@ -94,7 +94,7 @@ describe("POST /api/auth/claim", () => {
   });
 
   it("returns 400 with AUTH_VALIDATION_FAILED for missing fields", async () => {
-    const res = await POST(makeRequest({ tenantId: "tenant1" }));
+    const res = await POST(makeRequest({ tenantId: "tenant1" }), { params: Promise.resolve({}) });
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data.success).toBe(false);
@@ -106,12 +106,12 @@ describe("POST /api/auth/claim", () => {
     vi.mocked(prisma.tenant.findUnique).mockRejectedValue(new Error("DB error"));
     const res = await POST(makeRequest({
       tenantId: "tenant1", email: "owner@test.com", name: "Owner",
-    }));
+    }), { params: Promise.resolve({}) });
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data).toEqual({
       success: false,
-      error: { code: ErrorCodes.CLAIM_FAILED },
+      error: { code: ErrorCodes.INTERNAL_ERROR },
     });
   });
 

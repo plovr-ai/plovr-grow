@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { webhookDispatcher } from "@/services/integration/webhook-dispatcher.service";
+import { withApiHandler } from "@/lib/api";
 
-export async function POST(
+export const POST = withApiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ provider: string }> }
-) {
+) => {
   const { provider } = await params;
   const rawBody = await request.text();
 
@@ -16,6 +17,6 @@ export async function POST(
 
   const result = await webhookDispatcher.dispatch(provider, rawBody, headers);
   return NextResponse.json(result.body, { status: result.status });
-}
+});
 
 export const runtime = "nodejs";

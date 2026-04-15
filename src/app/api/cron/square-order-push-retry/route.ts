@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { squareOrderRetryService } from "@/services/square/square-order-retry.service";
+import { withApiHandler } from "@/lib/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+export const GET = withApiHandler(async (request: NextRequest) => {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
     console.error(
@@ -20,17 +21,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    const result = await squareOrderRetryService.retryFailedOrderPushes();
-    return NextResponse.json({ ok: true, ...result });
-  } catch (error) {
-    console.error("[Square Order Push Retry Cron] Failed:", error);
-    return NextResponse.json(
-      {
-        ok: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
-  }
-}
+  const result = await squareOrderRetryService.retryFailedOrderPushes();
+  return NextResponse.json({ ok: true, ...result });
+});

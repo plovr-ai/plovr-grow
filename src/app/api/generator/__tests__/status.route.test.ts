@@ -44,6 +44,7 @@ describe("GET /api/generator/{generationId}/status", () => {
     const res = await GET(req, makeParams("gen-err"));
     const data = await res.json();
     expect(res.status).toBe(500);
-    expect(data.error).toBe("Internal server error");
+    expect(data.success).toBe(false);
+    expect(data.error).toEqual({ code: "INTERNAL_ERROR" });
   });
 });

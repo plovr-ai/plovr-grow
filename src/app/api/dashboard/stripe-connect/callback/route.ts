@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withApiHandler } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { stripeConnectService } from "@/services/stripe-connect";
 
-export async function GET(request: NextRequest) {
+export const GET = withApiHandler(async (request: NextRequest) => {
   const session = await auth();
   if (!session?.user?.tenantId) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
@@ -29,4 +30,4 @@ export async function GET(request: NextRequest) {
     fallbackUrl.searchParams.set("error", "stripe_connect_failed");
     return NextResponse.redirect(fallbackUrl);
   }
-}
+});

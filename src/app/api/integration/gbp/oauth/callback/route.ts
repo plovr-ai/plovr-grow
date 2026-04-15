@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gbpService } from "@/services/gbp";
+import { withApiHandler } from "@/lib/api";
 
-export async function GET(request: NextRequest) {
+export const GET = withApiHandler(async (request: NextRequest) => {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const state = searchParams.get("state");
@@ -22,4 +23,4 @@ export async function GET(request: NextRequest) {
     fallbackUrl.searchParams.set("error", "gbp_oauth_failed");
     return NextResponse.redirect(fallbackUrl);
   }
-}
+});

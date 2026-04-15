@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import prisma from "@/lib/db";
+import { withApiHandler } from "@/lib/api";
 
 const leadSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -11,32 +12,24 @@ const leadSchema = z.object({
   source: z.enum(["calculator", "customer-loss"]).default("calculator"),
 });
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const parsed = leadSchema.safeParse(body);
+export const POST = withApiHandler(async (request: NextRequest) => {
+  const body = await request.json();
+  const parsed = leadSchema.safeParse(body);
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Validation failed",
-          fieldErrors: parsed.error.flatten().fieldErrors,
-        },
-        { status: 400 }
-      );
-    }
-
-    await prisma.lead.create({
-      data: parsed.data,
-    });
-
-    return NextResponse.json({ success: true }, { status: 201 });
-  } catch (error) {
-    console.error("[Leads] Create error:", error);
+  if (!parsed.success) {
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
+      {
+        success: false,
+        error: "Validation failed",
+        fieldErrors: parsed.error.flatten().fieldErrors,
+      },
+      { status: 400 }
     );
   }
-}
+
+  await prisma.lead.create({
+    data: parsed.data,
+  });
+
+  return NextResponse.json({ success: true }, { status: 201 });
+});

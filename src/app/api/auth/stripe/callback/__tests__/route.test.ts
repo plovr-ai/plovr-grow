@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
+import { NextRequest } from "next/server"
 import { GET } from "../route"
 
 vi.mock("@/services/stripe-connect", () => ({
@@ -26,10 +27,10 @@ describe("GET /api/auth/stripe/callback", () => {
       detailsSubmitted: true,
     })
 
-    const request = new Request(
+    const request = new NextRequest(
       "http://localhost:3000/api/auth/stripe/callback?code=test_code&state=encoded_state"
     )
-    const response = await GET(request)
+    const response = await GET(request, { params: Promise.resolve({}) })
 
     expect(response.status).toBe(307)
     expect(response.headers.get("location")).toBe(`${DASHBOARD_URL}?stripe_connect=success`)
@@ -38,10 +39,10 @@ describe("GET /api/auth/stripe/callback", () => {
   })
 
   it("should redirect with error when error param is present", async () => {
-    const request = new Request(
+    const request = new NextRequest(
       "http://localhost:3000/api/auth/stripe/callback?error=access_denied&error_description=User+denied+access"
     )
-    const response = await GET(request)
+    const response = await GET(request, { params: Promise.resolve({}) })
 
     expect(response.status).toBe(307)
     const location = response.headers.get("location")!
@@ -52,10 +53,10 @@ describe("GET /api/auth/stripe/callback", () => {
   })
 
   it("should redirect with 'Unknown error' when error param is present without description", async () => {
-    const request = new Request(
+    const request = new NextRequest(
       "http://localhost:3000/api/auth/stripe/callback?error=access_denied"
     )
-    const response = await GET(request)
+    const response = await GET(request, { params: Promise.resolve({}) })
 
     expect(response.status).toBe(307)
     const location = response.headers.get("location")!
@@ -64,10 +65,10 @@ describe("GET /api/auth/stripe/callback", () => {
   })
 
   it("should redirect with 'Missing parameters' when code is missing", async () => {
-    const request = new Request(
+    const request = new NextRequest(
       "http://localhost:3000/api/auth/stripe/callback?state=encoded_state"
     )
-    const response = await GET(request)
+    const response = await GET(request, { params: Promise.resolve({}) })
 
     expect(response.status).toBe(307)
     expect(response.headers.get("location")).toBe(
@@ -76,10 +77,10 @@ describe("GET /api/auth/stripe/callback", () => {
   })
 
   it("should redirect with 'Missing parameters' when state is missing", async () => {
-    const request = new Request(
+    const request = new NextRequest(
       "http://localhost:3000/api/auth/stripe/callback?code=test_code"
     )
-    const response = await GET(request)
+    const response = await GET(request, { params: Promise.resolve({}) })
 
     expect(response.status).toBe(307)
     expect(response.headers.get("location")).toBe(
@@ -93,10 +94,10 @@ describe("GET /api/auth/stripe/callback", () => {
       new Error("Already connected")
     )
 
-    const request = new Request(
+    const request = new NextRequest(
       "http://localhost:3000/api/auth/stripe/callback?code=test_code&state=encoded_state"
     )
-    const response = await GET(request)
+    const response = await GET(request, { params: Promise.resolve({}) })
 
     expect(response.status).toBe(307)
     const location = response.headers.get("location")!
@@ -108,10 +109,10 @@ describe("GET /api/auth/stripe/callback", () => {
     vi.mocked(stripeConnectService.parseOAuthState).mockReturnValue({ tenantId: "tenant-123" })
     vi.mocked(stripeConnectService.handleOAuthCallback).mockRejectedValue("some string error")
 
-    const request = new Request(
+    const request = new NextRequest(
       "http://localhost:3000/api/auth/stripe/callback?code=test_code&state=encoded_state"
     )
-    const response = await GET(request)
+    const response = await GET(request, { params: Promise.resolve({}) })
 
     expect(response.status).toBe(307)
     const location = response.headers.get("location")!

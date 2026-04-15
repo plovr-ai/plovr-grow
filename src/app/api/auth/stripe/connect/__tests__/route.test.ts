@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
+import { NextRequest } from "next/server"
 import { ErrorCodes } from "@/lib/errors/error-codes"
 import { GET } from "../route"
 
@@ -16,8 +17,8 @@ describe("GET /api/auth/stripe/connect", () => {
   })
 
   it("should return 400 with STRIPE_CONNECT_MISSING_TENANT when tenantId is missing", async () => {
-    const request = new Request("http://localhost:3000/api/auth/stripe/connect")
-    const response = await GET(request)
+    const request = new NextRequest("http://localhost:3000/api/auth/stripe/connect")
+    const response = await GET(request, { params: Promise.resolve({}) })
     expect(response.status).toBe(400)
     const body = await response.json()
     expect(body).toEqual({
@@ -30,8 +31,8 @@ describe("GET /api/auth/stripe/connect", () => {
     const oauthUrl = "https://connect.stripe.com/oauth/authorize?client_id=ca_test&state=abc"
     vi.mocked(stripeConnectService.generateOAuthUrl).mockReturnValue(oauthUrl)
 
-    const request = new Request("http://localhost:3000/api/auth/stripe/connect?tenantId=tenant-123")
-    const response = await GET(request)
+    const request = new NextRequest("http://localhost:3000/api/auth/stripe/connect?tenantId=tenant-123")
+    const response = await GET(request, { params: Promise.resolve({}) })
 
     expect(response.status).toBe(307)
     expect(response.headers.get("location")).toBe(oauthUrl)

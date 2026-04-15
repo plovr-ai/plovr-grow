@@ -44,7 +44,7 @@ describe("GET /api/cron/square-order-push-retry", () => {
   it("returns 500 when CRON_SECRET is not configured", async () => {
     delete process.env.CRON_SECRET;
 
-    const response = await GET(buildRequest("Bearer anything"));
+    const response = await GET(buildRequest("Bearer anything"), { params: Promise.resolve({}) });
 
     expect(response.status).toBe(500);
     expect(mockRetryFailedOrderPushes).not.toHaveBeenCalled();
@@ -55,7 +55,7 @@ describe("GET /api/cron/square-order-push-retry", () => {
   it("returns 401 when authorization header is missing", async () => {
     process.env.CRON_SECRET = "test-secret";
 
-    const response = await GET(buildRequest());
+    const response = await GET(buildRequest(), { params: Promise.resolve({}) });
 
     expect(response.status).toBe(401);
     expect(mockRetryFailedOrderPushes).not.toHaveBeenCalled();
@@ -64,7 +64,7 @@ describe("GET /api/cron/square-order-push-retry", () => {
   it("returns 401 when authorization header is incorrect", async () => {
     process.env.CRON_SECRET = "test-secret";
 
-    const response = await GET(buildRequest("Bearer wrong-secret"));
+    const response = await GET(buildRequest("Bearer wrong-secret"), { params: Promise.resolve({}) });
 
     expect(response.status).toBe(401);
     expect(mockRetryFailedOrderPushes).not.toHaveBeenCalled();
@@ -78,7 +78,7 @@ describe("GET /api/cron/square-order-push-retry", () => {
       deadLettered: 1,
     });
 
-    const response = await GET(buildRequest("Bearer test-secret"));
+    const response = await GET(buildRequest("Bearer test-secret"), { params: Promise.resolve({}) });
 
     expect(response.status).toBe(200);
     expect(mockRetryFailedOrderPushes).toHaveBeenCalledTimes(1);
@@ -95,11 +95,11 @@ describe("GET /api/cron/square-order-push-retry", () => {
     process.env.CRON_SECRET = "test-secret";
     mockRetryFailedOrderPushes.mockRejectedValue(new Error("db down"));
 
-    const response = await GET(buildRequest("Bearer test-secret"));
+    const response = await GET(buildRequest("Bearer test-secret"), { params: Promise.resolve({}) });
 
     expect(response.status).toBe(500);
     const body = await response.json();
-    expect(body.ok).toBe(false);
-    expect(body.error).toBe("db down");
+    expect(body.success).toBe(false);
+    expect(body.error).toEqual({ code: "INTERNAL_ERROR" });
   });
 });
