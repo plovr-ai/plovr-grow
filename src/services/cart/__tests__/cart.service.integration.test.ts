@@ -97,9 +97,8 @@ vi.mock("@/services/square/square.service", () => ({
 // ---------------------------------------------------------------------------
 
 const prisma = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { PrismaClient: PC } =
-    require("@prisma/client") as typeof import("@prisma/client");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- vi.hoisted requires synchronous require
+  const { PrismaClient: PC } = require("@prisma/client") as typeof import("@prisma/client");
   const url =
     process.env.DATABASE_URL ||
     "mysql://root:password@localhost:3306/plovr_test";
@@ -221,74 +220,38 @@ async function cleanupTestData() {
   // Delete in reverse FK dependency order
   // Order-related tables (created during checkout) — use try/catch for tables
   // that may not exist in every database setup
-  const safeDeleteMany = async (
-    model: { deleteMany: (args: unknown) => Promise<unknown> },
-    args: unknown
-  ) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma model types are complex, using any for cleanup helper
+  const safeDeleteMany = async (fn: () => Promise<any>) => {
     try {
-      await model.deleteMany(args);
+      await fn();
     } catch {
       // Table may not exist — ignore
     }
   };
 
-  await safeDeleteMany(prisma.fulfillmentStatusLog, {
-    where: { tenantId: TENANT_ID },
-  });
-  await safeDeleteMany(prisma.orderFulfillment, {
-    where: { tenantId: TENANT_ID },
-  });
-  await safeDeleteMany(prisma.payment, {
-    where: { tenantId: TENANT_ID },
-  });
-  await safeDeleteMany(prisma.orderItemModifier, {
-    where: { orderItem: { order: { tenantId: TENANT_ID } } },
-  });
-  await safeDeleteMany(prisma.orderItem, {
-    where: { order: { tenantId: TENANT_ID } },
-  });
-  await safeDeleteMany(prisma.order, {
-    where: { tenantId: TENANT_ID },
-  });
-  await safeDeleteMany(prisma.orderSequence, {
-    where: { tenantId: TENANT_ID },
-  });
+  await safeDeleteMany(() => prisma.fulfillmentStatusLog.deleteMany({ where: { tenantId: TENANT_ID } }));
+  await safeDeleteMany(() => prisma.orderFulfillment.deleteMany({ where: { tenantId: TENANT_ID } }));
+  await safeDeleteMany(() => prisma.payment.deleteMany({ where: { tenantId: TENANT_ID } }));
+  await safeDeleteMany(() => prisma.orderItemModifier.deleteMany({ where: { orderItem: { order: { tenantId: TENANT_ID } } } }));
+  await safeDeleteMany(() => prisma.orderItem.deleteMany({ where: { order: { tenantId: TENANT_ID } } }));
+  await safeDeleteMany(() => prisma.order.deleteMany({ where: { tenantId: TENANT_ID } }));
+  await safeDeleteMany(() => prisma.orderSequence.deleteMany({ where: { tenantId: TENANT_ID } }));
 
   // Cart tables
-  await safeDeleteMany(prisma.cartItemModifier, {
-    where: { cartItem: { cart: { tenantId: TENANT_ID } } },
-  });
-  await safeDeleteMany(prisma.cartItem, {
-    where: { cart: { tenantId: TENANT_ID } },
-  });
-  await safeDeleteMany(prisma.cart, {
-    where: { tenantId: TENANT_ID },
-  });
-  await safeDeleteMany(prisma.cart, {
-    where: { tenantId: TENANT_B_ID },
-  });
+  await safeDeleteMany(() => prisma.cartItemModifier.deleteMany({ where: { cartItem: { cart: { tenantId: TENANT_ID } } } }));
+  await safeDeleteMany(() => prisma.cartItem.deleteMany({ where: { cart: { tenantId: TENANT_ID } } }));
+  await safeDeleteMany(() => prisma.cart.deleteMany({ where: { tenantId: TENANT_ID } }));
+  await safeDeleteMany(() => prisma.cart.deleteMany({ where: { tenantId: TENANT_B_ID } }));
 
   // Menu tables
-  await safeDeleteMany(prisma.menuCategoryItem, {
-    where: { tenantId: TENANT_ID },
-  });
-  await safeDeleteMany(prisma.menuItem, {
-    where: { tenantId: TENANT_ID },
-  });
-  await safeDeleteMany(prisma.menuCategory, {
-    where: { tenantId: TENANT_ID },
-  });
-  await safeDeleteMany(prisma.menu, {
-    where: { tenantId: TENANT_ID },
-  });
+  await safeDeleteMany(() => prisma.menuCategoryItem.deleteMany({ where: { tenantId: TENANT_ID } }));
+  await safeDeleteMany(() => prisma.menuItem.deleteMany({ where: { tenantId: TENANT_ID } }));
+  await safeDeleteMany(() => prisma.menuCategory.deleteMany({ where: { tenantId: TENANT_ID } }));
+  await safeDeleteMany(() => prisma.menu.deleteMany({ where: { tenantId: TENANT_ID } }));
 
   // Merchant & Tenant
-  await safeDeleteMany(prisma.merchant, {
-    where: { tenantId: TENANT_ID },
-  });
-  await safeDeleteMany(prisma.tenant, {
-    where: { id: { in: [TENANT_ID, TENANT_B_ID] } },
-  });
+  await safeDeleteMany(() => prisma.merchant.deleteMany({ where: { tenantId: TENANT_ID } }));
+  await safeDeleteMany(() => prisma.tenant.deleteMany({ where: { id: { in: [TENANT_ID, TENANT_B_ID] } } }));
 }
 
 // ---------------------------------------------------------------------------
