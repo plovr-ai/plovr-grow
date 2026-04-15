@@ -9,6 +9,13 @@
  * @see https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
  */
 export async function register() {
+  // Initialise Sentry for the active runtime (Node.js or Edge)
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    await import("../sentry.server.config");
+  } else if (process.env.NEXT_RUNTIME === "edge") {
+    await import("../sentry.edge.config");
+  }
+
   // Only register event handlers on the Node.js server runtime
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { registerLoyaltyEventHandlers } = await import(
