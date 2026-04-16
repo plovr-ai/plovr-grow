@@ -193,12 +193,37 @@ describe("POST /api/external/v1/knowledge/query", () => {
     expect(json.data.knowledgeMap.AGENT_WORK_SWITCH).toBeNull();
   });
 
-  it("should return null for SERVICE_PROVIDED (not yet implemented)", async () => {
-    mockGetMerchantById.mockResolvedValue(mockMerchant);
+  it("should return SERVICE_PROVIDED derived from merchant settings", async () => {
+    const merchantWithServices = {
+      ...mockMerchant,
+      settings: {
+        ...mockMerchant.settings,
+        acceptsPickup: true,
+        acceptsDelivery: false,
+        estimatedPrepTime: 25,
+      },
+    };
+    mockGetMerchantById.mockResolvedValue(merchantWithServices);
     const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["SERVICE_PROVIDED"] }));
     const json = await response.json();
     expect(response.status).toBe(200);
-    expect(json.data.knowledgeMap.SERVICE_PROVIDED).toBeNull();
+    const service = JSON.parse(json.data.knowledgeMap.SERVICE_PROVIDED.data);
+    expect(service.pickup.openSwitch).toBe(1);
+    expect(service.pickup.quoteTime.min).toBe(25);
+    expect(service.delivery.openSwitch).toBe(0);
+    expect(service.reservation.openSwitch).toBe(0);
+  });
+
+  it("should return SERVICE_PROVIDED with defaults when settings is null", async () => {
+    const merchantNoSettings = { ...mockMerchant, settings: undefined };
+    mockGetMerchantById.mockResolvedValue(merchantNoSettings);
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["SERVICE_PROVIDED"] }));
+    const json = await response.json();
+    expect(response.status).toBe(200);
+    const service = JSON.parse(json.data.knowledgeMap.SERVICE_PROVIDED.data);
+    expect(service.pickup.openSwitch).toBe(0);
+    expect(service.pickup.quoteTime.min).toBe(15);
+    expect(service.delivery.openSwitch).toBe(0);
   });
 
   it("should only return requested targets", async () => {
