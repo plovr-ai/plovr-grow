@@ -64,10 +64,13 @@ const mockMerchant = {
   },
   phoneAiSettings: {
     greetings: "Welcome to Happy Wok! How can I help you?",
-    faq: [
-      { question: "Do you have gluten-free options?", answer: "Yes, we have several gluten-free dishes." },
-    ],
-    agentWorkSwitch: "transfer_to_human",
+    faq: {
+      savedFaqs: [
+        { question: "Do you have gluten-free options?", answer: "Yes, we have several gluten-free dishes." },
+      ],
+      customFaqs: [],
+    },
+    agentWorkSwitch: "0",
   },
 };
 
@@ -168,8 +171,9 @@ describe("POST /api/external/v1/knowledge/query", () => {
     const json = await response.json();
     expect(response.status).toBe(200);
     const faq = JSON.parse(json.data.knowledgeMap.FAQ.data);
-    expect(faq).toHaveLength(1);
-    expect(faq[0].question).toBe("Do you have gluten-free options?");
+    expect(faq.savedFaqs).toHaveLength(1);
+    expect(faq.savedFaqs[0].question).toBe("Do you have gluten-free options?");
+    expect(faq.customFaqs).toHaveLength(0);
   });
 
   it("should return AGENT_WORK_SWITCH from phoneAiSettings", async () => {
@@ -178,7 +182,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
     const json = await response.json();
     expect(response.status).toBe(200);
     expect(json.data.knowledgeMap.AGENT_WORK_SWITCH).toEqual({
-      data: "transfer_to_human",
+      data: "0",
     });
   });
 
