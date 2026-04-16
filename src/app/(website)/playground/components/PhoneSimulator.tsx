@@ -15,14 +15,13 @@ import { CallControls } from "./CallControls";
 
 const config: PlaygroundConfig = {
   apiUrl: process.env.NEXT_PUBLIC_PHONE_AI_API_URL ?? "",
-  tenantId: process.env.NEXT_PUBLIC_PLAYGROUND_TENANT_ID ?? "",
-  merchantId: process.env.NEXT_PUBLIC_PLAYGROUND_MERCHANT_ID ?? "",
 };
 
 export function PhoneSimulator() {
   const clientRef = useRef<PipecatClient | null>(null);
   const [status, setStatus] = useState<CallStatus>(CALL_STATUS.IDLE);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [interimText, setInterimText] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -56,7 +55,7 @@ export function PhoneSimulator() {
     setMessages([]);
     setElapsed(0);
 
-    if (!config.apiUrl || !config.tenantId || !config.merchantId) {
+    if (!config.apiUrl) {
       setError("Playground environment variables not configured");
       return;
     }
@@ -65,6 +64,7 @@ export function PhoneSimulator() {
       const client = await startCall(config, {
         onStatusChange: (s) => setStatus(s),
         onMessage: (msg) => setMessages((prev) => [...prev, msg]),
+        onInterimTranscript: (text) => setInterimText(text),
         onError: (err) => setError(err),
       });
       clientRef.current = client;
@@ -75,14 +75,24 @@ export function PhoneSimulator() {
   }, []);
 
   const handleEnd = useCallback(async () => {
-    if (clientRef.current) {
-      try {
-        await endCall(clientRef.current);
-      } catch {
-        // WebSocket may already be closed — ignore
-      }
-      clientRef.current = null;
+    const client = clientRef.current;
+    if (!client) {
+      setStatus(CALL_STATUS.DISCONNECTED);
+      return;
     }
+    clientRef.current = null;
+    try {
+      await endCall(client);
+    } catch {
+      // disconnect may throw if media/WebSocket already closed —
+      // force disconnect at transport level as fallback
+      try {
+        client.transport.disconnect();
+      } catch {
+        // ignore
+      }
+    }
+    setStatus(CALL_STATUS.DISCONNECTED);
   }, []);
 
   const handleToggleMute = useCallback(() => {
@@ -144,6 +154,7 @@ export function PhoneSimulator() {
         {/* Conversation area */}
         <ConversationLog
           messages={messages}
+          interimText={interimText}
           isConnected={status === CALL_STATUS.CONNECTED}
         />
 

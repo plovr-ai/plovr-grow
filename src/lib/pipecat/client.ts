@@ -6,6 +6,7 @@ import type { PlaygroundConfig, ConversationMessage } from "./types";
 interface PipecatCallbacks {
   onStatusChange: (status: "connecting" | "connected" | "disconnected") => void;
   onMessage: (message: ConversationMessage) => void;
+  onInterimTranscript: (text: string | null) => void;
   onError: (error: string) => void;
 }
 
@@ -22,17 +23,12 @@ export async function startCall(
 ): Promise<PipecatClient> {
   callbacks.onStatusChange("connecting");
 
-  // 1. Get WebSocket URL from plovr-phone-ai
+  // 1. Get WebSocket URL from plovr-phone-ai via quick-call
   const response = await fetch(
-    `${config.apiUrl}/api/ai/admin/playground/put-config`,
+    `${config.apiUrl}/api/ai/admin/playground/quick-call`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        tenant_id: config.tenantId,
-        org_id: config.merchantId,
-        agents: [],
-      }),
+      headers: { "sec-plovr-user": "playground" },
     }
   );
 
@@ -57,13 +53,20 @@ export async function startCall(
   });
 
   client.on("userTranscript", (data: TranscriptData) => {
-    if (data.text.trim()) {
+    if (!data.text.trim()) return;
+
+    if (data.final) {
+      // Clear interim preview and add final message
+      callbacks.onInterimTranscript(null);
       callbacks.onMessage({
         id: createMessageId(),
         role: "user",
         text: data.text,
         timestamp: new Date(),
       });
+    } else {
+      // Show interim preview
+      callbacks.onInterimTranscript(data.text);
     }
   });
 
