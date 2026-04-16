@@ -295,7 +295,7 @@ export class CartService {
 
     // Query tax data from DB (same pattern as order.service.ts)
     const itemIds = items.map((item) => item.menuItemId);
-    const itemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(itemIds);
+    const itemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(itemIds) ?? new Map<string, string[]>();
     const allTaxConfigIds = [...new Set([...itemTaxMap.values()].flat())];
     const [taxConfigs, merchantTaxRateMap] = await Promise.all([
       taxConfigRepository.getTaxConfigsByIds(tenantId, allTaxConfigIds),
