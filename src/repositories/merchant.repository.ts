@@ -112,6 +112,22 @@ export class MerchantRepository {
         OR: [{ aiPhone: withoutPlus }, { aiPhone: withPlus }],
         deleted: false,
       },
+      select: {
+        id: true,
+        tenantId: true,
+        slug: true,
+        name: true,
+        address: true,
+        city: true,
+        state: true,
+        zipCode: true,
+        phone: true,
+        email: true,
+        timezone: true,
+        currency: true,
+        locale: true,
+        phoneAiSettings: true,
+      },
     });
   }
 
