@@ -96,6 +96,22 @@ In tests that rely on event-driven side effects, configure mocks before triggeri
 
 ---
 
+## [269] Mock that returns fixed list fails when service validates list length
+
+**Date**: 2026-04-16
+**Category**: wrong-assumption
+
+### What went wrong
+Mocked `menuService.getMenuItemsByIds` to always return all 3 test menu items, regardless of which IDs were requested. The `orderService.createMerchantOrder` validates that `menuItems.length === itemIds.length`, so when the cart had 2 items but the mock returned 3, the check failed with `MENU_ITEMS_UNAVAILABLE`.
+
+### Correct approach
+Use `mockImplementation` to filter the returned items by the requested IDs, matching the real service behavior: `ALL_ITEMS.filter(m => requestedIds.includes(m.id))`.
+
+### How to avoid
+When mocking a service that returns filtered results, use `mockImplementation` with argument-aware logic instead of `mockResolvedValue` with a static list.
+
+---
+
 ## [202] New test file for large untested service drops global coverage below thresholds
 
 **Date**: 2026-04-13
