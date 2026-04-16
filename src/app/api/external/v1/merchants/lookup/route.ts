@@ -61,7 +61,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
       currency: merchant.currency,
       locale: merchant.locale,
       phone: merchant.phone,
-      forwardPhone: phoneAiSettings?.agentWorkSwitch ?? merchant.phone,
+      forwardPhone: phoneAiSettings?.forwardPhone ?? null,
       address: merchant.address,
       city: merchant.city,
       state: merchant.state,
