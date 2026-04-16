@@ -4,6 +4,12 @@ import type { TipConfig, FeeConfig } from "./index";
 
 export type MerchantStatus = "active" | "inactive" | "temporarily_closed";
 
+export interface PhoneAiSettings {
+  greetings?: string;
+  faq?: Array<{ question: string; answer: string }>;
+  agentWorkSwitch?: string;
+}
+
 export interface BusinessHoursMap {
   [key: string]: {
     open: string;
@@ -48,6 +54,7 @@ export interface MerchantInfo {
   locale: string;
   status: MerchantStatus;
   settings: MerchantSettings | null;
+  phoneAiSettings: PhoneAiSettings | null;
   createdAt: Date;
   updatedAt: Date;
 }

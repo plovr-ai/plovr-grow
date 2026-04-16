@@ -3,7 +3,7 @@
 
 import type { Prisma } from "@prisma/client";
 import type { TenantSettings } from "@/types/tenant";
-import type { MerchantSettings, MerchantStatus, BusinessHoursMap } from "@/types/merchant";
+import type { MerchantSettings, MerchantStatus, BusinessHoursMap, PhoneAiSettings } from "@/types/merchant";
 import type { MerchantWithTenant, TenantWithMerchants } from "./merchant.types";
 
 // Prisma return types for Merchant with Tenant
@@ -50,6 +50,7 @@ export function toMerchantWithTenant(
     locale: data.locale,
     status: data.status as MerchantStatus,
     settings: (data.settings as unknown) as MerchantSettings | undefined,
+    phoneAiSettings: (data.phoneAiSettings as unknown) as PhoneAiSettings | undefined,
     tenant: {
       id: data.tenant.id,
       slug: data.tenant.slug,
@@ -109,6 +110,7 @@ function toMerchantFromTenant(
     locale: merchant.locale,
     status: merchant.status as MerchantStatus,
     settings: (merchant.settings as unknown) as MerchantSettings | undefined,
+    phoneAiSettings: (merchant.phoneAiSettings as unknown) as PhoneAiSettings | undefined,
     tenant: {
       id: tenant.id,
       slug: tenant.slug,
