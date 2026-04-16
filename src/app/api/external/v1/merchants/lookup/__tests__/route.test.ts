@@ -67,6 +67,7 @@ describe("POST /api/external/v1/merchants/lookup", () => {
       id: "m1", tenantId: "t1", name: "Happy Wok", timezone: "America/Los_Angeles",
       currency: "USD", locale: "en-US", phone: "+14155551234",
       address: "123 Main St", city: "San Francisco", state: "CA", zipCode: "94102",
+      phoneAiSettings: null,
     });
     const response = await POST(createRequest({ phone: "+14155551234" }));
     const json = await response.json();
@@ -75,9 +76,24 @@ describe("POST /api/external/v1/merchants/lookup", () => {
     expect(json.data).toEqual({
       tenantId: "t1", merchantId: "m1", merchantName: "Happy Wok",
       timezone: "America/Los_Angeles", currency: "USD", locale: "en-US",
-      phone: "+14155551234", address: "123 Main St", city: "San Francisco",
+      phone: "+14155551234", forwardPhone: "+14155551234",
+      address: "123 Main St", city: "San Francisco",
       state: "CA", zipCode: "94102",
     });
     expect(mockGetByAiPhone).toHaveBeenCalledWith("+14155551234");
+  });
+
+  it("should return forwardPhone from phoneAiSettings.agentWorkSwitch when present", async () => {
+    mockGetByAiPhone.mockResolvedValue({
+      id: "m1", tenantId: "t1", name: "Happy Wok", timezone: "America/Los_Angeles",
+      currency: "USD", locale: "en-US", phone: "+14155551234",
+      address: "123 Main St", city: "San Francisco", state: "CA", zipCode: "94102",
+      phoneAiSettings: { agentWorkSwitch: "+14155559999" },
+    });
+    const response = await POST(createRequest({ phone: "+14155551234" }));
+    const json = await response.json();
+    expect(response.status).toBe(200);
+    expect(json.data.forwardPhone).toBe("+14155559999");
+    expect(json.data.phone).toBe("+14155551234");
   });
 });

@@ -4,6 +4,7 @@ import { validateExternalRequest } from "@/lib/external-auth";
 import { withApiHandler } from "@/lib/api";
 import { merchantRepository } from "@/repositories/merchant.repository";
 import { ErrorCodes } from "@/lib/errors/error-codes";
+import type { PhoneAiSettings } from "@/types/merchant";
 
 const lookupSchema = z.object({
   phone: z.string().min(1),
@@ -48,6 +49,8 @@ export const POST = withApiHandler(async (request: NextRequest) => {
     );
   }
 
+  const phoneAiSettings = merchant.phoneAiSettings as unknown as PhoneAiSettings | null;
+
   return NextResponse.json({
     success: true,
     data: {
@@ -58,6 +61,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
       currency: merchant.currency,
       locale: merchant.locale,
       phone: merchant.phone,
+      forwardPhone: phoneAiSettings?.agentWorkSwitch ?? merchant.phone,
       address: merchant.address,
       city: merchant.city,
       state: merchant.state,
