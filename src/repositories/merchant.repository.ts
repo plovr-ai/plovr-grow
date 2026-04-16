@@ -100,6 +100,22 @@ export class MerchantRepository {
   }
 
   /**
+   * Get merchant by AI phone number (normalizes + prefix)
+   */
+  async getByAiPhone(phone: string) {
+    const normalized = phone.startsWith("+") ? phone.slice(1) : phone;
+    const withPlus = `+${normalized}`;
+    const withoutPlus = normalized;
+
+    return prisma.merchant.findFirst({
+      where: {
+        OR: [{ aiPhone: withoutPlus }, { aiPhone: withPlus }],
+        deleted: false,
+      },
+    });
+  }
+
+  /**
    * Create a new merchant
    */
   async create(
