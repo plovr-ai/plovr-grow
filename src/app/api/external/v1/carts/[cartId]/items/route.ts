@@ -53,14 +53,14 @@ export async function POST(
     const { tenantId, menuItemId, quantity, selectedModifiers, specialInstructions } =
       parsed.data;
 
-    const item = await cartService.addItem(tenantId, cartId, {
+    const cart = await cartService.addItem(tenantId, cartId, {
       menuItemId,
       quantity,
       selectedModifiers,
       specialInstructions,
     });
 
-    return NextResponse.json({ success: true, data: item }, { status: 201 });
+    return NextResponse.json({ success: true, data: cart }, { status: 201 });
   } catch (error) {
     console.error("Add cart item failed:", error);
 

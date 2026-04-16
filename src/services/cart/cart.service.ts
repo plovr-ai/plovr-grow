@@ -86,7 +86,7 @@ export class CartService {
     await cartRepository.updateStatus(tenantId, cartId, "cancelled");
   }
 
-  async addItem(tenantId: string, cartId: string, input: AddCartItemInput) {
+  async addItem(tenantId: string, cartId: string, input: AddCartItemInput): Promise<CartWithItems> {
     const cart = await cartRepository.findById(tenantId, cartId);
     if (!cart) {
       throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
@@ -125,7 +125,7 @@ export class CartService {
 
     const sortOrder = await cartRepository.getNextSortOrder(cartId);
 
-    const item = await cartRepository.addItem(cartId, {
+    await cartRepository.addItem(cartId, {
       menuItemId: input.menuItemId,
       name: menuItem.name,
       unitPrice,
@@ -137,7 +137,7 @@ export class CartService {
       modifiers,
     });
 
-    return this.mapCartItem(item);
+    return this.getCart(tenantId, cartId);
   }
 
   async updateItem(
@@ -145,7 +145,7 @@ export class CartService {
     cartId: string,
     itemId: string,
     input: UpdateCartItemInput
-  ) {
+  ): Promise<CartWithItems> {
     const cart = await cartRepository.findById(tenantId, cartId);
     if (!cart) {
       throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
@@ -181,13 +181,13 @@ export class CartService {
       );
       const totalPrice = Math.round((unitPrice + modifierTotal) * quantity * 100) / 100;
 
-      const updated = await cartRepository.updateItem(itemId, {
+      await cartRepository.updateItem(itemId, {
         quantity,
         totalPrice,
         specialInstructions: input.specialInstructions,
       });
 
-      return this.mapCartItem(updated);
+      return this.getCart(tenantId, cartId);
     }
 
     // Only quantity/instructions changed
@@ -197,7 +197,7 @@ export class CartService {
     );
     const totalPrice = Math.round((unitPrice + modifierTotal) * quantity * 100) / 100;
 
-    const updated = await cartRepository.updateItem(itemId, {
+    await cartRepository.updateItem(itemId, {
       quantity,
       totalPrice,
       specialInstructions: input.specialInstructions !== undefined
@@ -205,10 +205,10 @@ export class CartService {
         : undefined,
     });
 
-    return this.mapCartItem(updated);
+    return this.getCart(tenantId, cartId);
   }
 
-  async removeItem(tenantId: string, cartId: string, itemId: string): Promise<void> {
+  async removeItem(tenantId: string, cartId: string, itemId: string): Promise<CartWithItems> {
     const cart = await cartRepository.findById(tenantId, cartId);
     if (!cart) {
       throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
@@ -223,6 +223,7 @@ export class CartService {
     }
 
     await cartRepository.softDeleteItem(itemId);
+    return this.getCart(tenantId, cartId);
   }
 
   async checkout(

@@ -55,13 +55,13 @@ export async function PATCH(
 
     const { tenantId, quantity, selectedModifiers, specialInstructions } = parsed.data;
 
-    const item = await cartService.updateItem(tenantId, cartId, itemId, {
+    const cart = await cartService.updateItem(tenantId, cartId, itemId, {
       quantity,
       selectedModifiers,
       specialInstructions,
     });
 
-    return NextResponse.json({ success: true, data: item });
+    return NextResponse.json({ success: true, data: cart });
   } catch (error) {
     console.error("Update cart item failed:", error);
 
@@ -107,8 +107,8 @@ export async function DELETE(
       );
     }
 
-    await cartService.removeItem(parsed.data.tenantId, cartId, itemId);
-    return NextResponse.json({ success: true, data: null });
+    const cart = await cartService.removeItem(parsed.data.tenantId, cartId, itemId);
+    return NextResponse.json({ success: true, data: cart });
   } catch (error) {
     console.error("Remove cart item failed:", error);
 

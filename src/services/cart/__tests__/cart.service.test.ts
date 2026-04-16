@@ -25,6 +25,14 @@ vi.mock("@/repositories/menu.repository", () => ({
   },
 }));
 
+vi.mock("@/repositories/tax-config.repository", () => ({
+  taxConfigRepository: {
+    getMenuItemsTaxConfigIds: vi.fn().mockResolvedValue(new Map()),
+    getTaxConfigsByIds: vi.fn().mockResolvedValue([]),
+    getMerchantTaxRateMap: vi.fn().mockResolvedValue(new Map()),
+  },
+}));
+
 vi.mock("@/services/order", () => ({
   orderService: {
     createMerchantOrderAtomic: vi.fn(),
@@ -216,6 +224,9 @@ describe("CartService", () => {
       ]);
       vi.mocked(cartRepository.getNextSortOrder).mockResolvedValue(0);
       vi.mocked(cartRepository.addItem).mockResolvedValue(makeCartItem() as never);
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
+        makeCartWithItems({ cartItems: [makeCartItem()] }) as never
+      );
 
       const result = await cartService.addItem("tenant-1", "cart-1", addInput);
 
@@ -231,7 +242,7 @@ describe("CartService", () => {
           modifiers: [],
         })
       );
-      expect(result.unitPrice).toBe(12.99);
+      expect(result.items[0].unitPrice).toBe(12.99);
     });
 
     it("calculates totalPrice including modifier prices", async () => {
@@ -242,6 +253,9 @@ describe("CartService", () => {
       vi.mocked(cartRepository.getNextSortOrder).mockResolvedValue(1);
       vi.mocked(cartRepository.addItem).mockResolvedValue(
         makeCartItem({ unitPrice: 10, totalPrice: 23, quantity: 2 }) as never
+      );
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
+        makeCartWithItems({ cartItems: [makeCartItem({ unitPrice: 10, totalPrice: 23, quantity: 2 })] }) as never
       );
 
       await cartService.addItem("tenant-1", "cart-1", {
@@ -304,6 +318,9 @@ describe("CartService", () => {
       vi.mocked(cartRepository.updateItem).mockResolvedValue(
         makeCartItem({ quantity: 3, totalPrice: 30 }) as never
       );
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
+        makeCartWithItems({ cartItems: [makeCartItem({ quantity: 3, totalPrice: 30 })] }) as never
+      );
 
       const result = await cartService.updateItem("tenant-1", "cart-1", "item-1", {
         quantity: 3,
@@ -313,8 +330,8 @@ describe("CartService", () => {
         "item-1",
         expect.objectContaining({ quantity: 3, totalPrice: 30 })
       );
-      expect(result.quantity).toBe(3);
-      expect(result.totalPrice).toBe(30);
+      expect(result.items[0].quantity).toBe(3);
+      expect(result.items[0].totalPrice).toBe(30);
     });
 
     it("replaces modifiers when selectedModifiers is provided", async () => {
@@ -324,6 +341,9 @@ describe("CartService", () => {
       vi.mocked(cartRepository.replaceItemModifiers).mockResolvedValue(undefined);
       vi.mocked(cartRepository.updateItem).mockResolvedValue(
         makeCartItem({ totalPrice: 23 }) as never
+      );
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
+        makeCartWithItems({ cartItems: [makeCartItem({ totalPrice: 23 })] }) as never
       );
 
       await cartService.updateItem("tenant-1", "cart-1", "item-1", {
@@ -383,14 +403,18 @@ describe("CartService", () => {
   // removeItem
   // ------------------------------------------------------------------ //
   describe("removeItem()", () => {
-    it("soft-deletes an item from an active cart", async () => {
+    it("soft-deletes an item from an active cart and returns updated cart", async () => {
       vi.mocked(cartRepository.findById).mockResolvedValue(makeCart() as never);
       vi.mocked(cartRepository.findItemById).mockResolvedValue(makeCartItem() as never);
       vi.mocked(cartRepository.softDeleteItem).mockResolvedValue(undefined);
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
+        makeCartWithItems({ cartItems: [] }) as never
+      );
 
-      await cartService.removeItem("tenant-1", "cart-1", "item-1");
+      const result = await cartService.removeItem("tenant-1", "cart-1", "item-1");
 
       expect(cartRepository.softDeleteItem).toHaveBeenCalledWith("item-1");
+      expect(result.items).toHaveLength(0);
     });
 
     it("throws CART_ITEM_NOT_FOUND when item does not exist", async () => {
