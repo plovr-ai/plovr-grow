@@ -332,27 +332,31 @@ describe("CartService Integration", () => {
     });
 
     it("adds 2 items to the cart", async () => {
-      const item1 = await cartService.addItem(TENANT_ID, cartId, {
+      const cart1 = await cartService.addItem(TENANT_ID, cartId, {
         menuItemId: MENU_ITEM_ID,
         quantity: 1,
       });
 
-      item1Id = item1.id;
-      expect(item1.name).toBe("Test Burger");
-      expect(item1.unitPrice).toBeCloseTo(12.99, 2);
-      expect(item1.quantity).toBe(1);
-      expect(item1.totalPrice).toBeCloseTo(12.99, 2);
+      expect(cart1.items).toHaveLength(1);
+      const addedItem1 = cart1.items[0];
+      item1Id = addedItem1.id;
+      expect(addedItem1.name).toBe("Test Burger");
+      expect(addedItem1.unitPrice).toBeCloseTo(12.99, 2);
+      expect(addedItem1.quantity).toBe(1);
+      expect(addedItem1.totalPrice).toBeCloseTo(12.99, 2);
 
-      const item2 = await cartService.addItem(TENANT_ID, cartId, {
+      const cart2 = await cartService.addItem(TENANT_ID, cartId, {
         menuItemId: MENU_ITEM_ID_2,
         quantity: 2,
       });
 
-      item2Id = item2.id;
-      expect(item2.name).toBe("Test Fries");
-      expect(item2.unitPrice).toBeCloseTo(4.99, 2);
-      expect(item2.quantity).toBe(2);
-      expect(item2.totalPrice).toBeCloseTo(9.98, 2);
+      expect(cart2.items).toHaveLength(2);
+      const addedItem2 = cart2.items.find((i) => i.menuItemId === MENU_ITEM_ID_2)!;
+      item2Id = addedItem2.id;
+      expect(addedItem2.name).toBe("Test Fries");
+      expect(addedItem2.unitPrice).toBeCloseTo(4.99, 2);
+      expect(addedItem2.quantity).toBe(2);
+      expect(addedItem2.totalPrice).toBeCloseTo(9.98, 2);
     });
 
     it("updates item quantity", async () => {
@@ -363,8 +367,9 @@ describe("CartService Integration", () => {
         { quantity: 3 }
       );
 
-      expect(updated.quantity).toBe(3);
-      expect(updated.totalPrice).toBeCloseTo(38.97, 2);
+      const updatedItem = updated.items.find((i) => i.id === item1Id)!;
+      expect(updatedItem.quantity).toBe(3);
+      expect(updatedItem.totalPrice).toBeCloseTo(38.97, 2);
     });
 
     it("removes 1 item", async () => {
