@@ -6,6 +6,7 @@ import { merchantService } from "@/services/merchant";
 import { menuService } from "@/services/menu";
 import { ErrorCodes } from "@/lib/errors/error-codes";
 import type { MerchantWithTenant } from "@/services/merchant";
+import type { PhoneAiSettings } from "@/types/merchant";
 
 const KNOWLEDGE_TARGETS = [
   "MENU",
@@ -67,10 +68,22 @@ async function resolveTarget(
       return { data: JSON.stringify(menuData) };
     }
 
-    case "GREETINGS":
-    case "FAQ":
+    case "GREETINGS": {
+      const phoneAi = merchant.phoneAiSettings as PhoneAiSettings | undefined;
+      return phoneAi?.greetings ? { data: phoneAi.greetings } : null;
+    }
+
+    case "FAQ": {
+      const phoneAiFaq = merchant.phoneAiSettings as PhoneAiSettings | undefined;
+      return phoneAiFaq?.faq ? { data: JSON.stringify(phoneAiFaq.faq) } : null;
+    }
+
+    case "AGENT_WORK_SWITCH": {
+      const phoneAiSwitch = merchant.phoneAiSettings as PhoneAiSettings | undefined;
+      return phoneAiSwitch?.agentWorkSwitch ? { data: phoneAiSwitch.agentWorkSwitch } : null;
+    }
+
     case "SERVICE_PROVIDED":
-    case "AGENT_WORK_SWITCH":
       return null;
   }
 }
