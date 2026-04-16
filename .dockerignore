@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.github
+.env*
+!.env.example
+__tests__
+docs
+ava-github-config
+*.md
