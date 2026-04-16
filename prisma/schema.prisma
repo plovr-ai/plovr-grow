@@ -227,6 +227,7 @@ model Merchant {
   zipCode                String?                 @map("zip_code")
   country                String                  @default("US")
   phone                  String?
+  aiPhone                String?                 @unique @map("ai_phone")
   email                  String?
   logoUrl                String?                 @map("logo_url")
   bannerUrl              String?                 @map("banner_url")
