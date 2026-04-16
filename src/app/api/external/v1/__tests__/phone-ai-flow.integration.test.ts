@@ -150,11 +150,9 @@ const MERCHANT_A_DATA = {
     sunday: { open: "12:00", close: "20:00" },
   },
   settings: {
-    orderMinimum: 15,
-    deliveryFee: 5,
-    estimatedPickupTime: 20,
     acceptsPickup: true,
     acceptsDelivery: false,
+    minimumOrderAmount: 15,
     estimatedPrepTime: 20,
   },
   phoneAiSettings: {
@@ -198,9 +196,10 @@ const MERCHANT_B_DATA = {
     tuesday: { open: "12:00", close: "22:00" },
   },
   settings: {
-    orderMinimum: 20,
-    deliveryFee: 7,
-    estimatedPickupTime: 30,
+    acceptsPickup: true,
+    acceptsDelivery: true,
+    minimumOrderAmount: 20,
+    estimatedPrepTime: 30,
   },
   tenant: {
     id: TENANT_ID,
@@ -408,8 +407,10 @@ describe("Phone-AI External API — Call Flow", () => {
       expect(hours.friday.close).toBe("22:00");
 
       const orderConfig = JSON.parse(knowledgeBody.data.knowledgeMap.ORDER_CONFIG.data);
-      expect(orderConfig.orderMinimum).toBe(15);
-      expect(orderConfig.estimatedPickupTime).toBe(20);
+      expect(orderConfig.minimumOrderAmount).toBe(15);
+      expect(orderConfig.estimatedPrepTime).toBe(20);
+      expect(orderConfig.acceptsPickup).toBe(true);
+      expect(orderConfig.acceptsDelivery).toBe(false);
 
       // MENU target should have called menuService
       expect(mockGetMenu).toHaveBeenCalledWith(tenantId, merchantId);
