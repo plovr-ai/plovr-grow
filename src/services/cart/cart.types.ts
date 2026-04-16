@@ -69,6 +69,12 @@ export interface CartItemData {
   modifiers: CartItemModifierData[];
 }
 
+export interface CartSummary {
+  subtotal: number;
+  taxAmount: number;
+  totalAmount: number;
+}
+
 export interface CartWithItems {
   id: string;
   tenantId: string;
@@ -79,6 +85,7 @@ export interface CartWithItems {
   createdAt: Date;
   updatedAt: Date;
   items: CartItemData[];
+  summary: CartSummary;
 }
 
 export interface CheckoutResult {

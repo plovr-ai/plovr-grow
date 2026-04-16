@@ -1,8 +1,12 @@
 import { cartRepository } from "@/repositories/cart.repository";
 import { menuRepository } from "@/repositories/menu.repository";
+import { taxConfigRepository } from "@/repositories/tax-config.repository";
 import { orderService } from "@/services/order";
 import { AppError } from "@/lib/errors";
 import { ErrorCodes } from "@/lib/errors/error-codes";
+import { calculateOrderPricing } from "@/lib/pricing";
+import type { PricingItem } from "@/lib/pricing";
+import type { RoundingMethod } from "@/services/menu/tax-config.types";
 import type {
   CreateCartInput,
   AddCartItemInput,
@@ -11,6 +15,7 @@ import type {
   CartWithItems,
   CartItemData,
   CartItemModifierData,
+  CartSummary,
   CheckoutResult,
 } from "./cart.types";
 import type { OrderItemData, SelectedModifier, SalesChannel } from "@/types";
@@ -29,6 +34,33 @@ export class CartService {
       throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
     }
 
+    const items = cart.cartItems.map((item): CartItemData => ({
+      id: item.id,
+      menuItemId: item.menuItemId,
+      name: item.name,
+      unitPrice: Number(item.unitPrice),
+      quantity: item.quantity,
+      totalPrice: Number(item.totalPrice),
+      specialInstructions: item.specialInstructions,
+      imageUrl: item.imageUrl,
+      sortOrder: item.sortOrder,
+      modifiers: item.modifiers.map((m): CartItemModifierData => ({
+        id: m.id,
+        modifierGroupId: m.modifierGroupId,
+        modifierOptionId: m.modifierOptionId,
+        groupName: m.groupName,
+        name: m.name,
+        price: Number(m.price),
+        quantity: m.quantity,
+      })),
+    }));
+
+    const summary = await this.computeCartSummary(
+      cart.tenantId,
+      cart.merchantId,
+      items
+    );
+
     return {
       id: cart.id,
       tenantId: cart.tenantId,
@@ -38,26 +70,8 @@ export class CartService {
       notes: cart.notes,
       createdAt: cart.createdAt,
       updatedAt: cart.updatedAt,
-      items: cart.cartItems.map((item): CartItemData => ({
-        id: item.id,
-        menuItemId: item.menuItemId,
-        name: item.name,
-        unitPrice: Number(item.unitPrice),
-        quantity: item.quantity,
-        totalPrice: Number(item.totalPrice),
-        specialInstructions: item.specialInstructions,
-        imageUrl: item.imageUrl,
-        sortOrder: item.sortOrder,
-        modifiers: item.modifiers.map((m): CartItemModifierData => ({
-          id: m.id,
-          modifierGroupId: m.modifierGroupId,
-          modifierOptionId: m.modifierOptionId,
-          groupName: m.groupName,
-          name: m.name,
-          price: Number(m.price),
-          quantity: m.quantity,
-        })),
-      })),
+      items,
+      summary,
     };
   }
 
@@ -266,6 +280,56 @@ export class CartService {
     return {
       orderId: order.id,
       orderNumber: order.orderNumber,
+    };
+  }
+
+  private async computeCartSummary(
+    tenantId: string,
+    merchantId: string,
+    items: CartItemData[]
+  ): Promise<CartSummary> {
+    if (items.length === 0) {
+      return { subtotal: 0, taxAmount: 0, totalAmount: 0 };
+    }
+
+    // Query tax data from DB (same pattern as order.service.ts)
+    const itemIds = items.map((item) => item.menuItemId);
+    const itemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(itemIds);
+    const allTaxConfigIds = [...new Set([...itemTaxMap.values()].flat())];
+    const [taxConfigs, merchantTaxRateMap] = await Promise.all([
+      taxConfigRepository.getTaxConfigsByIds(tenantId, allTaxConfigIds),
+      taxConfigRepository.getMerchantTaxRateMap(merchantId),
+    ]);
+    const taxConfigMap = new Map(taxConfigs.map((c) => [c.id, c]));
+
+    // Convert to PricingItem using DB-sourced tax data
+    const pricingItems: PricingItem[] = items.map((item) => {
+      const taxConfigIds = itemTaxMap.get(item.menuItemId) || [];
+      const taxes = taxConfigIds
+        .map((taxId) => {
+          const config = taxConfigMap.get(taxId);
+          if (!config) return null;
+          return {
+            rate: merchantTaxRateMap.get(taxId) || 0,
+            roundingMethod: config.roundingMethod as RoundingMethod,
+            inclusionType: config.inclusionType,
+          };
+        })
+        .filter((t): t is NonNullable<typeof t> => t !== null);
+      return {
+        itemId: item.menuItemId,
+        unitPrice: item.totalPrice / item.quantity,
+        quantity: item.quantity,
+        taxes,
+      };
+    });
+
+    const pricing = calculateOrderPricing(pricingItems);
+
+    return {
+      subtotal: pricing.subtotal,
+      taxAmount: pricing.taxAmount,
+      totalAmount: pricing.totalAmount,
     };
   }
 
