@@ -6,8 +6,12 @@ export type MerchantStatus = "active" | "inactive" | "temporarily_closed";
 
 export interface PhoneAiSettings {
   greetings?: string;
-  faq?: Array<{ question: string; answer: string }>;
-  agentWorkSwitch?: string;
+  faq?: {
+    savedFaqs?: Array<{ question: string; answer: string }>;
+    customFaqs?: Array<{ question: string; answer: string }>;
+  };
+  agentWorkSwitch?: "0" | "1" | "2";
+  forwardPhone?: string;
 }
 
 export interface BusinessHoursMap {

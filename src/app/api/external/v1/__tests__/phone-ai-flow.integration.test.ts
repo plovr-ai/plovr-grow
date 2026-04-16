@@ -159,10 +159,14 @@ const MERCHANT_A_DATA = {
   },
   phoneAiSettings: {
     greetings: "Welcome to Happy Wok!",
-    faq: [
-      { question: "Are you open?", answer: "Yes, we are open every day." },
-    ],
-    agentWorkSwitch: "+14155559999",
+    faq: {
+      savedFaqs: [
+        { question: "Are you open?", answer: "Yes, we are open every day." },
+      ],
+      customFaqs: [],
+    },
+    agentWorkSwitch: "0",
+    forwardPhone: "+14155559999",
   },
   tenant: {
     id: TENANT_ID,
@@ -626,10 +630,10 @@ describe("Phone-AI External API — Call Flow", () => {
         data: "Welcome to Happy Wok!",
       });
       const faq = JSON.parse(body.data.knowledgeMap.FAQ.data);
-      expect(faq).toHaveLength(1);
-      expect(faq[0].question).toBe("Are you open?");
+      expect(faq.savedFaqs).toHaveLength(1);
+      expect(faq.savedFaqs[0].question).toBe("Are you open?");
       expect(body.data.knowledgeMap.AGENT_WORK_SWITCH).toEqual({
-        data: "+14155559999",
+        data: "0",
       });
 
       // SERVICE_PROVIDED derived from merchant settings
