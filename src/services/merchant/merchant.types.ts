@@ -6,6 +6,7 @@ import type {
   MerchantSettings,
   MerchantStatus,
   BusinessHoursMap,
+  PhoneAiSettings,
 } from "@/types/merchant";
 
 // ==================== Response Types ====================
@@ -35,6 +36,7 @@ export interface MerchantWithTenant {
 
   status: MerchantStatus;
   settings?: MerchantSettings;
+  phoneAiSettings?: PhoneAiSettings;
   tenant: {
     id: string;
     slug: string | null;
@@ -86,6 +88,7 @@ export interface MerchantBasic {
 
   status: MerchantStatus;
   settings?: MerchantSettings;
+  phoneAiSettings?: PhoneAiSettings;
   createdAt: Date;
   updatedAt: Date;
 }
