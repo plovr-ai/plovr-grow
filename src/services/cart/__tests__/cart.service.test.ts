@@ -42,6 +42,7 @@ vi.mock("@/services/order", () => ({
 // Import mocked modules after vi.mock
 import { cartRepository } from "@/repositories/cart.repository";
 import { menuRepository } from "@/repositories/menu.repository";
+import { taxConfigRepository } from "@/repositories/tax-config.repository";
 import { orderService } from "@/services/order";
 
 // Helper factories
@@ -160,6 +161,72 @@ describe("CartService", () => {
       expect(result.items[0].totalPrice).toBe(25.98);
       expect(result.items[0].modifiers).toHaveLength(1);
       expect(result.items[0].modifiers[0].price).toBe(1.5);
+    });
+
+    it("returns summary with subtotal, taxAmount, totalAmount", async () => {
+      const item = makeCartItem({ unitPrice: 10, quantity: 2, totalPrice: 20 });
+      const cartWithItems = makeCartWithItems({ cartItems: [item] });
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
+        cartWithItems as never
+      );
+
+      // No taxes configured — summary should reflect subtotal only
+      const result = await cartService.getCart("tenant-1", "cart-1");
+
+      expect(result.summary).toBeDefined();
+      expect(result.summary.subtotal).toBe(20);
+      expect(result.summary.taxAmount).toBe(0);
+      expect(result.summary.totalAmount).toBe(20);
+    });
+
+    it("returns summary with tax when tax configs exist", async () => {
+      const item = makeCartItem({
+        menuItemId: "item-taxed",
+        unitPrice: 10,
+        quantity: 1,
+        totalPrice: 10,
+      });
+      const cartWithItems = makeCartWithItems({ cartItems: [item] });
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
+        cartWithItems as never
+      );
+
+      // Setup tax mocks
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([["item-taxed", ["tax-1"]]])
+      );
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([
+        {
+          id: "tax-1",
+          name: "Sales Tax",
+          roundingMethod: "round_half_up",
+          inclusionType: "additive",
+        } as never,
+      ]);
+      vi.mocked(taxConfigRepository.getMerchantTaxRateMap).mockResolvedValue(
+        new Map([["tax-1", 0.1]]) // 10% tax
+      );
+
+      const result = await cartService.getCart("tenant-1", "cart-1");
+
+      expect(result.summary.subtotal).toBe(10);
+      expect(result.summary.taxAmount).toBe(1); // 10% of $10
+      expect(result.summary.totalAmount).toBe(11); // $10 + $1
+    });
+
+    it("returns zero summary for empty cart", async () => {
+      const cartWithItems = makeCartWithItems({ cartItems: [] });
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
+        cartWithItems as never
+      );
+
+      const result = await cartService.getCart("tenant-1", "cart-1");
+
+      expect(result.summary).toEqual({
+        subtotal: 0,
+        taxAmount: 0,
+        totalAmount: 0,
+      });
     });
 
     it("throws CART_NOT_FOUND when cart does not exist", async () => {
