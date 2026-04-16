@@ -291,6 +291,10 @@ describe("External Order API — Phone Order Flow", () => {
     mockCreatePaymentRecord.mockReset();
     // Re-establish auth mock
     mockValidateExternalRequest.mockResolvedValue({ authenticated: true });
+    // Re-establish tax mocks (needed by computeCartSummary on every cart mutation)
+    mockGetMenuItemsTaxConfigIds.mockResolvedValue(new Map());
+    mockGetTaxConfigsByIds.mockResolvedValue([]);
+    mockGetMerchantTaxRateMap.mockResolvedValue(new Map());
   });
 
   // =========================================================================
