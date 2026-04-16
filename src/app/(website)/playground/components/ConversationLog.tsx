@@ -5,17 +5,18 @@ import type { ConversationMessage } from "@/lib/pipecat";
 
 interface ConversationLogProps {
   messages: ConversationMessage[];
+  interimText: string | null;
   isConnected: boolean;
 }
 
-export function ConversationLog({ messages, isConnected }: ConversationLogProps) {
+export function ConversationLog({ messages, interimText, isConnected }: ConversationLogProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, interimText]);
 
   return (
     <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
@@ -40,6 +41,13 @@ export function ConversationLog({ messages, isConnected }: ConversationLogProps)
           </div>
         </div>
       ))}
+      {interimText && (
+        <div className="flex justify-end">
+          <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-gray-800/60 px-3 py-2 text-sm leading-relaxed text-white/80 italic">
+            {interimText}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

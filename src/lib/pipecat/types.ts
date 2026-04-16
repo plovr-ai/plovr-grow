@@ -16,6 +16,4 @@ export interface ConversationMessage {
 
 export interface PlaygroundConfig {
   apiUrl: string;
-  tenantId: string;
-  merchantId: string;
 }
