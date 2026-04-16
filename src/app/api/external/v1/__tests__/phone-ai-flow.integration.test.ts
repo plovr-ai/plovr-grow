@@ -153,6 +153,16 @@ const MERCHANT_A_DATA = {
     orderMinimum: 15,
     deliveryFee: 5,
     estimatedPickupTime: 20,
+    acceptsPickup: true,
+    acceptsDelivery: false,
+    estimatedPrepTime: 20,
+  },
+  phoneAiSettings: {
+    greetings: "Welcome to Happy Wok!",
+    faq: [
+      { question: "Are you open?", answer: "Yes, we are open every day." },
+    ],
+    agentWorkSwitch: "+14155559999",
   },
   tenant: {
     id: TENANT_ID,
@@ -264,6 +274,7 @@ async function seedTestData() {
         locale: "en-US",
         businessHours: JSON.parse(JSON.stringify(MERCHANT_A_DATA.businessHours)),
         settings: JSON.parse(JSON.stringify(MERCHANT_A_DATA.settings)),
+        phoneAiSettings: JSON.parse(JSON.stringify(MERCHANT_A_DATA.phoneAiSettings)),
       },
       {
         id: MERCHANT_B_ID,
@@ -362,6 +373,7 @@ describe("Phone-AI External API — Call Flow", () => {
       expect(lookupBody.data.merchantName).toBe("Happy Wok");
       expect(lookupBody.data.address).toBe("123 Main St");
       expect(lookupBody.data.city).toBe("San Francisco");
+      expect(lookupBody.data.forwardPhone).toBe("+14155559999");
 
       const { tenantId, merchantId } = lookupBody.data;
 
@@ -591,8 +603,8 @@ describe("Phone-AI External API — Call Flow", () => {
   // Scenario 6: Knowledge query — unsupported targets return null
   // Phone-AI queries mix of supported and unsupported targets
   // =========================================================================
-  describe("Scenario 6: Unsupported knowledge targets return null without breaking", () => {
-    it("should return data for supported targets and null for unsupported ones", async () => {
+  describe("Scenario 6: Knowledge targets including phoneAiSettings-based ones", () => {
+    it("should return data for all configured targets", async () => {
       setupMerchantServiceMock(MERCHANT_A_DATA);
       mockGetMenu.mockResolvedValue(MOCK_MENU_DATA);
 
@@ -600,25 +612,54 @@ describe("Phone-AI External API — Call Flow", () => {
         createJsonRequest("/api/external/v1/knowledge/query", "POST", {
           tenantId: TENANT_ID,
           merchantId: MERCHANT_A_ID,
-          targets: ["MENU", "RESTAURANT_INFO", "FAQ", "GREETINGS"],
+          targets: ["MENU", "RESTAURANT_INFO", "FAQ", "GREETINGS", "SERVICE_PROVIDED", "AGENT_WORK_SWITCH"],
         })
       );
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.success).toBe(true);
 
-      // Supported targets have data
+      // All targets should have data (merchant A has phoneAiSettings)
       expect(body.data.knowledgeMap.MENU).not.toBeNull();
-      expect(body.data.knowledgeMap.MENU.data).toBeDefined();
       expect(body.data.knowledgeMap.RESTAURANT_INFO).not.toBeNull();
-      expect(body.data.knowledgeMap.RESTAURANT_INFO.data).toBeDefined();
+      expect(body.data.knowledgeMap.GREETINGS).toEqual({
+        data: "Welcome to Happy Wok!",
+      });
+      const faq = JSON.parse(body.data.knowledgeMap.FAQ.data);
+      expect(faq).toHaveLength(1);
+      expect(faq[0].question).toBe("Are you open?");
+      expect(body.data.knowledgeMap.AGENT_WORK_SWITCH).toEqual({
+        data: "+14155559999",
+      });
 
-      // Unsupported targets return null
-      expect(body.data.knowledgeMap.FAQ).toBeNull();
+      // SERVICE_PROVIDED derived from merchant settings
+      const service = JSON.parse(body.data.knowledgeMap.SERVICE_PROVIDED.data);
+      expect(service.pickup.openSwitch).toBe(1);
+      expect(service.pickup.quoteTime.min).toBe(20);
+      expect(service.delivery.openSwitch).toBe(0);
+      expect(service.reservation.openSwitch).toBe(0);
+
+      // Response has all 6 keys
+      expect(Object.keys(body.data.knowledgeMap)).toHaveLength(6);
+    });
+
+    it("should return null for GREETINGS/FAQ/AGENT_WORK_SWITCH when phoneAiSettings is missing", async () => {
+      const merchantNoPhoneAi = { ...MERCHANT_B_DATA };
+      setupMerchantServiceMock(MERCHANT_A_DATA, merchantNoPhoneAi);
+
+      const res = await queryKnowledge(
+        createJsonRequest("/api/external/v1/knowledge/query", "POST", {
+          tenantId: TENANT_ID,
+          merchantId: MERCHANT_B_ID,
+          targets: ["GREETINGS", "FAQ", "AGENT_WORK_SWITCH"],
+        })
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
       expect(body.data.knowledgeMap.GREETINGS).toBeNull();
-
-      // Response is still parseable — all 4 keys present
-      expect(Object.keys(body.data.knowledgeMap)).toHaveLength(4);
+      expect(body.data.knowledgeMap.FAQ).toBeNull();
+      expect(body.data.knowledgeMap.AGENT_WORK_SWITCH).toBeNull();
     });
   });
 });
