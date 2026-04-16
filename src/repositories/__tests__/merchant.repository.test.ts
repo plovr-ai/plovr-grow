@@ -462,6 +462,12 @@ describe("MerchantRepository", () => {
 
       expect(prisma.merchant.findFirst).toHaveBeenCalledWith({
         where: { OR: [{ aiPhone: "14155551234" }, { aiPhone: "+14155551234" }], deleted: false },
+        select: expect.objectContaining({
+          id: true,
+          tenantId: true,
+          phone: true,
+          phoneAiSettings: true,
+        }),
       });
       expect(result).toEqual(mockMerchant);
     });
@@ -473,6 +479,12 @@ describe("MerchantRepository", () => {
 
       expect(prisma.merchant.findFirst).toHaveBeenCalledWith({
         where: { OR: [{ aiPhone: "14155551234" }, { aiPhone: "+14155551234" }], deleted: false },
+        select: expect.objectContaining({
+          id: true,
+          tenantId: true,
+          phone: true,
+          phoneAiSettings: true,
+        }),
       });
       expect(result).toEqual(mockMerchant);
     });
