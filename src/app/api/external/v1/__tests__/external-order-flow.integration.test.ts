@@ -332,10 +332,12 @@ describe("External Order API — Phone Order Flow", () => {
       expect(addBurgerRes.status).toBe(201);
       const addBurgerBody = await addBurgerRes.json();
       expect(addBurgerBody.success).toBe(true);
-      burgerItemId = addBurgerBody.data.id;
-      expect(addBurgerBody.data.name).toBe("Burger");
-      expect(addBurgerBody.data.unitPrice).toBe(12.99);
-      expect(addBurgerBody.data.totalPrice).toBe(12.99);
+      // addItem now returns full CartWithItems
+      const burgerItem = addBurgerBody.data.items.find((i: { menuItemId: string }) => i.menuItemId === BURGER_ID);
+      burgerItemId = burgerItem.id;
+      expect(burgerItem.name).toBe("Burger");
+      expect(burgerItem.unitPrice).toBe(12.99);
+      expect(burgerItem.totalPrice).toBe(12.99);
 
       // Step 3: Add Fries (qty: 2, with large size modifier +$1.50)
       const addFriesRes = await addCartItem(
@@ -357,10 +359,12 @@ describe("External Order API — Phone Order Flow", () => {
       );
       expect(addFriesRes.status).toBe(201);
       const addFriesBody = await addFriesRes.json();
+      // addItem returns full CartWithItems
+      const friesItem = addFriesBody.data.items.find((i: { menuItemId: string }) => i.menuItemId === FRIES_ID);
       // totalPrice = (4.99 + 1.50) * 2 = 12.98
-      expect(addFriesBody.data.totalPrice).toBe(12.98);
-      expect(addFriesBody.data.modifiers).toHaveLength(1);
-      expect(addFriesBody.data.modifiers[0].name).toBe("Large");
+      expect(friesItem.totalPrice).toBe(12.98);
+      expect(friesItem.modifiers).toHaveLength(1);
+      expect(friesItem.modifiers[0].name).toBe("Large");
 
       // Step 4: Get cart — verify 2 items with correct prices
       const getRes = await getCart(
@@ -382,9 +386,11 @@ describe("External Order API — Phone Order Flow", () => {
       );
       expect(updateRes.status).toBe(200);
       const updateBody = await updateRes.json();
+      // updateItem returns full CartWithItems
+      const updatedBurger = updateBody.data.items.find((i: { id: string }) => i.id === burgerItemId);
       // totalPrice = 12.99 * 2 = 25.98
-      expect(updateBody.data.totalPrice).toBe(25.98);
-      expect(updateBody.data.quantity).toBe(2);
+      expect(updatedBurger.totalPrice).toBe(25.98);
+      expect(updatedBurger.quantity).toBe(2);
 
       // Step 6: Get cart again — verify updated totals
       const getRes2 = await getCart(
@@ -454,7 +460,8 @@ describe("External Order API — Phone Order Flow", () => {
         }),
         createRouteContext({ cartId })
       );
-      const burgerItemId = (await addRes.json()).data.id;
+      const addBody = await addRes.json();
+      const burgerItemId = addBody.data.items.find((i: { menuItemId: string }) => i.menuItemId === BURGER_ID).id;
 
       // Delete Burger
       await deleteCartItem(
