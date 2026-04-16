@@ -297,10 +297,12 @@ export class CartService {
     const itemIds = items.map((item) => item.menuItemId);
     const itemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(itemIds) ?? new Map<string, string[]>();
     const allTaxConfigIds = [...new Set([...itemTaxMap.values()].flat())];
-    const [taxConfigs, merchantTaxRateMap] = await Promise.all([
+    const [taxConfigsRaw, merchantTaxRateMapRaw] = await Promise.all([
       taxConfigRepository.getTaxConfigsByIds(tenantId, allTaxConfigIds),
       taxConfigRepository.getMerchantTaxRateMap(merchantId),
     ]);
+    const taxConfigs = taxConfigsRaw ?? [];
+    const merchantTaxRateMap = merchantTaxRateMapRaw ?? new Map<string, number>();
     const taxConfigMap = new Map(taxConfigs.map((c) => [c.id, c]));
 
     // Convert to PricingItem using DB-sourced tax data
