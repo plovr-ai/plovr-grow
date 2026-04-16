@@ -453,4 +453,36 @@ describe("MerchantRepository", () => {
       expect(result.deleted).toBe(true);
     });
   });
+
+  describe("getByAiPhone", () => {
+    it("should find merchant by aiPhone with + prefix", async () => {
+      vi.mocked(prisma.merchant.findFirst).mockResolvedValue(mockMerchant as never);
+
+      const result = await repository.getByAiPhone("+14155551234");
+
+      expect(prisma.merchant.findFirst).toHaveBeenCalledWith({
+        where: { OR: [{ aiPhone: "14155551234" }, { aiPhone: "+14155551234" }], deleted: false },
+      });
+      expect(result).toEqual(mockMerchant);
+    });
+
+    it("should find merchant by aiPhone without + prefix", async () => {
+      vi.mocked(prisma.merchant.findFirst).mockResolvedValue(mockMerchant as never);
+
+      const result = await repository.getByAiPhone("14155551234");
+
+      expect(prisma.merchant.findFirst).toHaveBeenCalledWith({
+        where: { OR: [{ aiPhone: "14155551234" }, { aiPhone: "+14155551234" }], deleted: false },
+      });
+      expect(result).toEqual(mockMerchant);
+    });
+
+    it("should return null when no merchant found", async () => {
+      vi.mocked(prisma.merchant.findFirst).mockResolvedValue(null);
+
+      const result = await repository.getByAiPhone("+10000000000");
+
+      expect(result).toBeNull();
+    });
+  });
 });
