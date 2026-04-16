@@ -62,6 +62,13 @@ const mockMerchant = {
     tipConfig: { enabled: true, presets: [15, 18, 20] },
     feeConfig: { serviceFee: 0 },
   },
+  phoneAiSettings: {
+    greetings: "Welcome to Happy Wok! How can I help you?",
+    faq: [
+      { question: "Do you have gluten-free options?", answer: "Yes, we have several gluten-free dishes." },
+    ],
+    agentWorkSwitch: "transfer_to_human",
+  },
 };
 
 describe("POST /api/external/v1/knowledge/query", () => {
@@ -145,15 +152,53 @@ describe("POST /api/external/v1/knowledge/query", () => {
     expect(mockGetMenu).toHaveBeenCalledWith("t1", "m1");
   });
 
-  it("should return null for unsupported targets", async () => {
+  it("should return GREETINGS from phoneAiSettings", async () => {
     mockGetMerchantById.mockResolvedValue(mockMerchant);
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["GREETINGS", "FAQ", "SERVICE_PROVIDED", "AGENT_WORK_SWITCH"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["GREETINGS"] }));
+    const json = await response.json();
+    expect(response.status).toBe(200);
+    expect(json.data.knowledgeMap.GREETINGS).toEqual({
+      data: "Welcome to Happy Wok! How can I help you?",
+    });
+  });
+
+  it("should return FAQ from phoneAiSettings as JSON string", async () => {
+    mockGetMerchantById.mockResolvedValue(mockMerchant);
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["FAQ"] }));
+    const json = await response.json();
+    expect(response.status).toBe(200);
+    const faq = JSON.parse(json.data.knowledgeMap.FAQ.data);
+    expect(faq).toHaveLength(1);
+    expect(faq[0].question).toBe("Do you have gluten-free options?");
+  });
+
+  it("should return AGENT_WORK_SWITCH from phoneAiSettings", async () => {
+    mockGetMerchantById.mockResolvedValue(mockMerchant);
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["AGENT_WORK_SWITCH"] }));
+    const json = await response.json();
+    expect(response.status).toBe(200);
+    expect(json.data.knowledgeMap.AGENT_WORK_SWITCH).toEqual({
+      data: "transfer_to_human",
+    });
+  });
+
+  it("should return null for GREETINGS when phoneAiSettings is missing", async () => {
+    const merchantWithoutPhoneAi = { ...mockMerchant, phoneAiSettings: undefined };
+    mockGetMerchantById.mockResolvedValue(merchantWithoutPhoneAi);
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["GREETINGS", "FAQ", "AGENT_WORK_SWITCH"] }));
     const json = await response.json();
     expect(response.status).toBe(200);
     expect(json.data.knowledgeMap.GREETINGS).toBeNull();
     expect(json.data.knowledgeMap.FAQ).toBeNull();
-    expect(json.data.knowledgeMap.SERVICE_PROVIDED).toBeNull();
     expect(json.data.knowledgeMap.AGENT_WORK_SWITCH).toBeNull();
+  });
+
+  it("should return null for SERVICE_PROVIDED (not yet implemented)", async () => {
+    mockGetMerchantById.mockResolvedValue(mockMerchant);
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["SERVICE_PROVIDED"] }));
+    const json = await response.json();
+    expect(response.status).toBe(200);
+    expect(json.data.knowledgeMap.SERVICE_PROVIDED).toBeNull();
   });
 
   it("should only return requested targets", async () => {
