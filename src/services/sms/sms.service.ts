@@ -56,6 +56,20 @@ export class SmsService {
   }
 
   /**
+   * Send a custom SMS message
+   */
+  async sendMessage(phone: string, message: string): Promise<SmsResult> {
+    if (!this.verifyPhoneFormat(phone)) {
+      return {
+        success: false,
+        error: "Invalid phone number format. Use E.164 format (e.g., +14155551234)",
+      };
+    }
+
+    return this.provider.sendMessage(phone, message);
+  }
+
+  /**
    * Verify phone number format
    */
   verifyPhoneFormat(phone: string): boolean {
