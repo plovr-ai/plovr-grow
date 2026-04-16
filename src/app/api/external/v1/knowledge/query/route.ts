@@ -83,8 +83,22 @@ async function resolveTarget(
       return phoneAiSwitch?.agentWorkSwitch ? { data: phoneAiSwitch.agentWorkSwitch } : null;
     }
 
-    case "SERVICE_PROVIDED":
-      return null;
+    case "SERVICE_PROVIDED": {
+      const settings = merchant.settings;
+      const serviceData = {
+        pickup: {
+          openSwitch: settings?.acceptsPickup ? 1 : 0,
+          quoteTime: { min: settings?.estimatedPrepTime ?? 15 },
+        },
+        delivery: {
+          openSwitch: settings?.acceptsDelivery ? 1 : 0,
+        },
+        reservation: {
+          openSwitch: 0,
+        },
+      };
+      return { data: JSON.stringify(serviceData) };
+    }
   }
 }
 
