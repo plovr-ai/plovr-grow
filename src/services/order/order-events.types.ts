@@ -18,7 +18,7 @@ export type FulfillmentEventType =
 export type OrderEventType = PaymentEventType | FulfillmentEventType;
 
 /** Where the status change originated */
-export type OrderEventSource = "internal" | "square_webhook" | "toast_webhook" | "manual";
+export type OrderEventSource = "internal" | "square_webhook" | "toast_webhook" | "manual" | "phone_order";
 
 // Base event payload
 export interface OrderEventPayload {
