@@ -62,6 +62,38 @@ export class TwilioSmsProvider implements SmsProvider {
     }
   }
 
+  async sendMessage(phone: string, message: string): Promise<SmsResult> {
+    if (!this.accountSid || !this.authToken || !this.fromNumber) {
+      return {
+        success: false,
+        error: "Twilio credentials not configured",
+      };
+    }
+
+    try {
+      // @ts-expect-error - twilio is an optional peer dependency
+      const twilio = await import("twilio");
+      const client = twilio.default(this.accountSid, this.authToken);
+
+      const result = await client.messages.create({
+        body: message,
+        from: this.fromNumber,
+        to: phone,
+      });
+
+      return {
+        success: true,
+        messageId: result.sid,
+      };
+    } catch (error) {
+      console.error("[TwilioSmsProvider] Error sending SMS:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
   verifyPhoneFormat(phone: string): boolean {
     // E.164 format: +[country code][number]
     return /^\+[1-9]\d{1,14}$/.test(phone);

@@ -25,6 +25,20 @@ export class MockSmsProvider implements SmsProvider {
     };
   }
 
+  async sendMessage(phone: string, message: string): Promise<SmsResult> {
+    console.log("\n==========================================");
+    console.log("[Mock SMS] Message Sent");
+    console.log("==========================================");
+    console.log(`Phone: ${phone}`);
+    console.log(`Message: ${message}`);
+    console.log("==========================================\n");
+
+    return {
+      success: true,
+      messageId: `mock-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+    };
+  }
+
   verifyPhoneFormat(phone: string): boolean {
     // E.164 format: +[country code][number]
     // Examples: +14155551234, +8613800138000

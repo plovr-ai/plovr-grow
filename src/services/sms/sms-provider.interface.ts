@@ -11,6 +11,11 @@ export interface SmsProvider {
   sendOtp(phone: string, code: string): Promise<SmsResult>;
 
   /**
+   * Send a custom SMS message
+   */
+  sendMessage(phone: string, message: string): Promise<SmsResult>;
+
+  /**
    * Verify phone number format (E.164)
    */
   verifyPhoneFormat(phone: string): boolean;
