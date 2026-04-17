@@ -273,6 +273,7 @@ export class CartService {
     return {
       orderId: order.id,
       orderNumber: order.orderNumber,
+      alreadyExists: false,
     };
   }
 

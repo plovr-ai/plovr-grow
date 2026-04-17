@@ -649,7 +649,11 @@ describe("CartService", () => {
           ]),
         })
       );
-      expect(result).toEqual({ orderId: "order-1", orderNumber: "ORD-001" });
+      expect(result).toEqual({
+        orderId: "order-1",
+        orderNumber: "ORD-001",
+        alreadyExists: false,
+      });
     });
 
     it("marks cart as submitted after successful order creation", async () => {
