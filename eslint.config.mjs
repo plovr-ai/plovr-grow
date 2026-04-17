@@ -35,6 +35,9 @@ const eslintConfig = defineConfig([
       // 禁止显式 any
       "@typescript-eslint/no-explicit-any": "error",
 
+      // 本项目使用原生 <img> + CDN 自带图片优化，关闭 next/image 约束
+      "@next/next/no-img-element": "off",
+
       // 禁止 enum，使用 const + as const 或联合类型
       "no-restricted-syntax": [
         "error",
