@@ -17,6 +17,8 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       exclude: [
+        // Test fixtures — helper code for tests, not product code
+        "**/__tests__/fixtures/**",
         // Repository implementations without unit tests — covered by integration tests
         "src/repositories/catering-order.repository.ts",
         "src/repositories/catering.repository.ts",
