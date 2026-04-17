@@ -61,15 +61,21 @@ const mockMerchant = {
     sun: { open: "10:00", close: "20:00", closed: false },
   },
   settings: {
-    tipConfig: { enabled: true, presets: [15, 18, 20] },
-    feeConfig: { serviceFee: 0 },
+    acceptsPickup: true,
+    acceptsDelivery: false,
+    estimatedPrepTime: 20,
+    tipConfig: { mode: "percentage", tiers: [0.15, 0.18, 0.20], allowCustom: true },
+    feeConfig: { fees: [] },
   },
   phoneAiSettings: {
     greetings: "Welcome to Happy Wok! How can I help you?",
-    faq: [
-      { question: "Do you have gluten-free options?", answer: "Yes, we have several gluten-free dishes." },
-    ],
-    agentWorkSwitch: "transfer_to_human",
+    faq: {
+      savedFaqs: [
+        { question: "Do you have gluten-free options?", answer: "Yes, we have several gluten-free dishes." },
+      ],
+      customFaqs: [],
+    },
+    agentWorkSwitch: "0",
   },
 };
 
@@ -136,7 +142,9 @@ describe("POST /api/external/v1/knowledge/query", () => {
     const json = await response.json();
     expect(response.status).toBe(200);
     const config = JSON.parse(json.data.knowledgeMap.ORDER_CONFIG.data);
-    expect(config.tipConfig.enabled).toBe(true);
+    expect(config.tipConfig.mode).toBe("percentage");
+    expect(config.tipConfig.tiers).toEqual([0.15, 0.18, 0.20]);
+    expect(config.acceptsPickup).toBe(true);
   });
 
   it("should return MENU data from menuService", async () => {
@@ -170,8 +178,9 @@ describe("POST /api/external/v1/knowledge/query", () => {
     const json = await response.json();
     expect(response.status).toBe(200);
     const faq = JSON.parse(json.data.knowledgeMap.FAQ.data);
-    expect(faq).toHaveLength(1);
-    expect(faq[0].question).toBe("Do you have gluten-free options?");
+    expect(faq.savedFaqs).toHaveLength(1);
+    expect(faq.savedFaqs[0].question).toBe("Do you have gluten-free options?");
+    expect(faq.customFaqs).toHaveLength(0);
   });
 
   it("should return AGENT_WORK_SWITCH from phoneAiSettings", async () => {
@@ -180,7 +189,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
     const json = await response.json();
     expect(response.status).toBe(200);
     expect(json.data.knowledgeMap.AGENT_WORK_SWITCH).toEqual({
-      data: "transfer_to_human",
+      data: "0",
     });
   });
 

@@ -152,19 +152,21 @@ const MERCHANT_A_DATA = {
     sunday: { open: "12:00", close: "20:00" },
   },
   settings: {
-    orderMinimum: 15,
-    deliveryFee: 5,
-    estimatedPickupTime: 20,
     acceptsPickup: true,
     acceptsDelivery: false,
+    minimumOrderAmount: 15,
     estimatedPrepTime: 20,
   },
   phoneAiSettings: {
     greetings: "Welcome to Happy Wok!",
-    faq: [
-      { question: "Are you open?", answer: "Yes, we are open every day." },
-    ],
-    agentWorkSwitch: "+14155559999",
+    faq: {
+      savedFaqs: [
+        { question: "Are you open?", answer: "Yes, we are open every day." },
+      ],
+      customFaqs: [],
+    },
+    agentWorkSwitch: "0",
+    forwardPhone: "+14155559999",
   },
   tenant: {
     id: TENANT_ID,
@@ -200,12 +202,10 @@ const MERCHANT_B_DATA = {
     sunday: { open: "11:00", close: "21:00" },
   },
   settings: {
-    orderMinimum: 20,
-    deliveryFee: 7,
-    estimatedPickupTime: 30,
     acceptsPickup: true,
-    acceptsDelivery: false,
-    estimatedPrepTime: 25,
+    acceptsDelivery: true,
+    minimumOrderAmount: 20,
+    estimatedPrepTime: 30,
   },
   phoneAiSettings: null,
   tenant: {
@@ -415,8 +415,10 @@ describe("Phone-AI External API — Call Flow", () => {
       expect(hours.friday.close).toBe("22:00");
 
       const orderConfig = JSON.parse(knowledgeBody.data.knowledgeMap.ORDER_CONFIG.data);
-      expect(orderConfig.orderMinimum).toBe(15);
-      expect(orderConfig.estimatedPickupTime).toBe(20);
+      expect(orderConfig.minimumOrderAmount).toBe(15);
+      expect(orderConfig.estimatedPrepTime).toBe(20);
+      expect(orderConfig.acceptsPickup).toBe(true);
+      expect(orderConfig.acceptsDelivery).toBe(false);
 
       // MENU target should have called menuService
       expect(mockGetMenu).toHaveBeenCalledWith(tenantId, merchantId);
@@ -649,10 +651,10 @@ describe("Phone-AI External API — Call Flow", () => {
         data: "Welcome to Happy Wok!",
       });
       const faq = JSON.parse(body.data.knowledgeMap.FAQ.data);
-      expect(faq).toHaveLength(1);
-      expect(faq[0].question).toBe("Are you open?");
+      expect(faq.savedFaqs).toHaveLength(1);
+      expect(faq.savedFaqs[0].question).toBe("Are you open?");
       expect(body.data.knowledgeMap.AGENT_WORK_SWITCH).toEqual({
-        data: "+14155559999",
+        data: "0",
       });
 
       // SERVICE_PROVIDED derived from merchant settings

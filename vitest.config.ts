@@ -12,6 +12,7 @@ export default defineConfig({
       "**/*.integration.test.ts",
       "**/*.integration.test.tsx",
       ".worktrees/**",
+      ".claude/worktrees/**",
     ],
     coverage: {
       provider: "v8",
