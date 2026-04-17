@@ -6,7 +6,7 @@ import {
   loyaltyMemberRepository,
   type LoyaltyMemberRepository,
 } from "@/repositories/loyalty-member.repository";
-import prisma from "@/lib/db";
+import { runInTransaction } from "@/lib/transaction";
 import { Prisma } from "@prisma/client";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import type {
@@ -87,7 +87,7 @@ export class PointsService {
 
     try {
       // Atomic: create transaction record + update member balance
-      const transaction = await prisma.$transaction(async (tx) => {
+      const transaction = await runInTransaction(async (tx) => {
         const txn = await this.transactionRepository.create(tenantId, {
           memberId,
           merchantId: input.merchantId,
@@ -164,7 +164,7 @@ export class PointsService {
 
     try {
       // Atomic: create transaction record + update member balance
-      const transaction = await prisma.$transaction(async (tx) => {
+      const transaction = await runInTransaction(async (tx) => {
         const txn = await this.transactionRepository.create(tenantId, {
           memberId,
           merchantId: input.merchantId,

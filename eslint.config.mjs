@@ -61,6 +61,47 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // Enforce Repository pattern: Service 和 API Route 禁止直接导入 prisma 默认实例。
+  // Named type-only imports (e.g. `import type { DbClient } from "@/lib/db"`)
+  // remain allowed because `importNames: ["default"]` only restricts the
+  // default export.
+  //
+  // The ignores list below contains services that are tracked as follow-up
+  // work for issue #280 (order + square + stripe-connect have complex
+  // transactions that need dedicated migration PRs). Remove entries as their
+  // direct prisma usage is migrated to Repositories.
+  {
+    files: ["src/services/**/*.ts", "src/app/api/**/*.{ts,tsx}"],
+    ignores: [
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+      "src/**/*.integration.test.ts",
+      "src/**/*.integration.test.tsx",
+      "src/**/__tests__/**",
+      // TODO(#280 follow-up): migrate these services to the Repository pattern.
+      "src/services/order/order.service.ts",
+      "src/services/square/square.service.ts",
+      "src/services/square/square-order.service.ts",
+      "src/services/square/square-webhook.service.ts",
+      "src/services/stripe-connect/stripe-connect.service.ts",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/lib/db",
+              importNames: ["default"],
+              message:
+                "Service 和 API Route 禁止直接导入 prisma；请通过 Repository 访问数据。如需事务编排，使用 runInTransaction from '@/lib/transaction'。",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

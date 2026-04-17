@@ -1,19 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { ErrorCodes } from "@/lib/errors/error-codes";
+import { AppError } from "@/lib/errors/app-error";
 
-vi.mock("@/lib/db", () => ({
-  default: {
-    tenant: { findUnique: vi.fn() },
-    user: { findFirst: vi.fn(), create: vi.fn() },
-  },
+vi.mock("@/services/auth/auth.service", () => ({
+  authService: { claimTenant: vi.fn() },
 }));
 
-vi.mock("@/lib/id", () => ({
-  generateEntityId: vi.fn().mockReturnValue("mock-user-id"),
-}));
-
-import prisma from "@/lib/db";
+import { authService } from "@/services/auth/auth.service";
 import { POST } from "../claim/route";
 
 function makeRequest(body: unknown) {
@@ -27,11 +21,7 @@ describe("POST /api/auth/claim", () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it("claims a tenant and creates owner user", async () => {
-    vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
-      id: "tenant1", slug: "test-slug",
-    } as never);
-    vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
-    vi.mocked(prisma.user.create).mockResolvedValue({ id: "mock-user-id" } as never);
+    vi.mocked(authService.claimTenant).mockResolvedValue({ companySlug: "test-slug" });
 
     const res = await POST(makeRequest({
       tenantId: "tenant1", email: "owner@test.com", name: "Owner",
@@ -39,13 +29,15 @@ describe("POST /api/auth/claim", () => {
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data).toEqual({ success: true, companySlug: "test-slug" });
-    expect(prisma.user.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ email: "owner@test.com", passwordHash: null, role: "owner", status: "active" }),
+    expect(authService.claimTenant).toHaveBeenCalledWith({
+      tenantId: "tenant1", email: "owner@test.com", name: "Owner",
     });
   });
 
   it("returns 404 with CLAIM_TENANT_NOT_FOUND when tenant does not exist", async () => {
-    vi.mocked(prisma.tenant.findUnique).mockResolvedValue(null);
+    vi.mocked(authService.claimTenant).mockRejectedValue(
+      new AppError(ErrorCodes.CLAIM_TENANT_NOT_FOUND, undefined, 404)
+    );
     const res = await POST(makeRequest({
       tenantId: "fake", email: "owner@test.com", name: "Owner",
     }), { params: Promise.resolve({}) });
@@ -58,10 +50,9 @@ describe("POST /api/auth/claim", () => {
   });
 
   it("returns 409 with AUTH_EMAIL_EXISTS when email already exists for this tenant", async () => {
-    vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
-      id: "tenant1",
-    } as never);
-    vi.mocked(prisma.user.findFirst).mockResolvedValue({ id: "existing-user" } as never);
+    vi.mocked(authService.claimTenant).mockRejectedValue(
+      new AppError(ErrorCodes.AUTH_EMAIL_EXISTS, undefined, 409)
+    );
     const res = await POST(makeRequest({
       tenantId: "tenant1", email: "owner@test.com", name: "Owner",
     }), { params: Promise.resolve({}) });
@@ -82,8 +73,8 @@ describe("POST /api/auth/claim", () => {
     expect(data.fieldErrors).toBeDefined();
   });
 
-  it("returns 500 with CLAIM_FAILED for unexpected errors", async () => {
-    vi.mocked(prisma.tenant.findUnique).mockRejectedValue(new Error("DB error"));
+  it("returns 500 with INTERNAL_ERROR for unexpected errors", async () => {
+    vi.mocked(authService.claimTenant).mockRejectedValue(new Error("DB error"));
     const res = await POST(makeRequest({
       tenantId: "tenant1", email: "owner@test.com", name: "Owner",
     }), { params: Promise.resolve({}) });

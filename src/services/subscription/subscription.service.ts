@@ -5,6 +5,7 @@ import {
   subscriptionRepository,
   type UpdateSubscriptionInput,
 } from "@/repositories/subscription.repository";
+import { tenantRepository } from "@/repositories/tenant.repository";
 import type {
   SubscriptionInfo,
   SubscriptionStatus,
@@ -582,22 +583,14 @@ export class SubscriptionService {
   }
 
   /**
-   * Get tenant info (uses raw query to avoid circular imports)
+   * Get minimal tenant info for Stripe customer creation. We intentionally
+   * hit the repository (rather than tenantService) to avoid a service-layer
+   * circular import.
    */
   private async getTenantInfo(
     tenantId: string
   ): Promise<{ name: string; email: string | null } | null> {
-    // Import prisma directly to avoid service layer circular dependency
-    const { default: prisma } = await import("@/lib/db");
-
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: {
-        name: true,
-        supportEmail: true,
-      },
-    });
-
+    const tenant = await tenantRepository.getNameAndSupportEmail(tenantId);
     if (!tenant) return null;
 
     return {

@@ -31,16 +31,16 @@ vi.mock("@/repositories/subscription.repository", () => ({
   },
 }));
 
-vi.mock("@/lib/db", () => ({
-  default: {
-    tenant: { findUnique: vi.fn() },
+vi.mock("@/repositories/tenant.repository", () => ({
+  tenantRepository: {
+    getNameAndSupportEmail: vi.fn(),
   },
 }));
 
 import { subscriptionService } from "../subscription.service";
 import { stripeService } from "@/services/stripe/stripe.service";
 import { subscriptionRepository } from "@/repositories/subscription.repository";
-import prisma from "@/lib/db";
+import { tenantRepository } from "@/repositories/tenant.repository";
 
 const activeSubscription = {
   id: "sub-1",
@@ -451,7 +451,7 @@ describe("SubscriptionService", () => {
 
     it("should create a new Stripe customer when no existing subscription", async () => {
       vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([]);
-      vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
+      vi.mocked(tenantRepository.getNameAndSupportEmail).mockResolvedValue({
         name: "Test Tenant",
         supportEmail: "support@test.com",
       } as never);
@@ -477,9 +477,9 @@ describe("SubscriptionService", () => {
 
     it("should use fallback email when tenant has no company email", async () => {
       vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([]);
-      vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
+      vi.mocked(tenantRepository.getNameAndSupportEmail).mockResolvedValue({
         name: "Test Tenant",
-        company: null,
+        supportEmail: null,
       } as never);
       vi.mocked(stripeService.createCustomer).mockResolvedValue("cus_new_456");
       vi.mocked(subscriptionRepository.create).mockResolvedValue({} as never);
@@ -499,7 +499,7 @@ describe("SubscriptionService", () => {
 
     it("should throw when tenant not found during customer creation", async () => {
       vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([]);
-      vi.mocked(prisma.tenant.findUnique).mockResolvedValue(null);
+      vi.mocked(tenantRepository.getNameAndSupportEmail).mockResolvedValue(null);
 
       await expect(
         subscriptionService.createCheckoutSession("tenant-1", "platform", "starter")

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { validateExternalRequest } from "@/lib/external-auth";
 import { withApiHandler } from "@/lib/api";
-import { merchantRepository } from "@/repositories/merchant.repository";
+import { merchantService } from "@/services/merchant";
 import { ErrorCodes } from "@/lib/errors/error-codes";
 import type { PhoneAiSettings } from "@/types/merchant";
 
@@ -41,7 +41,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
     );
   }
 
-  const merchant = await merchantRepository.getByAiPhone(parsed.data.phone);
+  const merchant = await merchantService.lookupByAiPhone(parsed.data.phone);
   if (!merchant) {
     return NextResponse.json(
       { success: false, error: { code: ErrorCodes.MERCHANT_NOT_FOUND } },

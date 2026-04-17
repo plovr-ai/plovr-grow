@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import type { DbClient } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
 
@@ -132,16 +133,21 @@ export class MerchantRepository {
   }
 
   /**
-   * Create a new merchant
+   * Create a new merchant. Pass an `id` in `data` to reuse a pre-generated
+   * identifier (useful when the caller needs the id before persisting — e.g.
+   * to return it alongside the paired tenant record in `createTenantWithMerchant`).
    */
   async create(
     tenantId: string,
-    data: Omit<Prisma.MerchantCreateInput, "id" | "tenant">
+    data: Omit<Prisma.MerchantCreateInput, "id" | "tenant"> & { id?: string },
+    tx?: DbClient
   ) {
-    return prisma.merchant.create({
+    const db = tx ?? prisma;
+    const { id, ...rest } = data;
+    return db.merchant.create({
       data: {
-        id: generateEntityId(),
-        ...data,
+        id: id ?? generateEntityId(),
+        ...rest,
         tenant: { connect: { id: tenantId } },
       },
     });
@@ -150,8 +156,13 @@ export class MerchantRepository {
   /**
    * Update merchant details by ID
    */
-  async update(merchantId: string, data: Prisma.MerchantUpdateInput) {
-    return prisma.merchant.update({
+  async update(
+    merchantId: string,
+    data: Prisma.MerchantUpdateInput,
+    tx?: DbClient
+  ) {
+    const db = tx ?? prisma;
+    return db.merchant.update({
       where: { id: merchantId },
       data,
     });
