@@ -252,7 +252,7 @@ export class CartService {
           cart.orderId
         );
         if (!order) {
-          throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId: cart.orderId });
+          throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId: cart.orderId }, 404);
         }
         return {
           orderId: order.id,
@@ -346,7 +346,7 @@ export class CartService {
           current.orderId
         );
         if (!order) {
-          throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId: current.orderId });
+          throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId: current.orderId }, 404);
         }
         return {
           orderId: order.id,
@@ -455,47 +455,6 @@ export class CartService {
     };
   }
 
-  private mapCartItem(item: {
-    id: string;
-    menuItemId: string;
-    name: string;
-    unitPrice: unknown;
-    quantity: number;
-    totalPrice: unknown;
-    specialInstructions: string | null;
-    imageUrl: string | null;
-    sortOrder: number;
-    modifiers: Array<{
-      id: string;
-      modifierGroupId: string;
-      modifierOptionId: string;
-      groupName: string;
-      name: string;
-      price: unknown;
-      quantity: number;
-    }>;
-  }): CartItemData {
-    return {
-      id: item.id,
-      menuItemId: item.menuItemId,
-      name: item.name,
-      unitPrice: Number(item.unitPrice),
-      quantity: item.quantity,
-      totalPrice: Number(item.totalPrice),
-      specialInstructions: item.specialInstructions,
-      imageUrl: item.imageUrl,
-      sortOrder: item.sortOrder,
-      modifiers: item.modifiers.map((m): CartItemModifierData => ({
-        id: m.id,
-        modifierGroupId: m.modifierGroupId,
-        modifierOptionId: m.modifierOptionId,
-        groupName: m.groupName,
-        name: m.name,
-        price: Number(m.price),
-        quantity: m.quantity,
-      })),
-    };
-  }
 }
 
 export const cartService = new CartService();
