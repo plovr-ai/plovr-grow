@@ -913,5 +913,46 @@ describe("CartService", () => {
 
       vi.useRealTimers();
     });
+
+    it("throws ORDER_NOT_FOUND when peer orderId points to missing order during wait", async () => {
+      vi.useFakeTimers();
+
+      const activeCart = makeCartWithItems({ status: "active", cartItems: [makeCartItem()] });
+      const peerSubmitted = makeCart({ status: "submitted", orderId: "order-gone" });
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(activeCart as never);
+      vi.mocked(cartRepository.findById).mockResolvedValue(peerSubmitted as never);
+      vi.mocked(cartRepository.claimForCheckout).mockResolvedValue({ count: 0 } as never);
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(null);
+
+      const promise = cartService.checkout("tenant-1", "cart-1", checkoutInput);
+      const assertion = expect(promise).rejects.toMatchObject({
+        code: "ORDER_NOT_FOUND",
+      });
+      await vi.advanceTimersByTimeAsync(100);
+      await assertion;
+
+      expect(orderService.createMerchantOrderAtomic).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    it("throws CART_NOT_ACTIVE when cart flips to cancelled during wait", async () => {
+      vi.useFakeTimers();
+
+      const activeCart = makeCartWithItems({ status: "active", cartItems: [makeCartItem()] });
+      const cancelledRow = makeCart({ status: "cancelled", orderId: null });
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(activeCart as never);
+      vi.mocked(cartRepository.findById).mockResolvedValue(cancelledRow as never);
+      vi.mocked(cartRepository.claimForCheckout).mockResolvedValue({ count: 0 } as never);
+
+      const promise = cartService.checkout("tenant-1", "cart-1", checkoutInput);
+      const assertion = expect(promise).rejects.toMatchObject({
+        code: "CART_NOT_ACTIVE",
+      });
+      await vi.advanceTimersByTimeAsync(100);
+      await assertion;
+
+      expect(orderService.createMerchantOrderAtomic).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
   });
 });
