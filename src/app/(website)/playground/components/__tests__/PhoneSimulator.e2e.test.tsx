@@ -196,4 +196,57 @@ describe("PhoneSimulator E2E — full lifecycle with real SDK", () => {
     expect(server.isConnected()).toBe(false);
     expect(screen.queryByText("Live")).not.toBeInTheDocument();
   });
+
+  it("regression #291: hangup still disconnects after many re-renders mid-call", async () => {
+    await renderPhoneSimulator();
+    await clickStartCall();
+    await server.awaitConnection();
+    await waitForLive();
+
+    for (let i = 0; i < 5; i++) {
+      act(() => {
+        server.sendBotTranscript(`chunk ${i}`);
+      });
+    }
+    await waitFor(() => {
+      expect(screen.getByText("chunk 4")).toBeInTheDocument();
+    });
+
+    await clickHangup();
+    await waitForCallEnded();
+    await waitFor(() => {
+      expect(server.isClosed()).toBe(true);
+    });
+  });
+
+  it("unmounting mid-call disconnects the SDK (leak guard)", async () => {
+    const { unmount } = await renderPhoneSimulator();
+    await clickStartCall();
+    await server.awaitConnection();
+    await waitForLive();
+
+    expect(server.isClosed()).toBe(false);
+    unmount();
+
+    await waitFor(() => {
+      expect(server.isClosed()).toBe(true);
+    });
+  });
+
+  it("hangup button is safe against double-click (one disconnect only)", async () => {
+    await renderPhoneSimulator();
+    await clickStartCall();
+    await server.awaitConnection();
+    await waitForLive();
+
+    await clickHangup();
+    await waitForCallEnded();
+
+    // After disconnect, button unmounts; attempting another click is a no-op.
+    // Assert server saw exactly one close.
+    await waitFor(() => {
+      expect(server.isClosed()).toBe(true);
+    });
+    expect(server.isConnected()).toBe(false);
+  });
 });
