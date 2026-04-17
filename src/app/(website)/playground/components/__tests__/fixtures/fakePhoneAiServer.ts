@@ -8,6 +8,21 @@ import {
   errorMessage,
 } from "./rtviMessages";
 
+// JSDOM's Blob does not implement `arrayBuffer()`; the real Pipecat
+// ProtobufFrameSerializer.deserialize awaits it. Polyfill on first use so
+// `blob instanceof Blob` still holds and the SDK's code path is exercised.
+if (typeof Blob !== "undefined" && typeof Blob.prototype.arrayBuffer !== "function") {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (Blob.prototype as any).arrayBuffer = function arrayBuffer(): Promise<ArrayBuffer> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(this as Blob);
+    });
+  };
+}
+
 export interface FakePhoneAiServer {
   /** ws:// URL passed to the quick-call mock response body. */
   readonly url: string;
@@ -51,9 +66,26 @@ export function createFakePhoneAiServer(): FakePhoneAiServer {
 
     socket.on("message", async (data) => {
       // mock-socket gives us the raw payload; SDK serialized it with
-      // the same ProtobufFrameSerializer. Round-trip it for recording.
+      // the same ProtobufFrameSerializer. The SDK calls ws.send(uint8Array),
+      // but mock-socket's `normalizeSendData` only passes through Blob and
+      // ArrayBuffer — Uint8Array becomes `String(uint8array)` (comma-joined
+      // bytes). Decode either shape.
       try {
-        const parsed = await serializer.deserialize(data);
+        let blob: Blob;
+        if (data instanceof Blob) {
+          blob = data;
+        } else if (data instanceof ArrayBuffer) {
+          blob = new Blob([data]);
+        } else if (typeof data === "string") {
+          // Uint8Array stringified by mock-socket — recover the bytes.
+          const bytes = Uint8Array.from(
+            data.split(",").map((s) => Number(s)),
+          );
+          blob = new Blob([bytes]);
+        } else {
+          return;
+        }
+        const parsed = await serializer.deserialize(blob);
         if (parsed.type === "message") {
           received.push(parsed.message);
         } else if (parsed.type === "audio") {
@@ -76,7 +108,12 @@ export function createFakePhoneAiServer(): FakePhoneAiServer {
       );
     }
     const encoded = serializer.serializeMessage(message);
-    connectedClient.send(encoded);
+    // SDK's ReconnectingWebSocket._handleMessage only resolves if the payload
+    // is a string, ArrayBuffer, or Blob — and deserialize() requires Blob.
+    // So wrap as Blob. Cast through Uint8Array so `BlobPart` typing is happy
+    // across Uint8Array<ArrayBufferLike> variants.
+    const blob = new Blob([encoded as unknown as ArrayBuffer]);
+    connectedClient.send(blob);
   }
 
   return {
