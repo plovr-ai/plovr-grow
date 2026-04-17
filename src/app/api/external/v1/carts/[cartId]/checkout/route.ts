@@ -94,7 +94,14 @@ export async function POST(
       notes,
     });
 
-    return NextResponse.json({ success: true, data: result }, { status: 201 });
+    const status = result.alreadyExists ? 200 : 201;
+    return NextResponse.json(
+      {
+        success: true,
+        data: { orderId: result.orderId, orderNumber: result.orderNumber },
+      },
+      { status }
+    );
   } catch (error) {
     console.error("Cart checkout failed:", error);
 
