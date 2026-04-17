@@ -118,4 +118,46 @@ describe("PhoneSimulator E2E — full lifecycle with real SDK", () => {
     });
     expect(screen.queryByText("Live")).not.toBeInTheDocument();
   });
+
+  it("mute button toggles SDK mic state without ending the call", async () => {
+    await renderPhoneSimulator();
+    await clickStartCall();
+    await server.awaitConnection();
+    await waitForLive();
+
+    const muteBtn = screen.getByRole("button", { name: /mute/i });
+    await act(async () => {
+      fireEvent.click(muteBtn);
+    });
+
+    const unmuteBtn = await screen.findByRole("button", { name: /unmute/i });
+    await act(async () => {
+      fireEvent.click(unmuteBtn);
+    });
+
+    // Call still alive, SDK never told to disconnect.
+    expect(screen.getByText("Live")).toBeInTheDocument();
+    expect(server.isClosed()).toBe(false);
+  });
+
+  it("interim user transcripts render as preview, finals render as message", async () => {
+    await renderPhoneSimulator();
+    await clickStartCall();
+    await server.awaitConnection();
+    await waitForLive();
+
+    act(() => {
+      server.sendUserTranscript("I'd like", { final: false });
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/I'd like/)).toBeInTheDocument();
+    });
+
+    act(() => {
+      server.sendUserTranscript("I'd like a burger", { final: true });
+    });
+    await waitFor(() => {
+      expect(screen.getByText("I'd like a burger")).toBeInTheDocument();
+    });
+  });
 });
