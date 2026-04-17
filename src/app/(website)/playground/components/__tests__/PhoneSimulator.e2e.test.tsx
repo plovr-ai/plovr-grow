@@ -160,4 +160,40 @@ describe("PhoneSimulator E2E — full lifecycle with real SDK", () => {
       expect(screen.getByText("I'd like a burger")).toBeInTheDocument();
     });
   });
+
+  it("non-fatal error surfaces to UI but call keeps going", async () => {
+    await renderPhoneSimulator();
+    await clickStartCall();
+    await server.awaitConnection();
+    await waitForLive();
+
+    act(() => {
+      server.sendError("transport-hiccup", { fatal: false });
+    });
+    await waitFor(() => {
+      // client.ts forwards message.type ("error") into setError.
+      // Non-fatal means dispose() is NOT called.
+      expect(screen.getByText(/error/i)).toBeInTheDocument();
+    });
+
+    // Call still alive — fatal=false must not auto-disconnect.
+    expect(screen.getByText("Live")).toBeInTheDocument();
+    expect(server.isClosed()).toBe(false);
+  });
+
+  it("quick-call HTTP failure surfaces error and never opens WS", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      text: async () => "tenant disabled",
+    } as Response);
+
+    await renderPhoneSimulator();
+    await clickStartCall();
+
+    await waitFor(() => {
+      expect(screen.getByText(/tenant disabled/)).toBeInTheDocument();
+    });
+    expect(server.isConnected()).toBe(false);
+    expect(screen.queryByText("Live")).not.toBeInTheDocument();
+  });
 });
