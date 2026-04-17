@@ -384,6 +384,15 @@ export class MerchantService {
   async isOpen(merchantId: string): Promise<boolean> {
     return merchantRepository.isOpen(merchantId);
   }
+
+  /**
+   * Look up a merchant by its AI-assigned phone number. Exposed as a service
+   * method so that the external `merchants/lookup` API route doesn't need to
+   * reach into the repository layer directly.
+   */
+  async lookupByAiPhone(phone: string) {
+    return merchantRepository.getByAiPhone(phone);
+  }
 }
 
 export const merchantService = new MerchantService();

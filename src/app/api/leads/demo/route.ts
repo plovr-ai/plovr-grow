@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import prisma from "@/lib/db";
+import { leadsService } from "@/services/leads/leads.service";
 import { withApiHandler } from "@/lib/api";
 
 const demoLeadSchema = z.object({
@@ -45,12 +45,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
     );
   }
 
-  await prisma.lead.create({
-    data: {
-      ...parsed.data,
-      source: "landing-page",
-    },
-  });
+  await leadsService.createDemoLead(parsed.data);
 
   return NextResponse.json({ success: true }, { status: 201 });
 });

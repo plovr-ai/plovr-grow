@@ -1,7 +1,7 @@
 import { tenantRepository } from "@/repositories/tenant.repository";
 import { merchantRepository } from "@/repositories/merchant.repository";
 import { AppError, ErrorCodes } from "@/lib/errors";
-import prisma from "@/lib/db";
+import { runInTransaction } from "@/lib/transaction";
 import { generateEntityId } from "@/lib/id";
 import type { Prisma } from "@prisma/client";
 import type { CreateTenantInput, UpdateTenantInput } from "./tenant.types";
@@ -80,8 +80,8 @@ export class TenantService {
     const merchantName = input.merchant?.name ?? input.name;
 
     const run = async (client: Prisma.TransactionClient) => {
-      const tenant = await client.tenant.create({
-        data: {
+      const tenant = await tenantRepository.create(
+        {
           id: tenantId,
           name: input.name,
           slug: tenantSlug,
@@ -89,12 +89,13 @@ export class TenantService {
           settings: input.settings as Prisma.InputJsonValue | undefined,
           source: input.source,
         },
-      });
+        client
+      );
 
-      const merchant = await client.merchant.create({
-        data: {
+      const merchant = await merchantRepository.create(
+        tenantId,
+        {
           id: merchantId,
-          tenantId,
           slug: merchantSlug,
           name: merchantName,
           // status defaults to "active" via the schema. Setting "pending" here
@@ -109,13 +110,14 @@ export class TenantService {
             | Prisma.InputJsonValue
             | undefined,
         },
-      });
+        client
+      );
 
       return { tenant, merchant };
     };
 
     if (input.tx) return run(input.tx);
-    return prisma.$transaction(run);
+    return runInTransaction(run);
   }
 
   /**
@@ -284,21 +286,22 @@ export class TenantService {
     };
 
     // Update both in a transaction
-    await prisma.$transaction(async (tx) => {
-      await tx.tenant.update({
-        where: { id: tenantId },
-        data: {
+    await runInTransaction(async (tx) => {
+      await tenantRepository.update(
+        tenantId,
+        {
           name: details.name,
           slug: newTenantSlug,
           websiteUrl: details.websiteUrl,
           settings: tenantSettings as Prisma.InputJsonValue,
           source: "generator",
         },
-      });
+        tx
+      );
 
-      await tx.merchant.update({
-        where: { id: merchant.id },
-        data: {
+      await merchantRepository.update(
+        merchant.id,
+        {
           name: details.name,
           slug: newMerchantSlug,
           status: "active",
@@ -309,7 +312,8 @@ export class TenantService {
           phone: details.phone,
           businessHours: details.businessHours as Prisma.InputJsonValue,
         },
-      });
+        tx
+      );
     });
 
     return { tenantSlug: newTenantSlug, merchantSlug: newMerchantSlug };

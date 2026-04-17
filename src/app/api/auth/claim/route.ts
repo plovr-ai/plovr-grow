@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import prisma from "@/lib/db";
-import { generateEntityId } from "@/lib/id";
-import { AppError } from "@/lib/errors";
+import { authService } from "@/services/auth/auth.service";
 import { ErrorCodes } from "@/lib/errors/error-codes";
 import { withApiHandler } from "@/lib/api";
 
@@ -23,27 +21,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
     );
   }
 
-  const { tenantId, email, name } = parsed.data;
+  const { companySlug } = await authService.claimTenant(parsed.data);
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-  });
-
-  if (!tenant) {
-    throw new AppError(ErrorCodes.CLAIM_TENANT_NOT_FOUND, undefined, 404);
-  }
-
-  const existingUser = await prisma.user.findFirst({ where: { tenantId, email } });
-  if (existingUser) {
-    throw new AppError(ErrorCodes.AUTH_EMAIL_EXISTS, undefined, 409);
-  }
-
-  await prisma.user.create({
-    data: {
-      id: generateEntityId(), tenantId,
-      email, passwordHash: null, name, role: "owner", status: "active",
-    },
-  });
-
-  return NextResponse.json({ success: true, companySlug: tenant.slug }, { status: 200 });
+  return NextResponse.json({ success: true, companySlug }, { status: 200 });
 });
