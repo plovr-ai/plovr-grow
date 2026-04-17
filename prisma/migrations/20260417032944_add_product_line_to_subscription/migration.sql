@@ -22,6 +22,3 @@ ALTER TABLE `tenants` DROP COLUMN `subscription_plan`,
 
 -- CreateIndex
 CREATE UNIQUE INDEX `subscriptions_tenant_id_product_line_key` ON `subscriptions`(`tenant_id`, `product_line`);
-
--- CreateIndex
-CREATE INDEX `subscriptions_stripe_customer_id_idx` ON `subscriptions`(`stripe_customer_id`);
