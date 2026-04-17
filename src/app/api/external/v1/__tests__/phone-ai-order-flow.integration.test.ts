@@ -994,7 +994,18 @@ describe("Phone-AI Order Flow — Integration Tests", () => {
       expect(body.error.code).toBe("CART_NOT_ACTIVE");
     });
 
-    it("should return CART_NOT_ACTIVE when checking out submitted cart again", async () => {
+    it("should return same orderId idempotently when checking out submitted cart again", async () => {
+      // First checkout already happened in beforeAll. Capture its details by
+      // fetching the submitted cart's orderId from the DB.
+      const firstCart = await prisma.cart.findUnique({
+        where: { id: submittedCartId },
+      });
+      const firstOrderId = firstCart?.orderId;
+      expect(firstOrderId).toBeTruthy();
+
+      const sequenceCallsBefore = mockGetNextOrderSequence.mock.calls.length;
+
+      // Second checkout on the same submitted cart
       const res = await checkoutCart(
         createJsonRequest(`/api/external/v1/carts/${submittedCartId}/checkout`, "POST", {
           tenantId: TENANT_ID,
@@ -1006,8 +1017,13 @@ describe("Phone-AI Order Flow — Integration Tests", () => {
         createRouteContext({ cartId: submittedCartId })
       );
       const body = await res.json();
-      expect(body.success).toBe(false);
-      expect(body.error.code).toBe("CART_NOT_ACTIVE");
+
+      expect(res.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.data.orderId).toBe(firstOrderId);
+      expect(body.data.orderNumber).toBeTruthy();
+      // Proves no second order was created
+      expect(mockGetNextOrderSequence.mock.calls.length).toBe(sequenceCallsBefore);
     });
 
     it("should return CART_NOT_ACTIVE when adding item to cancelled cart", async () => {
@@ -1016,6 +1032,130 @@ describe("Phone-AI Order Flow — Integration Tests", () => {
           tenantId: TENANT_ID,
           menuItemId: COKE_ID,
           quantity: 1,
+        }),
+        createRouteContext({ cartId: cancelledCartId })
+      );
+      const body = await res.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe("CART_NOT_ACTIVE");
+    });
+
+    it("should return same orderId on third and fourth duplicate checkouts", async () => {
+      const firstCart = await prisma.cart.findUnique({
+        where: { id: submittedCartId },
+      });
+      const firstOrderId = firstCart?.orderId;
+      const sequenceCallsBefore = mockGetNextOrderSequence.mock.calls.length;
+
+      const res3 = await checkoutCart(
+        createJsonRequest(`/api/external/v1/carts/${submittedCartId}/checkout`, "POST", {
+          tenantId: TENANT_ID,
+          customerFirstName: "Third",
+          customerLastName: "Attempt",
+          customerPhone: "555-0402",
+          orderMode: "pickup",
+        }),
+        createRouteContext({ cartId: submittedCartId })
+      );
+      const res4 = await checkoutCart(
+        createJsonRequest(`/api/external/v1/carts/${submittedCartId}/checkout`, "POST", {
+          tenantId: TENANT_ID,
+          customerFirstName: "Fourth",
+          customerLastName: "Attempt",
+          customerPhone: "555-0403",
+          orderMode: "pickup",
+        }),
+        createRouteContext({ cartId: submittedCartId })
+      );
+
+      const body3 = await res3.json();
+      const body4 = await res4.json();
+
+      expect(res3.status).toBe(200);
+      expect(res4.status).toBe(200);
+      expect(body3.data.orderId).toBe(firstOrderId);
+      expect(body4.data.orderId).toBe(firstOrderId);
+      expect(mockGetNextOrderSequence.mock.calls.length).toBe(sequenceCallsBefore);
+    });
+
+    it("should preserve original customer info when duplicate body differs", async () => {
+      // Setup: create a fresh cart + first checkout as Alice/pickup
+      const freshCartRes = await createCart(
+        createJsonRequest("/api/external/v1/carts", "POST", {
+          tenantId: TENANT_ID,
+          merchantId: MERCHANT_A_ID,
+          salesChannel: "phone_order",
+        })
+      );
+      const freshCartId = (await freshCartRes.json()).data.id;
+
+      await addCartItem(
+        createJsonRequest(`/api/external/v1/carts/${freshCartId}/items`, "POST", {
+          tenantId: TENANT_ID,
+          menuItemId: BURGER_ID,
+          quantity: 1,
+        }),
+        createRouteContext({ cartId: freshCartId })
+      );
+
+      setupOrderCreationMocks();
+      const firstRes = await checkoutCart(
+        createJsonRequest(`/api/external/v1/carts/${freshCartId}/checkout`, "POST", {
+          tenantId: TENANT_ID,
+          customerFirstName: "Alice",
+          customerLastName: "Original",
+          customerPhone: "555-0410",
+          orderMode: "pickup",
+        }),
+        createRouteContext({ cartId: freshCartId })
+      );
+      const firstBody = await firstRes.json();
+      expect(firstRes.status).toBe(201);
+      const originalOrderId = firstBody.data.orderId;
+
+      // Re-establish tax mocks after setupOrderCreationMocks
+      mockGetMenuItemsTaxConfigIds.mockResolvedValue(new Map());
+      mockGetTaxConfigsByIds.mockResolvedValue([]);
+      mockGetMerchantTaxRateMap.mockResolvedValue(new Map());
+
+      // Second checkout with Bob/delivery
+      const secondRes = await checkoutCart(
+        createJsonRequest(`/api/external/v1/carts/${freshCartId}/checkout`, "POST", {
+          tenantId: TENANT_ID,
+          customerFirstName: "Bob",
+          customerLastName: "Different",
+          customerPhone: "555-0411",
+          orderMode: "delivery",
+          deliveryAddress: {
+            street: "1 Elsewhere",
+            city: "Somewhere",
+            state: "CA",
+            zipCode: "99999",
+          },
+        }),
+        createRouteContext({ cartId: freshCartId })
+      );
+      const secondBody = await secondRes.json();
+      expect(secondRes.status).toBe(200);
+      expect(secondBody.data.orderId).toBe(originalOrderId);
+
+      // Verify DB retained Alice, not Bob
+      const order = await prisma.order.findUnique({
+        where: { id: originalOrderId },
+      });
+      expect(order?.customerFirstName).toBe("Alice");
+      expect(order?.orderMode).toBe("pickup");
+    });
+
+    it("should return CART_NOT_ACTIVE for duplicate checkout on cancelled cart", async () => {
+      // cancelledCartId has no orderId — no idempotent reply available
+      const res = await checkoutCart(
+        createJsonRequest(`/api/external/v1/carts/${cancelledCartId}/checkout`, "POST", {
+          tenantId: TENANT_ID,
+          customerFirstName: "Cancel",
+          customerLastName: "Redo",
+          customerPhone: "555-0412",
+          orderMode: "pickup",
         }),
         createRouteContext({ cartId: cancelledCartId })
       );
