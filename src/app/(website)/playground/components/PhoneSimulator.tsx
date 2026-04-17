@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useRef, useState, useEffect } from "react";
-import type { PipecatClient } from "@pipecat-ai/client-js";
 import {
   startCall,
   endCall,
   CALL_STATUS,
+  type CallHandle,
   type CallStatus,
   type ConversationMessage,
   type PlaygroundConfig,
@@ -20,7 +20,7 @@ const config: PlaygroundConfig = {
 };
 
 export function PhoneSimulator() {
-  const clientRef = useRef<PipecatClient | null>(null);
+  const clientRef = useRef<CallHandle | null>(null);
   const [status, setStatus] = useState<CallStatus>(CALL_STATUS.IDLE);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [interimText, setInterimText] = useState<string | null>(null);
@@ -63,13 +63,13 @@ export function PhoneSimulator() {
     }
 
     try {
-      const client = await startCall(config, {
+      const handle = await startCall(config, {
         onStatusChange: (s) => setStatus(s),
         onMessage: (msg) => setMessages((prev) => [...prev, msg]),
         onInterimTranscript: (text) => setInterimText(text),
         onError: (err) => setError(err),
       });
-      clientRef.current = client;
+      clientRef.current = handle;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start call");
       setStatus(CALL_STATUS.DISCONNECTED);
@@ -77,22 +77,16 @@ export function PhoneSimulator() {
   }, []);
 
   const handleEnd = useCallback(async () => {
-    const client = clientRef.current;
-    if (!client) {
+    const handle = clientRef.current;
+    clientRef.current = null;
+    if (!handle) {
       setStatus(CALL_STATUS.DISCONNECTED);
       return;
     }
-    clientRef.current = null;
     try {
-      await endCall(client);
+      await endCall(handle);
     } catch {
-      // disconnect may throw if media/WebSocket already closed —
-      // force disconnect at transport level as fallback
-      try {
-        client.transport.disconnect();
-      } catch {
-        // ignore
-      }
+      // endCall has its own timeout + error handling; swallow here
     }
     setStatus(CALL_STATUS.DISCONNECTED);
   }, []);
@@ -100,7 +94,7 @@ export function PhoneSimulator() {
   const handleToggleMute = useCallback(() => {
     if (clientRef.current && status === CALL_STATUS.CONNECTED) {
       const next = !isMuted;
-      clientRef.current.enableMic(!next);
+      clientRef.current.client.enableMic(!next);
       setIsMuted(next);
     }
   }, [isMuted, status]);
@@ -109,7 +103,7 @@ export function PhoneSimulator() {
   useEffect(() => {
     return () => {
       if (clientRef.current) {
-        clientRef.current.disconnect();
+        void clientRef.current.end();
       }
     };
   }, []);
