@@ -306,6 +306,69 @@ export class OrderRepository {
       },
     });
   }
+
+  /**
+   * Atomic CAS: mark order as completed only if not already completed.
+   * Returns the number of rows affected (1 = this call won the race, 0 = lost).
+   * Used by updatePaymentStatus (webhook dedup), _createMerchantOrderAtomicInner,
+   * and markCashOrderPaid.
+   */
+  async atomicComplete(
+    tenantId: string,
+    orderId: string,
+    patch: { paidAt: Date; balanceDue?: number },
+    tx?: DbClient
+  ): Promise<number> {
+    const db = tx ?? prisma;
+    const result = await db.order.updateMany({
+      where: { id: orderId, tenantId, status: { not: "completed" } },
+      data: { status: "completed", ...patch },
+    });
+    return result.count;
+  }
+
+  /**
+   * Atomic CAS: mark order as payment_failed only if not already terminal.
+   * Returns the number of rows affected.
+   */
+  async atomicMarkPaymentFailed(
+    tenantId: string,
+    orderId: string,
+    tx?: DbClient
+  ): Promise<number> {
+    const db = tx ?? prisma;
+    const result = await db.order.updateMany({
+      where: {
+        id: orderId,
+        tenantId,
+        status: { notIn: ["completed", "canceled", "payment_failed"] },
+      },
+      data: { status: "payment_failed", paymentFailedAt: new Date() },
+    });
+    return result.count;
+  }
+
+  /**
+   * Atomic CAS: cancel order only if not already canceled. Idempotent.
+   * Returns the number of rows affected.
+   */
+  async atomicCancel(
+    tenantId: string,
+    orderId: string,
+    reason: string | undefined,
+    tx?: DbClient
+  ): Promise<number> {
+    const db = tx ?? prisma;
+    const result = await db.order.updateMany({
+      where: { id: orderId, tenantId, status: { not: "canceled" } },
+      data: {
+        status: "canceled",
+        cancelledAt: new Date(),
+        cancelReason: reason,
+      },
+    });
+    return result.count;
+  }
 }
 
 export const orderRepository = new OrderRepository();
