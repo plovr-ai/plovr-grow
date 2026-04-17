@@ -221,6 +221,34 @@ describe("SubscriptionService", () => {
     });
   });
 
+  describe("getAllSubscriptions", () => {
+    it("should return empty array when tenant has no subscriptions", async () => {
+      vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([]);
+
+      const result = await subscriptionService.getAllSubscriptions("tenant-1");
+      expect(result).toEqual([]);
+      expect(subscriptionRepository.getAllByTenantId).toHaveBeenCalledWith("tenant-1");
+    });
+
+    it("should return SubscriptionInfo list for all product lines", async () => {
+      const phoneAiSubscription = {
+        ...activeSubscription,
+        id: "sub-2",
+        productLine: "phone_ai",
+        stripeSubscriptionId: "sub_stripe_456",
+      };
+      vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([
+        activeSubscription,
+        phoneAiSubscription,
+      ]);
+
+      const result = await subscriptionService.getAllSubscriptions("tenant-1");
+      expect(result).toHaveLength(2);
+      expect(result[0].productLine).toBe("platform");
+      expect(result[1].productLine).toBe("phone_ai");
+    });
+  });
+
   describe("isSubscriptionActive", () => {
     it("should return false when no subscription", async () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(null);
