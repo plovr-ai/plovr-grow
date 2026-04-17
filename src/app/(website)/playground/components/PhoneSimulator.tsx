@@ -15,6 +15,8 @@ import { CallControls } from "./CallControls";
 
 const config: PlaygroundConfig = {
   apiUrl: process.env.NEXT_PUBLIC_PHONE_AI_API_URL ?? "",
+  tenantId: process.env.NEXT_PUBLIC_PLAYGROUND_TENANT_ID ?? "",
+  merchantId: process.env.NEXT_PUBLIC_PLAYGROUND_MERCHANT_ID ?? "",
 };
 
 export function PhoneSimulator() {
@@ -55,7 +57,7 @@ export function PhoneSimulator() {
     setMessages([]);
     setElapsed(0);
 
-    if (!config.apiUrl) {
+    if (!config.apiUrl || !config.tenantId || !config.merchantId) {
       setError("Playground environment variables not configured");
       return;
     }

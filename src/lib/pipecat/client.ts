@@ -28,7 +28,14 @@ export async function startCall(
     `${config.apiUrl}/api/ai/admin/playground/quick-call`,
     {
       method: "POST",
-      headers: { "sec-plovr-user": "playground" },
+      headers: {
+        "sec-plovr-user": "playground",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tenantId: config.tenantId,
+        merchantId: config.merchantId,
+      }),
     }
   );
 
