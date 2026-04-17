@@ -674,6 +674,22 @@ describe("CartService", () => {
       expect(orderService.createMerchantOrderAtomic).not.toHaveBeenCalled();
     });
 
+    it("throws ORDER_NOT_FOUND when submitted cart references missing order", async () => {
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
+        makeCartWithItems({
+          status: "submitted",
+          orderId: "order-gone",
+          cartItems: [makeCartItem()],
+        }) as never
+      );
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue(null);
+
+      await expect(
+        cartService.checkout("tenant-1", "cart-1", checkoutInput)
+      ).rejects.toMatchObject({ code: "ORDER_NOT_FOUND" });
+      expect(orderService.createMerchantOrderAtomic).not.toHaveBeenCalled();
+    });
+
     it("converts cart items to OrderItemData and calls createMerchantOrderAtomic", async () => {
       vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
         makeActiveCartWithItems() as never
