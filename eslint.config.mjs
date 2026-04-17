@@ -78,7 +78,11 @@ const eslintConfig = defineConfig([
       "src/**/*.integration.test.ts",
       "src/**/*.integration.test.tsx",
       "src/**/__tests__/**",
-      // TODO(#280 follow-up): migrate these services to the Repository pattern.
+      // Follow-up issues tracking migration of each deferred service:
+      //   #288 — order.service.ts
+      //   #289 — square*.service.ts (3 files)
+      //   #290 — stripe-connect.service.ts
+      // Remove the corresponding entry below when each migration PR lands.
       "src/services/order/order.service.ts",
       "src/services/square/square.service.ts",
       "src/services/square/square-order.service.ts",
