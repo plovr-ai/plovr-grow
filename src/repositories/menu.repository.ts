@@ -305,6 +305,20 @@ export class MenuRepository {
     });
   }
 
+  async getModifierOptionsByIds(tenantId: string, optionIds: string[]) {
+    if (optionIds.length === 0) return [];
+    return prisma.modifierOption.findMany({
+      where: {
+        id: { in: optionIds },
+        tenantId,
+        deleted: false,
+      },
+      include: {
+        group: true,
+      },
+    });
+  }
+
   // ==================== Create/Update methods ====================
 
   /**

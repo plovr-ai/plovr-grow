@@ -11,6 +11,7 @@ import type {
   CreateCartInput,
   AddCartItemInput,
   UpdateCartItemInput,
+  AddCartItemModifierInput,
   CheckoutInput,
   CartWithItems,
   CartItemData,
@@ -107,15 +108,10 @@ export class CartService {
     const menuItem = menuItems[0];
     const unitPrice = Number(menuItem.price);
 
-    // Calculate modifier total
-    const modifiers = (input.selectedModifiers ?? []).map((m) => ({
-      modifierGroupId: m.modifierGroupId,
-      modifierOptionId: m.modifierOptionId,
-      groupName: m.groupName,
-      name: m.name,
-      price: m.price,
-      quantity: m.quantity ?? 1,
-    }));
+    const modifiers = await this.resolveModifiers(
+      tenantId,
+      input.selectedModifiers ?? []
+    );
 
     const modifierTotal = modifiers.reduce(
       (sum, m) => sum + m.price * m.quantity,
@@ -164,14 +160,10 @@ export class CartService {
 
     // If modifiers changed, replace them
     if (input.selectedModifiers !== undefined) {
-      const newModifiers = input.selectedModifiers.map((m) => ({
-        modifierGroupId: m.modifierGroupId,
-        modifierOptionId: m.modifierOptionId,
-        groupName: m.groupName,
-        name: m.name,
-        price: m.price,
-        quantity: m.quantity ?? 1,
-      }));
+      const newModifiers = await this.resolveModifiers(
+        tenantId,
+        input.selectedModifiers
+      );
 
       await cartRepository.replaceItemModifiers(itemId, newModifiers);
 
@@ -282,6 +274,39 @@ export class CartService {
       orderId: order.id,
       orderNumber: order.orderNumber,
     };
+  }
+
+  private async resolveModifiers(
+    tenantId: string,
+    inputs: AddCartItemModifierInput[]
+  ): Promise<Array<{
+    modifierGroupId: string;
+    modifierOptionId: string;
+    groupName: string;
+    name: string;
+    price: number;
+    quantity: number;
+  }>> {
+    if (inputs.length === 0) return [];
+
+    const optionIds = Array.from(new Set(inputs.map((m) => m.modifierOptionId)));
+    const options = await menuRepository.getModifierOptionsByIds(tenantId, optionIds);
+    const optionMap = new Map(options.map((o) => [o.id, o]));
+
+    return inputs.map((m) => {
+      const option = optionMap.get(m.modifierOptionId);
+      if (!option) {
+        throw new AppError(ErrorCodes.CART_MODIFIER_OPTION_NOT_FOUND, undefined, 404);
+      }
+      return {
+        modifierGroupId: option.groupId,
+        modifierOptionId: option.id,
+        groupName: option.group.name,
+        name: option.name,
+        price: Number(option.price),
+        quantity: m.quantity ?? 1,
+      };
+    });
   }
 
   private async computeCartSummary(

@@ -19,11 +19,11 @@ export interface AddCartItemInput {
 }
 
 export interface AddCartItemModifierInput {
-  modifierGroupId: string;
+  modifierGroupId?: string;
   modifierOptionId: string;
-  groupName: string;
-  name: string;
-  price: number;
+  groupName?: string;
+  name?: string;
+  price?: number;
   quantity?: number;
 }
 

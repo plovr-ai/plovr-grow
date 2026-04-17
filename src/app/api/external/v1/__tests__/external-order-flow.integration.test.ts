@@ -155,6 +155,8 @@ const COKE_ID = generateEntityId();
 const CATEGORY_ITEM_BURGER_ID = generateEntityId();
 const CATEGORY_ITEM_FRIES_ID = generateEntityId();
 const CATEGORY_ITEM_COKE_ID = generateEntityId();
+const SIZE_GROUP_ID = generateEntityId();
+const LARGE_OPTION_ID = generateEntityId();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -243,6 +245,20 @@ async function seedTestData() {
       { id: CATEGORY_ITEM_COKE_ID, tenantId: TENANT_ID, categoryId: CATEGORY_ID, menuItemId: COKE_ID },
     ],
   });
+
+  await prisma.modifierGroup.create({
+    data: { id: SIZE_GROUP_ID, tenantId: TENANT_ID, name: "Size" },
+  });
+
+  await prisma.modifierOption.create({
+    data: {
+      id: LARGE_OPTION_ID,
+      tenantId: TENANT_ID,
+      groupId: SIZE_GROUP_ID,
+      name: "Large",
+      price: 1.5,
+    },
+  });
 }
 
 async function cleanupTestData() {
@@ -258,6 +274,8 @@ async function cleanupTestData() {
   await prisma.order.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.orderSequence.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.menuCategoryItem.deleteMany({ where: { tenantId: TENANT_ID } });
+  await prisma.modifierOption.deleteMany({ where: { tenantId: TENANT_ID } });
+  await prisma.modifierGroup.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.menuItem.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.menuCategory.deleteMany({ where: { tenantId: TENANT_ID } });
   await prisma.menu.deleteMany({ where: { tenantId: TENANT_ID } });
@@ -347,8 +365,8 @@ describe("External Order API — Phone Order Flow", () => {
           quantity: 2,
           selectedModifiers: [
             {
-              modifierGroupId: "size-group",
-              modifierOptionId: "large-option",
+              modifierGroupId: SIZE_GROUP_ID,
+              modifierOptionId: LARGE_OPTION_ID,
               groupName: "Size",
               name: "Large",
               price: 1.50,
@@ -671,6 +689,187 @@ describe("External Order API — Phone Order Flow", () => {
       const cancelBody = await cancelRes.json();
       expect(cancelBody.success).toBe(false);
       expect(cancelBody.error.code).toBe("CART_NOT_ACTIVE");
+    });
+  });
+
+  // =========================================================================
+  // Scenario 6: Server resolves modifier name/groupName/price from DB
+  // =========================================================================
+  describe("Scenario 6: Server-side modifier resolution", () => {
+    async function createFreshCart(): Promise<string> {
+      const res = await createCart(
+        createJsonRequest("/api/external/v1/carts", "POST", {
+          tenantId: TENANT_ID,
+          merchantId: MERCHANT_ID,
+          salesChannel: "phone_order",
+        })
+      );
+      const body = await res.json();
+      return body.data.id as string;
+    }
+
+    it("fills modifier fields from DB when client sends only modifierOptionId", async () => {
+      const cartId = await createFreshCart();
+
+      const res = await addCartItem(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/items`, "POST", {
+          tenantId: TENANT_ID,
+          menuItemId: FRIES_ID,
+          quantity: 2,
+          selectedModifiers: [{ modifierOptionId: LARGE_OPTION_ID }],
+        }),
+        createRouteContext({ cartId })
+      );
+      expect(res.status).toBe(201);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+
+      const friesItem = body.data.items.find(
+        (i: { menuItemId: string }) => i.menuItemId === FRIES_ID
+      );
+      expect(friesItem.modifiers).toHaveLength(1);
+      const mod = friesItem.modifiers[0];
+      expect(mod.modifierGroupId).toBe(SIZE_GROUP_ID);
+      expect(mod.modifierOptionId).toBe(LARGE_OPTION_ID);
+      expect(mod.groupName).toBe("Size");
+      expect(mod.name).toBe("Large");
+      expect(mod.price).toBe(1.5);
+      // totalPrice = (4.99 + 1.5) * 2 = 12.98
+      expect(friesItem.totalPrice).toBe(12.98);
+    });
+
+    it("overrides client-sent name/price/groupName with DB values", async () => {
+      const cartId = await createFreshCart();
+
+      const res = await addCartItem(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/items`, "POST", {
+          tenantId: TENANT_ID,
+          menuItemId: FRIES_ID,
+          quantity: 1,
+          selectedModifiers: [
+            {
+              modifierGroupId: SIZE_GROUP_ID,
+              modifierOptionId: LARGE_OPTION_ID,
+              groupName: "HACKED-group",
+              name: "HACKED-name",
+              price: 999.99,
+            },
+          ],
+        }),
+        createRouteContext({ cartId })
+      );
+      expect(res.status).toBe(201);
+      const body = await res.json();
+
+      const friesItem = body.data.items.find(
+        (i: { menuItemId: string }) => i.menuItemId === FRIES_ID
+      );
+      const mod = friesItem.modifiers[0];
+      // Server must ignore client-sent values and use DB
+      expect(mod.groupName).toBe("Size");
+      expect(mod.name).toBe("Large");
+      expect(mod.price).toBe(1.5);
+      // totalPrice uses DB price: (4.99 + 1.5) * 1 = 6.49
+      expect(friesItem.totalPrice).toBe(6.49);
+    });
+
+    it("rejects nonexistent modifierOptionId with CART_MODIFIER_OPTION_NOT_FOUND", async () => {
+      const cartId = await createFreshCart();
+
+      const res = await addCartItem(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/items`, "POST", {
+          tenantId: TENANT_ID,
+          menuItemId: FRIES_ID,
+          quantity: 1,
+          selectedModifiers: [{ modifierOptionId: "nonexistent-option-id" }],
+        }),
+        createRouteContext({ cartId })
+      );
+      expect(res.status).toBe(404);
+      const body = await res.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe("CART_MODIFIER_OPTION_NOT_FOUND");
+    });
+
+    it("rejects modifierOptionId from another tenant with CART_MODIFIER_OPTION_NOT_FOUND", async () => {
+      // Seed a rogue tenant + option; confirm tenant isolation
+      const ROGUE_TENANT_ID = generateEntityId();
+      const ROGUE_GROUP_ID = generateEntityId();
+      const ROGUE_OPTION_ID = generateEntityId();
+      await prisma.tenant.create({
+        data: { id: ROGUE_TENANT_ID, name: "Rogue", slug: `rogue-${Date.now()}` },
+      });
+      await prisma.modifierGroup.create({
+        data: { id: ROGUE_GROUP_ID, tenantId: ROGUE_TENANT_ID, name: "Rogue" },
+      });
+      await prisma.modifierOption.create({
+        data: {
+          id: ROGUE_OPTION_ID,
+          tenantId: ROGUE_TENANT_ID,
+          groupId: ROGUE_GROUP_ID,
+          name: "Rogue option",
+          price: 999,
+        },
+      });
+
+      try {
+        const cartId = await createFreshCart();
+        const res = await addCartItem(
+          createJsonRequest(`/api/external/v1/carts/${cartId}/items`, "POST", {
+            tenantId: TENANT_ID,
+            menuItemId: FRIES_ID,
+            quantity: 1,
+            selectedModifiers: [{ modifierOptionId: ROGUE_OPTION_ID }],
+          }),
+          createRouteContext({ cartId })
+        );
+        expect(res.status).toBe(404);
+        const body = await res.json();
+        expect(body.error.code).toBe("CART_MODIFIER_OPTION_NOT_FOUND");
+      } finally {
+        await prisma.modifierOption.deleteMany({ where: { tenantId: ROGUE_TENANT_ID } });
+        await prisma.modifierGroup.deleteMany({ where: { tenantId: ROGUE_TENANT_ID } });
+        await prisma.tenant.deleteMany({ where: { id: ROGUE_TENANT_ID } });
+      }
+    });
+
+    it("PATCH /items/{id} also resolves modifier fields from DB", async () => {
+      const cartId = await createFreshCart();
+
+      const addRes = await addCartItem(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/items`, "POST", {
+          tenantId: TENANT_ID,
+          menuItemId: FRIES_ID,
+          quantity: 1,
+        }),
+        createRouteContext({ cartId })
+      );
+      const addBody = await addRes.json();
+      const itemId = addBody.data.items.find(
+        (i: { menuItemId: string }) => i.menuItemId === FRIES_ID
+      ).id;
+
+      const patchRes = await updateCartItem(
+        createJsonRequest(
+          `/api/external/v1/carts/${cartId}/items/${itemId}`,
+          "PATCH",
+          {
+            tenantId: TENANT_ID,
+            selectedModifiers: [{ modifierOptionId: LARGE_OPTION_ID }],
+          }
+        ),
+        createRouteContext({ cartId, itemId })
+      );
+      expect(patchRes.status).toBe(200);
+      const patchBody = await patchRes.json();
+      const updatedItem = patchBody.data.items.find(
+        (i: { id: string }) => i.id === itemId
+      );
+      expect(updatedItem.modifiers).toHaveLength(1);
+      expect(updatedItem.modifiers[0].name).toBe("Large");
+      expect(updatedItem.modifiers[0].price).toBe(1.5);
+      // totalPrice = (4.99 + 1.5) * 1 = 6.49
+      expect(updatedItem.totalPrice).toBe(6.49);
     });
   });
 });
