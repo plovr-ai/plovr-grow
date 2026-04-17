@@ -1,5 +1,42 @@
 # Mistakes Log
 
+## [294] Binary WS protocols in JSDOM need two compat shims: Blob.arrayBuffer polyfill + Blob-wrap on send
+
+**Date**: 2026-04-17
+**Category**: api-misuse
+
+### What went wrong
+Implemented a fake phone-ai WS server using `mock-socket` + real `ProtobufFrameSerializer` to exercise the Pipecat SDK end-to-end. The initial naive version sent `serializer.serializeMessage(...)` (Uint8Array) directly via `connectedClient.send(...)`. Two JSDOM-specific failures surfaced: (1) `mock-socket`'s `normalizeSendData` only passes Blob/ArrayBuffer through; Uint8Array gets stringified to comma-joined bytes. (2) Even after wrapping as Blob, the SDK's `ProtobufFrameSerializer.deserialize` calls `data.arrayBuffer()` which does not exist on JSDOM's Blob prototype.
+
+### Correct approach
+For any JSDOM-based WS test harness talking a binary protocol:
+1. Polyfill `Blob.prototype.arrayBuffer` using `FileReader.readAsArrayBuffer` at fixture module load (guard with `typeof Blob.prototype.arrayBuffer !== "function"`)
+2. Always wrap outbound binary as `new Blob([encoded as unknown as ArrayBuffer])` before `client.send(...)`
+3. Handle inbound data in three shapes (Blob, ArrayBuffer, stringified-Uint8Array) when decoding what the SDK sent back
+
+See `src/app/(website)/playground/components/__tests__/fixtures/fakePhoneAiServer.ts` for the reference implementation.
+
+### How to avoid
+Before shipping a JSDOM+mock-socket fixture that transports binary frames, run the happy-path test early and check for `data.arrayBuffer is not a function` or silent `String(uint8array)` delivery. These are the two canonical failure modes.
+
+---
+
+## [294] Test fixtures must be excluded from coverage, or they drag global thresholds
+
+**Date**: 2026-04-17
+**Category**: convention-violation
+
+### What went wrong
+Added `src/app/(website)/playground/components/__tests__/fixtures/*.ts` files (browserStubs, rtviMessages, fakePhoneAiServer) as test helpers. Default vitest-v8 coverage config does NOT exclude fixture directories — it only excludes files matching the default test-file glob. Fixture files with defensive branches (error catches, polyfill guards, stringified-payload fallbacks) ran at 70% line / 58% function coverage, dropping the repo's global coverage below the 97% threshold and failing `npm run test:run`.
+
+### Correct approach
+When introducing a `fixtures/` subdirectory under `__tests__/`, add `"**/__tests__/fixtures/**"` to `vitest.config.ts` → `coverage.exclude` in the same commit. Test helpers are not product code — their correctness is validated by the tests that depend on them, not by line coverage.
+
+### How to avoid
+Any new `__tests__/fixtures/**` or similar test-helper directory MUST be added to `vitest.config.ts` coverage exclusion atomically with the fixture code. Check `npm run test:run` coverage summary before marking the task done.
+
+---
+
 ## [280] vi.mock of a service module must be updated when adding new service methods used by migrated routes
 
 **Date**: 2026-04-17
