@@ -1,5 +1,6 @@
 import { cartRepository } from "@/repositories/cart.repository";
 import { menuRepository } from "@/repositories/menu.repository";
+import { orderRepository } from "@/repositories/order.repository";
 import { taxConfigRepository } from "@/repositories/tax-config.repository";
 import { orderService } from "@/services/order";
 import { AppError } from "@/lib/errors";
@@ -69,6 +70,7 @@ export class CartService {
       status: cart.status as CartWithItems["status"],
       salesChannel: cart.salesChannel,
       notes: cart.notes,
+      orderId: cart.orderId ?? null,
       createdAt: cart.createdAt,
       updatedAt: cart.updatedAt,
       items,
@@ -223,16 +225,49 @@ export class CartService {
     cartId: string,
     input: CheckoutInput
   ): Promise<CheckoutResult> {
+    return this._checkoutAttempt(tenantId, cartId, input, 0);
+  }
+
+  private async _checkoutAttempt(
+    tenantId: string,
+    cartId: string,
+    input: CheckoutInput,
+    depth: number
+  ): Promise<CheckoutResult> {
+    // depth is reserved for Tasks 6+7 (waitAndRetry recursion bound); unused for now.
+    void depth;
+
     const cart = await this.getCart(tenantId, cartId);
 
-    if (cart.status !== "active") {
+    // Resolve existing order for already-finalized carts
+    if (cart.status === "submitted") {
+      if (cart.orderId) {
+        const order = await orderRepository.getByIdWithMerchant(
+          tenantId,
+          cart.orderId
+        );
+        if (!order) {
+          throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId: cart.orderId });
+        }
+        return {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          alreadyExists: true,
+        };
+      }
+      // submitted + orderId=null → peer mid-checkout. Task 7 adds waitAndRetry here.
+      throw new AppError(ErrorCodes.CART_CHECKOUT_IN_PROGRESS, undefined, 409);
+    }
+
+    if (cart.status === "cancelled") {
       throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
     }
+
     if (cart.items.length === 0) {
       throw new AppError(ErrorCodes.CART_EMPTY);
     }
 
-    // Convert cart items to OrderItemData[]
+    // Active cart — fall through to existing create-order path (Tasks 6+7 will replace with CAS + wait)
     const orderItems: OrderItemData[] = cart.items.map((item) => ({
       menuItemId: item.menuItemId,
       name: item.name,
@@ -251,7 +286,6 @@ export class CartService {
       })),
     }));
 
-    // Delegate to existing order service
     const order = await orderService.createMerchantOrderAtomic(tenantId, {
       merchantId: cart.merchantId,
       customerFirstName: input.customerFirstName,
@@ -267,7 +301,6 @@ export class CartService {
       notes: input.notes,
     });
 
-    // Mark cart as submitted
     await cartRepository.updateStatus(tenantId, cartId, "submitted");
 
     return {

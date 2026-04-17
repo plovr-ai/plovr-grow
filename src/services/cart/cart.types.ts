@@ -82,6 +82,7 @@ export interface CartWithItems {
   status: CartStatus;
   salesChannel: string;
   notes: string | null;
+  orderId: string | null;
   createdAt: Date;
   updatedAt: Date;
   items: CartItemData[];
