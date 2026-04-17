@@ -808,5 +808,110 @@ describe("CartService", () => {
         cartService.checkout("tenant-1", "missing", checkoutInput)
       ).rejects.toMatchObject({ code: "CART_NOT_FOUND" });
     });
+
+    it("waits and returns peer's order when CAS loses the race (peer succeeded)", async () => {
+      vi.useFakeTimers();
+
+      // First getCart call: cart is active
+      // Subsequent findById calls (inside waitAndRetry poll): cart is submitted + orderId
+      const activeCart = makeCartWithItems({ status: "active", cartItems: [makeCartItem()] });
+      const submittedCart = makeCart({
+        status: "submitted",
+        orderId: "order-peer",
+      });
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(activeCart as never);
+      vi.mocked(cartRepository.findById).mockResolvedValue(submittedCart as never);
+      vi.mocked(cartRepository.claimForCheckout).mockResolvedValue({ count: 0 } as never);
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue({
+        id: "order-peer",
+        orderNumber: "ORD-PEER",
+      } as never);
+
+      const promise = cartService.checkout("tenant-1", "cart-1", checkoutInput);
+      await vi.advanceTimersByTimeAsync(100); // one poll tick
+      const result = await promise;
+
+      expect(result).toEqual({
+        orderId: "order-peer",
+        orderNumber: "ORD-PEER",
+        alreadyExists: true,
+      });
+      expect(orderService.createMerchantOrderAtomic).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    it("re-enters checkout when peer rolls back during wait", async () => {
+      vi.useFakeTimers();
+
+      const activeCart = makeCartWithItems({ status: "active", cartItems: [makeCartItem()] });
+      const activeRow = makeCart({ status: "active", orderId: null });
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(activeCart as never);
+      vi.mocked(cartRepository.findById).mockResolvedValue(activeRow as never);
+      // First claim: lose. Second claim (after re-enter): win.
+      vi.mocked(cartRepository.claimForCheckout)
+        .mockResolvedValueOnce({ count: 0 } as never)
+        .mockResolvedValueOnce({ count: 1 } as never);
+      vi.mocked(cartRepository.attachOrderId).mockResolvedValue({ count: 1 } as never);
+      vi.mocked(orderService.createMerchantOrderAtomic).mockResolvedValue({
+        id: "order-new",
+        orderNumber: "ORD-NEW",
+      } as never);
+
+      const promise = cartService.checkout("tenant-1", "cart-1", checkoutInput);
+      await vi.advanceTimersByTimeAsync(100);
+      const result = await promise;
+
+      expect(result).toEqual({
+        orderId: "order-new",
+        orderNumber: "ORD-NEW",
+        alreadyExists: false,
+      });
+      expect(cartRepository.claimForCheckout).toHaveBeenCalledTimes(2);
+      vi.useRealTimers();
+    });
+
+    it("throws CART_CHECKOUT_IN_PROGRESS when wait times out (stuck submitted+null)", async () => {
+      vi.useFakeTimers();
+
+      const stuckCartWithItems = makeCartWithItems({
+        status: "submitted",
+        orderId: null,
+        cartItems: [makeCartItem()],
+      });
+      const stuckRow = makeCart({ status: "submitted", orderId: null });
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(stuckCartWithItems as never);
+      vi.mocked(cartRepository.findById).mockResolvedValue(stuckRow as never);
+
+      const promise = cartService.checkout("tenant-1", "cart-1", checkoutInput);
+      // Attach rejection handler early so unhandled-rejection warnings don't fire
+      const assertion = expect(promise).rejects.toMatchObject({
+        code: "CART_CHECKOUT_IN_PROGRESS",
+      });
+      await vi.advanceTimersByTimeAsync(600); // 5 × 100ms + slack
+      await assertion;
+
+      expect(orderService.createMerchantOrderAtomic).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    it("throws CART_CHECKOUT_IN_PROGRESS when peer rolls back repeatedly (recursion depth cap)", async () => {
+      vi.useFakeTimers();
+
+      const activeCart = makeCartWithItems({ status: "active", cartItems: [makeCartItem()] });
+      const activeRow = makeCart({ status: "active", orderId: null });
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(activeCart as never);
+      vi.mocked(cartRepository.findById).mockResolvedValue(activeRow as never);
+      // Always lose the CAS
+      vi.mocked(cartRepository.claimForCheckout).mockResolvedValue({ count: 0 } as never);
+
+      const promise = cartService.checkout("tenant-1", "cart-1", checkoutInput);
+      const assertion = expect(promise).rejects.toMatchObject({
+        code: "CART_CHECKOUT_IN_PROGRESS",
+      });
+      await vi.advanceTimersByTimeAsync(2000); // ample time for retries to give up
+      await assertion;
+
+      vi.useRealTimers();
+    });
   });
 });
