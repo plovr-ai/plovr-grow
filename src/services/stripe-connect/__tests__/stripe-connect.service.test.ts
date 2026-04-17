@@ -22,23 +22,20 @@ vi.mock("@/repositories/stripe-connect-account.repository", () => ({
   },
 }));
 
-vi.mock("@/lib/db", () => ({
-  default: {
-    tenant: {
-      update: vi.fn(),
-    },
+vi.mock("@/repositories/tenant.repository", () => ({
+  tenantRepository: {
+    update: vi.fn(),
   },
 }));
 
 // Import mocked modules
 import { stripeService } from "@/services/stripe";
 import { stripeConnectAccountRepository } from "@/repositories/stripe-connect-account.repository";
-import db from "@/lib/db";
+import { tenantRepository } from "@/repositories/tenant.repository";
 
 const mockStripeService = vi.mocked(stripeService);
 const mockRepo = vi.mocked(stripeConnectAccountRepository);
-// db.tenant.update is mocked via vi.mock but needs explicit cast for type safety
-const mockTenantUpdate = db.tenant.update as ReturnType<typeof vi.fn>;
+const mockTenantRepoUpdate = vi.mocked(tenantRepository).update;
 
 const TENANT_ID = "tenant-123";
 const STRIPE_ACCOUNT_ID = "acct_test_123";
@@ -131,7 +128,7 @@ describe("StripeConnectService", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-      mockTenantUpdate.mockResolvedValue({} as never);
+      mockTenantRepoUpdate.mockResolvedValue({} as never);
 
       const { StripeConnectService } = await import("../stripe-connect.service");
       const service = new StripeConnectService();
@@ -157,9 +154,8 @@ describe("StripeConnectService", () => {
           scope: "read_write",
         }
       );
-      expect(mockTenantUpdate).toHaveBeenCalledWith({
-        where: { id: TENANT_ID },
-        data: { stripeConnectStatus: "connected" },
+      expect(mockTenantRepoUpdate).toHaveBeenCalledWith(TENANT_ID, {
+        stripeConnectStatus: "connected",
       });
     });
 
@@ -329,7 +325,7 @@ describe("StripeConnectService", () => {
       mockRepo.getByTenantId.mockResolvedValue(account);
       mockStripeService.disconnectConnectAccount.mockResolvedValue(undefined);
       mockRepo.softDelete.mockResolvedValue({ ...account, deleted: true });
-      mockTenantUpdate.mockResolvedValue({} as never);
+      mockTenantRepoUpdate.mockResolvedValue({} as never);
 
       const { StripeConnectService } = await import("../stripe-connect.service");
       const service = new StripeConnectService();
@@ -338,9 +334,8 @@ describe("StripeConnectService", () => {
 
       expect(mockStripeService.disconnectConnectAccount).toHaveBeenCalledWith(STRIPE_ACCOUNT_ID);
       expect(mockRepo.softDelete).toHaveBeenCalledWith("ca-1");
-      expect(mockTenantUpdate).toHaveBeenCalledWith({
-        where: { id: TENANT_ID },
-        data: { stripeConnectStatus: "disconnected" },
+      expect(mockTenantRepoUpdate).toHaveBeenCalledWith(TENANT_ID, {
+        stripeConnectStatus: "disconnected",
       });
     });
 
