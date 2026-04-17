@@ -78,10 +78,6 @@ const eslintConfig = defineConfig([
       "src/**/*.integration.test.ts",
       "src/**/*.integration.test.tsx",
       "src/**/__tests__/**",
-      // Follow-up issues tracking migration of each deferred service:
-      //   #290 — stripe-connect.service.ts
-      // Remove the corresponding entry below when each migration PR lands.
-      "src/services/stripe-connect/stripe-connect.service.ts",
     ],
     rules: {
       "no-restricted-imports": [

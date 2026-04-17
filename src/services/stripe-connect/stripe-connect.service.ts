@@ -1,6 +1,6 @@
 import { stripeService } from "@/services/stripe";
 import { stripeConnectAccountRepository } from "@/repositories/stripe-connect-account.repository";
-import db from "@/lib/db";
+import { tenantRepository } from "@/repositories/tenant.repository";
 import { AppError } from "@/lib/errors/app-error";
 import { ErrorCodes } from "@/lib/errors/error-codes";
 import type { ConnectAccountStatus, OAuthCallbackResult } from "./stripe-connect.types";
@@ -62,10 +62,7 @@ export class StripeConnectService {
     });
 
     // Update tenant stripeConnectStatus
-    await db.tenant.update({
-      where: { id: tenantId },
-      data: { stripeConnectStatus: "connected" },
-    });
+    await tenantRepository.update(tenantId, { stripeConnectStatus: "connected" });
 
     return {
       stripeAccountId: stripe_user_id,
@@ -108,10 +105,7 @@ export class StripeConnectService {
 
     await stripeConnectAccountRepository.softDelete(account.id);
 
-    await db.tenant.update({
-      where: { id: tenantId },
-      data: { stripeConnectStatus: "disconnected" },
-    });
+    await tenantRepository.update(tenantId, { stripeConnectStatus: "disconnected" });
   }
 
   /**
