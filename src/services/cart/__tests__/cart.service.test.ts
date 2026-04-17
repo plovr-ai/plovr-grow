@@ -40,11 +40,18 @@ vi.mock("@/services/order", () => ({
   },
 }));
 
+vi.mock("@/repositories/order.repository", () => ({
+  orderRepository: {
+    getByIdWithMerchant: vi.fn(),
+  },
+}));
+
 // Import mocked modules after vi.mock
 import { cartRepository } from "@/repositories/cart.repository";
 import { menuRepository } from "@/repositories/menu.repository";
 import { taxConfigRepository } from "@/repositories/tax-config.repository";
 import { orderService } from "@/services/order";
+import { orderRepository } from "@/repositories/order.repository";
 
 // Helper factories
 function makeCart(overrides: Record<string, unknown> = {}) {
@@ -611,6 +618,62 @@ describe("CartService", () => {
       return makeCartWithItems({ cartItems: [item] });
     }
 
+    it("returns existing order with alreadyExists=true when cart is already submitted with orderId", async () => {
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
+        makeCartWithItems({
+          status: "submitted",
+          orderId: "order-existing",
+          cartItems: [makeCartItem()],
+        }) as never
+      );
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue({
+        id: "order-existing",
+        orderNumber: "ORD-999",
+      } as never);
+
+      const result = await cartService.checkout("tenant-1", "cart-1", checkoutInput);
+
+      expect(result).toEqual({
+        orderId: "order-existing",
+        orderNumber: "ORD-999",
+        alreadyExists: true,
+      });
+      expect(orderService.createMerchantOrderAtomic).not.toHaveBeenCalled();
+    });
+
+    it("ignores second-call body differences and returns original order", async () => {
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
+        makeCartWithItems({
+          status: "submitted",
+          orderId: "order-existing",
+          cartItems: [makeCartItem()],
+        }) as never
+      );
+      vi.mocked(orderRepository.getByIdWithMerchant).mockResolvedValue({
+        id: "order-existing",
+        orderNumber: "ORD-999",
+      } as never);
+
+      const differentInput = {
+        customerFirstName: "Bob",
+        customerLastName: "DifferentLast",
+        customerPhone: "555-9999",
+        orderMode: "delivery" as const,
+        deliveryAddress: {
+          street: "1 Elsewhere",
+          city: "Elsewhere",
+          state: "CA",
+          zipCode: "99999",
+        },
+      };
+
+      const result = await cartService.checkout("tenant-1", "cart-1", differentInput);
+
+      expect(result.orderId).toBe("order-existing");
+      expect(result.alreadyExists).toBe(true);
+      expect(orderService.createMerchantOrderAtomic).not.toHaveBeenCalled();
+    });
+
     it("converts cart items to OrderItemData and calls createMerchantOrderAtomic", async () => {
       vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
         makeActiveCartWithItems() as never
@@ -686,14 +749,9 @@ describe("CartService", () => {
       expect(orderService.createMerchantOrderAtomic).not.toHaveBeenCalled();
     });
 
-    it("throws CART_NOT_ACTIVE when cart is submitted", async () => {
+    it("throws CART_NOT_ACTIVE when cart is cancelled", async () => {
       vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
-        makeActiveCartWithItems() as never
-        // Override status inside the mock cart
-      );
-      // Override the getCart result to return a submitted cart
-      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
-        makeCartWithItems({ status: "submitted", cartItems: [makeCartItem()] }) as never
+        makeCartWithItems({ status: "cancelled", cartItems: [makeCartItem()] }) as never
       );
 
       await expect(
