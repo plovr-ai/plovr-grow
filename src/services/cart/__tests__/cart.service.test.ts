@@ -22,6 +22,7 @@ vi.mock("@/repositories/cart.repository", () => ({
 vi.mock("@/repositories/menu.repository", () => ({
   menuRepository: {
     getItemsByIdsByCompany: vi.fn(),
+    getModifierOptionsByIds: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -317,6 +318,15 @@ describe("CartService", () => {
       vi.mocked(menuRepository.getItemsByIdsByCompany).mockResolvedValue([
         { id: "menu-item-1", name: "Burger", price: 10.0, imageUrl: null } as never,
       ]);
+      vi.mocked(menuRepository.getModifierOptionsByIds).mockResolvedValue([
+        {
+          id: "option-1",
+          groupId: "group-1",
+          name: "Large",
+          price: 1.5,
+          group: { id: "group-1", name: "Size" },
+        } as never,
+      ]);
       vi.mocked(cartRepository.getNextSortOrder).mockResolvedValue(1);
       vi.mocked(cartRepository.addItem).mockResolvedValue(
         makeCartItem({ unitPrice: 10, totalPrice: 23, quantity: 2 }) as never
@@ -344,6 +354,68 @@ describe("CartService", () => {
         "cart-1",
         expect.objectContaining({ totalPrice: 23 })
       );
+    });
+
+    it("resolves modifier name/groupName/price from DB, ignoring client-sent values", async () => {
+      vi.mocked(cartRepository.findById).mockResolvedValue(makeCart() as never);
+      vi.mocked(menuRepository.getItemsByIdsByCompany).mockResolvedValue([
+        { id: "menu-item-1", name: "Burger", price: 10.0, imageUrl: null } as never,
+      ]);
+      vi.mocked(menuRepository.getModifierOptionsByIds).mockResolvedValue([
+        {
+          id: "option-1",
+          groupId: "group-1",
+          name: "Medium",
+          price: 2.0,
+          group: { id: "group-1", name: "Doneness" },
+        } as never,
+      ]);
+      vi.mocked(cartRepository.getNextSortOrder).mockResolvedValue(0);
+      vi.mocked(cartRepository.addItem).mockResolvedValue(makeCartItem() as never);
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
+        makeCartWithItems({ cartItems: [makeCartItem()] }) as never
+      );
+
+      // Client sends only modifierOptionId (no name/groupName/price)
+      await cartService.addItem("tenant-1", "cart-1", {
+        menuItemId: "menu-item-1",
+        quantity: 1,
+        selectedModifiers: [{ modifierOptionId: "option-1" }],
+      });
+
+      // Server fills from DB: (10 + 2.0) * 1 = 12
+      expect(cartRepository.addItem).toHaveBeenCalledWith(
+        "cart-1",
+        expect.objectContaining({
+          totalPrice: 12,
+          modifiers: [
+            expect.objectContaining({
+              modifierGroupId: "group-1",
+              modifierOptionId: "option-1",
+              groupName: "Doneness",
+              name: "Medium",
+              price: 2.0,
+              quantity: 1,
+            }),
+          ],
+        })
+      );
+    });
+
+    it("throws CART_MODIFIER_OPTION_NOT_FOUND when modifier option does not exist", async () => {
+      vi.mocked(cartRepository.findById).mockResolvedValue(makeCart() as never);
+      vi.mocked(menuRepository.getItemsByIdsByCompany).mockResolvedValue([
+        { id: "menu-item-1", name: "Burger", price: 10.0, imageUrl: null } as never,
+      ]);
+      vi.mocked(menuRepository.getModifierOptionsByIds).mockResolvedValue([]);
+
+      await expect(
+        cartService.addItem("tenant-1", "cart-1", {
+          menuItemId: "menu-item-1",
+          quantity: 1,
+          selectedModifiers: [{ modifierOptionId: "missing" }],
+        })
+      ).rejects.toMatchObject({ code: "CART_MODIFIER_OPTION_NOT_FOUND" });
     });
 
     it("throws CART_MENU_ITEM_NOT_FOUND when menu item does not exist", async () => {
@@ -405,6 +477,15 @@ describe("CartService", () => {
       const existingItem = makeCartItem({ unitPrice: 10.0, modifiers: [] });
       vi.mocked(cartRepository.findById).mockResolvedValue(makeCart() as never);
       vi.mocked(cartRepository.findItemById).mockResolvedValue(existingItem as never);
+      vi.mocked(menuRepository.getModifierOptionsByIds).mockResolvedValue([
+        {
+          id: "option-1",
+          groupId: "group-1",
+          name: "Large",
+          price: 1.5,
+          group: { id: "group-1", name: "Size" },
+        } as never,
+      ]);
       vi.mocked(cartRepository.replaceItemModifiers).mockResolvedValue(undefined);
       vi.mocked(cartRepository.updateItem).mockResolvedValue(
         makeCartItem({ totalPrice: 23 }) as never

@@ -6,11 +6,11 @@ import { AppError } from "@/lib/errors";
 import { ErrorCodes } from "@/lib/errors/error-codes";
 
 const modifierSchema = z.object({
-  modifierGroupId: z.string().min(1),
+  modifierGroupId: z.string().min(1).optional(),
   modifierOptionId: z.string().min(1),
-  groupName: z.string().min(1),
-  name: z.string().min(1),
-  price: z.number().min(0),
+  groupName: z.string().optional(),
+  name: z.string().optional(),
+  price: z.number().min(0).optional(),
   quantity: z.number().int().positive().optional(),
 });
 
