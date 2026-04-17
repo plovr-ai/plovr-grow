@@ -1229,8 +1229,7 @@ describe("Phone-AI Order Flow — Integration Tests", () => {
   // Scenario 6: Concurrent checkout (race condition)
   // =========================================================================
   describe("Scenario 6: Concurrent checkout (race condition)", () => {
-    it("should allow exactly one successful checkout when two run concurrently", async () => {
-      // Create cart + add item
+    it("should return same orderId for both concurrent checkouts", async () => {
       const createRes = await createCart(
         createJsonRequest("/api/external/v1/carts", "POST", {
           tenantId: TENANT_ID,
@@ -1249,13 +1248,11 @@ describe("Phone-AI Order Flow — Integration Tests", () => {
         createRouteContext({ cartId })
       );
 
-      // Setup mocks for checkout
       setupOrderCreationMocks();
-      // Ensure sequence counter returns different values for concurrent calls
       let seqCounter = 100;
       mockGetNextOrderSequence.mockImplementation(() => Promise.resolve(seqCounter++));
+      const sequenceCallsBefore = mockGetNextOrderSequence.mock.calls.length;
 
-      // Fire 2 checkout calls concurrently
       const [checkout1, checkout2] = await Promise.all([
         checkoutCart(
           createJsonRequest(`/api/external/v1/carts/${cartId}/checkout`, "POST", {
@@ -1282,15 +1279,130 @@ describe("Phone-AI Order Flow — Integration Tests", () => {
       const body1 = await checkout1.json();
       const body2 = await checkout2.json();
 
-      const successes = [body1, body2].filter(
-        (b) => b.success === true
+      expect(body1.success).toBe(true);
+      expect(body2.success).toBe(true);
+      expect(body1.data.orderId).toBe(body2.data.orderId);
+
+      // Exactly one 201, one 200 — in either order
+      const statuses = [checkout1.status, checkout2.status].sort();
+      expect(statuses).toEqual([200, 201]);
+
+      // DB has exactly one order for this cart's flow (one new sequence call)
+      expect(mockGetNextOrderSequence.mock.calls.length - sequenceCallsBefore).toBe(1);
+    });
+
+    it("should converge 5 concurrent checkouts to a single orderId", async () => {
+      const createRes = await createCart(
+        createJsonRequest("/api/external/v1/carts", "POST", {
+          tenantId: TENANT_ID,
+          merchantId: MERCHANT_A_ID,
+          salesChannel: "phone_order",
+        })
+      );
+      const cartId = (await createRes.json()).data.id;
+
+      await addCartItem(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/items`, "POST", {
+          tenantId: TENANT_ID,
+          menuItemId: BURGER_ID,
+          quantity: 1,
+        }),
+        createRouteContext({ cartId })
       );
 
-      // Currently no concurrency guard — both may succeed (creates duplicate orders).
-      // After #278 (idempotent checkout), both should succeed and return the SAME orderId.
-      // For now, verify at least one succeeds.
-      expect(successes.length).toBeGreaterThanOrEqual(1);
-      expect(successes[0].data.orderId).toBeDefined();
+      setupOrderCreationMocks();
+      let seqCounter = 200;
+      mockGetNextOrderSequence.mockImplementation(() => Promise.resolve(seqCounter++));
+      const sequenceCallsBefore = mockGetNextOrderSequence.mock.calls.length;
+
+      const responses = await Promise.all(
+        Array.from({ length: 5 }, (_, i) =>
+          checkoutCart(
+            createJsonRequest(`/api/external/v1/carts/${cartId}/checkout`, "POST", {
+              tenantId: TENANT_ID,
+              customerFirstName: `Racer${i}`,
+              customerLastName: "Concurrent",
+              customerPhone: `555-061${i}`,
+              orderMode: "pickup",
+            }),
+            createRouteContext({ cartId })
+          )
+        )
+      );
+
+      const bodies = await Promise.all(responses.map((r) => r.json()));
+      const orderIds = new Set(bodies.map((b) => b.data.orderId));
+
+      expect(bodies.every((b) => b.success === true)).toBe(true);
+      expect(orderIds.size).toBe(1);
+
+      const statuses = responses.map((r) => r.status).sort();
+      // Exactly one 201, four 200s
+      expect(statuses).toEqual([200, 200, 200, 200, 201]);
+
+      expect(mockGetNextOrderSequence.mock.calls.length - sequenceCallsBefore).toBe(1);
+    });
+
+    it("should retry and create new order when peer checkout rolls back", async () => {
+      const createRes = await createCart(
+        createJsonRequest("/api/external/v1/carts", "POST", {
+          tenantId: TENANT_ID,
+          merchantId: MERCHANT_A_ID,
+          salesChannel: "phone_order",
+        })
+      );
+      const cartId = (await createRes.json()).data.id;
+
+      await addCartItem(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/items`, "POST", {
+          tenantId: TENANT_ID,
+          menuItemId: BURGER_ID,
+          quantity: 1,
+        }),
+        createRouteContext({ cartId })
+      );
+
+      // First checkout: force a failure inside createMerchantOrderAtomic by
+      // making menu lookup reject once
+      setupOrderCreationMocks();
+      mockGetMenuItemsByIds.mockRejectedValueOnce(new Error("simulated failure"));
+
+      const failedRes = await checkoutCart(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/checkout`, "POST", {
+          tenantId: TENANT_ID,
+          customerFirstName: "Fail",
+          customerLastName: "First",
+          customerPhone: "555-0620",
+          orderMode: "pickup",
+        }),
+        createRouteContext({ cartId })
+      );
+      expect(failedRes.status).not.toBe(201);
+      expect(failedRes.status).not.toBe(200);
+
+      // Verify cart was rolled back to active
+      const rolledBack = await prisma.cart.findUnique({ where: { id: cartId } });
+      expect(rolledBack?.status).toBe("active");
+      expect(rolledBack?.orderId).toBeNull();
+
+      // Second checkout: succeeds
+      const successRes = await checkoutCart(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/checkout`, "POST", {
+          tenantId: TENANT_ID,
+          customerFirstName: "Retry",
+          customerLastName: "Second",
+          customerPhone: "555-0621",
+          orderMode: "pickup",
+        }),
+        createRouteContext({ cartId })
+      );
+      expect(successRes.status).toBe(201);
+      const body = await successRes.json();
+      expect(body.success).toBe(true);
+
+      const finalCart = await prisma.cart.findUnique({ where: { id: cartId } });
+      expect(finalCart?.status).toBe("submitted");
+      expect(finalCart?.orderId).toBe(body.data.orderId);
     });
   });
 
