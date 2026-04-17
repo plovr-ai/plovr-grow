@@ -249,4 +249,31 @@ describe("PhoneSimulator E2E — full lifecycle with real SDK", () => {
     });
     expect(server.isConnected()).toBe(false);
   });
+
+  it("phone-ai prod mode: no bot-ready ever sent — UI still reaches Live via `connected` hack", async () => {
+    // Default fakePhoneAiServer does NOT auto-send bot-ready.
+    // This matches current plovr-phone-ai production behavior and guards the
+    // compatibility hack at src/lib/pipecat/client.ts:128–146 (resolve connect
+    // promise on the `connected` event, not on `bot-ready`).
+    await renderPhoneSimulator();
+    await clickStartCall();
+    await server.awaitConnection();
+
+    // No server.sendBotReady() — simulate prod.
+    await waitForLive();
+
+    // Call works end-to-end: transcripts flow, hangup clean.
+    act(() => {
+      server.sendBotTranscript("Hello from plovr-phone-ai prod");
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Hello from plovr-phone-ai prod")).toBeInTheDocument();
+    });
+
+    await clickHangup();
+    await waitForCallEnded();
+    await waitFor(() => {
+      expect(server.isClosed()).toBe(true);
+    });
+  });
 });
