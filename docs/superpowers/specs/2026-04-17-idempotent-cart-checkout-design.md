@@ -174,16 +174,54 @@ async attachOrderId(tenantId, cartId, orderId): Promise<void>
 8. order creation throws → rollback called, cart is `active`, error rethrown
 9. second call with different body → still returns original order (true idempotency)
 
-### Integration (src/app/api/external/v1/__tests__/phone-ai-order-flow.integration.test.ts — modify)
+### Integration (src/app/api/external/v1/__tests__/phone-ai-order-flow.integration.test.ts)
 
-**Scenario 4 — "should return CART_NOT_ACTIVE when checking out submitted cart again"**
-Rename to **"should return same orderId idempotently for submitted cart"**. Expect HTTP 200 and `orderId` equal to the first checkout's orderId. Cancelled-cart `CART_NOT_ACTIVE` coverage stays.
+All integration tests hit real MySQL through the existing test setup (mocks only mask out external side-channels — order sequence, tax, POS, payment). Assertions must verify DB state in addition to HTTP response shape, because Scenario 6's original assertion slipped in a "both created duplicate orders" regression that only DB-level checks would have caught.
 
-**Scenario 6 — "should allow exactly one successful checkout when two run concurrently"**
-Rename to **"should return same orderId for both concurrent checkouts"**. Both responses `success: true`; `body1.data.orderId === body2.data.orderId`. Verify DB has exactly one order for this cart.
+#### Scenario 4 — Cart lifecycle protection (modify existing)
 
-**New Scenario 4 test** — **"should preserve original customer info on duplicate checkout"**
-First call with Alice, second call with Bob → GET /orders/{orderId} returns Alice.
+Rewrite three existing assertions; add three new ones.
+
+| Test | Modification |
+|---|---|
+| "should return CART_NOT_ACTIVE when checking out submitted cart again" | **Rename** to "should return same orderId idempotently when checking out submitted cart again". Capture `firstOrderId` on first checkout; second call: expect HTTP 200 (not 201), `success: true`, `body.data.orderId === firstOrderId`, `body.data.orderNumber === firstOrderNumber`. Verify `mockGetNextOrderSequence` invocation count stays at 1 across both calls (proves no second order was created). |
+| "should return CART_NOT_ACTIVE when adding item to submitted cart" | Keep as-is. |
+| "should return CART_NOT_ACTIVE when updating item in submitted cart" | Keep as-is. |
+| "should return CART_NOT_ACTIVE when deleting item from submitted cart" | Keep as-is. |
+| "should return CART_NOT_ACTIVE when adding item to cancelled cart" | Keep as-is. |
+| **NEW** "should return same orderId on third and fourth duplicate checkouts" | After first checkout, fire two more sequential checkouts. Both return HTTP 200 + same orderId. Proves idempotency is durable, not one-shot. |
+| **NEW** "should preserve original customer info when duplicate body differs" | First checkout with Alice/pickup, second checkout with Bob/delivery+deliveryAddress. Second returns HTTP 200 + Alice's orderId. `GET /orders/{orderId}` → `customerFirstName === "Alice"`, `orderMode === "pickup"`. Proves we ignore second body (true idempotency). |
+| **NEW** "should return CART_NOT_ACTIVE for duplicate checkout on cancelled cart" | Cancelled carts have no orderId to return → expect 422 `CART_NOT_ACTIVE`, not 200. |
+
+#### Scenario 6 — Concurrent checkout (rewrite)
+
+| Test | Modification |
+|---|---|
+| "should allow exactly one successful checkout when two run concurrently" | **Rename** to "should return same orderId for both concurrent checkouts". Expected: both `success: true`, HTTP statuses `{201, 200}` in some order, `body1.data.orderId === body2.data.orderId`. Query DB: `prisma.order.count({ where: { tenantId, ... } })` for this cart's merchant+customer → exactly 1. `mockGetNextOrderSequence` called exactly 1 time. |
+| **NEW** "should converge 5 concurrent checkouts to a single orderId" | Fire 5 `Promise.all` checkouts on one cart. All succeed; all 5 orderIds identical; HTTP statuses: one 201 + four 200s. DB order count = 1. Proves CAS + waitForConcurrentCheckout scales beyond the 2-caller case. |
+| **NEW** "should retry and create new order when peer checkout rolls back" | Setup: mock `mockGetMenuItemsByIds` to reject the FIRST call (simulating failed order creation), then succeed. Fire two sequential checkouts. First throws (cart rolls back to `active`). Second succeeds with HTTP 201 + a fresh orderId. GET cart → `status === "submitted" + orderId === second's id`. Proves rollback restores reusability. |
+
+#### Scenario 9 (NEW) — HTTP status semantics
+
+| Test | Purpose |
+|---|---|
+| "should return 201 on first checkout and 200 on idempotent retry" | Explicit HTTP status assertion isolated from business assertions; guards against accidental regression to a single status code during refactor. |
+
+#### Scenario 10 (NEW) — Cross-tenant isolation of idempotency
+
+| Test | Purpose |
+|---|---|
+| "should return CART_NOT_FOUND when duplicate checkout comes from different tenant" | First checkout under `TENANT_ID` succeeds. Second checkout uses same `cartId` but `tenantId = OTHER_TENANT_ID` → expect 404 `CART_NOT_FOUND`, not accidentally 200 with leaked orderId. Proves tenant guard runs before idempotency check. |
+
+#### Assertion utilities
+
+Add a small helper to the test file:
+```ts
+async function countOrdersForMerchant(tenantId: string, merchantId: string): Promise<number> {
+  return prisma.order.count({ where: { tenantId, merchantId } });
+}
+```
+Use in Scenario 6 to prove no duplicate orders in DB.
 
 ### Cleanup Sanity
 
