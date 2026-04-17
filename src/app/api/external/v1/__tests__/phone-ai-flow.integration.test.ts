@@ -27,12 +27,21 @@ vi.mock("@/lib/external-auth", () => ({
 }));
 
 // Mock merchantService (used by online-order-url, links/generate, knowledge/query)
+// Also exposes lookupByAiPhone as a pass-through to the real repository so the
+// merchants/lookup endpoint continues to hit the integration test DB.
 const mockGetMerchantById = vi.fn();
-vi.mock("@/services/merchant", () => ({
-  merchantService: {
-    getMerchantById: (...args: unknown[]) => mockGetMerchantById(...args),
-  },
-}));
+vi.mock("@/services/merchant", async () => {
+  const { merchantRepository } = await import(
+    "@/repositories/merchant.repository"
+  );
+  return {
+    merchantService: {
+      getMerchantById: (...args: unknown[]) => mockGetMerchantById(...args),
+      lookupByAiPhone: (phone: string) =>
+        merchantRepository.getByAiPhone(phone),
+    },
+  };
+});
 
 // Mock menuService (used by knowledge/query for MENU target)
 const mockGetMenu = vi.fn();
