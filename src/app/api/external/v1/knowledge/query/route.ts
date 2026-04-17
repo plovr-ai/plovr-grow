@@ -88,6 +88,7 @@ async function resolveTarget(
       const serviceData = {
         pickup: {
           openSwitch: settings?.acceptsPickup ? 1 : 0,
+          pickupHoursMode: 1,
           quoteTime: { min: settings?.estimatedPrepTime ?? 15 },
         },
         delivery: {

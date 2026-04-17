@@ -660,6 +660,7 @@ describe("Phone-AI External API — Call Flow", () => {
       // SERVICE_PROVIDED derived from merchant settings
       const service = JSON.parse(body.data.knowledgeMap.SERVICE_PROVIDED.data);
       expect(service.pickup.openSwitch).toBe(1);
+      expect(service.pickup.pickupHoursMode).toBe(1);
       expect(service.pickup.quoteTime.min).toBe(20);
       expect(service.delivery.openSwitch).toBe(0);
       expect(service.reservation.openSwitch).toBe(0);

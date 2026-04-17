@@ -220,6 +220,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
     expect(response.status).toBe(200);
     const service = JSON.parse(json.data.knowledgeMap.SERVICE_PROVIDED.data);
     expect(service.pickup.openSwitch).toBe(1);
+    expect(service.pickup.pickupHoursMode).toBe(1);
     expect(service.pickup.quoteTime.min).toBe(25);
     expect(service.delivery.openSwitch).toBe(0);
     expect(service.reservation.openSwitch).toBe(0);
@@ -233,6 +234,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
     expect(response.status).toBe(200);
     const service = JSON.parse(json.data.knowledgeMap.SERVICE_PROVIDED.data);
     expect(service.pickup.openSwitch).toBe(0);
+    expect(service.pickup.pickupHoursMode).toBe(1);
     expect(service.pickup.quoteTime.min).toBe(15);
     expect(service.delivery.openSwitch).toBe(0);
   });
