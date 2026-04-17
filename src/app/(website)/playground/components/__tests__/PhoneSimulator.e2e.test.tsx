@@ -276,4 +276,27 @@ describe("PhoneSimulator E2E — full lifecycle with real SDK", () => {
       expect(server.isClosed()).toBe(true);
     });
   });
+
+  it("phone-ai future mode: server sends bot-ready — UI reaches Live exactly once, disconnect still clean", async () => {
+    await renderPhoneSimulator();
+    await clickStartCall();
+    await server.awaitConnection();
+
+    // Phone-ai "fixed" — emit bot-ready after the connected event.
+    act(() => {
+      server.sendBotReady();
+    });
+    await waitForLive();
+
+    // Assert Live appears exactly once (no double-flip from two settle paths).
+    expect(screen.getAllByText("Live")).toHaveLength(1);
+
+    // Disconnect must settle cleanly — if the old connect() promise from SDK
+    // also resolves, there should be no dangling state.
+    await clickHangup();
+    await waitForCallEnded();
+    await waitFor(() => {
+      expect(server.isClosed()).toBe(true);
+    });
+  });
 });
