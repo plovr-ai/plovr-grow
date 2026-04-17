@@ -244,3 +244,19 @@ Use `prisma.$executeRaw` with a single UPDATE-with-conditional-WHERE. InnoDB tak
 Any time you need atomic CAS on MySQL via Prisma, use `$executeRaw` with a single UPDATE statement, NOT `updateMany` with a conditional predicate. Empirically verify by running 5 parallel calls — raw SQL returns [1,0,0,0,0], `updateMany` returns [1,1,1,1,1] (the bug).
 
 ---
+
+## [297] "Dev-only instrumentation" must not widen shared middleware matcher to compensate for missing request context
+
+**Date**: 2026-04-17
+**Category**: convention-violation
+
+### What went wrong
+Implementing a dev-only Prisma `$extends` gated on `DB_PERF_LOG=1`, the instrumentation needed a per-request id / route label to bucket queries. The chosen wiring was: middleware injects `x-db-perf-req` / `x-db-perf-route` headers; Prisma extension reads via `next/headers`. Next.js 16's proxy/middleware `config.matcher` is statically analyzed — it does not support env-conditional expressions. To get the headers onto storefront routes, the matcher was widened from `/dashboard|/admin` to the whole app (sans static assets). Even with the header-injection helper gated on the flag, the matcher widening itself permanently runs the existing NextAuth `auth()` wrapper on every request site-wide — a production behavior change that survives even when the flag is off. This violates the "zero runtime cost when flag is unset" guarantee that defines a dev-only tool.
+
+### Correct approach
+When you can't feed per-request context to dev instrumentation without widening a shared framework hook, prefer a **request-less fallback**: aggregate queries by a sliding idle window (e.g. 300ms) into `unk_N` buckets and rely on the user's sequential curl pattern + manual label mapping. The instrumentation never touches the middleware/proxy. For this project, that meant `getFallbackBucketKey()` rotating on idle; the analysis findings (query counts + N+1 patterns per route) survive unchanged.
+
+### How to avoid
+Rule of thumb for any dev-only tool: if wiring it requires modifying a file that runs on every production request (middleware, proxy, root layout, instrumentation.ts' `register()`), and the modification isn't itself gated on the flag at runtime, reject that approach and fall back to a request-less design. Static-matcher frameworks like Next.js 16 disqualify conditional-matcher workarounds up front.
+
+---
