@@ -92,6 +92,7 @@
     "CART_ITEM_NOT_FOUND": "Cart item not found",
     "CART_MENU_ITEM_NOT_FOUND": "Menu item not found in the menu",
     "CART_MODIFIER_OPTION_NOT_FOUND": "One or more modifier options were not found",
+    "CART_CHECKOUT_IN_PROGRESS": "Another checkout is already in progress for this cart, please retry",
     "VALIDATION_FAILED": "Validation failed",
     "INTERNAL_ERROR": "An unexpected error occurred. Please try again.",
     "NETWORK_ERROR": "Network error. Please check your connection."
