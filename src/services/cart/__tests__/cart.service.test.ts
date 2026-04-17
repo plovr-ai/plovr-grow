@@ -16,6 +16,9 @@ vi.mock("@/repositories/cart.repository", () => ({
     replaceItemModifiers: vi.fn(),
     softDeleteItem: vi.fn(),
     getNextSortOrder: vi.fn(),
+    claimForCheckout: vi.fn(),
+    rollbackCheckoutClaim: vi.fn(),
+    attachOrderId: vi.fn(),
   },
 }));
 
@@ -694,6 +697,8 @@ describe("CartService", () => {
       vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
         makeActiveCartWithItems() as never
       );
+      vi.mocked(cartRepository.claimForCheckout).mockResolvedValue({ count: 1 } as never);
+      vi.mocked(cartRepository.attachOrderId).mockResolvedValue({ count: 1 } as never);
       vi.mocked(orderService.createMerchantOrderAtomic).mockResolvedValue({
         id: "order-1",
         orderNumber: "ORD-001",
@@ -739,19 +744,39 @@ describe("CartService", () => {
       vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
         makeActiveCartWithItems() as never
       );
+      vi.mocked(cartRepository.claimForCheckout).mockResolvedValue({ count: 1 } as never);
+      vi.mocked(cartRepository.attachOrderId).mockResolvedValue({ count: 1 } as never);
       vi.mocked(orderService.createMerchantOrderAtomic).mockResolvedValue({
         id: "order-1",
         orderNumber: "ORD-001",
       } as never);
-      vi.mocked(cartRepository.updateStatus).mockResolvedValue({} as never);
 
       await cartService.checkout("tenant-1", "cart-1", checkoutInput);
 
-      expect(cartRepository.updateStatus).toHaveBeenCalledWith(
+      expect(cartRepository.claimForCheckout).toHaveBeenCalledWith("tenant-1", "cart-1");
+      expect(cartRepository.attachOrderId).toHaveBeenCalledWith(
         "tenant-1",
         "cart-1",
-        "submitted"
+        "order-1"
       );
+    });
+
+    it("rolls back cart to active when order creation fails", async () => {
+      vi.mocked(cartRepository.findByIdWithItems).mockResolvedValue(
+        makeCartWithItems({ status: "active", cartItems: [makeCartItem()] }) as never
+      );
+      vi.mocked(cartRepository.claimForCheckout).mockResolvedValue({ count: 1 } as never);
+      vi.mocked(orderService.createMerchantOrderAtomic).mockRejectedValue(
+        new Error("menu item gone")
+      );
+      vi.mocked(cartRepository.rollbackCheckoutClaim).mockResolvedValue({ count: 1 } as never);
+
+      await expect(
+        cartService.checkout("tenant-1", "cart-1", checkoutInput)
+      ).rejects.toThrow("menu item gone");
+
+      expect(cartRepository.rollbackCheckoutClaim).toHaveBeenCalledWith("tenant-1", "cart-1");
+      expect(cartRepository.attachOrderId).not.toHaveBeenCalled();
     });
 
     it("throws CART_EMPTY when cart has no items", async () => {

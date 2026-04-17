@@ -267,7 +267,13 @@ export class CartService {
       throw new AppError(ErrorCodes.CART_EMPTY);
     }
 
-    // Active cart — fall through to existing create-order path (Tasks 6+7 will replace with CAS + wait)
+    // Active cart — attempt CAS claim to serialize concurrent callers
+    const claim = await cartRepository.claimForCheckout(tenantId, cartId);
+    if (claim.count === 0) {
+      // Lost the race — peer is mid-checkout. Task 7 will add waitAndRetry here.
+      throw new AppError(ErrorCodes.CART_CHECKOUT_IN_PROGRESS, undefined, 409);
+    }
+
     const orderItems: OrderItemData[] = cart.items.map((item) => ({
       menuItemId: item.menuItemId,
       name: item.name,
@@ -286,22 +292,28 @@ export class CartService {
       })),
     }));
 
-    const order = await orderService.createMerchantOrderAtomic(tenantId, {
-      merchantId: cart.merchantId,
-      customerFirstName: input.customerFirstName,
-      customerLastName: input.customerLastName,
-      customerPhone: input.customerPhone,
-      customerEmail: input.customerEmail,
-      orderMode: input.orderMode,
-      salesChannel: cart.salesChannel as Exclude<SalesChannel, "giftcard">,
-      paymentType: "in_store",
-      items: orderItems,
-      deliveryAddress: input.deliveryAddress,
-      tipAmount: input.tipAmount,
-      notes: input.notes,
-    });
+    let order;
+    try {
+      order = await orderService.createMerchantOrderAtomic(tenantId, {
+        merchantId: cart.merchantId,
+        customerFirstName: input.customerFirstName,
+        customerLastName: input.customerLastName,
+        customerPhone: input.customerPhone,
+        customerEmail: input.customerEmail,
+        orderMode: input.orderMode,
+        salesChannel: cart.salesChannel as Exclude<SalesChannel, "giftcard">,
+        paymentType: "in_store",
+        items: orderItems,
+        deliveryAddress: input.deliveryAddress,
+        tipAmount: input.tipAmount,
+        notes: input.notes,
+      });
+    } catch (err) {
+      await cartRepository.rollbackCheckoutClaim(tenantId, cartId);
+      throw err;
+    }
 
-    await cartRepository.updateStatus(tenantId, cartId, "submitted");
+    await cartRepository.attachOrderId(tenantId, cartId, order.id);
 
     return {
       orderId: order.id,
