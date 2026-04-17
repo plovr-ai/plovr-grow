@@ -1849,36 +1849,4 @@ describe("CheckoutPage", () => {
     });
   });
 
-  describe("trial block", () => {
-    it("should block checkout for trial tenants", () => {
-      useCartStore.setState({
-        tenantId: "test",
-        items: mockCartItems,
-      });
-
-      function TrialWrapper({ children }: { children: React.ReactNode }) {
-        return (
-          <MerchantProvider
-            config={{
-              name: "Test Restaurant",
-              logoUrl: null,
-              currency: "USD",
-              locale: "en-US",
-              timezone: "America/New_York",              companySlug: "test-company",
-              isTrial: true,
-              tenantId: "trial-tenant-id",
-            }}
-          >
-            <LoyaltyProvider>{children}</LoyaltyProvider>
-          </MerchantProvider>
-        );
-      }
-
-      render(<CheckoutPage />, { wrapper: TrialWrapper });
-
-      // TrialCheckoutBlock should be rendered instead of the checkout form
-      // The form elements should not be present
-      expect(screen.queryByText("Pickup")).not.toBeInTheDocument();
-    });
-  });
 });

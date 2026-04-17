@@ -24,6 +24,7 @@ export default async function ProtectedLayout({
   const [initialCompany, merchants, subscription] = await Promise.all([
     tenantService.getTenant(tenantId),
     merchantService.getMerchantsByTenantId(tenantId),
+    // Use platform subscription for dashboard feature gating
     subscriptionService.getSubscriptionForDashboard(tenantId, "platform"),
   ]);
 

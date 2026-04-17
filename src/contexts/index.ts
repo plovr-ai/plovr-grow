@@ -6,7 +6,6 @@ export {
   useFeeConfig,
   useCompanySlug,
   useCountry,
-  useTrial,
 } from "./MerchantContext";
 
 export {
