@@ -258,6 +258,42 @@ describe("MerchantRepository", () => {
       });
       expect(result).toEqual(mockMerchant);
     });
+
+    it("should use caller-supplied id when present", async () => {
+      vi.mocked(prisma.merchant.create).mockResolvedValue(mockMerchant as never);
+
+      await repository.create("tenant-1", {
+        id: "pre-allocated",
+        slug: "x",
+        name: "X",
+      });
+
+      expect(prisma.merchant.create).toHaveBeenCalledWith({
+        data: {
+          id: "pre-allocated",
+          slug: "x",
+          name: "X",
+          tenant: { connect: { id: "tenant-1" } },
+        },
+      });
+    });
+
+    it("should use tx client when provided", async () => {
+      const txCreate = vi.fn().mockResolvedValue(mockMerchant);
+      const tx = { merchant: { create: txCreate } } as never;
+
+      await repository.create("tenant-1", { slug: "y", name: "Y" }, tx);
+
+      expect(txCreate).toHaveBeenCalledWith({
+        data: {
+          id: "generated-id-123",
+          slug: "y",
+          name: "Y",
+          tenant: { connect: { id: "tenant-1" } },
+        },
+      });
+      expect(prisma.merchant.create).not.toHaveBeenCalled();
+    });
   });
 
   describe("update", () => {
@@ -274,6 +310,19 @@ describe("MerchantRepository", () => {
         data: { name: "Updated Name" },
       });
       expect(result.name).toBe("Updated Name");
+    });
+
+    it("should use tx client when provided", async () => {
+      const txUpdate = vi.fn().mockResolvedValue({ ...mockMerchant, name: "Tx Update" });
+      const tx = { merchant: { update: txUpdate } } as never;
+
+      await repository.update("merchant-1", { name: "Tx Update" }, tx);
+
+      expect(txUpdate).toHaveBeenCalledWith({
+        where: { id: "merchant-1" },
+        data: { name: "Tx Update" },
+      });
+      expect(prisma.merchant.update).not.toHaveBeenCalled();
     });
   });
 
