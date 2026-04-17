@@ -91,40 +91,66 @@ vi.mock("@/repositories/integration.repository", () => ({
     upsertIdMapping: vi.fn(),
     getIdMappingByExternalId: vi.fn(() => null),
     getLastSuccessfulSyncCursor: vi.fn(() => null),
+    softDeleteIdMapping: vi.fn(),
   },
 }));
 
+vi.mock("@/repositories/menu.repository", () => ({
+  menuRepository: {
+    upsertCategory: vi.fn(),
+    upsertItem: vi.fn(),
+    softDeleteCategoryById: vi.fn(),
+    softDeleteItemById: vi.fn(),
+  },
+}));
+
+vi.mock("@/repositories/menu-entity.repository", () => ({
+  menuEntityRepository: {
+    findDefaultMenu: vi.fn(() => ({ id: "menu-1" })),
+    createDefaultMenu: vi.fn(() => ({ id: "new-menu-1" })),
+  },
+}));
+
+vi.mock("@/repositories/menu-category-item.repository", () => ({
+  menuCategoryItemRepository: {
+    upsertLink: vi.fn(),
+  },
+}));
+
+vi.mock("@/repositories/tax-config.repository", () => ({
+  taxConfigRepository: {
+    upsertTaxConfig: vi.fn(),
+    upsertMerchantTaxRate: vi.fn(),
+    softDeleteTaxConfig: vi.fn(),
+    softDeleteRatesByConfig: vi.fn(),
+  },
+}));
+
+vi.mock("@/repositories/modifier.repository", () => ({
+  modifierRepository: {
+    getOptionGroupId: vi.fn(() => null),
+    softDeleteGroup: vi.fn(),
+    softDeleteOptionsByGroup: vi.fn(),
+  },
+}));
+
+vi.mock("@/lib/transaction", () => ({
+  runInTransaction: vi.fn(async (fn: (tx: unknown) => unknown) => {
+    // Pass the mock tx (keeps FOR-UPDATE $queryRaw working for
+    // getConnectionForUpdate) to the callback.
+    const mockTx = (await import("@/lib/db")) as unknown as {
+      __mockTx: unknown;
+    };
+    return fn(mockTx.__mockTx);
+  }),
+}));
+
 vi.mock("@/lib/db", () => {
-  // Universal tx mock that supports both guard and data transactions.
-  // syncCatalog calls $transaction twice: 1st for concurrency guard, 2nd for data write.
+  // Minimal tx mock that only needs to support $queryRaw (FOR UPDATE lock)
+  // now that every data write goes through a Repository mock instead of a
+  // raw tx.model.method() call.
   const mockTx = {
-    // FOR UPDATE lock support
     $queryRaw: vi.fn(() => [{ id: "conn-1" }]),
-    // Guard transaction fields
-    integrationSyncRecord: {
-      findFirst: vi.fn(() => null), // no running sync by default
-      create: vi.fn(() => ({ id: "sync-1" })),
-    },
-    // Data transaction fields
-    menu: { findFirst: vi.fn(() => ({ id: "menu-1" })), create: vi.fn() },
-    menuCategory: { upsert: vi.fn(), updateMany: vi.fn() },
-    menuItem: { upsert: vi.fn(), updateMany: vi.fn() },
-    menuCategoryItem: { upsert: vi.fn() },
-    taxConfig: { upsert: vi.fn(), updateMany: vi.fn() },
-    merchantTaxRate: { upsert: vi.fn(), updateMany: vi.fn() },
-    modifierGroup: { upsert: vi.fn(), updateMany: vi.fn() },
-    modifierOption: {
-      upsert: vi.fn(),
-      findUnique: vi.fn(() => null),
-      updateMany: vi.fn(),
-    },
-    menuItemModifierGroup: {
-      create: vi.fn(),
-      deleteMany: vi.fn(),
-    },
-    externalIdMapping: {
-      updateMany: vi.fn(),
-    },
   };
   return {
     default: {
@@ -158,21 +184,21 @@ const { squareOAuthService } = await import("../square-oauth.service");
 const { integrationRepository } = await import(
   "@/repositories/integration.repository"
 );
+const { menuRepository } = await import("@/repositories/menu.repository");
+const { menuEntityRepository } = await import(
+  "@/repositories/menu-entity.repository"
+);
+const { menuCategoryItemRepository } = await import(
+  "@/repositories/menu-category-item.repository"
+);
+const { taxConfigRepository } = await import(
+  "@/repositories/tax-config.repository"
+);
+const { modifierRepository } = await import(
+  "@/repositories/modifier.repository"
+);
 const { squareOrderService } = await import("../square-order.service");
 const { squareCatalogService } = await import("../square-catalog.service");
-const { __mockTx } = await import("@/lib/db") as unknown as {
-  __mockTx: {
-    integrationSyncRecord: { findFirst: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
-    menu: { findFirst: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
-    menuCategory: { upsert: ReturnType<typeof vi.fn> };
-    menuItem: { upsert: ReturnType<typeof vi.fn>; updateMany: ReturnType<typeof vi.fn> };
-    taxConfig: { upsert: ReturnType<typeof vi.fn>; updateMany: ReturnType<typeof vi.fn> };
-    merchantTaxRate: { upsert: ReturnType<typeof vi.fn>; updateMany: ReturnType<typeof vi.fn> };
-    modifierGroup: { upsert: ReturnType<typeof vi.fn>; updateMany: ReturnType<typeof vi.fn> };
-    modifierOption: { upsert: ReturnType<typeof vi.fn>; findUnique: ReturnType<typeof vi.fn>; updateMany: ReturnType<typeof vi.fn> };
-    externalIdMapping: { updateMany: ReturnType<typeof vi.fn> };
-  };
-};
 
 describe("SquareService", () => {
   let service: SquareService;
@@ -352,13 +378,28 @@ describe("SquareService", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-      // The concurrency guard now runs inside $transaction.
-      // Mock the tx's findFirst to return a running sync record.
-      __mockTx.integrationSyncRecord.findFirst.mockResolvedValueOnce({
+      // The concurrency guard runs inside runInTransaction and calls
+      // integrationRepository.getRunningSync(connectionId, tx). Return a
+      // running sync record to simulate a concurrent sync already in flight.
+      vi.mocked(integrationRepository.getRunningSync).mockResolvedValueOnce({
         id: "sync-running",
+        tenantId: "t1",
+        connectionId: "conn-1",
+        syncType: "CATALOG_FULL",
         status: "running",
         startedAt: new Date(),
-      });
+        finishedAt: null,
+        objectsSynced: null,
+        objectsMapped: null,
+        errorMessage: null,
+        cursor: null,
+        stats: null,
+        retryCount: 0,
+        nextRetryAt: null,
+        payload: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never);
 
       await expect(
         service.syncCatalog("t1", "m1")
@@ -645,9 +686,21 @@ describe("SquareService", () => {
     it("should create a default menu when none exists", async () => {
       vi.mocked(integrationRepository.getConnection).mockResolvedValueOnce(makeConnection());
 
-      // Override menu.findFirst to return null so a new menu is created
-      __mockTx.menu.findFirst.mockResolvedValueOnce(null);
-      __mockTx.menu.create.mockResolvedValueOnce({ id: "new-menu-1" });
+      // Override findDefaultMenu to return null so createDefaultMenu is called
+      vi.mocked(menuEntityRepository.findDefaultMenu).mockResolvedValueOnce(
+        null
+      );
+      vi.mocked(menuEntityRepository.createDefaultMenu).mockResolvedValueOnce({
+        id: "new-menu-1",
+        tenantId: "t1",
+        name: "Main Menu",
+        description: null,
+        sortOrder: 0,
+        status: "active",
+        deleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never);
 
       vi.mocked(squareCatalogService.mapToMenuModels).mockReturnValueOnce({
         categories: [{ externalId: "sq-cat-1", name: "Drinks", sortOrder: 0 }],
@@ -658,7 +711,11 @@ describe("SquareService", () => {
 
       const result = await service.syncCatalog("t1", "m1");
 
-      expect(__mockTx.menu.create).toHaveBeenCalled();
+      expect(menuEntityRepository.createDefaultMenu).toHaveBeenCalledWith(
+        "t1",
+        "Main Menu",
+        expect.anything()
+      );
       expect(result.objectsSynced).toBe(1);
     });
 
@@ -789,8 +846,10 @@ describe("SquareService", () => {
         }
       );
 
-      // modifierOption.findUnique should return existing group
-      __mockTx.menu.findFirst.mockResolvedValue({ id: "menu-1" });
+      // modifierRepository.getOptionGroupId should return the existing group
+      vi.mocked(modifierRepository.getOptionGroupId).mockResolvedValueOnce(
+        "existing-group-id"
+      );
 
       vi.mocked(squareCatalogService.mapToMenuModels).mockReturnValueOnce({
         categories: [],
@@ -1018,9 +1077,21 @@ describe("SquareService", () => {
       const result = await service.syncCatalog("t1", "m1", true);
 
       expect(result.objectsSynced).toBe(0);
-      expect(__mockTx.menuCategory.upsert).not.toHaveBeenCalled();
-      // Verify soft-delete was called on the externalIdMapping
-      expect(__mockTx.externalIdMapping.updateMany).toHaveBeenCalledTimes(2);
+      expect(menuRepository.upsertCategory).not.toHaveBeenCalled();
+      // Verify soft-delete was called on the externalIdMapping (once per
+      // deleted external id, regardless of its internalType)
+      expect(integrationRepository.softDeleteIdMapping).toHaveBeenCalledTimes(2);
+      // And the menuCategory + menuItem soft-deletes both fired once
+      expect(menuRepository.softDeleteCategoryById).toHaveBeenCalledWith(
+        "t1",
+        "internal-cat-1",
+        expect.anything()
+      );
+      expect(menuRepository.softDeleteItemById).toHaveBeenCalledWith(
+        "t1",
+        "internal-item-1",
+        expect.anything()
+      );
     });
 
     it("should soft-delete merchantTaxRate when TaxConfig is deleted incrementally", async () => {
@@ -1052,14 +1123,15 @@ describe("SquareService", () => {
 
       await service.syncCatalog("t1", "m1", true);
 
-      expect(__mockTx.taxConfig.updateMany).toHaveBeenCalledWith({
-        where: { id: "internal-tax-1", tenantId: "t1" },
-        data: { deleted: true },
-      });
-      expect(__mockTx.merchantTaxRate.updateMany).toHaveBeenCalledWith({
-        where: { taxConfigId: "internal-tax-1", deleted: false },
-        data: { deleted: true },
-      });
+      expect(taxConfigRepository.softDeleteTaxConfig).toHaveBeenCalledWith(
+        "t1",
+        "internal-tax-1",
+        expect.anything()
+      );
+      expect(taxConfigRepository.softDeleteRatesByConfig).toHaveBeenCalledWith(
+        "internal-tax-1",
+        expect.anything()
+      );
     });
 
     it("should soft-delete ModifierGroup and its options when deleted incrementally", async () => {
@@ -1091,14 +1163,15 @@ describe("SquareService", () => {
 
       await service.syncCatalog("t1", "m1", true);
 
-      expect(__mockTx.modifierGroup.updateMany).toHaveBeenCalledWith({
-        where: { id: "internal-modgroup-1", tenantId: "t1" },
-        data: { deleted: true },
-      });
-      expect(__mockTx.modifierOption.updateMany).toHaveBeenCalledWith({
-        where: { groupId: "internal-modgroup-1" },
-        data: { deleted: true },
-      });
+      expect(modifierRepository.softDeleteGroup).toHaveBeenCalledWith(
+        "t1",
+        "internal-modgroup-1",
+        expect.anything()
+      );
+      expect(modifierRepository.softDeleteOptionsByGroup).toHaveBeenCalledWith(
+        "internal-modgroup-1",
+        expect.anything()
+      );
     });
 
     it("should use CATALOG_INCREMENTAL sync type for incremental sync", async () => {
@@ -1109,11 +1182,12 @@ describe("SquareService", () => {
 
       await service.syncCatalog("t1", "m1", true);
 
-      expect(__mockTx.integrationSyncRecord.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          syncType: "CATALOG_INCREMENTAL",
-        }),
-      });
+      expect(integrationRepository.createSyncRecord).toHaveBeenCalledWith(
+        "t1",
+        "conn-1",
+        "CATALOG_INCREMENTAL",
+        expect.anything()
+      );
     });
   });
 });

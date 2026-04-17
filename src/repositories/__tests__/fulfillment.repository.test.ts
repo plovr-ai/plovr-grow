@@ -321,4 +321,64 @@ describe("FulfillmentRepository", () => {
       });
     });
   });
+
+  describe("bumpExternalVersionByOrderIdIfNewer()", () => {
+    it("should query by orderId and allow null externalVersion", async () => {
+      mockPrisma.orderFulfillment.updateMany.mockResolvedValue({
+        count: 1,
+      } as never);
+
+      await fulfillmentRepository.bumpExternalVersionByOrderIdIfNewer(
+        ORDER_ID,
+        5
+      );
+
+      expect(mockPrisma.orderFulfillment.updateMany).toHaveBeenCalledWith({
+        where: {
+          orderId: ORDER_ID,
+          OR: [
+            { externalVersion: null },
+            { externalVersion: { lt: 5 } },
+          ],
+        },
+        data: { externalVersion: 5 },
+      });
+    });
+
+    it("should atomically bump when stored version is strictly smaller (WHERE does the compare)", async () => {
+      mockPrisma.orderFulfillment.updateMany.mockResolvedValue({
+        count: 1,
+      } as never);
+
+      const result =
+        await fulfillmentRepository.bumpExternalVersionByOrderIdIfNewer(
+          ORDER_ID,
+          5
+        );
+
+      expect(result).toEqual({ count: 1 });
+    });
+
+    it("should not bump when stored version is newer (WHERE clause matches 0 rows)", async () => {
+      // updateMany returns { count: 0 } when the WHERE predicate eliminates
+      // every candidate row — i.e. the stored version was already >= 5.
+      mockPrisma.orderFulfillment.updateMany.mockResolvedValue({
+        count: 0,
+      } as never);
+
+      const result =
+        await fulfillmentRepository.bumpExternalVersionByOrderIdIfNewer(
+          ORDER_ID,
+          3
+        );
+
+      expect(result).toEqual({ count: 0 });
+      // The WHERE clause still used lt: 3
+      const callArg =
+        mockPrisma.orderFulfillment.updateMany.mock.calls[0][0] as {
+          where: { OR: Array<{ externalVersion?: unknown }> };
+        };
+      expect(callArg.where.OR[1]).toEqual({ externalVersion: { lt: 3 } });
+    });
+  });
 });

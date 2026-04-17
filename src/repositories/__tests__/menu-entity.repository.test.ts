@@ -392,4 +392,69 @@ describe("MenuEntityRepository", () => {
       });
     });
   });
+
+  describe("findDefaultMenu", () => {
+    it("should find the first non-deleted menu for a tenant", async () => {
+      vi.mocked(prisma.menu.findFirst).mockResolvedValue({
+        id: "menu-1",
+        tenantId: "tenant-1",
+        name: "Main Menu",
+      } as never);
+
+      const result = await repository.findDefaultMenu("tenant-1");
+
+      expect(prisma.menu.findFirst).toHaveBeenCalledWith({
+        where: { tenantId: "tenant-1", deleted: false },
+      });
+      expect(result).toMatchObject({ id: "menu-1" });
+    });
+
+    it("should use the provided tx client when one is passed", async () => {
+      const txFindFirst = vi.fn().mockResolvedValue(null);
+      const tx = { menu: { findFirst: txFindFirst } } as never;
+
+      await repository.findDefaultMenu("tenant-1", tx);
+
+      expect(txFindFirst).toHaveBeenCalledWith({
+        where: { tenantId: "tenant-1", deleted: false },
+      });
+      expect(prisma.menu.findFirst).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("createDefaultMenu", () => {
+    it("should create a menu with sortOrder=0", async () => {
+      vi.mocked(prisma.menu.create).mockResolvedValue({
+        id: "new-menu",
+        tenantId: "tenant-1",
+        name: "Main Menu",
+        description: null,
+        sortOrder: 0,
+        status: "active",
+        deleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await repository.createDefaultMenu("tenant-1", "Main Menu");
+
+      expect(prisma.menu.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          tenantId: "tenant-1",
+          name: "Main Menu",
+          sortOrder: 0,
+        }),
+      });
+    });
+
+    it("should use the provided tx client when one is passed", async () => {
+      const txCreate = vi.fn().mockResolvedValue({ id: "new-menu" });
+      const tx = { menu: { create: txCreate } } as never;
+
+      await repository.createDefaultMenu("tenant-1", "Main Menu", tx);
+
+      expect(txCreate).toHaveBeenCalled();
+      expect(prisma.menu.create).not.toHaveBeenCalled();
+    });
+  });
 });

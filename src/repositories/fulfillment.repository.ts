@@ -175,6 +175,31 @@ export class FulfillmentRepository {
       data: { externalVersion },
     });
   }
+
+  /**
+   * Bump a fulfillment's externalVersion by orderId, only if the new version
+   * is strictly newer than the currently stored one (or the stored one is
+   * null). Atomic updateMany with a guard in the WHERE clause makes this
+   * safe against concurrent writers racing for the version bump.
+   *
+   * Used by SquareOrderService.persistSquareOrderVersion (#109) so a late
+   * echo carrying an older version cannot overwrite a newer one.
+   */
+  async bumpExternalVersionByOrderIdIfNewer(
+    orderId: string,
+    version: number
+  ) {
+    return prisma.orderFulfillment.updateMany({
+      where: {
+        orderId,
+        OR: [
+          { externalVersion: null },
+          { externalVersion: { lt: version } },
+        ],
+      },
+      data: { externalVersion: version },
+    });
+  }
 }
 
 const FULFILLMENT_TIMESTAMP_FIELD: Record<string, string> = {

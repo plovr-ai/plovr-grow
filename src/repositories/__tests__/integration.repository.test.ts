@@ -178,6 +178,58 @@ describe("IntegrationRepository", () => {
       });
       expect(result).toBeTruthy();
     });
+
+    it("should run on the provided tx client when one is passed", async () => {
+      const txFindFirst = vi.fn().mockResolvedValue(null);
+      const tx = {
+        integrationSyncRecord: { findFirst: txFindFirst },
+      } as never;
+
+      await repo.getRunningSync("conn-1", tx);
+
+      expect(txFindFirst).toHaveBeenCalledWith({
+        where: {
+          connectionId: "conn-1",
+          status: "running",
+          startedAt: { gte: expect.any(Date) },
+        },
+      });
+      expect(mockPrisma.integrationSyncRecord.findFirst).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("softDeleteIdMapping", () => {
+    it("should soft-delete a mapping by row id", async () => {
+      const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+      // Patch the prisma mock for this test — the default mock doesn't have
+      // externalIdMapping.updateMany in its shape.
+      (
+        mockPrisma.externalIdMapping as unknown as {
+          updateMany: ReturnType<typeof vi.fn>;
+        }
+      ).updateMany = updateMany;
+
+      await repo.softDeleteIdMapping("mapping-1");
+
+      expect(updateMany).toHaveBeenCalledWith({
+        where: { id: "mapping-1" },
+        data: { deleted: true },
+      });
+    });
+
+    it("should run on the provided tx client when one is passed", async () => {
+      const txUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+      const tx = {
+        externalIdMapping: { updateMany: txUpdateMany },
+      } as never;
+
+      await repo.softDeleteIdMapping("mapping-1", tx);
+
+      expect(txUpdateMany).toHaveBeenCalledWith({
+        where: { id: "mapping-1" },
+        data: { deleted: true },
+      });
+    });
   });
 
   describe("upsertIdMapping", () => {

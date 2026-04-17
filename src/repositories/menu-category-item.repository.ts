@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import type { DbClient } from "@/lib/db";
 import { generateEntityId } from "@/lib/id";
 
 export class MenuCategoryItemRepository {
@@ -210,6 +211,36 @@ export class MenuCategoryItemRepository {
   async countItemCategories(menuItemId: string): Promise<number> {
     return prisma.menuCategoryItem.count({
       where: { menuItemId, deleted: false },
+    });
+  }
+
+  /**
+   * Upsert a category ↔ item link, keyed by the compound unique
+   * (categoryId, menuItemId). Create path stamps tenant + sortOrder=0;
+   * update path clears the deleted flag so a previously unlinked pair is
+   * restored when Square re-publishes the association.
+   */
+  async upsertLink(
+    tenantId: string,
+    categoryId: string,
+    menuItemId: string,
+    tx?: DbClient
+  ) {
+    const db = tx ?? prisma;
+    return db.menuCategoryItem.upsert({
+      where: {
+        categoryId_menuItemId: { categoryId, menuItemId },
+      },
+      create: {
+        id: generateEntityId(),
+        tenantId,
+        categoryId,
+        menuItemId,
+        sortOrder: 0,
+      },
+      update: {
+        deleted: false,
+      },
     });
   }
 }

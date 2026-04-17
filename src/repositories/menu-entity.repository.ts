@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import type { DbClient } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
 
@@ -182,6 +183,34 @@ export class MenuEntityRepository {
         tenantId,
         status: "active",
         deleted: false,
+      },
+    });
+  }
+
+  /**
+   * Find the first active menu for a tenant.
+   * Used by the Square catalog sync pipeline to locate (or create) the
+   * default menu that categories are attached to.
+   */
+  async findDefaultMenu(tenantId: string, tx?: DbClient) {
+    const db = tx ?? prisma;
+    return db.menu.findFirst({
+      where: { tenantId, deleted: false },
+    });
+  }
+
+  /**
+   * Create a default menu for a tenant when none exists yet.
+   * Used by the Square catalog sync pipeline.
+   */
+  async createDefaultMenu(tenantId: string, name: string, tx?: DbClient) {
+    const db = tx ?? prisma;
+    return db.menu.create({
+      data: {
+        id: generateEntityId(),
+        tenantId,
+        name,
+        sortOrder: 0,
       },
     });
   }

@@ -40,19 +40,18 @@ vi.mock("../square.config", () => ({
   },
 }));
 
-const mockMerchantFindFirst = vi.fn();
-const mockOrderUpdate = vi.fn();
-const mockOrderFindUnique = vi.fn();
+const mockMerchantGetById = vi.fn();
+const mockOrderGetStatusById = vi.fn();
 
-vi.mock("@/lib/db", () => ({
-  default: {
-    merchant: {
-      findFirst: (...args: unknown[]) => mockMerchantFindFirst(...args),
-    },
-    order: {
-      update: (...args: unknown[]) => mockOrderUpdate(...args),
-      findUnique: (...args: unknown[]) => mockOrderFindUnique(...args),
-    },
+vi.mock("@/repositories/merchant.repository", () => ({
+  merchantRepository: {
+    getById: (...args: unknown[]) => mockMerchantGetById(...args),
+  },
+}));
+
+vi.mock("@/repositories/order.repository", () => ({
+  orderRepository: {
+    getStatusById: (...args: unknown[]) => mockOrderGetStatusById(...args),
   },
 }));
 
@@ -122,11 +121,10 @@ describe("SquareWebhookService", () => {
     mockScheduleWebhookEventRetry.mockResolvedValue({});
     mockMarkWebhookEventDeadLetter.mockResolvedValue({});
     mockMarkWebhookEventProcessed.mockResolvedValue({});
-    mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+    mockMerchantGetById.mockResolvedValue({ tenantId: TENANT_ID });
     mockSyncCatalog.mockResolvedValue({});
     mockGetIdMappingByExternalId.mockResolvedValue(null);
-    mockOrderUpdate.mockResolvedValue({});
-    mockOrderFindUnique.mockResolvedValue({
+    mockOrderGetStatusById.mockResolvedValue({
       status: "completed",
     });
     mockGetFulfillmentByOrderId.mockResolvedValue({
@@ -149,10 +147,7 @@ describe("SquareWebhookService", () => {
       const payload = buildPayload({ type: "catalog.version.updated" });
       await service.routeEvent("catalog.version.updated", payload, mockConnection);
 
-      expect(mockMerchantFindFirst).toHaveBeenCalledWith({
-        where: { id: MERCHANT_ID },
-        select: { tenantId: true },
-      });
+      expect(mockMerchantGetById).toHaveBeenCalledWith(MERCHANT_ID);
       expect(mockSyncCatalog).toHaveBeenCalledWith(
         TENANT_ID,
         MERCHANT_ID,
@@ -161,7 +156,7 @@ describe("SquareWebhookService", () => {
     });
 
     it("should skip sync when merchant not found", async () => {
-      mockMerchantFindFirst.mockResolvedValue(null);
+      mockMerchantGetById.mockResolvedValue(null);
 
       const payload = buildPayload({ type: "catalog.version.updated" });
       await service.routeEvent("catalog.version.updated", payload, mockConnection);
@@ -251,7 +246,7 @@ describe("SquareWebhookService", () => {
       await service.routeEvent("order.updated", noFulfillmentPayload, mockConnection);
 
       expect(mockGetIdMappingByExternalId).not.toHaveBeenCalled();
-      expect(mockOrderUpdate).not.toHaveBeenCalled();
+      expect(mockOrderGetStatusById).not.toHaveBeenCalled();
     });
 
     it("should skip when fulfillment state is unknown", async () => {
@@ -272,7 +267,7 @@ describe("SquareWebhookService", () => {
       await service.routeEvent("order.updated", unknownStatePayload, mockConnection);
 
       expect(mockGetIdMappingByExternalId).not.toHaveBeenCalled();
-      expect(mockOrderUpdate).not.toHaveBeenCalled();
+      expect(mockOrderGetStatusById).not.toHaveBeenCalled();
     });
 
     it("should not regress fulfillment status when stale webhook arrives", async () => {
@@ -427,7 +422,7 @@ describe("SquareWebhookService", () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue(null);
+      mockOrderGetStatusById.mockResolvedValue(null);
 
       await service.routeEvent("order.updated", orderPayload, mockConnection);
 
@@ -445,7 +440,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "completed",
       });
 
@@ -458,7 +453,7 @@ describe("SquareWebhookService", () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({ status: "completed" });
+      mockOrderGetStatusById.mockResolvedValue({ status: "completed" });
 
       const canceledPayload = buildPayload({
         type: "order.updated",
@@ -502,7 +497,7 @@ describe("SquareWebhookService", () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({ status: "completed" });
+      mockOrderGetStatusById.mockResolvedValue({ status: "completed" });
 
       const canceledPayload = buildPayload({
         type: "order.updated",
@@ -541,7 +536,7 @@ describe("SquareWebhookService", () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({ status: "completed" });
+      mockOrderGetStatusById.mockResolvedValue({ status: "completed" });
 
       const failedPayload = buildPayload({
         type: "order.updated",
@@ -587,7 +582,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "completed",
       });
 
@@ -619,7 +614,7 @@ describe("SquareWebhookService", () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({ status: "canceled" });
+      mockOrderGetStatusById.mockResolvedValue({ status: "canceled" });
 
       const canceledPayload = buildPayload({
         type: "order.updated",
@@ -645,7 +640,7 @@ describe("SquareWebhookService", () => {
       mockGetIdMappingByExternalId.mockResolvedValue({
         internalId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue(null);
+      mockOrderGetStatusById.mockResolvedValue(null);
 
       const canceledPayload = buildPayload({
         type: "order.updated",
@@ -678,7 +673,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "canceled",
       });
 
@@ -700,7 +695,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "completed",
       });
 
@@ -735,7 +730,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "completed",
       });
 
@@ -770,7 +765,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "completed",
       });
 
@@ -813,7 +808,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "completed",
       });
 
@@ -848,7 +843,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "completed",
       });
 
@@ -875,7 +870,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "completed",
       });
 
@@ -918,7 +913,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "completed",
       });
 
@@ -967,7 +962,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "completed",
       });
 
@@ -1005,7 +1000,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "completed",
       });
 
@@ -1041,7 +1036,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "canceled",
       });
 
@@ -1077,7 +1072,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "canceled",
       });
 
@@ -1242,7 +1237,7 @@ describe("SquareWebhookService", () => {
         merchantId: MERCHANT_ID,
         orderId: "internal-order-1",
       });
-      mockOrderFindUnique.mockResolvedValue({
+      mockOrderGetStatusById.mockResolvedValue({
         status: "completed",
       });
 
@@ -1308,7 +1303,7 @@ describe("SquareWebhookService", () => {
     it("should mark event as processed on successful retry", async () => {
       mockFindRetryableWebhookEvents.mockResolvedValue([FAILED_CATALOG_EVENT]);
       mockClaimWebhookEventForRetry.mockResolvedValue(true);
-      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockMerchantGetById.mockResolvedValue({ tenantId: TENANT_ID });
       mockSyncCatalog.mockResolvedValue({});
 
       const result = await service.retryFailedEvents();
@@ -1339,7 +1334,7 @@ describe("SquareWebhookService", () => {
         { ...FAILED_CATALOG_EVENT, retryCount: 2 },
       ]);
       mockClaimWebhookEventForRetry.mockResolvedValue(true);
-      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockMerchantGetById.mockResolvedValue({ tenantId: TENANT_ID });
       mockSyncCatalog.mockRejectedValue(new Error("still broken"));
 
       const result = await service.retryFailedEvents();
@@ -1359,7 +1354,7 @@ describe("SquareWebhookService", () => {
         { ...FAILED_CATALOG_EVENT, retryCount: 4 },
       ]);
       mockClaimWebhookEventForRetry.mockResolvedValue(true);
-      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockMerchantGetById.mockResolvedValue({ tenantId: TENANT_ID });
       mockSyncCatalog.mockRejectedValue(new Error("still broken"));
 
       const result = await service.retryFailedEvents();
@@ -1375,7 +1370,7 @@ describe("SquareWebhookService", () => {
     it("should pass a future lease expiry to claimWebhookEventForRetry", async () => {
       mockFindRetryableWebhookEvents.mockResolvedValue([FAILED_CATALOG_EVENT]);
       mockClaimWebhookEventForRetry.mockResolvedValue(true);
-      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockMerchantGetById.mockResolvedValue({ tenantId: TENANT_ID });
       mockSyncCatalog.mockResolvedValue({});
 
       const before = Date.now();
@@ -1403,7 +1398,7 @@ describe("SquareWebhookService", () => {
       };
       mockFindRetryableWebhookEvents.mockResolvedValue([staleEvent]);
       mockClaimWebhookEventForRetry.mockResolvedValue(true);
-      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockMerchantGetById.mockResolvedValue({ tenantId: TENANT_ID });
       mockSyncCatalog.mockResolvedValue({});
 
       const result = await service.retryFailedEvents();
@@ -1426,7 +1421,7 @@ describe("SquareWebhookService", () => {
         deadEvent,
       ]);
       mockClaimWebhookEventForRetry.mockResolvedValue(true);
-      mockMerchantFindFirst.mockResolvedValue({ tenantId: TENANT_ID });
+      mockMerchantGetById.mockResolvedValue({ tenantId: TENANT_ID });
       mockSyncCatalog
         .mockResolvedValueOnce({})
         .mockRejectedValueOnce(new Error("fail 2"))

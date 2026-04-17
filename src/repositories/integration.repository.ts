@@ -129,9 +129,11 @@ export class IntegrationRepository {
   async createSyncRecord(
     tenantId: string,
     connectionId: string,
-    syncType: string
+    syncType: string,
+    tx?: DbClient
   ) {
-    return prisma.integrationSyncRecord.create({
+    const db = tx ?? prisma;
+    return db.integrationSyncRecord.create({
       data: {
         id: generateEntityId(),
         tenantId,
@@ -196,11 +198,12 @@ export class IntegrationRepository {
     });
   }
 
-  async getRunningSync(connectionId: string) {
+  async getRunningSync(connectionId: string, tx?: DbClient) {
+    const db = tx ?? prisma;
     const staleThreshold = new Date(
       Date.now() - SYNC_STALE_MINUTES * 60 * 1000
     );
-    return prisma.integrationSyncRecord.findFirst({
+    return db.integrationSyncRecord.findFirst({
       where: {
         connectionId,
         status: "running",
@@ -272,15 +275,29 @@ export class IntegrationRepository {
   async getIdMappingByExternalId(
     tenantId: string,
     externalSource: string,
-    externalId: string
+    externalId: string,
+    tx?: DbClient
   ) {
-    return prisma.externalIdMapping.findFirst({
+    const db = tx ?? prisma;
+    return db.externalIdMapping.findFirst({
       where: {
         tenantId,
         externalSource,
         externalId,
         deleted: false,
       },
+    });
+  }
+
+  /**
+   * Soft-delete an external ID mapping by its row ID.
+   * Used when incremental catalog sync reports that a Square object was deleted.
+   */
+  async softDeleteIdMapping(id: string, tx?: DbClient) {
+    const db = tx ?? prisma;
+    return db.externalIdMapping.updateMany({
+      where: { id },
+      data: { deleted: true },
     });
   }
 
