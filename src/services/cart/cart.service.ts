@@ -22,6 +22,14 @@ import type {
 } from "./cart.types";
 import type { OrderItemData, SelectedModifier, SalesChannel } from "@/types";
 
+const CHECKOUT_WAIT_ATTEMPTS = 5;
+const CHECKOUT_WAIT_INTERVAL_MS = 100;
+const CHECKOUT_MAX_REENTRY_DEPTH = 1;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export class CartService {
   async createCart(tenantId: string, merchantId: string, input: CreateCartInput) {
     return cartRepository.create(tenantId, merchantId, {
@@ -234,9 +242,6 @@ export class CartService {
     input: CheckoutInput,
     depth: number
   ): Promise<CheckoutResult> {
-    // depth is reserved for Tasks 6+7 (waitAndRetry recursion bound); unused for now.
-    void depth;
-
     const cart = await this.getCart(tenantId, cartId);
 
     // Resolve existing order for already-finalized carts
@@ -255,8 +260,8 @@ export class CartService {
           alreadyExists: true,
         };
       }
-      // submitted + orderId=null → peer mid-checkout. Task 7 adds waitAndRetry here.
-      throw new AppError(ErrorCodes.CART_CHECKOUT_IN_PROGRESS, undefined, 409);
+      // submitted + orderId=null → peer mid-checkout. Poll briefly for resolution.
+      return this.waitAndRetry(tenantId, cartId, input, depth);
     }
 
     if (cart.status === "cancelled") {
@@ -270,8 +275,8 @@ export class CartService {
     // Active cart — attempt CAS claim to serialize concurrent callers
     const claim = await cartRepository.claimForCheckout(tenantId, cartId);
     if (claim.count === 0) {
-      // Lost the race — peer is mid-checkout. Task 7 will add waitAndRetry here.
-      throw new AppError(ErrorCodes.CART_CHECKOUT_IN_PROGRESS, undefined, 409);
+      // Lost the race — peer is mid-checkout. Poll briefly for resolution.
+      return this.waitAndRetry(tenantId, cartId, input, depth);
     }
 
     const orderItems: OrderItemData[] = cart.items.map((item) => ({
@@ -320,6 +325,49 @@ export class CartService {
       orderNumber: order.orderNumber,
       alreadyExists: false,
     };
+  }
+
+  private async waitAndRetry(
+    tenantId: string,
+    cartId: string,
+    input: CheckoutInput,
+    depth: number
+  ): Promise<CheckoutResult> {
+    for (let i = 0; i < CHECKOUT_WAIT_ATTEMPTS; i++) {
+      await sleep(CHECKOUT_WAIT_INTERVAL_MS);
+      const current = await cartRepository.findById(tenantId, cartId);
+      if (!current) {
+        throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
+      }
+
+      if (current.status === "submitted" && current.orderId) {
+        const order = await orderRepository.getByIdWithMerchant(
+          tenantId,
+          current.orderId
+        );
+        if (!order) {
+          throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId: current.orderId });
+        }
+        return {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          alreadyExists: true,
+        };
+      }
+
+      if (current.status === "active") {
+        if (depth >= CHECKOUT_MAX_REENTRY_DEPTH) {
+          throw new AppError(ErrorCodes.CART_CHECKOUT_IN_PROGRESS, undefined, 409);
+        }
+        return this._checkoutAttempt(tenantId, cartId, input, depth + 1);
+      }
+
+      if (current.status === "cancelled") {
+        throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
+      }
+    }
+
+    throw new AppError(ErrorCodes.CART_CHECKOUT_IN_PROGRESS, undefined, 409);
   }
 
   private async resolveModifiers(
