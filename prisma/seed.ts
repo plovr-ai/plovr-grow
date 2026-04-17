@@ -1960,6 +1960,750 @@ async function main() {
 
   console.log(`Created Velvet Lounge user: ${velvetLoungeUser.email}`);
 
+  // ==================== Phone AI Test Merchant: Burger Shack ====================
+  console.log("\nCreating Burger Shack (phone AI playground test)...");
+
+  const burgerTenantId = "tenant-burger-phone-ai";
+  const burgerMerchantId = "merchant-burger-phone-ai";
+  const burgerMenuId = "burger-menu-main";
+
+  const burgerWebsiteSettings = {
+    defaultCurrency: "USD",
+    defaultLocale: "en-US",
+    defaultTimezone: "America/Los_Angeles",
+    websiteTemplate: "fast_casual",
+    website: {
+      tagline: "Smash Burgers & Hand-Cut Fries",
+      heroImage:
+        "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1920&h=1080&fit=crop",
+      socialLinks: [],
+    },
+  };
+
+  const burgerTenant = await prisma.tenant.upsert({
+    where: { id: burgerTenantId },
+    update: { settings: burgerWebsiteSettings },
+    create: {
+      id: burgerTenantId,
+      slug: "burger-shack",
+      name: "Burger Shack",
+      description: "Phone AI testing merchant - smash burgers and hand-cut fries",
+      supportEmail: "support@burgershack.test",
+      supportPhone: "(415) 555-0900",
+      currency: "USD",
+      locale: "en-US",
+      timezone: "America/Los_Angeles",
+      settings: burgerWebsiteSettings,
+    },
+  });
+
+  console.log(`Created tenant: ${burgerTenant.name} (${burgerTenant.id})`);
+
+  const burgerMerchant = await prisma.merchant.upsert({
+    where: { id: burgerMerchantId },
+    update: {},
+    create: {
+      id: burgerMerchantId,
+      tenantId: burgerTenant.id,
+      slug: "burger-shack-main",
+      name: "Burger Shack - Main",
+      description: "Phone AI test location",
+      address: "789 Market St",
+      city: "San Francisco",
+      state: "CA",
+      zipCode: "94103",
+      country: "US",
+      phone: "(415) 555-0900",
+      email: "main@burgershack.test",
+      timezone: "America/Los_Angeles",
+      currency: "USD",
+      locale: "en-US",
+      businessHours: {
+        mon: { open: "10:00", close: "22:00" },
+        tue: { open: "10:00", close: "22:00" },
+        wed: { open: "10:00", close: "22:00" },
+        thu: { open: "10:00", close: "22:00" },
+        fri: { open: "10:00", close: "23:00" },
+        sat: { open: "10:00", close: "23:00" },
+        sun: { open: "11:00", close: "21:00" },
+      },
+      settings: {
+        acceptsPickup: true,
+        acceptsDelivery: true,
+        deliveryRadius: 5,
+        minimumOrderAmount: 10,
+        estimatedPrepTime: 15,
+        tipConfig: {
+          mode: "percentage",
+          tiers: [0.15, 0.18, 0.2],
+          allowCustom: true,
+        },
+        feeConfig: { fees: [] },
+      },
+      phoneAiSettings: {
+        greetings:
+          "Hi, thanks for calling Burger Shack! This is Ava, your AI assistant. How can I help you today?",
+        agentWorkSwitch: "1",
+        faq: {
+          savedFaqs: [
+            {
+              question: "Do you offer vegetarian or vegan options?",
+              answer:
+                "Yes! We have a house-made veggie burger, and most burgers can be prepared with a plant-based patty on request.",
+            },
+            {
+              question: "How long does pickup take?",
+              answer:
+                "Most orders are ready for pickup in about 15 minutes after confirmation.",
+            },
+          ],
+          customFaqs: [
+            {
+              question: "Is the kitchen nut-free?",
+              answer:
+                "Our kitchen is not a certified nut-free facility, but we do not use peanuts or tree nuts in any of our recipes.",
+            },
+          ],
+        },
+      },
+    },
+  });
+
+  console.log(`Created merchant: ${burgerMerchant.name}`);
+
+  // Tax configuration
+  const burgerTax = await prisma.taxConfig.upsert({
+    where: { id: "tax-burger-standard" },
+    update: {},
+    create: {
+      id: "tax-burger-standard",
+      tenantId: burgerTenant.id,
+      name: "CA Sales Tax",
+      description: "California sales tax",
+      roundingMethod: "half_up",
+      status: "active",
+    },
+  });
+
+  await prisma.merchantTaxRate.upsert({
+    where: {
+      merchantId_taxConfigId: {
+        merchantId: burgerMerchant.id,
+        taxConfigId: burgerTax.id,
+      },
+    },
+    update: { rate: 0.0875 },
+    create: {
+      id: "mtr-burger-standard",
+      merchantId: burgerMerchant.id,
+      taxConfigId: burgerTax.id,
+      rate: 0.0875,
+    },
+  });
+
+  // Menu
+  const burgerMenu = await prisma.menu.upsert({
+    where: { id: burgerMenuId },
+    update: {},
+    create: {
+      id: burgerMenuId,
+      tenantId: burgerTenant.id,
+      name: "Main Menu",
+      sortOrder: 0,
+    },
+  });
+
+  // Categories
+  const burgerCategoryBurgers = await prisma.menuCategory.upsert({
+    where: { id: "burger-cat-burgers" },
+    update: {},
+    create: {
+      id: "burger-cat-burgers",
+      tenantId: burgerTenant.id,
+      menuId: burgerMenu.id,
+      name: "Burgers",
+      description: "Fresh-ground, smashed to order",
+      sortOrder: 1,
+    },
+  });
+
+  const burgerCategorySides = await prisma.menuCategory.upsert({
+    where: { id: "burger-cat-sides" },
+    update: {},
+    create: {
+      id: "burger-cat-sides",
+      tenantId: burgerTenant.id,
+      menuId: burgerMenu.id,
+      name: "Sides",
+      description: "Hand-cut fries and more",
+      sortOrder: 2,
+    },
+  });
+
+  const burgerCategoryDrinks = await prisma.menuCategory.upsert({
+    where: { id: "burger-cat-drinks" },
+    update: {},
+    create: {
+      id: "burger-cat-drinks",
+      tenantId: burgerTenant.id,
+      menuId: burgerMenu.id,
+      name: "Drinks",
+      description: "Sodas, shakes, and more",
+      sortOrder: 3,
+    },
+  });
+
+  const burgerCategoryDesserts = await prisma.menuCategory.upsert({
+    where: { id: "burger-cat-desserts" },
+    update: {},
+    create: {
+      id: "burger-cat-desserts",
+      tenantId: burgerTenant.id,
+      menuId: burgerMenu.id,
+      name: "Desserts",
+      description: "Sweet treats",
+      sortOrder: 4,
+    },
+  });
+
+  // Menu items
+  const burgerItems: Array<{
+    id: string;
+    tenantId: string;
+    name: string;
+    description: string;
+    price: number;
+    imageUrl?: string;
+    tags?: string[];
+  }> = [
+    // Burgers
+    {
+      id: "burger-item-classic-cheese",
+      tenantId: burgerTenant.id,
+      name: "Classic Cheeseburger",
+      description:
+        "Single 4oz smash patty with American cheese, lettuce, tomato, pickles, onion, and house sauce on a toasted potato bun",
+      price: 9.99,
+      imageUrl:
+        "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&h=600&fit=crop",
+      tags: ["popular"],
+    },
+    {
+      id: "burger-item-double-cheese",
+      tenantId: burgerTenant.id,
+      name: "Double Cheeseburger",
+      description:
+        "Two 4oz smash patties, double American cheese, lettuce, pickles, onion, and house sauce",
+      price: 12.99,
+      imageUrl:
+        "https://images.unsplash.com/photo-1550317138-10000687a72b?w=800&h=600&fit=crop",
+      tags: ["popular"],
+    },
+    {
+      id: "burger-item-bacon-cheese",
+      tenantId: burgerTenant.id,
+      name: "Bacon Cheeseburger",
+      description:
+        "Smash patty with crispy bacon, cheddar, lettuce, tomato, and smoky BBQ mayo",
+      price: 11.99,
+      imageUrl:
+        "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=800&h=600&fit=crop",
+      tags: ["popular"],
+    },
+    {
+      id: "burger-item-mushroom-swiss",
+      tenantId: burgerTenant.id,
+      name: "Mushroom Swiss Burger",
+      description:
+        "Smash patty with sauteed mushrooms, melted Swiss, caramelized onions, and garlic aioli",
+      price: 11.49,
+      imageUrl:
+        "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=800&h=600&fit=crop",
+      tags: [],
+    },
+    {
+      id: "burger-item-spicy-jalapeno",
+      tenantId: burgerTenant.id,
+      name: "Spicy Jalapeno Burger",
+      description:
+        "Smash patty with pepper jack, pickled jalapenos, chipotle mayo, and crispy onions",
+      price: 10.99,
+      imageUrl:
+        "https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=800&h=600&fit=crop",
+      tags: ["spicy"],
+    },
+    {
+      id: "burger-item-bbq-bacon",
+      tenantId: burgerTenant.id,
+      name: "BBQ Bacon Burger",
+      description:
+        "Smash patty with cheddar, bacon, onion rings, and tangy BBQ sauce",
+      price: 12.49,
+      imageUrl:
+        "https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=800&h=600&fit=crop",
+      tags: [],
+    },
+    {
+      id: "burger-item-veggie",
+      tenantId: burgerTenant.id,
+      name: "Veggie Burger",
+      description:
+        "House-made black bean and quinoa patty, avocado, lettuce, tomato, and chipotle aioli",
+      price: 9.49,
+      imageUrl:
+        "https://images.unsplash.com/photo-1520072959219-c595dc870360?w=800&h=600&fit=crop",
+      tags: ["vegetarian"],
+    },
+    {
+      id: "burger-item-chicken-sandwich",
+      tenantId: burgerTenant.id,
+      name: "Crispy Chicken Sandwich",
+      description:
+        "Buttermilk-fried chicken with pickles, coleslaw, and honey mustard on a brioche bun",
+      price: 10.49,
+      imageUrl:
+        "https://images.unsplash.com/photo-1606755962773-d324e0a13086?w=800&h=600&fit=crop",
+      tags: [],
+    },
+    // Sides
+    {
+      id: "burger-item-fries",
+      tenantId: burgerTenant.id,
+      name: "Hand-Cut Fries",
+      description: "Fresh-cut and double-fried in beef tallow, dusted with sea salt",
+      price: 3.99,
+      imageUrl:
+        "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?w=800&h=600&fit=crop",
+      tags: ["vegetarian"],
+    },
+    {
+      id: "burger-item-onion-rings",
+      tenantId: burgerTenant.id,
+      name: "Onion Rings",
+      description: "Beer-battered crispy onion rings with spicy ranch",
+      price: 4.49,
+      imageUrl:
+        "https://images.unsplash.com/photo-1639024471283-03518883512d?w=800&h=600&fit=crop",
+      tags: ["vegetarian"],
+    },
+    {
+      id: "burger-item-sweet-fries",
+      tenantId: burgerTenant.id,
+      name: "Sweet Potato Fries",
+      description: "Crispy sweet potato fries with chipotle dip",
+      price: 4.99,
+      imageUrl:
+        "https://images.unsplash.com/photo-1630431341973-02e1b662ec35?w=800&h=600&fit=crop",
+      tags: ["vegetarian"],
+    },
+    {
+      id: "burger-item-side-salad",
+      tenantId: burgerTenant.id,
+      name: "Side Salad",
+      description: "Mixed greens, cherry tomatoes, cucumber, and balsamic vinaigrette",
+      price: 4.99,
+      tags: ["vegetarian", "vegan"],
+    },
+    // Drinks
+    {
+      id: "burger-item-soda",
+      tenantId: burgerTenant.id,
+      name: "Fountain Soda",
+      description: "Coke, Diet Coke, Sprite, Dr Pepper, or Lemonade",
+      price: 2.49,
+      tags: [],
+    },
+    {
+      id: "burger-item-milkshake",
+      tenantId: burgerTenant.id,
+      name: "Milkshake",
+      description: "Hand-spun shake with real ice cream",
+      price: 5.99,
+      imageUrl:
+        "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=800&h=600&fit=crop",
+      tags: ["vegetarian"],
+    },
+    {
+      id: "burger-item-iced-tea",
+      tenantId: burgerTenant.id,
+      name: "Iced Tea",
+      description: "Freshly brewed unsweetened iced tea",
+      price: 2.99,
+      tags: ["vegetarian", "vegan"],
+    },
+    {
+      id: "burger-item-water",
+      tenantId: burgerTenant.id,
+      name: "Bottled Water",
+      description: "Purified spring water",
+      price: 1.99,
+      tags: [],
+    },
+    // Desserts
+    {
+      id: "burger-item-brownie",
+      tenantId: burgerTenant.id,
+      name: "Chocolate Brownie",
+      description: "Warm fudgy brownie with a scoop of vanilla ice cream",
+      price: 4.99,
+      tags: ["vegetarian"],
+    },
+    {
+      id: "burger-item-apple-pie",
+      tenantId: burgerTenant.id,
+      name: "Apple Pie",
+      description: "Classic hot apple pie with cinnamon sugar crust",
+      price: 3.99,
+      tags: ["vegetarian"],
+    },
+  ];
+
+  for (const item of burgerItems) {
+    const { id: _id, tenantId: _tenantId, ...updateData } = item;
+    await prisma.menuItem.upsert({
+      where: { id: item.id },
+      update: updateData,
+      create: item,
+    });
+  }
+
+  console.log(`Created ${burgerItems.length} menu items for Burger Shack`);
+
+  // Category-item links
+  const burgerCategoryLinks = [
+    // Burgers
+    { categoryId: burgerCategoryBurgers.id, menuItemId: "burger-item-classic-cheese", sortOrder: 1 },
+    { categoryId: burgerCategoryBurgers.id, menuItemId: "burger-item-double-cheese", sortOrder: 2 },
+    { categoryId: burgerCategoryBurgers.id, menuItemId: "burger-item-bacon-cheese", sortOrder: 3 },
+    { categoryId: burgerCategoryBurgers.id, menuItemId: "burger-item-mushroom-swiss", sortOrder: 4 },
+    { categoryId: burgerCategoryBurgers.id, menuItemId: "burger-item-spicy-jalapeno", sortOrder: 5 },
+    { categoryId: burgerCategoryBurgers.id, menuItemId: "burger-item-bbq-bacon", sortOrder: 6 },
+    { categoryId: burgerCategoryBurgers.id, menuItemId: "burger-item-veggie", sortOrder: 7 },
+    { categoryId: burgerCategoryBurgers.id, menuItemId: "burger-item-chicken-sandwich", sortOrder: 8 },
+    // Sides
+    { categoryId: burgerCategorySides.id, menuItemId: "burger-item-fries", sortOrder: 1 },
+    { categoryId: burgerCategorySides.id, menuItemId: "burger-item-onion-rings", sortOrder: 2 },
+    { categoryId: burgerCategorySides.id, menuItemId: "burger-item-sweet-fries", sortOrder: 3 },
+    { categoryId: burgerCategorySides.id, menuItemId: "burger-item-side-salad", sortOrder: 4 },
+    // Drinks
+    { categoryId: burgerCategoryDrinks.id, menuItemId: "burger-item-soda", sortOrder: 1 },
+    { categoryId: burgerCategoryDrinks.id, menuItemId: "burger-item-milkshake", sortOrder: 2 },
+    { categoryId: burgerCategoryDrinks.id, menuItemId: "burger-item-iced-tea", sortOrder: 3 },
+    { categoryId: burgerCategoryDrinks.id, menuItemId: "burger-item-water", sortOrder: 4 },
+    // Desserts
+    { categoryId: burgerCategoryDesserts.id, menuItemId: "burger-item-brownie", sortOrder: 1 },
+    { categoryId: burgerCategoryDesserts.id, menuItemId: "burger-item-apple-pie", sortOrder: 2 },
+  ];
+
+  for (const link of burgerCategoryLinks) {
+    await prisma.menuCategoryItem.upsert({
+      where: {
+        categoryId_menuItemId: {
+          categoryId: link.categoryId,
+          menuItemId: link.menuItemId,
+        },
+      },
+      update: { sortOrder: link.sortOrder },
+      create: {
+        id: `mci-${link.menuItemId}`,
+        tenantId: burgerTenant.id,
+        categoryId: link.categoryId,
+        menuItemId: link.menuItemId,
+        sortOrder: link.sortOrder,
+      },
+    });
+  }
+
+  // Modifier groups (doneness, add-ons, remove, drink size/flavor, shake flavor)
+  const burgerModifierData: {
+    tenantId: string;
+    menuItemId: string;
+    groups: {
+      id: string;
+      name: string;
+      required: boolean;
+      minSelect: number;
+      maxSelect: number;
+      allowQuantity?: boolean;
+      maxQuantityPerModifier?: number;
+      options: { id: string; name: string; price: number; isDefault?: boolean }[];
+    }[];
+  }[] = [];
+
+  const donenessOptions = (itemId: string) => ({
+    id: `${itemId}-doneness`,
+    name: "Doneness",
+    required: true,
+    minSelect: 1,
+    maxSelect: 1,
+    options: [
+      { id: `${itemId}-doneness-medium-rare`, name: "Medium Rare", price: 0 },
+      { id: `${itemId}-doneness-medium`, name: "Medium", price: 0, isDefault: true },
+      { id: `${itemId}-doneness-medium-well`, name: "Medium Well", price: 0 },
+      { id: `${itemId}-doneness-well-done`, name: "Well Done", price: 0 },
+    ],
+  });
+
+  const addonsOptions = (itemId: string) => ({
+    id: `${itemId}-addons`,
+    name: "Add-ons",
+    required: false,
+    minSelect: 0,
+    maxSelect: 6,
+    allowQuantity: true,
+    maxQuantityPerModifier: 2,
+    options: [
+      { id: `${itemId}-addons-extra-patty`, name: "Extra Patty", price: 3.5 },
+      { id: `${itemId}-addons-extra-cheese`, name: "Extra Cheese", price: 1 },
+      { id: `${itemId}-addons-bacon`, name: "Bacon", price: 2 },
+      { id: `${itemId}-addons-avocado`, name: "Avocado", price: 2 },
+      { id: `${itemId}-addons-fried-egg`, name: "Fried Egg", price: 1.5 },
+      { id: `${itemId}-addons-jalapenos`, name: "Jalapenos", price: 0.75 },
+    ],
+  });
+
+  const removeOptions = (itemId: string) => ({
+    id: `${itemId}-remove`,
+    name: "Remove",
+    required: false,
+    minSelect: 0,
+    maxSelect: 5,
+    options: [
+      { id: `${itemId}-remove-lettuce`, name: "No Lettuce", price: 0 },
+      { id: `${itemId}-remove-tomato`, name: "No Tomato", price: 0 },
+      { id: `${itemId}-remove-onion`, name: "No Onion", price: 0 },
+      { id: `${itemId}-remove-pickles`, name: "No Pickles", price: 0 },
+      { id: `${itemId}-remove-sauce`, name: "No Sauce", price: 0 },
+    ],
+  });
+
+  const beefBurgerIds = [
+    "burger-item-classic-cheese",
+    "burger-item-double-cheese",
+    "burger-item-bacon-cheese",
+    "burger-item-mushroom-swiss",
+    "burger-item-spicy-jalapeno",
+    "burger-item-bbq-bacon",
+  ];
+
+  for (const id of beefBurgerIds) {
+    burgerModifierData.push({
+      tenantId: burgerTenant.id,
+      menuItemId: id,
+      groups: [donenessOptions(id), addonsOptions(id), removeOptions(id)],
+    });
+  }
+
+  // Veggie and chicken don't get doneness
+  burgerModifierData.push({
+    tenantId: burgerTenant.id,
+    menuItemId: "burger-item-veggie",
+    groups: [addonsOptions("burger-item-veggie"), removeOptions("burger-item-veggie")],
+  });
+  burgerModifierData.push({
+    tenantId: burgerTenant.id,
+    menuItemId: "burger-item-chicken-sandwich",
+    groups: [addonsOptions("burger-item-chicken-sandwich"), removeOptions("burger-item-chicken-sandwich")],
+  });
+
+  // Fries size
+  burgerModifierData.push({
+    tenantId: burgerTenant.id,
+    menuItemId: "burger-item-fries",
+    groups: [
+      {
+        id: "burger-item-fries-size",
+        name: "Size",
+        required: true,
+        minSelect: 1,
+        maxSelect: 1,
+        options: [
+          { id: "burger-item-fries-size-small", name: "Small", price: 0, isDefault: true },
+          { id: "burger-item-fries-size-medium", name: "Medium", price: 1 },
+          { id: "burger-item-fries-size-large", name: "Large", price: 2 },
+        ],
+      },
+    ],
+  });
+
+  // Soda size and flavor
+  burgerModifierData.push({
+    tenantId: burgerTenant.id,
+    menuItemId: "burger-item-soda",
+    groups: [
+      {
+        id: "burger-item-soda-size",
+        name: "Size",
+        required: true,
+        minSelect: 1,
+        maxSelect: 1,
+        options: [
+          { id: "burger-item-soda-size-small", name: "Small", price: 0, isDefault: true },
+          { id: "burger-item-soda-size-medium", name: "Medium", price: 0.5 },
+          { id: "burger-item-soda-size-large", name: "Large", price: 1 },
+        ],
+      },
+      {
+        id: "burger-item-soda-flavor",
+        name: "Flavor",
+        required: true,
+        minSelect: 1,
+        maxSelect: 1,
+        options: [
+          { id: "burger-item-soda-flavor-coke", name: "Coca-Cola", price: 0, isDefault: true },
+          { id: "burger-item-soda-flavor-diet", name: "Diet Coke", price: 0 },
+          { id: "burger-item-soda-flavor-sprite", name: "Sprite", price: 0 },
+          { id: "burger-item-soda-flavor-drpepper", name: "Dr Pepper", price: 0 },
+          { id: "burger-item-soda-flavor-lemonade", name: "Lemonade", price: 0 },
+        ],
+      },
+    ],
+  });
+
+  // Milkshake flavor
+  burgerModifierData.push({
+    tenantId: burgerTenant.id,
+    menuItemId: "burger-item-milkshake",
+    groups: [
+      {
+        id: "burger-item-milkshake-flavor",
+        name: "Flavor",
+        required: true,
+        minSelect: 1,
+        maxSelect: 1,
+        options: [
+          { id: "burger-item-milkshake-flavor-vanilla", name: "Vanilla", price: 0, isDefault: true },
+          { id: "burger-item-milkshake-flavor-chocolate", name: "Chocolate", price: 0 },
+          { id: "burger-item-milkshake-flavor-strawberry", name: "Strawberry", price: 0 },
+          { id: "burger-item-milkshake-flavor-oreo", name: "Oreo", price: 0.75 },
+        ],
+      },
+    ],
+  });
+
+  for (const itemMod of burgerModifierData) {
+    for (let groupIdx = 0; groupIdx < itemMod.groups.length; groupIdx++) {
+      const group = itemMod.groups[groupIdx];
+
+      await prisma.modifierGroup.upsert({
+        where: { id: group.id },
+        update: {
+          name: group.name,
+          required: group.required,
+          minSelect: group.minSelect,
+          maxSelect: group.maxSelect,
+          allowQuantity: group.allowQuantity ?? false,
+          maxQuantityPerModifier: group.maxQuantityPerModifier ?? 1,
+        },
+        create: {
+          id: group.id,
+          tenantId: itemMod.tenantId,
+          name: group.name,
+          required: group.required,
+          minSelect: group.minSelect,
+          maxSelect: group.maxSelect,
+          allowQuantity: group.allowQuantity ?? false,
+          maxQuantityPerModifier: group.maxQuantityPerModifier ?? 1,
+        },
+      });
+
+      for (let optIdx = 0; optIdx < group.options.length; optIdx++) {
+        const opt = group.options[optIdx];
+        await prisma.modifierOption.upsert({
+          where: { id: opt.id },
+          update: { name: opt.name, price: opt.price, isDefault: opt.isDefault ?? false, sortOrder: optIdx },
+          create: {
+            id: opt.id,
+            tenantId: itemMod.tenantId,
+            groupId: group.id,
+            name: opt.name,
+            price: opt.price,
+            isDefault: opt.isDefault ?? false,
+            isAvailable: true,
+            sortOrder: optIdx,
+          },
+        });
+      }
+
+      await prisma.menuItemModifierGroup.upsert({
+        where: {
+          menuItemId_modifierGroupId: {
+            menuItemId: itemMod.menuItemId,
+            modifierGroupId: group.id,
+          },
+        },
+        update: { sortOrder: groupIdx },
+        create: {
+          id: `mimg-${group.id}`,
+          menuItemId: itemMod.menuItemId,
+          modifierGroupId: group.id,
+          sortOrder: groupIdx,
+        },
+      });
+    }
+  }
+
+  // Featured items
+  const burgerFeaturedIds = [
+    "burger-item-classic-cheese",
+    "burger-item-double-cheese",
+    "burger-item-bacon-cheese",
+    "burger-item-fries",
+  ];
+  for (let i = 0; i < burgerFeaturedIds.length; i++) {
+    const menuItemId = burgerFeaturedIds[i];
+    await prisma.featuredItem.upsert({
+      where: {
+        tenantId_menuItemId: {
+          tenantId: burgerTenant.id,
+          menuItemId,
+        },
+      },
+      update: { sortOrder: i + 1 },
+      create: {
+        id: `featured-burger-${menuItemId}`,
+        tenantId: burgerTenant.id,
+        menuItemId,
+        sortOrder: i + 1,
+      },
+    });
+  }
+
+  // Tax associations for all items
+  for (const item of burgerItems) {
+    await prisma.menuItemTax.upsert({
+      where: {
+        menuItemId_taxConfigId: {
+          menuItemId: item.id,
+          taxConfigId: burgerTax.id,
+        },
+      },
+      update: {},
+      create: {
+        id: `mit-${item.id}-standard`,
+        tenantId: burgerTenant.id,
+        menuItemId: item.id,
+        taxConfigId: burgerTax.id,
+      },
+    });
+  }
+
+  // Loyalty config
+  await prisma.loyaltyConfig.upsert({
+    where: { id: "loyalty-config-burger-phone-ai" },
+    update: {},
+    create: {
+      id: "loyalty-config-burger-phone-ai",
+      tenantId: burgerTenant.id,
+      pointsPerDollar: 1,
+      status: "active",
+    },
+  });
+
+  console.log(`✅ Burger Shack ready for phone AI testing`);
+  console.log(`   NEXT_PUBLIC_PLAYGROUND_TENANT_ID=${burgerTenant.id}`);
+  console.log(`   NEXT_PUBLIC_PLAYGROUND_MERCHANT_ID=${burgerMerchant.id}`);
+
   // ==================== Onboarding Test Account ====================
   console.log("\nCreating onboarding test account...");
 
