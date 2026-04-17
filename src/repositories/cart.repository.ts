@@ -50,28 +50,35 @@ export class CartRepository {
   }
 
   async claimForCheckout(tenantId: string, cartId: string) {
-    return prisma.cart.updateMany({
-      where: {
-        id: cartId,
-        tenantId,
-        status: "active",
-        deleted: false,
-      },
-      data: { status: "submitted" },
-    });
+    // Use raw SQL to get a true atomic CAS. Prisma's `updateMany` splits into
+    // SELECT + UPDATE, so concurrent callers can both see status='active' in
+    // their snapshot and both succeed. Raw UPDATE with conditional WHERE is
+    // a single statement and row-locking serializes concurrent calls, so
+    // exactly one caller observes affectedRows=1 (the winner).
+    const affected = await prisma.$executeRaw`
+      UPDATE carts
+      SET status = 'submitted', updated_at = NOW(3)
+      WHERE id = ${cartId}
+        AND tenant_id = ${tenantId}
+        AND status = 'active'
+        AND deleted = false
+    `;
+    return { count: affected };
   }
 
   async rollbackCheckoutClaim(tenantId: string, cartId: string) {
-    return prisma.cart.updateMany({
-      where: {
-        id: cartId,
-        tenantId,
-        status: "submitted",
-        orderId: null,
-        deleted: false,
-      },
-      data: { status: "active" },
-    });
+    // Same reasoning as claimForCheckout: use raw SQL so the WHERE predicate
+    // and UPDATE happen atomically under a single row lock.
+    const affected = await prisma.$executeRaw`
+      UPDATE carts
+      SET status = 'active', updated_at = NOW(3)
+      WHERE id = ${cartId}
+        AND tenant_id = ${tenantId}
+        AND status = 'submitted'
+        AND order_id IS NULL
+        AND deleted = false
+    `;
+    return { count: affected };
   }
 
   async attachOrderId(tenantId: string, cartId: string, orderId: string) {
