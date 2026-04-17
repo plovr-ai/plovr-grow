@@ -33,10 +33,6 @@ export const POST = withApiHandler(async (request: NextRequest) => {
     throw new AppError(ErrorCodes.CLAIM_TENANT_NOT_FOUND, undefined, 404);
   }
 
-  if (tenant.subscriptionStatus !== "trial") {
-    throw new AppError(ErrorCodes.CLAIM_TENANT_NOT_TRIAL, undefined, 400);
-  }
-
   const existingUser = await prisma.user.findFirst({ where: { tenantId, email } });
   if (existingUser) {
     throw new AppError(ErrorCodes.AUTH_EMAIL_EXISTS, undefined, 409);
@@ -47,11 +43,6 @@ export const POST = withApiHandler(async (request: NextRequest) => {
       id: generateEntityId(), tenantId,
       email, passwordHash: null, name, role: "owner", status: "active",
     },
-  });
-
-  await prisma.tenant.update({
-    where: { id: tenantId },
-    data: { subscriptionStatus: "active" },
   });
 
   return NextResponse.json({ success: true, companySlug: tenant.slug }, { status: 200 });

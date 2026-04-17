@@ -55,7 +55,6 @@ export class TenantService {
     source?: "signup" | "generator";
     websiteUrl?: string | null;
     settings?: Record<string, unknown>;
-    subscriptionStatus?: "trial" | "active" | "past_due" | "canceled";
     merchant?: {
       name?: string;
       address?: string | null;
@@ -89,7 +88,6 @@ export class TenantService {
           websiteUrl: input.websiteUrl ?? undefined,
           settings: input.settings as Prisma.InputJsonValue | undefined,
           source: input.source,
-          subscriptionStatus: input.subscriptionStatus,
         },
       });
 

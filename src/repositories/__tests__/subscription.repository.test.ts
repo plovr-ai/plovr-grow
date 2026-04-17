@@ -5,12 +5,10 @@ vi.mock("@/lib/db", () => ({
   default: {
     subscription: {
       findFirst: vi.fn(),
+      findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       count: vi.fn(),
-    },
-    tenant: {
-      update: vi.fn(),
     },
   },
 }));
@@ -30,16 +28,33 @@ describe("SubscriptionRepository", () => {
   });
 
   describe("getByTenantId", () => {
-    it("should find subscription by tenantId", async () => {
-      const mockSub = { id: "sub-1", tenantId: "t1", status: "active" };
+    it("should find subscription by tenantId and productLine", async () => {
+      const mockSub = { id: "sub-1", tenantId: "t1", productLine: "platform", status: "active" };
       vi.mocked(prisma.subscription.findFirst).mockResolvedValue(mockSub as never);
 
-      const result = await repo.getByTenantId("t1");
+      const result = await repo.getByTenantId("t1", "platform");
 
       expect(prisma.subscription.findFirst).toHaveBeenCalledWith({
-        where: { tenantId: "t1", deleted: false },
+        where: { tenantId: "t1", productLine: "platform", deleted: false },
       });
       expect(result).toEqual(mockSub);
+    });
+  });
+
+  describe("getAllByTenantId", () => {
+    it("should find all subscriptions by tenantId", async () => {
+      const mockSubs = [
+        { id: "sub-1", tenantId: "t1", productLine: "platform", status: "active" },
+        { id: "sub-2", tenantId: "t1", productLine: "phone_ai", status: "trialing" },
+      ];
+      vi.mocked(prisma.subscription.findMany).mockResolvedValue(mockSubs as never);
+
+      const result = await repo.getAllByTenantId("t1");
+
+      expect(prisma.subscription.findMany).toHaveBeenCalledWith({
+        where: { tenantId: "t1", deleted: false },
+      });
+      expect(result).toEqual(mockSubs);
     });
   });
 
@@ -71,40 +86,12 @@ describe("SubscriptionRepository", () => {
     });
   });
 
-  describe("getWithTenant", () => {
-    it("should find subscription with tenant details", async () => {
-      const mockSub = {
-        id: "sub-1",
-        tenantId: "t1",
-        tenant: { id: "t1", name: "Test", subscriptionPlan: "starter", subscriptionStatus: "active" },
-      };
-      vi.mocked(prisma.subscription.findFirst).mockResolvedValue(mockSub as never);
-
-      const result = await repo.getWithTenant("t1");
-
-      expect(prisma.subscription.findFirst).toHaveBeenCalledWith({
-        where: { tenantId: "t1", deleted: false },
-        include: {
-          tenant: {
-            select: {
-              id: true,
-              name: true,
-              subscriptionPlan: true,
-              subscriptionStatus: true,
-            },
-          },
-        },
-      });
-      expect(result).toEqual(mockSub);
-    });
-  });
-
   describe("create", () => {
     it("should create a subscription with defaults", async () => {
       const mockCreated = { id: "sub-id-123", tenantId: "t1", status: "incomplete" };
       vi.mocked(prisma.subscription.create).mockResolvedValue(mockCreated as never);
 
-      const result = await repo.create("t1", {
+      const result = await repo.create("t1", "platform", {
         stripeCustomerId: "cus_123",
       });
 
@@ -112,9 +99,10 @@ describe("SubscriptionRepository", () => {
         data: expect.objectContaining({
           id: "sub-id-123",
           tenantId: "t1",
+          productLine: "platform",
           stripeCustomerId: "cus_123",
           status: "incomplete",
-          plan: "starter",
+          plan: "free",
         }),
       });
       expect(result).toEqual(mockCreated);
@@ -124,7 +112,7 @@ describe("SubscriptionRepository", () => {
       const now = new Date();
       vi.mocked(prisma.subscription.create).mockResolvedValue({} as never);
 
-      await repo.create("t1", {
+      await repo.create("t1", "platform", {
         stripeCustomerId: "cus_123",
         stripeSubscriptionId: "sub_123",
         stripePriceId: "price_123",
@@ -138,6 +126,7 @@ describe("SubscriptionRepository", () => {
 
       expect(prisma.subscription.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
+          productLine: "platform",
           status: "active",
           plan: "pro",
           stripeSubscriptionId: "sub_123",
@@ -161,13 +150,13 @@ describe("SubscriptionRepository", () => {
   });
 
   describe("updateByTenantId", () => {
-    it("should update subscription by tenant ID", async () => {
+    it("should update subscription by tenant ID and productLine", async () => {
       vi.mocked(prisma.subscription.update).mockResolvedValue({} as never);
 
-      await repo.updateByTenantId("t1", { status: "active" });
+      await repo.updateByTenantId("t1", "platform", { status: "active" });
 
       expect(prisma.subscription.update).toHaveBeenCalledWith({
-        where: { tenantId: "t1" },
+        where: { tenantId_productLine: { tenantId: "t1", productLine: "platform" } },
         data: { status: "active" },
       });
     });
@@ -186,19 +175,6 @@ describe("SubscriptionRepository", () => {
     });
   });
 
-  describe("updateByStripeCustomerId", () => {
-    it("should update subscription by Stripe customer ID", async () => {
-      vi.mocked(prisma.subscription.update).mockResolvedValue({} as never);
-
-      await repo.updateByStripeCustomerId("cus_123", { cancelAtPeriodEnd: true });
-
-      expect(prisma.subscription.update).toHaveBeenCalledWith({
-        where: { stripeCustomerId: "cus_123" },
-        data: { cancelAtPeriodEnd: true },
-      });
-    });
-  });
-
   describe("delete", () => {
     it("should soft delete by ID", async () => {
       vi.mocked(prisma.subscription.update).mockResolvedValue({} as never);
@@ -213,27 +189,14 @@ describe("SubscriptionRepository", () => {
   });
 
   describe("deleteByTenantId", () => {
-    it("should soft delete by tenant ID", async () => {
+    it("should soft delete by tenant ID and productLine", async () => {
       vi.mocked(prisma.subscription.update).mockResolvedValue({} as never);
 
-      await repo.deleteByTenantId("t1");
+      await repo.deleteByTenantId("t1", "platform");
 
       expect(prisma.subscription.update).toHaveBeenCalledWith({
-        where: { tenantId: "t1" },
+        where: { tenantId_productLine: { tenantId: "t1", productLine: "platform" } },
         data: { deleted: true, updatedAt: expect.any(Date) },
-      });
-    });
-  });
-
-  describe("updateTenantSubscriptionStatus", () => {
-    it("should update tenant denormalized fields", async () => {
-      vi.mocked(prisma.tenant.update).mockResolvedValue({} as never);
-
-      await repo.updateTenantSubscriptionStatus("t1", "pro", "active");
-
-      expect(prisma.tenant.update).toHaveBeenCalledWith({
-        where: { id: "t1" },
-        data: { subscriptionPlan: "pro", subscriptionStatus: "active" },
       });
     });
   });
@@ -242,18 +205,18 @@ describe("SubscriptionRepository", () => {
     it("should return true when subscription exists", async () => {
       vi.mocked(prisma.subscription.count).mockResolvedValue(1);
 
-      const result = await repo.exists("t1");
+      const result = await repo.exists("t1", "platform");
 
       expect(result).toBe(true);
       expect(prisma.subscription.count).toHaveBeenCalledWith({
-        where: { tenantId: "t1", deleted: false },
+        where: { tenantId: "t1", productLine: "platform", deleted: false },
       });
     });
 
     it("should return false when no subscription exists", async () => {
       vi.mocked(prisma.subscription.count).mockResolvedValue(0);
 
-      const result = await repo.exists("t1");
+      const result = await repo.exists("t1", "platform");
 
       expect(result).toBe(false);
     });

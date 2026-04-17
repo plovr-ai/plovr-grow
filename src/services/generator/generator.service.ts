@@ -75,7 +75,6 @@ export class GeneratorService {
       source: "generator",
       websiteUrl: details.websiteUrl,
       settings: tenantSettings,
-      subscriptionStatus: "trial",
       merchant: {
         address: details.address,
         city: details.city,

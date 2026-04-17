@@ -6,8 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getApiErrorMessage } from "@/lib/api";
 import { useCartStore, useCartHydration } from "@/stores";
 import { usePricing } from "@/hooks";
-import { useFeeConfig, useLoyalty, useCountry, useTrial } from "@/contexts";
-import { TrialCheckoutBlock } from "@storefront/components/trial/TrialCheckoutBlock";
+import { useFeeConfig, useLoyalty, useCountry } from "@/contexts";
 import type { FeeInput } from "@/lib/pricing";
 import {
   OrderTypeSelector,
@@ -95,7 +94,6 @@ export default function CheckoutPage() {
 
   const hydrated = useCartHydration();
   const country = useCountry();
-  const { isTrial, tenantId } = useTrial();
   const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
 
@@ -500,11 +498,6 @@ export default function CheckoutPage() {
       setIsSubmitting(false);
     }
   };
-
-  // Block checkout for trial tenants
-  if (isTrial && tenantId) {
-    return <TrialCheckoutBlock tenantId={tenantId} />;
-  }
 
   // Show loading while hydrating
   if (!hydrated) {

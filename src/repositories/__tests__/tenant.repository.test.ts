@@ -28,7 +28,6 @@ describe("TenantRepository", () => {
     name: "Joe's Pizza",
     logoUrl: "https://example.com/logo.png",
     settings: {},
-    subscriptionStatus: "active",
     deleted: false,
     createdAt: new Date(),
     updatedAt: new Date(),

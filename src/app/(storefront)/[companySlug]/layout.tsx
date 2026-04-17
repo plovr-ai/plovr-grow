@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { merchantService } from "@/services/merchant";
 import { MerchantProvider, ThemeProvider, LoyaltyProvider } from "@/contexts";
-import { ClaimBar } from "@storefront/components/trial/ClaimBar";
+
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -39,8 +39,6 @@ export default async function CompanyLayout({ children, params }: LayoutProps) {
     notFound();
   }
 
-  const isTrial = company.subscriptionStatus === "trial";
-
   // Use company info for brand-level pages
   const defaultTipConfig = {
     mode: "percentage" as const,
@@ -50,7 +48,6 @@ export default async function CompanyLayout({ children, params }: LayoutProps) {
 
   return (
     <ThemeProvider preset={company.settings?.themePreset}>
-      {isTrial && company.slug && <ClaimBar tenantId={company.tenantId} companySlug={company.slug} />}
       <MerchantProvider
         config={{
           name: company.name,

@@ -100,6 +100,8 @@ import { POST as sendSms } from "../sms/send/route";
 import { POST as generateLink } from "../links/generate/route";
 import { POST as queryKnowledge } from "../knowledge/query/route";
 
+const dummyContext = { params: Promise.resolve({}) };
+
 // ---------------------------------------------------------------------------
 // Test IDs
 // ---------------------------------------------------------------------------
@@ -171,7 +173,6 @@ const MERCHANT_A_DATA = {
     slug: `phone-ai-test-${timestamp}`,
     tenantId: TENANT_ID,
     name: "Phone AI Test Tenant",
-    subscriptionStatus: "active",
   },
 };
 
@@ -194,6 +195,11 @@ const MERCHANT_B_DATA = {
   businessHours: {
     monday: { open: "12:00", close: "22:00" },
     tuesday: { open: "12:00", close: "22:00" },
+    wednesday: { open: "12:00", close: "22:00" },
+    thursday: { open: "12:00", close: "22:00" },
+    friday: { open: "12:00", close: "23:00" },
+    saturday: { open: "11:00", close: "23:00" },
+    sunday: { open: "11:00", close: "21:00" },
   },
   settings: {
     acceptsPickup: true,
@@ -201,12 +207,12 @@ const MERCHANT_B_DATA = {
     minimumOrderAmount: 20,
     estimatedPrepTime: 30,
   },
+  phoneAiSettings: null,
   tenant: {
     id: TENANT_ID,
     slug: `phone-ai-test-${timestamp}`,
     tenantId: TENANT_ID,
     name: "Phone AI Test Tenant",
-    subscriptionStatus: "active",
   },
 };
 
@@ -366,7 +372,8 @@ describe("Phone-AI External API — Call Flow", () => {
       const lookupRes = await lookupMerchant(
         createJsonRequest("/api/external/v1/merchants/lookup", "POST", {
           phone: MERCHANT_A_AI_PHONE,
-        })
+        }),
+        dummyContext
       );
       expect(lookupRes.status).toBe(200);
       const lookupBody = await lookupRes.json();
@@ -389,7 +396,8 @@ describe("Phone-AI External API — Call Flow", () => {
           tenantId,
           merchantId,
           targets: ["RESTAURANT_INFO", "OPENING_HOURS", "ORDER_CONFIG", "MENU"],
-        })
+        }),
+        dummyContext
       );
       expect(knowledgeRes.status).toBe(200);
       const knowledgeBody = await knowledgeRes.json();
@@ -421,7 +429,8 @@ describe("Phone-AI External API — Call Flow", () => {
         createJsonRequest(
           `/api/external/v1/merchants/online-order-url?tenantId=${tenantId}&merchantId=${merchantId}`,
           "GET"
-        )
+        ),
+        dummyContext
       );
       expect(urlRes.status).toBe(200);
       const urlBody = await urlRes.json();
@@ -444,7 +453,8 @@ describe("Phone-AI External API — Call Flow", () => {
       const lookupRes = await lookupMerchant(
         createJsonRequest("/api/external/v1/merchants/lookup", "POST", {
           phone: MERCHANT_A_AI_PHONE,
-        })
+        }),
+        dummyContext
       );
       expect(lookupRes.status).toBe(200);
       const { tenantId, merchantId } = (await lookupRes.json()).data;
@@ -456,7 +466,8 @@ describe("Phone-AI External API — Call Flow", () => {
         createJsonRequest("/api/external/v1/links/generate", "POST", {
           tenantId,
           merchantId,
-        })
+        }),
+        dummyContext
       );
       expect(linkRes.status).toBe(200);
       const linkBody = await linkRes.json();
@@ -473,7 +484,8 @@ describe("Phone-AI External API — Call Flow", () => {
           merchantId,
           mobile: customerPhone,
           message: `Order online here: ${orderUrl}`,
-        })
+        }),
+        dummyContext
       );
       expect(smsRes.status).toBe(200);
       const smsBody = await smsRes.json();
@@ -499,7 +511,8 @@ describe("Phone-AI External API — Call Flow", () => {
       const res1 = await lookupMerchant(
         createJsonRequest("/api/external/v1/merchants/lookup", "POST", {
           phone: "+14155550001",
-        })
+        }),
+        dummyContext
       );
       expect(res1.status).toBe(200);
       const data1 = (await res1.json()).data;
@@ -508,7 +521,8 @@ describe("Phone-AI External API — Call Flow", () => {
       const res2 = await lookupMerchant(
         createJsonRequest("/api/external/v1/merchants/lookup", "POST", {
           phone: "14155550001",
-        })
+        }),
+        dummyContext
       );
       expect(res2.status).toBe(200);
       const data2 = (await res2.json()).data;
@@ -531,7 +545,8 @@ describe("Phone-AI External API — Call Flow", () => {
       const resA = await lookupMerchant(
         createJsonRequest("/api/external/v1/merchants/lookup", "POST", {
           phone: MERCHANT_A_AI_PHONE,
-        })
+        }),
+        dummyContext
       );
       expect(resA.status).toBe(200);
       const dataA = (await resA.json()).data;
@@ -542,7 +557,8 @@ describe("Phone-AI External API — Call Flow", () => {
       const resB = await lookupMerchant(
         createJsonRequest("/api/external/v1/merchants/lookup", "POST", {
           phone: MERCHANT_B_AI_PHONE,
-        })
+        }),
+        dummyContext
       );
       expect(resB.status).toBe(200);
       const dataB = (await resB.json()).data;
@@ -562,7 +578,8 @@ describe("Phone-AI External API — Call Flow", () => {
           tenantId: wrongTenantId,
           merchantId: MERCHANT_A_ID,
           targets: ["RESTAURANT_INFO"],
-        })
+        }),
+        dummyContext
       );
       expect(res.status).toBe(404);
       const body = await res.json();
@@ -578,7 +595,8 @@ describe("Phone-AI External API — Call Flow", () => {
         createJsonRequest(
           `/api/external/v1/merchants/online-order-url?tenantId=${wrongTenantId}&merchantId=${MERCHANT_A_ID}`,
           "GET"
-        )
+        ),
+        dummyContext
       );
       expect(res.status).toBe(404);
       const body = await res.json();
@@ -595,7 +613,8 @@ describe("Phone-AI External API — Call Flow", () => {
       const res = await lookupMerchant(
         createJsonRequest("/api/external/v1/merchants/lookup", "POST", {
           phone: "+19999999999",
-        })
+        }),
+        dummyContext
       );
       expect(res.status).toBe(404);
       const body = await res.json();
@@ -618,7 +637,8 @@ describe("Phone-AI External API — Call Flow", () => {
           tenantId: TENANT_ID,
           merchantId: MERCHANT_A_ID,
           targets: ["MENU", "RESTAURANT_INFO", "FAQ", "GREETINGS", "SERVICE_PROVIDED", "AGENT_WORK_SWITCH"],
-        })
+        }),
+        dummyContext
       );
       expect(res.status).toBe(200);
       const body = await res.json();
@@ -649,7 +669,7 @@ describe("Phone-AI External API — Call Flow", () => {
     });
 
     it("should return null for GREETINGS/FAQ/AGENT_WORK_SWITCH when phoneAiSettings is missing", async () => {
-      const merchantNoPhoneAi = { ...MERCHANT_B_DATA };
+      const merchantNoPhoneAi = { ...MERCHANT_B_DATA } as unknown as typeof MERCHANT_A_DATA;
       setupMerchantServiceMock(MERCHANT_A_DATA, merchantNoPhoneAi);
 
       const res = await queryKnowledge(
@@ -657,7 +677,8 @@ describe("Phone-AI External API — Call Flow", () => {
           tenantId: TENANT_ID,
           merchantId: MERCHANT_B_ID,
           targets: ["GREETINGS", "FAQ", "AGENT_WORK_SWITCH"],
-        })
+        }),
+        dummyContext
       );
       expect(res.status).toBe(200);
       const body = await res.json();

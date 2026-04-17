@@ -128,6 +128,38 @@ When mocking a service that returns filtered results, use `mockImplementation` w
 
 ---
 
+## [277] Removing denormalized fields requires tracing ALL consumers, including context providers
+
+**Date**: 2026-04-17
+**Category**: wrong-assumption
+
+### What went wrong
+Removed `subscriptionPlan`/`subscriptionStatus` from the Tenant model and cleaned up direct references, but missed the `isTrial` field in `MerchantContext` and the `TrialCheckoutBlock` in the checkout page. These were fed by `subscriptionStatus` indirectly through the storefront layout → context → component chain.
+
+### Correct approach
+When removing a denormalized field, trace ALL downstream consumers — not just direct `field.name` references, but also derived values (like `isTrial = status === "trial"`) that flow through context providers, hooks, and component props.
+
+### How to avoid
+After removing a field, search for both the field name AND any derived boolean/computed values that depended on it. Check React context interfaces for fields that might be fed by the removed data.
+
+---
+
+## [277] Changing function signatures requires checking withApiHandler wrapper callers
+
+**Date**: 2026-04-17
+**Category**: wrong-assumption
+
+### What went wrong
+Changed subscription service method signatures to require `productLine`, which changed the `withApiHandler` wrapper's expected argument count. Many external API test files (phone-ai, knowledge, links, merchants, sms) called route handlers with 1 arg but the wrapper now expected 2 (request + context with params). These errors were only caught by `tsc`, not by tests.
+
+### Correct approach
+When changing a wrapper function's signature or the signature of functions it wraps, search for ALL test files that call routes through that wrapper — not just tests in the changed module.
+
+### How to avoid
+After changing a shared wrapper or service method signature, run `npx tsc --noEmit` immediately to catch all callers, before running targeted tests.
+
+---
+
 ## [202] New test file for large untested service drops global coverage below thresholds
 
 **Date**: 2026-04-13

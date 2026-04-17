@@ -1,3 +1,14 @@
+// ==================== Product Lines ====================
+
+export const PRODUCT_LINES = ["platform", "phone_ai"] as const;
+
+export type ProductLine = (typeof PRODUCT_LINES)[number];
+
+export const PRODUCT_LINE_NAMES: Record<ProductLine, string> = {
+  platform: "Online Ordering Platform",
+  phone_ai: "Phone AI Ordering",
+};
+
 // ==================== Subscription Status ====================
 
 export const SUBSCRIPTION_STATUSES = [
@@ -23,6 +34,7 @@ export type SubscriptionPlan = (typeof SUBSCRIPTION_PLANS)[number];
 export interface SubscriptionInfo {
   id: string;
   tenantId: string;
+  productLine: ProductLine;
   stripeCustomerId: string;
   stripeSubscriptionId: string | null;
   status: SubscriptionStatus;
@@ -73,6 +85,26 @@ export interface SubscriptionResponse {
   subscription: SubscriptionInfo | null;
 }
 
+// ==================== Multi-Product Line API Types ====================
+
+export interface ProductLineSubscriptionInfo {
+  productLine: ProductLine;
+  name: string;
+  subscription: SubscriptionInfo | null;
+  availablePlans: {
+    code: string;
+    name: string;
+    monthlyPrice: number;
+    currency: string;
+    features: string[];
+    recommended?: boolean;
+  }[];
+}
+
+export interface AllSubscriptionsResponse {
+  productLines: ProductLineSubscriptionInfo[];
+}
+
 // ==================== Webhook Event Data ====================
 
 export interface StripeSubscriptionData {
@@ -94,6 +126,7 @@ export interface StripeSubscriptionData {
   };
   metadata: {
     tenantId?: string;
+    productLine?: string;
   };
 }
 
@@ -114,6 +147,7 @@ export interface StripeCheckoutSessionData {
   mode: "subscription" | "payment" | "setup";
   metadata: {
     tenantId?: string;
+    productLine?: string;
   };
 }
 

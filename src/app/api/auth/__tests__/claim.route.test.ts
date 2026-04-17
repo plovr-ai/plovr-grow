@@ -4,7 +4,7 @@ import { ErrorCodes } from "@/lib/errors/error-codes";
 
 vi.mock("@/lib/db", () => ({
   default: {
-    tenant: { findUnique: vi.fn(), update: vi.fn() },
+    tenant: { findUnique: vi.fn() },
     user: { findFirst: vi.fn(), create: vi.fn() },
   },
 }));
@@ -26,13 +26,12 @@ function makeRequest(body: unknown) {
 describe("POST /api/auth/claim", () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it("claims a trial tenant and creates owner user", async () => {
+  it("claims a tenant and creates owner user", async () => {
     vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
-      id: "tenant1", subscriptionStatus: "trial", slug: "test-slug",
+      id: "tenant1", slug: "test-slug",
     } as never);
     vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
     vi.mocked(prisma.user.create).mockResolvedValue({ id: "mock-user-id" } as never);
-    vi.mocked(prisma.tenant.update).mockResolvedValue({} as never);
 
     const res = await POST(makeRequest({
       tenantId: "tenant1", email: "owner@test.com", name: "Owner",
@@ -42,25 +41,6 @@ describe("POST /api/auth/claim", () => {
     expect(data).toEqual({ success: true, companySlug: "test-slug" });
     expect(prisma.user.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ email: "owner@test.com", passwordHash: null, role: "owner", status: "active" }),
-    });
-    expect(prisma.tenant.update).toHaveBeenCalledWith({
-      where: { id: "tenant1" },
-      data: { subscriptionStatus: "active" },
-    });
-  });
-
-  it("returns 400 with CLAIM_TENANT_NOT_TRIAL when tenant is not in trial status", async () => {
-    vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
-      id: "tenant1", subscriptionStatus: "active",
-    } as never);
-    const res = await POST(makeRequest({
-      tenantId: "tenant1", email: "owner@test.com", name: "Owner",
-    }), { params: Promise.resolve({}) });
-    expect(res.status).toBe(400);
-    const data = await res.json();
-    expect(data).toEqual({
-      success: false,
-      error: { code: ErrorCodes.CLAIM_TENANT_NOT_TRIAL },
     });
   });
 
@@ -79,7 +59,7 @@ describe("POST /api/auth/claim", () => {
 
   it("returns 409 with AUTH_EMAIL_EXISTS when email already exists for this tenant", async () => {
     vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
-      id: "tenant1", subscriptionStatus: "trial",
+      id: "tenant1",
     } as never);
     vi.mocked(prisma.user.findFirst).mockResolvedValue({ id: "existing-user" } as never);
     const res = await POST(makeRequest({

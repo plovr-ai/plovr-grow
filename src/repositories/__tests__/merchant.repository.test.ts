@@ -64,7 +64,6 @@ describe("MerchantRepository", () => {
     name: "Joe's Pizza",
     logoUrl: "https://example.com/logo.png",
     settings: {},
-    subscriptionStatus: "active",
   };
 
   const mockMerchantWithTenant = {

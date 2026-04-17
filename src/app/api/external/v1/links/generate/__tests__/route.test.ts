@@ -25,6 +25,8 @@ vi.mock("@sentry/nextjs", () => ({
 
 import { POST } from "../route";
 
+const dummyContext = { params: Promise.resolve({}) };
+
 function createRequest(body: Record<string, unknown>): NextRequest {
   return new NextRequest(
     new URL("http://localhost/api/external/v1/links/generate"),
@@ -41,14 +43,14 @@ describe("POST /api/external/v1/links/generate", () => {
 
   it("should return 401 when not authenticated", async () => {
     mockValidateExternalRequest.mockResolvedValue({ authenticated: false });
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1" }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1" }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(401);
     expect(json).toEqual({ success: false, error: { code: "UNAUTHORIZED" } });
   });
 
   it("should return 400 when required fields are missing", async () => {
-    const response = await POST(createRequest({}));
+    const response = await POST(createRequest({}), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(400);
     expect(json.success).toBe(false);
@@ -57,7 +59,7 @@ describe("POST /api/external/v1/links/generate", () => {
 
   it("should return 404 when merchant not found", async () => {
     mockGetMerchantById.mockResolvedValue(null);
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1" }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1" }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(404);
     expect(json).toEqual({ success: false, error: { code: "MERCHANT_NOT_FOUND" } });
@@ -65,7 +67,7 @@ describe("POST /api/external/v1/links/generate", () => {
 
   it("should return URL on success", async () => {
     mockGetMerchantById.mockResolvedValue({ id: "m1", slug: "happy-wok", tenantId: "t1" });
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1" }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1" }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     expect(json).toEqual({ success: true, data: { url: "https://example.com/r/happy-wok/order" } });
@@ -73,7 +75,7 @@ describe("POST /api/external/v1/links/generate", () => {
 
   it("should return 404 when tenantId does not match", async () => {
     mockGetMerchantById.mockResolvedValue({ id: "m1", slug: "happy-wok", tenantId: "t-other" });
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1" }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1" }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(404);
     expect(json).toEqual({ success: false, error: { code: "MERCHANT_NOT_FOUND" } });

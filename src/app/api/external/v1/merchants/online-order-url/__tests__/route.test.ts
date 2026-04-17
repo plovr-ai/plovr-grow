@@ -25,6 +25,8 @@ vi.mock("@sentry/nextjs", () => ({
 
 import { GET } from "../route";
 
+const dummyContext = { params: Promise.resolve({}) };
+
 function createRequest(query: string): NextRequest {
   return new NextRequest(
     new URL(`http://localhost/api/external/v1/merchants/online-order-url?${query}`)
@@ -40,14 +42,14 @@ describe("GET /api/external/v1/merchants/online-order-url", () => {
 
   it("should return 401 when not authenticated", async () => {
     mockValidateExternalRequest.mockResolvedValue({ authenticated: false });
-    const response = await GET(createRequest("tenantId=t1&merchantId=m1"));
+    const response = await GET(createRequest("tenantId=t1&merchantId=m1"), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(401);
     expect(json).toEqual({ success: false, error: { code: "UNAUTHORIZED" } });
   });
 
   it("should return 400 when tenantId is missing", async () => {
-    const response = await GET(createRequest("merchantId=m1"));
+    const response = await GET(createRequest("merchantId=m1"), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(400);
     expect(json.success).toBe(false);
@@ -55,7 +57,7 @@ describe("GET /api/external/v1/merchants/online-order-url", () => {
   });
 
   it("should return 400 when merchantId is missing", async () => {
-    const response = await GET(createRequest("tenantId=t1"));
+    const response = await GET(createRequest("tenantId=t1"), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(400);
     expect(json.success).toBe(false);
@@ -63,7 +65,7 @@ describe("GET /api/external/v1/merchants/online-order-url", () => {
 
   it("should return 404 when merchant not found", async () => {
     mockGetMerchantById.mockResolvedValue(null);
-    const response = await GET(createRequest("tenantId=t1&merchantId=m1"));
+    const response = await GET(createRequest("tenantId=t1&merchantId=m1"), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(404);
     expect(json).toEqual({ success: false, error: { code: "MERCHANT_NOT_FOUND" } });
@@ -71,7 +73,7 @@ describe("GET /api/external/v1/merchants/online-order-url", () => {
 
   it("should return online order URL on success", async () => {
     mockGetMerchantById.mockResolvedValue({ id: "m1", slug: "happy-wok", tenantId: "t1" });
-    const response = await GET(createRequest("tenantId=t1&merchantId=m1"));
+    const response = await GET(createRequest("tenantId=t1&merchantId=m1"), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     expect(json).toEqual({

@@ -19,7 +19,6 @@ describe("POST /api/auth/claim (integration)", () => {
     const { tenant, merchant } = await tenantService.createTenantWithMerchant({
       name: "Claim Test Diner",
       source: "generator",
-      subscriptionStatus: "trial",
     });
     tenantId = tenant.id;
     merchantId = merchant.id;
@@ -33,7 +32,7 @@ describe("POST /api/auth/claim (integration)", () => {
     });
   }
 
-  it("claims a trial tenant, creates the user, preserves the existing merchant", async () => {
+  it("claims a tenant, creates the user, preserves the existing merchant", async () => {
     const res = await POST(
       buildRequest({
         tenantId,
@@ -51,9 +50,6 @@ describe("POST /api/auth/claim (integration)", () => {
       where: { tenantId, email: "claim-test@example.com" },
     });
     expect(user).not.toBeNull();
-
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
-    expect(tenant?.subscriptionStatus).toBe("active");
 
     // Regression guard: the merchant from the generator flow still exists
     const merchants = await prisma.merchant.findMany({
@@ -75,22 +71,6 @@ describe("POST /api/auth/claim (integration)", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns 400 when the tenant is not in trial status", async () => {
-    await prisma.tenant.update({
-      where: { id: tenantId },
-      data: { subscriptionStatus: "active" },
-    });
-    const res = await POST(
-      buildRequest({
-        tenantId,
-        email: "claim-test@example.com",
-        name: "Claim Tester",
-      }) as never,
-      { params: Promise.resolve({}) }
-    );
-    expect(res.status).toBe(400);
-  });
-
   it("returns 409 when the email already exists on this tenant", async () => {
     await POST(
       buildRequest({
@@ -100,12 +80,6 @@ describe("POST /api/auth/claim (integration)", () => {
       }) as never,
       { params: Promise.resolve({}) }
     );
-    // First claim flips status to active. Reset to trial so the second call
-    // hits the duplicate-email branch instead of the not-trial branch.
-    await prisma.tenant.update({
-      where: { id: tenantId },
-      data: { subscriptionStatus: "trial" },
-    });
 
     const res = await POST(
       buildRequest({

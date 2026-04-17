@@ -89,6 +89,7 @@ export interface CreateSubscriptionCheckoutInput {
   successUrl: string;
   cancelUrl: string;
   trialDays?: number;
+  metadata?: Record<string, string>;
 }
 
 export interface SubscriptionCheckoutResult {
