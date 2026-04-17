@@ -299,4 +299,64 @@ describe("PhoneSimulator E2E — full lifecycle with real SDK", () => {
       expect(server.isClosed()).toBe(true);
     });
   });
+
+  it("server closes WS mid-call — UI flips to Call Ended, no unhandled throw", async () => {
+    await renderPhoneSimulator();
+    await clickStartCall();
+    await server.awaitConnection();
+    await waitForLive();
+
+    act(() => {
+      server.closeFromServer();
+    });
+
+    await waitForCallEnded();
+    expect(server.isClosed()).toBe(true);
+  });
+
+  it("WS handshake rejected — UI shows error, status returns to DISCONNECTED", async () => {
+    // Close server before the SDK connects. We stop() the default server
+    // and swap in one that immediately closes on connect.
+    await server.stop();
+
+    server = createFakePhoneAiServer();
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ ws_url: server.url }),
+    } as Response);
+
+    // Install a one-shot "close on connect" behavior via awaitConnection + close.
+    void (async () => {
+      await server.awaitConnection();
+      server.closeFromServer();
+    })();
+
+    await renderPhoneSimulator();
+    await clickStartCall();
+
+    // handleStart catches the thrown error and calls setError + setStatus(DISCONNECTED).
+    // Both "Call Ended" (status badge) and "error" (error banner) render — assert
+    // at least one matches, not exactly one.
+    await waitFor(() => {
+      expect(screen.queryAllByText(/call ended|error/i).length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText("Live")).not.toBeInTheDocument();
+  });
+
+  it("fatal error triggers auto-hangup via client.ts dispose()", async () => {
+    await renderPhoneSimulator();
+    await clickStartCall();
+    await server.awaitConnection();
+    await waitForLive();
+
+    act(() => {
+      server.sendError("fatal-boom", { fatal: true });
+    });
+
+    // error surfaced + client.ts dispose() closes WS
+    await waitFor(() => {
+      expect(server.isClosed()).toBe(true);
+    });
+    await waitForCallEnded();
+  });
 });
