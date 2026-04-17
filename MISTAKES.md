@@ -191,3 +191,19 @@ Before creating a new test file for a large untested service, check if the servi
 Before creating test files for previously-untested services, check `vitest.config.ts` coverage thresholds and calculate whether partial coverage will pass.
 
 ---
+
+## [278] Prisma `updateMany` with conditional WHERE is NOT atomic CAS on MySQL
+
+**Date**: 2026-04-17
+**Category**: api-misuse
+
+### What went wrong
+Used `prisma.cart.updateMany({ where: { status: "active", ... }, data: { status: "submitted" } })` as an atomic compare-and-swap in the checkout concurrency guard. Prisma actually compiles this into TWO statements inside an auto-commit transaction: `SELECT id FROM carts WHERE status='active' AND ...` then `UPDATE carts SET status='submitted' WHERE id IN (?)`. The SELECT does not lock rows, so 5 concurrent callers each see status='active' in their snapshot, each UPDATE by id unconditionally, all observe count=1 — breaking the CAS guarantee and creating duplicate orders.
+
+### Correct approach
+Use `prisma.$executeRaw` with a single UPDATE-with-conditional-WHERE. InnoDB takes an X-lock on the matched row during the UPDATE, so concurrent sessions serialize and only the winner observes affectedRows=1. Return `{ count: affectedRows }` to preserve the service-layer contract. See `src/repositories/cart.repository.ts:claimForCheckout` for the pattern.
+
+### How to avoid
+Any time you need atomic CAS on MySQL via Prisma, use `$executeRaw` with a single UPDATE statement, NOT `updateMany` with a conditional predicate. Empirically verify by running 5 parallel calls — raw SQL returns [1,0,0,0,0], `updateMany` returns [1,1,1,1,1] (the bug).
+
+---
