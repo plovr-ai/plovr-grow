@@ -1496,4 +1496,114 @@ describe("Phone-AI Order Flow — Integration Tests", () => {
       expect(body.error.code).toBe("CART_NOT_FOUND");
     });
   });
+
+  // =========================================================================
+  // Scenario 9: HTTP status semantics (201 first, 200 idempotent)
+  // =========================================================================
+  describe("Scenario 9: HTTP status semantics", () => {
+    it("should return 201 on first checkout and 200 on idempotent retry", async () => {
+      const createRes = await createCart(
+        createJsonRequest("/api/external/v1/carts", "POST", {
+          tenantId: TENANT_ID,
+          merchantId: MERCHANT_A_ID,
+          salesChannel: "phone_order",
+        })
+      );
+      const cartId = (await createRes.json()).data.id;
+
+      await addCartItem(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/items`, "POST", {
+          tenantId: TENANT_ID,
+          menuItemId: BURGER_ID,
+          quantity: 1,
+        }),
+        createRouteContext({ cartId })
+      );
+
+      setupOrderCreationMocks();
+
+      const first = await checkoutCart(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/checkout`, "POST", {
+          tenantId: TENANT_ID,
+          customerFirstName: "Status",
+          customerLastName: "First",
+          customerPhone: "555-0900",
+          orderMode: "pickup",
+        }),
+        createRouteContext({ cartId })
+      );
+      expect(first.status).toBe(201);
+
+      mockGetMenuItemsTaxConfigIds.mockResolvedValue(new Map());
+      mockGetTaxConfigsByIds.mockResolvedValue([]);
+      mockGetMerchantTaxRateMap.mockResolvedValue(new Map());
+
+      const second = await checkoutCart(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/checkout`, "POST", {
+          tenantId: TENANT_ID,
+          customerFirstName: "Status",
+          customerLastName: "Retry",
+          customerPhone: "555-0901",
+          orderMode: "pickup",
+        }),
+        createRouteContext({ cartId })
+      );
+      expect(second.status).toBe(200);
+    });
+  });
+
+  // =========================================================================
+  // Scenario 10: Cross-tenant isolation of idempotency
+  // =========================================================================
+  describe("Scenario 10: Cross-tenant idempotency isolation", () => {
+    it("should return CART_NOT_FOUND when duplicate checkout comes from different tenant", async () => {
+      const createRes = await createCart(
+        createJsonRequest("/api/external/v1/carts", "POST", {
+          tenantId: TENANT_ID,
+          merchantId: MERCHANT_A_ID,
+          salesChannel: "phone_order",
+        })
+      );
+      const cartId = (await createRes.json()).data.id;
+
+      await addCartItem(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/items`, "POST", {
+          tenantId: TENANT_ID,
+          menuItemId: BURGER_ID,
+          quantity: 1,
+        }),
+        createRouteContext({ cartId })
+      );
+
+      setupOrderCreationMocks();
+      const first = await checkoutCart(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/checkout`, "POST", {
+          tenantId: TENANT_ID,
+          customerFirstName: "Tenant",
+          customerLastName: "A",
+          customerPhone: "555-1000",
+          orderMode: "pickup",
+        }),
+        createRouteContext({ cartId })
+      );
+      expect(first.status).toBe(201);
+
+      // Attempt duplicate checkout under OTHER_TENANT_ID — should be blocked
+      // before any idempotency check
+      const crossTenant = await checkoutCart(
+        createJsonRequest(`/api/external/v1/carts/${cartId}/checkout`, "POST", {
+          tenantId: OTHER_TENANT_ID,
+          customerFirstName: "Tenant",
+          customerLastName: "B",
+          customerPhone: "555-1001",
+          orderMode: "pickup",
+        }),
+        createRouteContext({ cartId })
+      );
+      expect(crossTenant.status).toBe(404);
+      const body = await crossTenant.json();
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe("CART_NOT_FOUND");
+    });
+  });
 });
