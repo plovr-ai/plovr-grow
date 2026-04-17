@@ -14,6 +14,7 @@ import type {
   StripeInvoiceData,
   StripeCheckoutSessionData,
   DashboardSubscriptionInfo,
+  ProductLine,
 } from "./subscription.types";
 import {
   getStripePriceId,
@@ -32,8 +33,8 @@ export class SubscriptionService {
   /**
    * Get subscription info for a tenant
    */
-  async getSubscription(tenantId: string): Promise<SubscriptionInfo | null> {
-    const subscription = await subscriptionRepository.getByTenantId(tenantId);
+  async getSubscription(tenantId: string, productLine: ProductLine): Promise<SubscriptionInfo | null> {
+    const subscription = await subscriptionRepository.getByTenantId(tenantId, productLine);
     if (!subscription) {
       return null;
     }
@@ -45,9 +46,10 @@ export class SubscriptionService {
    * Get subscription info for Dashboard context
    */
   async getSubscriptionForDashboard(
-    tenantId: string
+    tenantId: string,
+    productLine: ProductLine
   ): Promise<DashboardSubscriptionInfo | null> {
-    const subscription = await this.getSubscription(tenantId);
+    const subscription = await this.getSubscription(tenantId, productLine);
     if (!subscription) {
       return null;
     }
@@ -66,8 +68,8 @@ export class SubscriptionService {
   /**
    * Check if tenant has active subscription
    */
-  async isSubscriptionActive(tenantId: string): Promise<boolean> {
-    const subscription = await subscriptionRepository.getByTenantId(tenantId);
+  async isSubscriptionActive(tenantId: string, productLine: ProductLine): Promise<boolean> {
+    const subscription = await subscriptionRepository.getByTenantId(tenantId, productLine);
     if (!subscription) {
       return false;
     }
@@ -78,8 +80,8 @@ export class SubscriptionService {
    * Check if tenant can access premium features
    * (active, trialing, or in grace period)
    */
-  async canAccessPremiumFeatures(tenantId: string): Promise<boolean> {
-    const subscription = await subscriptionRepository.getByTenantId(tenantId);
+  async canAccessPremiumFeatures(tenantId: string, productLine: ProductLine): Promise<boolean> {
+    const subscription = await subscriptionRepository.getByTenantId(tenantId, productLine);
     if (!subscription) {
       return false;
     }
@@ -100,6 +102,14 @@ export class SubscriptionService {
     return false;
   }
 
+  /**
+   * Get all subscriptions for a tenant (all product lines)
+   */
+  async getAllSubscriptions(tenantId: string): Promise<SubscriptionInfo[]> {
+    const subscriptions = await subscriptionRepository.getAllByTenantId(tenantId);
+    return subscriptions.map((s) => this.toSubscriptionInfo(s));
+  }
+
   // ==================== Subscription Management ====================
 
   /**
@@ -107,20 +117,21 @@ export class SubscriptionService {
    */
   async createCheckoutSession(
     tenantId: string,
+    productLine: ProductLine,
     planCode: string,
     options?: Partial<CheckoutSessionOptions>
   ): Promise<{ url: string; sessionId: string }> {
-    const plan = getPlanByCode(planCode);
+    const plan = getPlanByCode(productLine, planCode);
     if (!plan) {
       throw new AppError(ErrorCodes.INVALID_PLAN_CODE, { planCode }, 400);
     }
 
-    const stripePriceId = getStripePriceId(planCode);
+    const stripePriceId = getStripePriceId(productLine, planCode);
     if (!stripePriceId) {
       throw new AppError(ErrorCodes.STRIPE_PRICE_NOT_CONFIGURED, { planCode }, 500);
     }
 
-    const stripeCustomerId = await this.getOrCreateStripeCustomer(tenantId);
+    const stripeCustomerId = await this.getOrCreateStripeCustomer(tenantId, productLine);
 
     const successUrl =
       options?.successUrl ?? `${APP_URL}/dashboard/subscription?success=true`;
@@ -134,6 +145,7 @@ export class SubscriptionService {
       successUrl,
       cancelUrl,
       trialDays: STRIPE_TRIAL_DAYS,
+      metadata: { productLine },
     });
 
     return {
@@ -149,13 +161,14 @@ export class SubscriptionService {
     tenantId: string,
     returnUrl?: string
   ): Promise<{ url: string }> {
-    const subscription = await subscriptionRepository.getByTenantId(tenantId);
-    if (!subscription) {
+    const allSubscriptions = await subscriptionRepository.getAllByTenantId(tenantId);
+    const withCustomer = allSubscriptions.find(s => s.stripeCustomerId);
+    if (!withCustomer) {
       throw new AppError(ErrorCodes.SUBSCRIPTION_NOT_FOUND, undefined, 404);
     }
 
     const result = await stripeService.createBillingPortalSession({
-      customerId: subscription.stripeCustomerId,
+      customerId: withCustomer.stripeCustomerId,
       returnUrl: returnUrl ?? `${APP_URL}/dashboard/subscription`,
     });
 
@@ -167,9 +180,10 @@ export class SubscriptionService {
    */
   async cancelSubscription(
     tenantId: string,
+    productLine: ProductLine,
     cancelImmediately: boolean = false
   ): Promise<void> {
-    const subscription = await subscriptionRepository.getByTenantId(tenantId);
+    const subscription = await subscriptionRepository.getByTenantId(tenantId, productLine);
     if (!subscription || !subscription.stripeSubscriptionId) {
       throw new AppError(ErrorCodes.SUBSCRIPTION_NOT_FOUND, undefined, 404);
     }
@@ -180,7 +194,7 @@ export class SubscriptionService {
     );
 
     // Update local record
-    await subscriptionRepository.updateByTenantId(tenantId, {
+    await subscriptionRepository.updateByTenantId(tenantId, productLine, {
       cancelAtPeriodEnd: !cancelImmediately,
       canceledAt: cancelImmediately ? new Date() : null,
     });
@@ -189,8 +203,8 @@ export class SubscriptionService {
   /**
    * Resume canceled subscription (before period ends)
    */
-  async resumeSubscription(tenantId: string): Promise<void> {
-    const subscription = await subscriptionRepository.getByTenantId(tenantId);
+  async resumeSubscription(tenantId: string, productLine: ProductLine): Promise<void> {
+    const subscription = await subscriptionRepository.getByTenantId(tenantId, productLine);
     if (!subscription || !subscription.stripeSubscriptionId) {
       throw new AppError(ErrorCodes.SUBSCRIPTION_NOT_FOUND, undefined, 404);
     }
@@ -202,7 +216,7 @@ export class SubscriptionService {
     await stripeService.resumeSubscription(subscription.stripeSubscriptionId);
 
     // Update local record
-    await subscriptionRepository.updateByTenantId(tenantId, {
+    await subscriptionRepository.updateByTenantId(tenantId, productLine, {
       cancelAtPeriodEnd: false,
       canceledAt: null,
     });
@@ -211,18 +225,18 @@ export class SubscriptionService {
   /**
    * Change subscription plan (upgrade/downgrade with proration)
    */
-  async changePlan(tenantId: string, newPlanCode: string): Promise<void> {
-    const plan = getPlanByCode(newPlanCode);
+  async changePlan(tenantId: string, productLine: ProductLine, newPlanCode: string): Promise<void> {
+    const plan = getPlanByCode(productLine, newPlanCode);
     if (!plan) {
       throw new AppError(ErrorCodes.INVALID_PLAN_CODE, { planCode: newPlanCode }, 400);
     }
 
-    const newStripePriceId = getStripePriceId(newPlanCode);
+    const newStripePriceId = getStripePriceId(productLine, newPlanCode);
     if (!newStripePriceId) {
       throw new AppError(ErrorCodes.STRIPE_PRICE_NOT_CONFIGURED, { planCode: newPlanCode }, 500);
     }
 
-    const subscription = await subscriptionRepository.getByTenantId(tenantId);
+    const subscription = await subscriptionRepository.getByTenantId(tenantId, productLine);
     if (!subscription || !subscription.stripeSubscriptionId) {
       throw new AppError(ErrorCodes.SUBSCRIPTION_NOT_FOUND, undefined, 404);
     }
@@ -253,8 +267,6 @@ export class SubscriptionService {
       plan: newPlanCode,
       stripePriceId: newStripePriceId,
     });
-
-    await this.updateTenantSubscriptionStatus(tenantId, newPlanCode, subscription.status);
   }
 
   // ==================== Webhook Handlers ====================
@@ -290,18 +302,20 @@ export class SubscriptionService {
       return;
     }
 
+    const productLine = (session.metadata.productLine ?? "platform") as ProductLine;
+
     // Check if subscription record exists
     const existingSubscription =
-      await subscriptionRepository.getByTenantId(tenantId);
+      await subscriptionRepository.getByTenantId(tenantId, productLine);
 
-    const detectedPlan = stripeSubscription.priceId
+    const detected = stripeSubscription.priceId
       ? getPlanByStripePriceId(stripeSubscription.priceId)
       : undefined;
-    const planCode = detectedPlan?.code ?? "starter";
+    const planCode = detected?.plan.code ?? "starter";
 
     if (existingSubscription) {
       // Update existing subscription
-      await subscriptionRepository.updateByTenantId(tenantId, {
+      await subscriptionRepository.updateByTenantId(tenantId, productLine, {
         stripeSubscriptionId: stripeSubscription.id,
         stripePriceId: stripeSubscription.priceId ?? undefined,
         plan: planCode,
@@ -315,7 +329,7 @@ export class SubscriptionService {
       });
     } else {
       // Create new subscription record
-      await subscriptionRepository.create(tenantId, {
+      await subscriptionRepository.create(tenantId, productLine, {
         stripeCustomerId: session.customer,
         stripeSubscriptionId: stripeSubscription.id,
         stripePriceId: stripeSubscription.priceId ?? undefined,
@@ -327,13 +341,6 @@ export class SubscriptionService {
         trialEnd: stripeSubscription.trialEnd ?? undefined,
       });
     }
-
-    // Update tenant's denormalized status
-    await this.updateTenantSubscriptionStatus(
-      tenantId,
-      planCode,
-      stripeSubscription.status
-    );
 
     console.log(
       `[Subscription] Checkout completed for tenant ${tenantId}, status: ${stripeSubscription.status}`
@@ -358,7 +365,7 @@ export class SubscriptionService {
     const priceId = subscription.items.data[0]?.price?.id || null;
 
     const planFromPrice = priceId ? getPlanByStripePriceId(priceId) : undefined;
-    const planCode = planFromPrice?.code ?? "starter";
+    const planCode = planFromPrice?.plan.code ?? "starter";
 
     // Check if already exists (might have been created by checkout handler)
     const existing = await subscriptionRepository.getByStripeSubscriptionId(
@@ -368,7 +375,9 @@ export class SubscriptionService {
       return;
     }
 
-    await subscriptionRepository.create(tenantId, {
+    const productLine = (subscription.metadata.productLine ?? "platform") as ProductLine;
+
+    await subscriptionRepository.create(tenantId, productLine, {
       stripeCustomerId: subscription.customer,
       stripeSubscriptionId: subscription.id,
       stripePriceId: priceId ?? undefined,
@@ -383,12 +392,6 @@ export class SubscriptionService {
         ? new Date(subscription.trial_end * 1000)
         : undefined,
     });
-
-    await this.updateTenantSubscriptionStatus(
-      tenantId,
-      planCode,
-      subscription.status
-    );
 
     console.log(
       `[Subscription] Created for tenant ${tenantId}, status: ${subscription.status}`
@@ -436,23 +439,13 @@ export class SubscriptionService {
     };
 
     if (priceId) {
-      const detectedPlan = getPlanByStripePriceId(priceId);
-      if (detectedPlan) {
-        updateData.plan = detectedPlan.code;
+      const detected = getPlanByStripePriceId(priceId);
+      if (detected) {
+        updateData.plan = detected.plan.code;
       }
     }
 
     await subscriptionRepository.update(existingSubscription.id, updateData);
-
-    // Update tenant's denormalized status
-    const currentPlan = priceId
-      ? (getPlanByStripePriceId(priceId)?.code ?? existingSubscription.plan)
-      : existingSubscription.plan;
-    await this.updateTenantSubscriptionStatus(
-      existingSubscription.tenantId,
-      currentPlan,
-      subscription.status
-    );
 
     console.log(
       `[Subscription] Updated for tenant ${existingSubscription.tenantId}, status: ${subscription.status}`
@@ -480,13 +473,6 @@ export class SubscriptionService {
       status: "canceled",
       canceledAt: new Date(),
     });
-
-    // Update tenant's denormalized status
-    await this.updateTenantSubscriptionStatus(
-      existingSubscription.tenantId,
-      "free",
-      "canceled"
-    );
 
     console.log(
       `[Subscription] Deleted for tenant ${existingSubscription.tenantId}`
@@ -517,12 +503,6 @@ export class SubscriptionService {
       status: "active",
       gracePeriodEnd: null,
     });
-
-    await this.updateTenantSubscriptionStatus(
-      subscription.tenantId,
-      subscription.plan,
-      "active"
-    );
 
     console.log(
       `[Subscription] Invoice payment succeeded for tenant ${subscription.tenantId}`
@@ -557,12 +537,6 @@ export class SubscriptionService {
       gracePeriodEnd,
     });
 
-    await this.updateTenantSubscriptionStatus(
-      subscription.tenantId,
-      subscription.plan,
-      "past_due"
-    );
-
     console.log(
       `[Subscription] Invoice payment failed for tenant ${subscription.tenantId}, grace period ends: ${gracePeriodEnd.toISOString()}`
     );
@@ -575,11 +549,12 @@ export class SubscriptionService {
   /**
    * Get or create Stripe customer for tenant
    */
-  private async getOrCreateStripeCustomer(tenantId: string): Promise<string> {
-    // Check if subscription already exists with a customer
-    const existing = await subscriptionRepository.getByTenantId(tenantId);
-    if (existing) {
-      return existing.stripeCustomerId;
+  private async getOrCreateStripeCustomer(tenantId: string, productLine: ProductLine): Promise<string> {
+    // Check if any subscription exists with a customer
+    const existingSubscriptions = await subscriptionRepository.getAllByTenantId(tenantId);
+    const existingWithCustomer = existingSubscriptions.find(s => s.stripeCustomerId);
+    if (existingWithCustomer) {
+      return existingWithCustomer.stripeCustomerId;
     }
 
     // Get tenant info for customer creation
@@ -598,27 +573,12 @@ export class SubscriptionService {
     });
 
     // Create subscription record with just the customer
-    await subscriptionRepository.create(tenantId, {
+    await subscriptionRepository.create(tenantId, productLine, {
       stripeCustomerId,
       status: "incomplete",
     });
 
     return stripeCustomerId;
-  }
-
-  /**
-   * Update tenant's denormalized subscription fields
-   */
-  private async updateTenantSubscriptionStatus(
-    tenantId: string,
-    plan: string,
-    status: string
-  ): Promise<void> {
-    await subscriptionRepository.updateTenantSubscriptionStatus(
-      tenantId,
-      plan,
-      status
-    );
   }
 
   /**
@@ -652,6 +612,7 @@ export class SubscriptionService {
   private toSubscriptionInfo(subscription: {
     id: string;
     tenantId: string;
+    productLine: string;
     stripeCustomerId: string;
     stripeSubscriptionId: string | null;
     status: string;
@@ -688,6 +649,7 @@ export class SubscriptionService {
     return {
       id: subscription.id,
       tenantId: subscription.tenantId,
+      productLine: subscription.productLine as ProductLine,
       stripeCustomerId: subscription.stripeCustomerId,
       stripeSubscriptionId: subscription.stripeSubscriptionId,
       status: subscription.status as SubscriptionStatus,

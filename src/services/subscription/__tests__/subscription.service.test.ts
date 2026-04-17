@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Set env vars before importing
-process.env.STRIPE_STARTER_PRICE_ID = "price_starter_test";
-process.env.STRIPE_PRO_PRICE_ID = "price_pro_test";
-process.env.STRIPE_ENTERPRISE_PRICE_ID = "price_enterprise_test";
+process.env.STRIPE_PLATFORM_STARTER_PRICE_ID = "price_starter_test";
+process.env.STRIPE_PLATFORM_PRO_PRICE_ID = "price_pro_test";
+process.env.STRIPE_PLATFORM_ENTERPRISE_PRICE_ID = "price_enterprise_test";
 process.env.STRIPE_TRIAL_DAYS = "14";
 process.env.STRIPE_GRACE_PERIOD_DAYS = "7";
 process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
@@ -23,11 +23,11 @@ vi.mock("@/services/stripe/stripe.service", () => ({
 vi.mock("@/repositories/subscription.repository", () => ({
   subscriptionRepository: {
     getByTenantId: vi.fn(),
+    getAllByTenantId: vi.fn(),
     getByStripeSubscriptionId: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
     updateByTenantId: vi.fn(),
-    updateTenantSubscriptionStatus: vi.fn(),
   },
 }));
 
@@ -45,6 +45,7 @@ import prisma from "@/lib/db";
 const activeSubscription = {
   id: "sub-1",
   tenantId: "tenant-1",
+  productLine: "platform",
   stripeCustomerId: "cus_123",
   stripeSubscriptionId: "sub_stripe_123",
   stripePriceId: "price_starter_test",
@@ -73,18 +74,19 @@ describe("SubscriptionService", () => {
     it("should return null when no subscription exists", async () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(null);
 
-      const result = await subscriptionService.getSubscription("tenant-1");
+      const result = await subscriptionService.getSubscription("tenant-1", "platform");
       expect(result).toBeNull();
     });
 
     it("should return subscription info for active subscription", async () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
 
-      const result = await subscriptionService.getSubscription("tenant-1");
+      const result = await subscriptionService.getSubscription("tenant-1", "platform");
       expect(result).not.toBeNull();
       expect(result!.id).toBe("sub-1");
       expect(result!.status).toBe("active");
       expect(result!.plan).toBe("starter");
+      expect(result!.productLine).toBe("platform");
       expect(result!.canAccessPremiumFeatures).toBe(true);
       expect(result!.isInGracePeriod).toBe(false);
       expect(result!.trialDaysRemaining).toBeNull();
@@ -100,7 +102,7 @@ describe("SubscriptionService", () => {
         trialEnd,
       });
 
-      const result = await subscriptionService.getSubscription("tenant-1");
+      const result = await subscriptionService.getSubscription("tenant-1", "platform");
       expect(result!.status).toBe("trialing");
       expect(result!.trialDaysRemaining).toBeGreaterThanOrEqual(4);
       expect(result!.trialDaysRemaining).toBeLessThanOrEqual(6);
@@ -117,14 +119,14 @@ describe("SubscriptionService", () => {
         trialEnd,
       });
 
-      const result = await subscriptionService.getSubscription("tenant-1");
+      const result = await subscriptionService.getSubscription("tenant-1", "platform");
       expect(result!.trialDaysRemaining).toBe(0);
     });
 
     it("should return null trial days when not trialing", async () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
 
-      const result = await subscriptionService.getSubscription("tenant-1");
+      const result = await subscriptionService.getSubscription("tenant-1", "platform");
       expect(result!.trialDaysRemaining).toBeNull();
     });
 
@@ -138,7 +140,7 @@ describe("SubscriptionService", () => {
         gracePeriodEnd,
       });
 
-      const result = await subscriptionService.getSubscription("tenant-1");
+      const result = await subscriptionService.getSubscription("tenant-1", "platform");
       expect(result!.isInGracePeriod).toBe(true);
       expect(result!.canAccessPremiumFeatures).toBe(true);
     });
@@ -153,7 +155,7 @@ describe("SubscriptionService", () => {
         gracePeriodEnd,
       });
 
-      const result = await subscriptionService.getSubscription("tenant-1");
+      const result = await subscriptionService.getSubscription("tenant-1", "platform");
       expect(result!.isInGracePeriod).toBe(false);
       expect(result!.canAccessPremiumFeatures).toBe(false);
     });
@@ -165,7 +167,7 @@ describe("SubscriptionService", () => {
         gracePeriodEnd: null,
       });
 
-      const result = await subscriptionService.getSubscription("tenant-1");
+      const result = await subscriptionService.getSubscription("tenant-1", "platform");
       expect(result!.isInGracePeriod).toBe(false);
       expect(result!.canAccessPremiumFeatures).toBe(false);
     });
@@ -176,7 +178,7 @@ describe("SubscriptionService", () => {
         status: "canceled",
       });
 
-      const result = await subscriptionService.getSubscription("tenant-1");
+      const result = await subscriptionService.getSubscription("tenant-1", "platform");
       expect(result!.canAccessPremiumFeatures).toBe(false);
     });
   });
@@ -185,14 +187,14 @@ describe("SubscriptionService", () => {
     it("should return null when no subscription exists", async () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(null);
 
-      const result = await subscriptionService.getSubscriptionForDashboard("tenant-1");
+      const result = await subscriptionService.getSubscriptionForDashboard("tenant-1", "platform");
       expect(result).toBeNull();
     });
 
     it("should return dashboard subscription info for active subscription", async () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
 
-      const result = await subscriptionService.getSubscriptionForDashboard("tenant-1");
+      const result = await subscriptionService.getSubscriptionForDashboard("tenant-1", "platform");
       expect(result).not.toBeNull();
       expect(result!.status).toBe("active");
       expect(result!.plan).toBe("starter");
@@ -213,7 +215,7 @@ describe("SubscriptionService", () => {
         trialEnd,
       });
 
-      const result = await subscriptionService.getSubscriptionForDashboard("tenant-1");
+      const result = await subscriptionService.getSubscriptionForDashboard("tenant-1", "platform");
       expect(result!.isTrialing).toBe(true);
       expect(result!.trialDaysRemaining).toBeGreaterThan(0);
     });
@@ -223,14 +225,14 @@ describe("SubscriptionService", () => {
     it("should return false when no subscription", async () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(null);
 
-      const result = await subscriptionService.isSubscriptionActive("tenant-1");
+      const result = await subscriptionService.isSubscriptionActive("tenant-1", "platform");
       expect(result).toBe(false);
     });
 
     it("should return true for active subscription", async () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
 
-      const result = await subscriptionService.isSubscriptionActive("tenant-1");
+      const result = await subscriptionService.isSubscriptionActive("tenant-1", "platform");
       expect(result).toBe(true);
     });
 
@@ -240,7 +242,7 @@ describe("SubscriptionService", () => {
         status: "trialing",
       });
 
-      const result = await subscriptionService.isSubscriptionActive("tenant-1");
+      const result = await subscriptionService.isSubscriptionActive("tenant-1", "platform");
       expect(result).toBe(true);
     });
 
@@ -250,7 +252,7 @@ describe("SubscriptionService", () => {
         status: "past_due",
       });
 
-      const result = await subscriptionService.isSubscriptionActive("tenant-1");
+      const result = await subscriptionService.isSubscriptionActive("tenant-1", "platform");
       expect(result).toBe(false);
     });
 
@@ -260,7 +262,7 @@ describe("SubscriptionService", () => {
         status: "canceled",
       });
 
-      const result = await subscriptionService.isSubscriptionActive("tenant-1");
+      const result = await subscriptionService.isSubscriptionActive("tenant-1", "platform");
       expect(result).toBe(false);
     });
   });
@@ -269,14 +271,14 @@ describe("SubscriptionService", () => {
     it("should return false when no subscription", async () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(null);
 
-      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1");
+      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1", "platform");
       expect(result).toBe(false);
     });
 
     it("should return true for active subscription", async () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
 
-      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1");
+      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1", "platform");
       expect(result).toBe(true);
     });
 
@@ -286,7 +288,7 @@ describe("SubscriptionService", () => {
         status: "trialing",
       });
 
-      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1");
+      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1", "platform");
       expect(result).toBe(true);
     });
 
@@ -300,7 +302,7 @@ describe("SubscriptionService", () => {
         gracePeriodEnd,
       });
 
-      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1");
+      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1", "platform");
       expect(result).toBe(true);
     });
 
@@ -314,7 +316,7 @@ describe("SubscriptionService", () => {
         gracePeriodEnd,
       });
 
-      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1");
+      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1", "platform");
       expect(result).toBe(false);
     });
 
@@ -325,7 +327,7 @@ describe("SubscriptionService", () => {
         gracePeriodEnd: null,
       });
 
-      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1");
+      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1", "platform");
       expect(result).toBe(false);
     });
 
@@ -335,7 +337,7 @@ describe("SubscriptionService", () => {
         status: "canceled",
       });
 
-      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1");
+      const result = await subscriptionService.canAccessPremiumFeatures("tenant-1", "platform");
       expect(result).toBe(false);
     });
   });
@@ -344,13 +346,13 @@ describe("SubscriptionService", () => {
 
   describe("createCheckoutSession", () => {
     it("should use correct Stripe price ID for given plan code", async () => {
-      vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
+      vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([activeSubscription]);
       vi.mocked(stripeService.createSubscriptionCheckoutSession).mockResolvedValue({
         url: "https://checkout.stripe.com/session_123",
         sessionId: "cs_123",
       });
 
-      const result = await subscriptionService.createCheckoutSession("tenant-1", "starter");
+      const result = await subscriptionService.createCheckoutSession("tenant-1", "platform", "starter");
 
       expect(stripeService.createSubscriptionCheckoutSession).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -358,6 +360,7 @@ describe("SubscriptionService", () => {
           customerId: "cus_123",
           tenantId: "tenant-1",
           trialDays: 14,
+          metadata: { productLine: "platform" },
         })
       );
       expect(result.url).toBe("https://checkout.stripe.com/session_123");
@@ -366,29 +369,29 @@ describe("SubscriptionService", () => {
 
     it("should throw on invalid plan code", async () => {
       await expect(
-        subscriptionService.createCheckoutSession("tenant-1", "nonexistent")
+        subscriptionService.createCheckoutSession("tenant-1", "platform", "nonexistent")
       ).rejects.toThrow("INVALID_PLAN_CODE");
     });
 
     it("should throw when env var is not configured", async () => {
-      const original = process.env.STRIPE_STARTER_PRICE_ID;
-      delete process.env.STRIPE_STARTER_PRICE_ID;
+      const original = process.env.STRIPE_PLATFORM_STARTER_PRICE_ID;
+      delete process.env.STRIPE_PLATFORM_STARTER_PRICE_ID;
 
       await expect(
-        subscriptionService.createCheckoutSession("tenant-1", "starter")
+        subscriptionService.createCheckoutSession("tenant-1", "platform", "starter")
       ).rejects.toThrow("STRIPE_PRICE_NOT_CONFIGURED");
 
-      process.env.STRIPE_STARTER_PRICE_ID = original;
+      process.env.STRIPE_PLATFORM_STARTER_PRICE_ID = original;
     });
 
     it("should use custom success and cancel URLs when provided", async () => {
-      vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
+      vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([activeSubscription]);
       vi.mocked(stripeService.createSubscriptionCheckoutSession).mockResolvedValue({
         url: "https://checkout.stripe.com/session_456",
         sessionId: "cs_456",
       });
 
-      await subscriptionService.createCheckoutSession("tenant-1", "pro", {
+      await subscriptionService.createCheckoutSession("tenant-1", "platform", "pro", {
         successUrl: "http://custom.com/success",
         cancelUrl: "http://custom.com/cancel",
       });
@@ -402,13 +405,13 @@ describe("SubscriptionService", () => {
     });
 
     it("should use default URLs when no options provided", async () => {
-      vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
+      vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([activeSubscription]);
       vi.mocked(stripeService.createSubscriptionCheckoutSession).mockResolvedValue({
         url: "https://checkout.stripe.com/session_789",
         sessionId: "cs_789",
       });
 
-      await subscriptionService.createCheckoutSession("tenant-1", "pro");
+      await subscriptionService.createCheckoutSession("tenant-1", "platform", "pro");
 
       expect(stripeService.createSubscriptionCheckoutSession).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -419,7 +422,7 @@ describe("SubscriptionService", () => {
     });
 
     it("should create a new Stripe customer when no existing subscription", async () => {
-      vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(null);
+      vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([]);
       vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
         name: "Test Tenant",
         supportEmail: "support@test.com",
@@ -431,21 +434,21 @@ describe("SubscriptionService", () => {
         sessionId: "cs_new",
       });
 
-      await subscriptionService.createCheckoutSession("tenant-1", "starter");
+      await subscriptionService.createCheckoutSession("tenant-1", "platform", "starter");
 
       expect(stripeService.createCustomer).toHaveBeenCalledWith({
         email: "support@test.com",
         name: "Test Tenant",
         metadata: { tenantId: "tenant-1" },
       });
-      expect(subscriptionRepository.create).toHaveBeenCalledWith("tenant-1", {
+      expect(subscriptionRepository.create).toHaveBeenCalledWith("tenant-1", "platform", {
         stripeCustomerId: "cus_new_123",
         status: "incomplete",
       });
     });
 
     it("should use fallback email when tenant has no company email", async () => {
-      vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(null);
+      vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([]);
       vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
         name: "Test Tenant",
         company: null,
@@ -457,7 +460,7 @@ describe("SubscriptionService", () => {
         sessionId: "cs_fb",
       });
 
-      await subscriptionService.createCheckoutSession("tenant-1", "starter");
+      await subscriptionService.createCheckoutSession("tenant-1", "platform", "starter");
 
       expect(stripeService.createCustomer).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -467,18 +470,18 @@ describe("SubscriptionService", () => {
     });
 
     it("should throw when tenant not found during customer creation", async () => {
-      vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(null);
+      vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([]);
       vi.mocked(prisma.tenant.findUnique).mockResolvedValue(null);
 
       await expect(
-        subscriptionService.createCheckoutSession("tenant-1", "starter")
+        subscriptionService.createCheckoutSession("tenant-1", "platform", "starter")
       ).rejects.toThrow("TENANT_NOT_FOUND");
     });
   });
 
   describe("createBillingPortalSession", () => {
     it("should create billing portal session with default return URL", async () => {
-      vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
+      vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([activeSubscription]);
       vi.mocked(stripeService.createBillingPortalSession).mockResolvedValue({
         url: "https://billing.stripe.com/portal_123",
       });
@@ -493,7 +496,7 @@ describe("SubscriptionService", () => {
     });
 
     it("should create billing portal session with custom return URL", async () => {
-      vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
+      vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([activeSubscription]);
       vi.mocked(stripeService.createBillingPortalSession).mockResolvedValue({
         url: "https://billing.stripe.com/portal_456",
       });
@@ -507,7 +510,7 @@ describe("SubscriptionService", () => {
     });
 
     it("should throw when no subscription found", async () => {
-      vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(null);
+      vi.mocked(subscriptionRepository.getAllByTenantId).mockResolvedValue([]);
 
       await expect(
         subscriptionService.createBillingPortalSession("tenant-1")
@@ -519,13 +522,13 @@ describe("SubscriptionService", () => {
     it("should cancel at period end by default", async () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
 
-      await subscriptionService.cancelSubscription("tenant-1");
+      await subscriptionService.cancelSubscription("tenant-1", "platform");
 
       expect(stripeService.cancelSubscription).toHaveBeenCalledWith(
         "sub_stripe_123",
         true // cancelAtPeriodEnd
       );
-      expect(subscriptionRepository.updateByTenantId).toHaveBeenCalledWith("tenant-1", {
+      expect(subscriptionRepository.updateByTenantId).toHaveBeenCalledWith("tenant-1", "platform", {
         cancelAtPeriodEnd: true,
         canceledAt: null,
       });
@@ -534,7 +537,7 @@ describe("SubscriptionService", () => {
     it("should cancel immediately when flag is true", async () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
 
-      await subscriptionService.cancelSubscription("tenant-1", true);
+      await subscriptionService.cancelSubscription("tenant-1", "platform", true);
 
       expect(stripeService.cancelSubscription).toHaveBeenCalledWith(
         "sub_stripe_123",
@@ -542,6 +545,7 @@ describe("SubscriptionService", () => {
       );
       expect(subscriptionRepository.updateByTenantId).toHaveBeenCalledWith(
         "tenant-1",
+        "platform",
         expect.objectContaining({
           cancelAtPeriodEnd: false,
           canceledAt: expect.any(Date),
@@ -553,7 +557,7 @@ describe("SubscriptionService", () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(null);
 
       await expect(
-        subscriptionService.cancelSubscription("tenant-1")
+        subscriptionService.cancelSubscription("tenant-1", "platform")
       ).rejects.toThrow("SUBSCRIPTION_NOT_FOUND");
     });
 
@@ -564,7 +568,7 @@ describe("SubscriptionService", () => {
       });
 
       await expect(
-        subscriptionService.cancelSubscription("tenant-1")
+        subscriptionService.cancelSubscription("tenant-1", "platform")
       ).rejects.toThrow("SUBSCRIPTION_NOT_FOUND");
     });
   });
@@ -576,10 +580,10 @@ describe("SubscriptionService", () => {
         cancelAtPeriodEnd: true,
       });
 
-      await subscriptionService.resumeSubscription("tenant-1");
+      await subscriptionService.resumeSubscription("tenant-1", "platform");
 
       expect(stripeService.resumeSubscription).toHaveBeenCalledWith("sub_stripe_123");
-      expect(subscriptionRepository.updateByTenantId).toHaveBeenCalledWith("tenant-1", {
+      expect(subscriptionRepository.updateByTenantId).toHaveBeenCalledWith("tenant-1", "platform", {
         cancelAtPeriodEnd: false,
         canceledAt: null,
       });
@@ -589,7 +593,7 @@ describe("SubscriptionService", () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(null);
 
       await expect(
-        subscriptionService.resumeSubscription("tenant-1")
+        subscriptionService.resumeSubscription("tenant-1", "platform")
       ).rejects.toThrow("SUBSCRIPTION_NOT_FOUND");
     });
 
@@ -600,7 +604,7 @@ describe("SubscriptionService", () => {
       });
 
       await expect(
-        subscriptionService.resumeSubscription("tenant-1")
+        subscriptionService.resumeSubscription("tenant-1", "platform")
       ).rejects.toThrow("SUBSCRIPTION_NOT_FOUND");
     });
 
@@ -608,7 +612,7 @@ describe("SubscriptionService", () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
 
       await expect(
-        subscriptionService.resumeSubscription("tenant-1")
+        subscriptionService.resumeSubscription("tenant-1", "platform")
       ).rejects.toThrow("SUBSCRIPTION_NOT_CANCELLING");
     });
   });
@@ -629,7 +633,7 @@ describe("SubscriptionService", () => {
         trialEnd: null,
       });
 
-      await subscriptionService.changePlan("tenant-1", "pro");
+      await subscriptionService.changePlan("tenant-1", "platform", "pro");
 
       expect(stripeService.updateSubscriptionPrice).toHaveBeenCalledWith({
         subscriptionId: "sub_stripe_123",
@@ -640,18 +644,13 @@ describe("SubscriptionService", () => {
         plan: "pro",
         stripePriceId: "price_pro_test",
       });
-      expect(subscriptionRepository.updateTenantSubscriptionStatus).toHaveBeenCalledWith(
-        "tenant-1",
-        "pro",
-        "active"
-      );
     });
 
     it("should throw when no subscription exists", async () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(null);
 
       await expect(
-        subscriptionService.changePlan("tenant-1", "pro")
+        subscriptionService.changePlan("tenant-1", "platform", "pro")
       ).rejects.toThrow("SUBSCRIPTION_NOT_FOUND");
     });
 
@@ -662,7 +661,7 @@ describe("SubscriptionService", () => {
       });
 
       await expect(
-        subscriptionService.changePlan("tenant-1", "pro")
+        subscriptionService.changePlan("tenant-1", "platform", "pro")
       ).rejects.toThrow("SUBSCRIPTION_NOT_FOUND");
     });
 
@@ -670,7 +669,7 @@ describe("SubscriptionService", () => {
       vi.mocked(subscriptionRepository.getByTenantId).mockResolvedValue(activeSubscription);
 
       await expect(
-        subscriptionService.changePlan("tenant-1", "starter")
+        subscriptionService.changePlan("tenant-1", "platform", "starter")
       ).rejects.toThrow("INVALID_PLAN_CODE");
     });
 
@@ -679,25 +678,25 @@ describe("SubscriptionService", () => {
       vi.mocked(stripeService.updateSubscriptionPrice).mockResolvedValue(null);
 
       await expect(
-        subscriptionService.changePlan("tenant-1", "pro")
+        subscriptionService.changePlan("tenant-1", "platform", "pro")
       ).rejects.toThrow("INTERNAL_ERROR");
     });
 
     it("should throw for invalid plan code", async () => {
       await expect(
-        subscriptionService.changePlan("tenant-1", "nonexistent")
+        subscriptionService.changePlan("tenant-1", "platform", "nonexistent")
       ).rejects.toThrow("INVALID_PLAN_CODE");
     });
 
     it("should throw when plan env var is not configured", async () => {
-      const original = process.env.STRIPE_PRO_PRICE_ID;
-      delete process.env.STRIPE_PRO_PRICE_ID;
+      const original = process.env.STRIPE_PLATFORM_PRO_PRICE_ID;
+      delete process.env.STRIPE_PLATFORM_PRO_PRICE_ID;
 
       await expect(
-        subscriptionService.changePlan("tenant-1", "pro")
+        subscriptionService.changePlan("tenant-1", "platform", "pro")
       ).rejects.toThrow("STRIPE_PRICE_NOT_CONFIGURED");
 
-      process.env.STRIPE_PRO_PRICE_ID = original;
+      process.env.STRIPE_PLATFORM_PRO_PRICE_ID = original;
     });
 
     it("should throw when subscription has no stripePriceId", async () => {
@@ -707,7 +706,7 @@ describe("SubscriptionService", () => {
       });
 
       await expect(
-        subscriptionService.changePlan("tenant-1", "pro")
+        subscriptionService.changePlan("tenant-1", "platform", "pro")
       ).rejects.toThrow("STRIPE_PRICE_NOT_CONFIGURED");
     });
 
@@ -729,7 +728,7 @@ describe("SubscriptionService", () => {
         trialEnd: null,
       });
 
-      await subscriptionService.changePlan("tenant-1", "pro");
+      await subscriptionService.changePlan("tenant-1", "platform", "pro");
 
       expect(stripeService.updateSubscriptionPrice).toHaveBeenCalled();
     });
@@ -817,17 +816,13 @@ describe("SubscriptionService", () => {
 
       expect(subscriptionRepository.updateByTenantId).toHaveBeenCalledWith(
         "tenant-1",
+        "platform",
         expect.objectContaining({
           stripeSubscriptionId: "sub_stripe_123",
           stripePriceId: "price_starter_test",
           plan: "starter",
           status: "active",
         })
-      );
-      expect(subscriptionRepository.updateTenantSubscriptionStatus).toHaveBeenCalledWith(
-        "tenant-1",
-        "starter",
-        "active"
       );
       consoleSpy.mockRestore();
     });
@@ -856,6 +851,7 @@ describe("SubscriptionService", () => {
 
       expect(subscriptionRepository.create).toHaveBeenCalledWith(
         "tenant-1",
+        "platform",
         expect.objectContaining({
           stripeCustomerId: "cus_123",
           stripeSubscriptionId: "sub_stripe_123",
@@ -887,6 +883,7 @@ describe("SubscriptionService", () => {
 
       expect(subscriptionRepository.create).toHaveBeenCalledWith(
         "tenant-1",
+        "platform",
         expect.objectContaining({
           stripePriceId: undefined,
           trialStart: undefined,
@@ -916,6 +913,7 @@ describe("SubscriptionService", () => {
 
       expect(subscriptionRepository.updateByTenantId).toHaveBeenCalledWith(
         "tenant-1",
+        "platform",
         expect.objectContaining({
           plan: "starter",
         })
@@ -943,6 +941,7 @@ describe("SubscriptionService", () => {
 
       expect(subscriptionRepository.updateByTenantId).toHaveBeenCalledWith(
         "tenant-1",
+        "platform",
         expect.objectContaining({
           plan: "starter",
         })
@@ -1002,6 +1001,7 @@ describe("SubscriptionService", () => {
 
       expect(subscriptionRepository.create).toHaveBeenCalledWith(
         "tenant-1",
+        "platform",
         expect.objectContaining({
           stripeCustomerId: "cus_123",
           stripeSubscriptionId: "sub_stripe_new",
@@ -1009,11 +1009,6 @@ describe("SubscriptionService", () => {
           plan: "starter",
           status: "trialing",
         })
-      );
-      expect(subscriptionRepository.updateTenantSubscriptionStatus).toHaveBeenCalledWith(
-        "tenant-1",
-        "starter",
-        "trialing"
       );
       consoleSpy.mockRestore();
     });
@@ -1029,6 +1024,7 @@ describe("SubscriptionService", () => {
 
       expect(subscriptionRepository.create).toHaveBeenCalledWith(
         "tenant-1",
+        "platform",
         expect.objectContaining({
           plan: "starter", // defaults to starter
         })
@@ -1048,6 +1044,7 @@ describe("SubscriptionService", () => {
 
       expect(subscriptionRepository.create).toHaveBeenCalledWith(
         "tenant-1",
+        "platform",
         expect.objectContaining({
           trialStart: undefined,
           trialEnd: undefined,
@@ -1091,11 +1088,6 @@ describe("SubscriptionService", () => {
           canceledAt: null,
           plan: "starter",
         })
-      );
-      expect(subscriptionRepository.updateTenantSubscriptionStatus).toHaveBeenCalledWith(
-        "tenant-1",
-        "starter",
-        "active"
       );
       consoleSpy.mockRestore();
     });
@@ -1202,7 +1194,7 @@ describe("SubscriptionService", () => {
       consoleSpy.mockRestore();
     });
 
-    it("should use existing plan when priceId is not recognized", async () => {
+    it("should not set plan when priceId is not recognized", async () => {
       const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
       vi.mocked(subscriptionRepository.getByStripeSubscriptionId).mockResolvedValue(
         activeSubscription
@@ -1214,16 +1206,12 @@ describe("SubscriptionService", () => {
       });
 
       // updateData.plan should not be set (unrecognized priceId doesn't set plan in updateData)
-      // but updateTenantSubscriptionStatus uses the existing plan
-      expect(subscriptionRepository.updateTenantSubscriptionStatus).toHaveBeenCalledWith(
-        "tenant-1",
-        "starter", // falls back to existing plan
-        "active"
-      );
+      const updateCall = vi.mocked(subscriptionRepository.update).mock.calls[0];
+      expect(updateCall[1]).not.toHaveProperty("plan");
       consoleSpy.mockRestore();
     });
 
-    it("should use existing plan when no price items", async () => {
+    it("should not set plan when no price items", async () => {
       const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
       vi.mocked(subscriptionRepository.getByStripeSubscriptionId).mockResolvedValue(
         activeSubscription
@@ -1234,11 +1222,9 @@ describe("SubscriptionService", () => {
         items: { data: [] },
       });
 
-      expect(subscriptionRepository.updateTenantSubscriptionStatus).toHaveBeenCalledWith(
-        "tenant-1",
-        "starter", // existing plan
-        "active"
-      );
+      // No plan should be set in updateData when there are no price items
+      const updateCall = vi.mocked(subscriptionRepository.update).mock.calls[0];
+      expect(updateCall[1]).not.toHaveProperty("plan");
       consoleSpy.mockRestore();
     });
   });
@@ -1270,11 +1256,6 @@ describe("SubscriptionService", () => {
         status: "canceled",
         canceledAt: expect.any(Date),
       });
-      expect(subscriptionRepository.updateTenantSubscriptionStatus).toHaveBeenCalledWith(
-        "tenant-1",
-        "free",
-        "canceled"
-      );
       consoleSpy.mockRestore();
     });
 
@@ -1316,11 +1297,6 @@ describe("SubscriptionService", () => {
         status: "active",
         gracePeriodEnd: null,
       });
-      expect(subscriptionRepository.updateTenantSubscriptionStatus).toHaveBeenCalledWith(
-        "tenant-1",
-        "starter",
-        "active"
-      );
       consoleSpy.mockRestore();
     });
 
@@ -1379,11 +1355,6 @@ describe("SubscriptionService", () => {
       expect(diffDays).toBeGreaterThan(6);
       expect(diffDays).toBeLessThan(8);
 
-      expect(subscriptionRepository.updateTenantSubscriptionStatus).toHaveBeenCalledWith(
-        "tenant-1",
-        "starter",
-        "past_due"
-      );
       consoleSpy.mockRestore();
     });
 
