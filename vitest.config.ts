@@ -19,6 +19,11 @@ export default defineConfig({
       exclude: [
         // Test fixtures — helper code for tests, not product code
         "**/__tests__/fixtures/**",
+        // Dev-only DB perf instrumentation (DB_PERF_LOG=1). Off in prod and
+        // tests, relies on next/headers + Prisma $extends runtime — the pure
+        // helpers (detectN1, flag-off branch of maybeAttachDbPerf) are
+        // unit-tested in db-instrumentation.test.ts. See #297.
+        "src/lib/db-instrumentation.ts",
         // Repository implementations without unit tests — covered by integration tests
         "src/repositories/catering-order.repository.ts",
         "src/repositories/catering.repository.ts",
