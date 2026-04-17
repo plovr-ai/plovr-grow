@@ -91,4 +91,5 @@ export interface CartWithItems {
 export interface CheckoutResult {
   orderId: string;
   orderNumber: string;
+  alreadyExists: boolean;
 }
