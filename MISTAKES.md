@@ -1,5 +1,21 @@
 # Mistakes Log
 
+## [280] vi.mock of a service module must be updated when adding new service methods used by migrated routes
+
+**Date**: 2026-04-17
+**Category**: test-mistake
+
+### What went wrong
+Migrated `api/external/v1/merchants/lookup/route.ts` to call a new `merchantService.lookupByAiPhone` instead of `merchantRepository.getByAiPhone`. Two phone-ai integration tests use `vi.mock("@/services/merchant", () => ({ merchantService: { getMerchantById: ... } }))` to intercept `getMerchantById`. The mock replaces the entire module export, so the new `lookupByAiPhone` method was `undefined` — the lookup handler threw and returned 500 instead of 200/404.
+
+### Correct approach
+When moving a route from repository access to a service call, grep for `vi.mock("@/services/<that-service>"` across the test suite. Each mock factory that replaces the whole service export must include either a pass-through for the new method (e.g., `lookupByAiPhone: (phone) => merchantRepository.getByAiPhone(phone)`) or an explicit `vi.fn()` mock alongside existing methods.
+
+### How to avoid
+Before committing any `api/**/route.ts` change that introduces a new `service.<method>` call, grep `vi.mock.*<service-path>` and confirm every mock factory already exports the new method.
+
+---
+
 ## [262] Pipecat JS SDK API differs from documentation examples
 
 **Date**: 2026-04-15
