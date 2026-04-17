@@ -302,6 +302,7 @@ model Order {
   payments            Payment[]
   orderItems          OrderItem[]
   fulfillments        OrderFulfillment[]
+  carts               Cart[]
 
   @@unique([tenantId, orderNumber])
   @@index([merchantId])
@@ -362,16 +363,19 @@ model Cart {
   status       String     @default("active")
   salesChannel String     @map("sales_channel")
   notes        String?    @db.Text
+  orderId      String?    @map("order_id")
   deleted      Boolean    @default(false)
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
   tenant       Tenant     @relation(fields: [tenantId], references: [id])
   merchant     Merchant   @relation(fields: [merchantId], references: [id])
+  order        Order?     @relation(fields: [orderId], references: [id], onDelete: SetNull)
   cartItems    CartItem[]
 
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([merchantId])
+  @@index([orderId])
   @@map("carts")
 }
 
