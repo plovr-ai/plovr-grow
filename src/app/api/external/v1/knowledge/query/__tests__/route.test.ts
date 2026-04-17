@@ -32,6 +32,8 @@ vi.mock("@sentry/nextjs", () => ({
 
 import { POST } from "../route";
 
+const dummyContext = { params: Promise.resolve({}) };
+
 function createRequest(body: Record<string, unknown>): NextRequest {
   return new NextRequest(
     new URL("http://localhost/api/external/v1/knowledge/query"),
@@ -79,21 +81,21 @@ describe("POST /api/external/v1/knowledge/query", () => {
 
   it("should return 401 when not authenticated", async () => {
     mockValidateExternalRequest.mockResolvedValue({ authenticated: false });
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["MENU"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["MENU"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(401);
     expect(json).toEqual({ success: false, error: { code: "UNAUTHORIZED" } });
   });
 
   it("should return 400 when targets is empty", async () => {
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: [] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: [] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(400);
     expect(json.success).toBe(false);
   });
 
   it("should return 400 when targets has invalid value", async () => {
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["INVALID_TARGET"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["INVALID_TARGET"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(400);
     expect(json.success).toBe(false);
@@ -101,7 +103,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
 
   it("should return 404 when merchant not found", async () => {
     mockGetMerchantById.mockResolvedValue(null);
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["RESTAURANT_INFO"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["RESTAURANT_INFO"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(404);
     expect(json).toEqual({ success: false, error: { code: "MERCHANT_NOT_FOUND" } });
@@ -109,7 +111,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
 
   it("should return RESTAURANT_INFO as JSON string", async () => {
     mockGetMerchantById.mockResolvedValue(mockMerchant);
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["RESTAURANT_INFO"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["RESTAURANT_INFO"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     expect(json.success).toBe(true);
@@ -121,7 +123,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
 
   it("should return OPENING_HOURS as JSON string", async () => {
     mockGetMerchantById.mockResolvedValue(mockMerchant);
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["OPENING_HOURS"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["OPENING_HOURS"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     const hours = JSON.parse(json.data.knowledgeMap.OPENING_HOURS.data);
@@ -130,7 +132,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
 
   it("should return ORDER_CONFIG from merchant settings", async () => {
     mockGetMerchantById.mockResolvedValue(mockMerchant);
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["ORDER_CONFIG"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["ORDER_CONFIG"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     const config = JSON.parse(json.data.knowledgeMap.ORDER_CONFIG.data);
@@ -143,7 +145,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
       menus: [{ id: "menu1", name: "Main Menu" }],
       categories: [{ id: "cat1", name: "Appetizers", menuItems: [{ id: "item1", name: "Spring Roll", price: 5.99 }] }],
     });
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["MENU"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["MENU"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     const menu = JSON.parse(json.data.knowledgeMap.MENU.data);
@@ -154,7 +156,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
 
   it("should return GREETINGS from phoneAiSettings", async () => {
     mockGetMerchantById.mockResolvedValue(mockMerchant);
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["GREETINGS"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["GREETINGS"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     expect(json.data.knowledgeMap.GREETINGS).toEqual({
@@ -164,7 +166,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
 
   it("should return FAQ from phoneAiSettings as JSON string", async () => {
     mockGetMerchantById.mockResolvedValue(mockMerchant);
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["FAQ"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["FAQ"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     const faq = JSON.parse(json.data.knowledgeMap.FAQ.data);
@@ -174,7 +176,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
 
   it("should return AGENT_WORK_SWITCH from phoneAiSettings", async () => {
     mockGetMerchantById.mockResolvedValue(mockMerchant);
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["AGENT_WORK_SWITCH"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["AGENT_WORK_SWITCH"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     expect(json.data.knowledgeMap.AGENT_WORK_SWITCH).toEqual({
@@ -185,7 +187,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
   it("should return null for GREETINGS when phoneAiSettings is missing", async () => {
     const merchantWithoutPhoneAi = { ...mockMerchant, phoneAiSettings: undefined };
     mockGetMerchantById.mockResolvedValue(merchantWithoutPhoneAi);
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["GREETINGS", "FAQ", "AGENT_WORK_SWITCH"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["GREETINGS", "FAQ", "AGENT_WORK_SWITCH"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     expect(json.data.knowledgeMap.GREETINGS).toBeNull();
@@ -204,7 +206,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
       },
     };
     mockGetMerchantById.mockResolvedValue(merchantWithServices);
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["SERVICE_PROVIDED"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["SERVICE_PROVIDED"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     const service = JSON.parse(json.data.knowledgeMap.SERVICE_PROVIDED.data);
@@ -217,7 +219,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
   it("should return SERVICE_PROVIDED with defaults when settings is null", async () => {
     const merchantNoSettings = { ...mockMerchant, settings: undefined };
     mockGetMerchantById.mockResolvedValue(merchantNoSettings);
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["SERVICE_PROVIDED"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["SERVICE_PROVIDED"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     const service = JSON.parse(json.data.knowledgeMap.SERVICE_PROVIDED.data);
@@ -228,7 +230,7 @@ describe("POST /api/external/v1/knowledge/query", () => {
 
   it("should only return requested targets", async () => {
     mockGetMerchantById.mockResolvedValue(mockMerchant);
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["OPENING_HOURS"] }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", targets: ["OPENING_HOURS"] }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     expect(Object.keys(json.data.knowledgeMap)).toEqual(["OPENING_HOURS"]);

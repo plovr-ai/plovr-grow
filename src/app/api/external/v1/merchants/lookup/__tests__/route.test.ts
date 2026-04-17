@@ -25,6 +25,8 @@ vi.mock("@sentry/nextjs", () => ({
 
 import { POST } from "../route";
 
+const dummyContext = { params: Promise.resolve({}) };
+
 function createRequest(body: Record<string, unknown>): NextRequest {
   return new NextRequest(
     new URL("http://localhost/api/external/v1/merchants/lookup"),
@@ -40,14 +42,14 @@ describe("POST /api/external/v1/merchants/lookup", () => {
 
   it("should return 401 when not authenticated", async () => {
     mockValidateExternalRequest.mockResolvedValue({ authenticated: false });
-    const response = await POST(createRequest({ phone: "+14155551234" }));
+    const response = await POST(createRequest({ phone: "+14155551234" }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(401);
     expect(json).toEqual({ success: false, error: { code: "UNAUTHORIZED" } });
   });
 
   it("should return 400 when phone is missing", async () => {
-    const response = await POST(createRequest({}));
+    const response = await POST(createRequest({}), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(400);
     expect(json.success).toBe(false);
@@ -56,7 +58,7 @@ describe("POST /api/external/v1/merchants/lookup", () => {
 
   it("should return 404 when merchant not found", async () => {
     mockGetByAiPhone.mockResolvedValue(null);
-    const response = await POST(createRequest({ phone: "+10000000000" }));
+    const response = await POST(createRequest({ phone: "+10000000000" }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(404);
     expect(json).toEqual({ success: false, error: { code: "MERCHANT_NOT_FOUND" } });
@@ -69,7 +71,7 @@ describe("POST /api/external/v1/merchants/lookup", () => {
       address: "123 Main St", city: "San Francisco", state: "CA", zipCode: "94102",
       phoneAiSettings: null,
     });
-    const response = await POST(createRequest({ phone: "+14155551234" }));
+    const response = await POST(createRequest({ phone: "+14155551234" }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     expect(json.success).toBe(true);
@@ -90,7 +92,7 @@ describe("POST /api/external/v1/merchants/lookup", () => {
       address: "123 Main St", city: "San Francisco", state: "CA", zipCode: "94102",
       phoneAiSettings: { agentWorkSwitch: "+14155559999" },
     });
-    const response = await POST(createRequest({ phone: "+14155551234" }));
+    const response = await POST(createRequest({ phone: "+14155551234" }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     expect(json.data.forwardPhone).toBe("+14155559999");

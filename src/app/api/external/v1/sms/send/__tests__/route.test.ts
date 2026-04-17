@@ -25,6 +25,8 @@ vi.mock("@sentry/nextjs", () => ({
 
 import { POST } from "../route";
 
+const dummyContext = { params: Promise.resolve({}) };
+
 function createRequest(body: Record<string, unknown>): NextRequest {
   return new NextRequest(
     new URL("http://localhost/api/external/v1/sms/send"),
@@ -40,14 +42,14 @@ describe("POST /api/external/v1/sms/send", () => {
 
   it("should return 401 when not authenticated", async () => {
     mockValidateExternalRequest.mockResolvedValue({ authenticated: false });
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", mobile: "+14155551234", message: "Hello" }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", mobile: "+14155551234", message: "Hello" }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(401);
     expect(json).toEqual({ success: false, error: { code: "UNAUTHORIZED" } });
   });
 
   it("should return 400 when required fields are missing", async () => {
-    const response = await POST(createRequest({ tenantId: "t1" }));
+    const response = await POST(createRequest({ tenantId: "t1" }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(400);
     expect(json.success).toBe(false);
@@ -55,7 +57,7 @@ describe("POST /api/external/v1/sms/send", () => {
   });
 
   it("should return 400 when message exceeds 1600 chars", async () => {
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", mobile: "+14155551234", message: "x".repeat(1601) }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", mobile: "+14155551234", message: "x".repeat(1601) }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(400);
     expect(json.success).toBe(false);
@@ -63,7 +65,7 @@ describe("POST /api/external/v1/sms/send", () => {
 
   it("should return 500 when SMS send fails", async () => {
     mockSendMessage.mockResolvedValue({ success: false, error: "Provider error" });
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", mobile: "+14155551234", message: "Hello" }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", mobile: "+14155551234", message: "Hello" }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(500);
     expect(json.success).toBe(false);
@@ -71,7 +73,7 @@ describe("POST /api/external/v1/sms/send", () => {
 
   it("should return messageId on success", async () => {
     mockSendMessage.mockResolvedValue({ success: true, messageId: "SM123" });
-    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", mobile: "+14155551234", message: "Your order link" }));
+    const response = await POST(createRequest({ tenantId: "t1", merchantId: "m1", mobile: "+14155551234", message: "Your order link" }), dummyContext);
     const json = await response.json();
     expect(response.status).toBe(200);
     expect(json).toEqual({ success: true, data: { messageId: "SM123" } });
