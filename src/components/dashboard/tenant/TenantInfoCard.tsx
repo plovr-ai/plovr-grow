@@ -19,7 +19,6 @@ import {
   Pencil,
   ChevronRight,
 } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { TenantSettingsForm } from "./TenantSettingsForm";
 
@@ -80,7 +79,7 @@ export function TenantInfoCard({ tenant }: TenantInfoCardProps) {
             {/* Logo */}
             <div className="flex-shrink-0">
               {tenant.logoUrl ? (
-                <Image
+                <img
                   src={tenant.logoUrl}
                   alt={tenant.name}
                   width={80}

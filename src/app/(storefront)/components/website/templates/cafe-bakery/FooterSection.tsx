@@ -1,4 +1,3 @@
-import Image from "next/image";
 import type { SocialLink, BusinessHoursMap } from "@/types/website";
 
 interface FooterSectionProps {
@@ -83,7 +82,7 @@ export function FooterSection({
           <div>
             <div className="flex items-center gap-3 mb-4">
               {logo && (
-                <Image
+                <img
                   src={logo}
                   alt={name}
                   width={48}

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Container } from "@/components/website/ui/Container";
 import { WebsiteButton } from "@/components/website/ui/WebsiteButton";
 import { siteConfig } from "@/config/site";
@@ -66,27 +65,24 @@ function SocialAgentCard() {
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2">
         <div className="relative aspect-square overflow-hidden rounded-sm">
-          <Image
+          <img
             src="/images/grow-agent/social-bg-1.png"
             alt="Social media content"
-            fill
-            className="object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
           />
         </div>
         <div className="relative aspect-square overflow-hidden rounded-sm">
-          <Image
+          <img
             src="/images/grow-agent/social-bg-2.png"
             alt="Social media content"
-            fill
-            className="object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
           />
         </div>
         <div className="relative aspect-square overflow-hidden rounded-sm">
-          <Image
+          <img
             src="/images/grow-agent/social-overlay.png"
             alt="Social media content"
-            fill
-            className="object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
           />
         </div>
       </div>

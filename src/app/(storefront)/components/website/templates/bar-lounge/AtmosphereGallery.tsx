@@ -1,4 +1,3 @@
-import Image from "next/image";
 import type { FeaturedItem } from "@/types/website";
 
 interface AtmosphereGalleryProps {
@@ -38,11 +37,10 @@ export function AtmosphereGallery({
               key={i}
               className="relative aspect-square rounded-lg overflow-hidden"
             >
-              <Image
+              <img
                 src={image.src}
                 alt={image.alt}
-                fill
-                className="object-cover hover:scale-105 transition-transform duration-300"
+                className="absolute inset-0 h-full w-full object-cover hover:scale-105 transition-transform duration-300"
               />
             </div>
           ))}

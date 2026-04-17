@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useRef } from "react";
 import type { MenuItemViewModel, MenuItemTag } from "@/types/menu-page";
 import { useFormatPrice } from "@/hooks";
@@ -58,12 +57,10 @@ export function MenuItemCard({ item, onAddClick }: MenuItemCardProps) {
           ref={imageRef}
           className="relative flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden"
         >
-          <Image
+          <img
             src={item.imageUrl}
             alt={item.name}
-            fill
-            sizes="(max-width: 640px) 96px, 112px"
-            className="object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
           />
         </div>
       ) : (

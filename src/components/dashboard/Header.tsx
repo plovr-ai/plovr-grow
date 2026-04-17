@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { LogOut, User } from "lucide-react";
 import { signOutAction } from "@/app/(dashboard)/dashboard/actions";
 import { useDashboard } from "@/contexts";
@@ -12,7 +11,7 @@ export function Header() {
     <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6">
       <div className="flex items-center gap-3">
         {tenant.logoUrl && (
-          <Image
+          <img
             src={tenant.logoUrl}
             alt={`${tenant.name} logo`}
             width={32}

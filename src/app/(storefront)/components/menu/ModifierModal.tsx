@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useCallback, useEffect } from "react";
 import type {
   MenuItemViewModel,
@@ -245,7 +244,7 @@ export function ModifierModal({
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-start gap-4">
             {item.imageUrl && (
-              <Image
+              <img
                 src={item.imageUrl}
                 alt={item.name}
                 width={80}

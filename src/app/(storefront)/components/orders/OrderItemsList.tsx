@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useFormatPrice } from "@/hooks";
 import type { OrderItemData } from "@/types";
 
@@ -26,7 +25,7 @@ export function OrderItemsList({ items, imageMap }: Props) {
             <div className="flex gap-3">
               {/* Item Image */}
               {imageUrl ? (
-                <Image
+                <img
                   src={imageUrl}
                   alt={item.name}
                   width={56}

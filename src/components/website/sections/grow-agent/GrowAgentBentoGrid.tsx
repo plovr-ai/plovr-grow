@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Container } from "@/components/website/ui/Container";
 
 function SeoMiniTable() {
@@ -22,11 +21,10 @@ function ConversionMini() {
   return (
     <div className="flex items-center gap-4">
       <div className="relative size-[100px] shrink-0 overflow-hidden rounded-lg">
-        <Image
+        <img
           src="/images/grow-agent/food-sandwich.png"
           alt="Menu item"
-          fill
-          className="object-cover"
+          className="absolute inset-0 h-full w-full object-cover"
         />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1">

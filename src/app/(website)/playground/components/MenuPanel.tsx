@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
 import type { MenuCategoryWithItems } from "@/services/menu/menu.types";
 
@@ -35,12 +34,10 @@ export function MenuPanel({ categories, currency = "USD" }: MenuPanelProps) {
               >
                 {item.imageUrl && (
                   <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
-                    <Image
+                    <img
                       src={item.imageUrl}
                       alt={item.name}
-                      fill
-                      sizes="64px"
-                      className="object-cover"
+                      className="absolute inset-0 h-full w-full object-cover"
                     />
                   </div>
                 )}
