@@ -10,6 +10,7 @@ vi.mock("@/repositories/merchant.repository", () => ({
     getByIdWithTenant: vi.fn(),
     getByTenantIdWithTenant: vi.fn(),
     getActiveByTenantIdWithTenant: vi.fn(),
+    getByAiPhone: vi.fn(),
     isSlugAvailable: vi.fn(),
     isOpen: vi.fn(),
     create: vi.fn(),
@@ -1724,6 +1725,26 @@ describe("MerchantService (unit tests)", () => {
       const result = await merchantService.isOpen("merchant-1");
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe("lookupByAiPhone()", () => {
+    it("delegates to repository.getByAiPhone", async () => {
+      const merchant = { id: "m1", tenantId: "t1", name: "X" };
+      vi.mocked(merchantRepository.getByAiPhone).mockResolvedValue(merchant as never);
+
+      const result = await merchantService.lookupByAiPhone("+14155551234");
+
+      expect(merchantRepository.getByAiPhone).toHaveBeenCalledWith("+14155551234");
+      expect(result).toEqual(merchant);
+    });
+
+    it("returns null when no merchant found", async () => {
+      vi.mocked(merchantRepository.getByAiPhone).mockResolvedValue(null);
+
+      const result = await merchantService.lookupByAiPhone("+10000000000");
+
+      expect(result).toBeNull();
     });
   });
 });

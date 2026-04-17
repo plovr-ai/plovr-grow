@@ -148,8 +148,31 @@ describe("TenantRepository", () => {
     });
   });
 
+  describe("getNameAndSupportEmail", () => {
+    it("should select only name and supportEmail without deleted filter", async () => {
+      vi.mocked(prisma.tenant.findUnique).mockResolvedValue({
+        name: "Joe's Pizza",
+        supportEmail: "support@joes.com",
+      } as never);
+
+      const result = await repository.getNameAndSupportEmail("tenant-1");
+
+      expect(prisma.tenant.findUnique).toHaveBeenCalledWith({
+        where: { id: "tenant-1" },
+        select: { name: true, supportEmail: true },
+      });
+      expect(result).toEqual({ name: "Joe's Pizza", supportEmail: "support@joes.com" });
+    });
+
+    it("should return null when tenant not found", async () => {
+      vi.mocked(prisma.tenant.findUnique).mockResolvedValue(null);
+      const result = await repository.getNameAndSupportEmail("missing");
+      expect(result).toBeNull();
+    });
+  });
+
   describe("create", () => {
-    it("should create tenant with generated ID", async () => {
+    it("should create tenant with generated ID when no id supplied", async () => {
       vi.mocked(prisma.tenant.create).mockResolvedValue(mockTenant as never);
 
       const createData = {
@@ -167,6 +190,28 @@ describe("TenantRepository", () => {
       });
       expect(result).toEqual(mockTenant);
     });
+
+    it("should use caller-supplied id when present", async () => {
+      vi.mocked(prisma.tenant.create).mockResolvedValue(mockTenant as never);
+
+      await repository.create({ id: "pre-allocated-id", slug: "x", name: "X" });
+
+      expect(prisma.tenant.create).toHaveBeenCalledWith({
+        data: { id: "pre-allocated-id", slug: "x", name: "X" },
+      });
+    });
+
+    it("should use tx client when provided", async () => {
+      const txCreate = vi.fn().mockResolvedValue(mockTenant);
+      const tx = { tenant: { create: txCreate } } as never;
+
+      await repository.create({ slug: "y", name: "Y" }, tx);
+
+      expect(txCreate).toHaveBeenCalledWith({
+        data: { id: "generated-id-123", slug: "y", name: "Y" },
+      });
+      expect(prisma.tenant.create).not.toHaveBeenCalled();
+    });
   });
 
   describe("update", () => {
@@ -183,6 +228,19 @@ describe("TenantRepository", () => {
         data: { name: "Updated Name" },
       });
       expect(result.name).toBe("Updated Name");
+    });
+
+    it("should use tx client when provided", async () => {
+      const txUpdate = vi.fn().mockResolvedValue({ ...mockTenant, name: "Tx Update" });
+      const tx = { tenant: { update: txUpdate } } as never;
+
+      await repository.update("tenant-1", { name: "Tx Update" }, tx);
+
+      expect(txUpdate).toHaveBeenCalledWith({
+        where: { id: "tenant-1" },
+        data: { name: "Tx Update" },
+      });
+      expect(prisma.tenant.update).not.toHaveBeenCalled();
     });
   });
 
