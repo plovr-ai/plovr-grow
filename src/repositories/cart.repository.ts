@@ -49,6 +49,38 @@ export class CartRepository {
     });
   }
 
+  async claimForCheckout(tenantId: string, cartId: string) {
+    return prisma.cart.updateMany({
+      where: {
+        id: cartId,
+        tenantId,
+        status: "active",
+        deleted: false,
+      },
+      data: { status: "submitted" },
+    });
+  }
+
+  async rollbackCheckoutClaim(tenantId: string, cartId: string) {
+    return prisma.cart.updateMany({
+      where: {
+        id: cartId,
+        tenantId,
+        status: "submitted",
+        orderId: null,
+        deleted: false,
+      },
+      data: { status: "active" },
+    });
+  }
+
+  async attachOrderId(tenantId: string, cartId: string, orderId: string) {
+    return prisma.cart.updateMany({
+      where: { id: cartId, tenantId, deleted: false },
+      data: { orderId },
+    });
+  }
+
   async addItem(
     cartId: string,
     data: {
