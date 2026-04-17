@@ -111,6 +111,13 @@ npm run lint             # 代码检查
 - **禁止硬编码货币符号** — 使用 `useFormatPrice()` / `useDashboardFormatPrice()`
 - 新增错误码时同步更新 `error-codes.ts` 和 `shared/en.json`
 
+### 图片使用规范
+
+- 本项目**不使用** Next.js 图片优化（`images.unoptimized: true`），依赖 CDN 自带的图片优化能力
+- 统一使用原生 `<img>` 元素，**禁止** `import Image from "next/image"`
+- 不需要维护 `remotePatterns` 白名单
+- 首屏关键图（Hero、Logo）可加 `loading="eager"`；其余图默认浏览器原生 lazy-load
+
 ### 主题色使用规范
 
 项目使用 CSS 变量实现主题系统，每个主题色包含 4 个变体：
