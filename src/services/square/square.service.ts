@@ -3,9 +3,14 @@ import { squareOAuthService } from "./square-oauth.service";
 import { squareCatalogService } from "./square-catalog.service";
 import { squareOrderService } from "./square-order.service";
 import { integrationRepository } from "@/repositories/integration.repository";
+import { menuRepository } from "@/repositories/menu.repository";
+import { menuEntityRepository } from "@/repositories/menu-entity.repository";
+import { menuCategoryItemRepository } from "@/repositories/menu-category-item.repository";
+import { taxConfigRepository } from "@/repositories/tax-config.repository";
+import { modifierRepository } from "@/repositories/modifier.repository";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import { generateEntityId } from "@/lib/id";
-import prisma from "@/lib/db";
+import { runInTransaction } from "@/lib/transaction";
 import { menuService } from "@/services/menu";
 import type { ModifierGroupInput, ModifierInput } from "@/services/menu/menu.types";
 import type {
@@ -128,32 +133,29 @@ export class SquareService {
     const syncStartTime = new Date().toISOString();
     const syncType = useIncremental ? "CATALOG_INCREMENTAL" : "CATALOG_FULL";
 
-    // Atomic concurrency guard + sync record creation
-    const syncRecord = await prisma.$transaction(async (tx) => {
-      // Acquire exclusive lock on connection row — serializes concurrent sync attempts
+    // Atomic concurrency guard + sync record creation.
+    // Acquires FOR UPDATE lock on the connection row to serialize concurrent
+    // sync attempts, then rejects if another running sync already exists.
+    const syncRecord = await runInTransaction(async (tx) => {
       await integrationRepository.getConnectionForUpdate(connection.id, tx);
 
-      const staleThreshold = new Date(Date.now() - 10 * 60 * 1000);
-      const runningSync = await tx.integrationSyncRecord.findFirst({
-        where: {
-          connectionId: connection.id,
-          status: "running",
-          startedAt: { gte: staleThreshold },
-        },
-      });
+      const runningSync = await integrationRepository.getRunningSync(
+        connection.id,
+        tx
+      );
       if (runningSync) {
-        throw new AppError(ErrorCodes.SQUARE_SYNC_ALREADY_RUNNING, undefined, 409);
+        throw new AppError(
+          ErrorCodes.SQUARE_SYNC_ALREADY_RUNNING,
+          undefined,
+          409
+        );
       }
-      return tx.integrationSyncRecord.create({
-        data: {
-          id: generateEntityId(),
-          tenantId,
-          connectionId: connection.id,
-          syncType,
-          status: "running",
-          startedAt: new Date(),
-        },
-      });
+      return integrationRepository.createSyncRecord(
+        tenantId,
+        connection.id,
+        syncType,
+        tx
+      );
     });
 
     try {
@@ -185,20 +187,15 @@ export class SquareService {
       const mapped = squareCatalogService.mapToMenuModels(rawCatalog);
 
       // Persist to database in a transaction
-      await prisma.$transaction(async (tx) => {
+      await runInTransaction(async (tx) => {
         // Ensure a default menu exists
-        let menu = await tx.menu.findFirst({
-          where: { tenantId, deleted: false },
-        });
+        let menu = await menuEntityRepository.findDefaultMenu(tenantId, tx);
         if (!menu) {
-          menu = await tx.menu.create({
-            data: {
-              id: generateEntityId(),
-              tenantId,
-              name: "Main Menu",
-              sortOrder: 0,
-            },
-          });
+          menu = await menuEntityRepository.createDefaultMenu(
+            tenantId,
+            "Main Menu",
+            tx
+          );
         }
 
         // Upsert categories
@@ -208,25 +205,17 @@ export class SquareService {
             await integrationRepository.getIdMappingByExternalId(
               tenantId,
               "SQUARE",
-              cat.externalId
+              cat.externalId,
+              tx
             );
           const internalId = existingMapping?.internalId ?? generateEntityId();
 
-          await tx.menuCategory.upsert({
-            where: { id: internalId },
-            create: {
-              id: internalId,
-              tenantId,
-              menuId: menu.id,
-              name: cat.name,
-              sortOrder: cat.sortOrder,
-            },
-            update: {
-              name: cat.name,
-              sortOrder: cat.sortOrder,
-              deleted: false,
-            },
-          });
+          await menuRepository.upsertCategory(
+            tenantId,
+            menu.id,
+            { id: internalId, name: cat.name, sortOrder: cat.sortOrder },
+            tx
+          );
 
           categoryIdMap.set(cat.externalId, internalId);
 
@@ -249,50 +238,33 @@ export class SquareService {
             await integrationRepository.getIdMappingByExternalId(
               tenantId,
               "SQUARE",
-              item.externalId
+              item.externalId,
+              tx
             );
           const internalId = existingMapping?.internalId ?? generateEntityId();
 
-          await tx.menuItem.upsert({
-            where: { id: internalId },
-            create: {
+          await menuRepository.upsertItem(
+            tenantId,
+            {
               id: internalId,
-              tenantId,
               name: item.name,
               description: item.description,
               price: item.price,
             },
-            update: {
-              name: item.name,
-              description: item.description,
-              price: item.price,
-              deleted: false,
-            },
-          });
+            tx
+          );
 
           // Link to categories
           for (const catExtId of item.categoryExternalIds) {
             const catInternalId = categoryIdMap.get(catExtId);
             if (!catInternalId) continue;
 
-            await tx.menuCategoryItem.upsert({
-              where: {
-                categoryId_menuItemId: {
-                  categoryId: catInternalId,
-                  menuItemId: internalId,
-                },
-              },
-              create: {
-                id: generateEntityId(),
-                tenantId,
-                categoryId: catInternalId,
-                menuItemId: internalId,
-                sortOrder: 0,
-              },
-              update: {
-                deleted: false,
-              },
-            });
+            await menuCategoryItemRepository.upsertLink(
+              tenantId,
+              catInternalId,
+              internalId,
+              tx
+            );
           }
 
           // ID mapping for item
@@ -355,15 +327,18 @@ export class SquareService {
               if (firstOptionExtId) {
                 const existingOptionMapping =
                   await integrationRepository.getIdMappingByExternalId(
-                    tenantId, "SQUARE", firstOptionExtId
+                    tenantId,
+                    "SQUARE",
+                    firstOptionExtId,
+                    tx
                   );
                 if (existingOptionMapping?.internalType === "ModifierOption") {
-                  const existingOption = await tx.modifierOption.findUnique({
-                    where: { id: existingOptionMapping.internalId },
-                    select: { groupId: true },
-                  });
-                  if (existingOption) {
-                    modifierGroupId = existingOption.groupId;
+                  const existingGroupId = await modifierRepository.getOptionGroupId(
+                    existingOptionMapping.internalId,
+                    tx
+                  );
+                  if (existingGroupId) {
+                    modifierGroupId = existingGroupId;
                   }
                 }
               }
@@ -378,7 +353,10 @@ export class SquareService {
                 const opt = group.options[optIdx];
                 const existingOptMapping =
                   await integrationRepository.getIdMappingByExternalId(
-                    tenantId, "SQUARE", opt.externalId
+                    tenantId,
+                    "SQUARE",
+                    opt.externalId,
+                    tx
                   );
                 const optionId =
                   (existingOptMapping?.internalType === "ModifierOption"
@@ -446,41 +424,28 @@ export class SquareService {
             await integrationRepository.getIdMappingByExternalId(
               tenantId,
               "SQUARE",
-              tax.externalId
+              tax.externalId,
+              tx
             );
           const internalId = existingMapping?.internalId ?? generateEntityId();
 
-          await tx.taxConfig.upsert({
-            where: { id: internalId },
-            create: {
+          await taxConfigRepository.upsertTaxConfig(
+            tenantId,
+            {
               id: internalId,
-              tenantId,
               name: tax.name,
               inclusionType: tax.inclusionType,
             },
-            update: {
-              name: tax.name,
-              inclusionType: tax.inclusionType,
-              deleted: false,
-            },
-          });
+            tx
+          );
 
           // Create merchant tax rate
-          await tx.merchantTaxRate.upsert({
-            where: {
-              merchantId_taxConfigId: { merchantId, taxConfigId: internalId },
-            },
-            create: {
-              id: generateEntityId(),
-              merchantId,
-              taxConfigId: internalId,
-              rate: tax.percentage / 100,
-            },
-            update: {
-              rate: tax.percentage / 100,
-              deleted: false,
-            },
-          });
+          await taxConfigRepository.upsertMerchantTaxRate(
+            merchantId,
+            internalId,
+            tax.percentage / 100,
+            tx
+          );
 
           await integrationRepository.upsertIdMapping(
             tenantId,
@@ -500,51 +465,53 @@ export class SquareService {
           const mapping = await integrationRepository.getIdMappingByExternalId(
             tenantId,
             "SQUARE",
-            deletedExtId
+            deletedExtId,
+            tx
           );
           if (!mapping) continue;
 
           switch (mapping.internalType) {
             case "MenuCategory":
-              await tx.menuCategory.updateMany({
-                where: { id: mapping.internalId, tenantId },
-                data: { deleted: true },
-              });
+              await menuRepository.softDeleteCategoryById(
+                tenantId,
+                mapping.internalId,
+                tx
+              );
               break;
             case "MenuItem":
-              await tx.menuItem.updateMany({
-                where: { id: mapping.internalId, tenantId },
-                data: { deleted: true },
-              });
+              await menuRepository.softDeleteItemById(
+                tenantId,
+                mapping.internalId,
+                tx
+              );
               break;
             case "TaxConfig":
-              await tx.taxConfig.updateMany({
-                where: { id: mapping.internalId, tenantId },
-                data: { deleted: true },
-              });
-              await tx.merchantTaxRate.updateMany({
-                where: { taxConfigId: mapping.internalId, deleted: false },
-                data: { deleted: true },
-              });
+              await taxConfigRepository.softDeleteTaxConfig(
+                tenantId,
+                mapping.internalId,
+                tx
+              );
+              await taxConfigRepository.softDeleteRatesByConfig(
+                mapping.internalId,
+                tx
+              );
               break;
             case "ModifierGroup":
-              await tx.modifierGroup.updateMany({
-                where: { id: mapping.internalId, tenantId },
-                data: { deleted: true },
-              });
+              await modifierRepository.softDeleteGroup(
+                tenantId,
+                mapping.internalId,
+                tx
+              );
               // Also soft-delete all options in this group
-              await tx.modifierOption.updateMany({
-                where: { groupId: mapping.internalId },
-                data: { deleted: true },
-              });
+              await modifierRepository.softDeleteOptionsByGroup(
+                mapping.internalId,
+                tx
+              );
               break;
           }
 
           // Mark the ID mapping as deleted
-          await tx.externalIdMapping.updateMany({
-            where: { id: mapping.id },
-            data: { deleted: true },
-          });
+          await integrationRepository.softDeleteIdMapping(mapping.id, tx);
         }
       });
 

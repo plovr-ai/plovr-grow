@@ -719,6 +719,30 @@ describe("OrderRepository", () => {
     });
   });
 
+  describe("getStatusById", () => {
+    it("should find the row by tenant + id and select only status", async () => {
+      vi.mocked(prisma.order.findFirst).mockResolvedValue({
+        status: "completed",
+      } as never);
+
+      const result = await repository.getStatusById("tenant-1", "order-1");
+
+      expect(prisma.order.findFirst).toHaveBeenCalledWith({
+        where: { id: "order-1", tenantId: "tenant-1" },
+        select: { status: true },
+      });
+      expect(result).toEqual({ status: "completed" });
+    });
+
+    it("should return null when the order does not exist (tenant isolation)", async () => {
+      vi.mocked(prisma.order.findFirst).mockResolvedValue(null);
+
+      const result = await repository.getStatusById("tenant-1", "order-x");
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe("atomicComplete", () => {
     it("should update order to completed with CAS filter and return count", async () => {
       vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);

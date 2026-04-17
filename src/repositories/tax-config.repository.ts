@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import type { DbClient } from "@/lib/db";
 import type { Prisma, TaxConfig } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
 import type { TaxInclusionType } from "@/types";
@@ -294,6 +295,92 @@ export class TaxConfigRepository {
         deleted: true,
         updatedAt: new Date(),
       },
+    });
+  }
+
+  // ==================== Square sync helpers (tx-aware) ====================
+
+  /**
+   * Upsert a TaxConfig by internal ID for the Square catalog sync.
+   * Update clears the deleted flag so a re-synced tax is restored.
+   */
+  async upsertTaxConfig(
+    tenantId: string,
+    input: { id: string; name: string; inclusionType: string },
+    tx?: DbClient
+  ) {
+    const db = tx ?? prisma;
+    return db.taxConfig.upsert({
+      where: { id: input.id },
+      create: {
+        id: input.id,
+        tenantId,
+        name: input.name,
+        inclusionType: input.inclusionType,
+      },
+      update: {
+        name: input.name,
+        inclusionType: input.inclusionType,
+        deleted: false,
+      },
+    });
+  }
+
+  /**
+   * Upsert a MerchantTaxRate (merchant-scoped rate for a given TaxConfig).
+   * Used by the Square catalog sync to keep the merchant's sales-tax rate
+   * in sync with the percentage Square reports. Update clears deleted flag.
+   */
+  async upsertMerchantTaxRate(
+    merchantId: string,
+    taxConfigId: string,
+    rate: number,
+    tx?: DbClient
+  ) {
+    const db = tx ?? prisma;
+    return db.merchantTaxRate.upsert({
+      where: {
+        merchantId_taxConfigId: { merchantId, taxConfigId },
+      },
+      create: {
+        id: generateEntityId(),
+        merchantId,
+        taxConfigId,
+        rate,
+      },
+      update: {
+        rate,
+        deleted: false,
+      },
+    });
+  }
+
+  /**
+   * Soft-delete a TaxConfig by ID (tenant-scoped).
+   * Called by the Square catalog sync when the TaxConfig's external mapping
+   * is reported as deleted.
+   */
+  async softDeleteTaxConfig(
+    tenantId: string,
+    id: string,
+    tx?: DbClient
+  ) {
+    const db = tx ?? prisma;
+    return db.taxConfig.updateMany({
+      where: { id, tenantId },
+      data: { deleted: true },
+    });
+  }
+
+  /**
+   * Soft-delete every active MerchantTaxRate referencing a given TaxConfig.
+   * Pair this with softDeleteTaxConfig when handling an external deletion.
+   */
+  async softDeleteRatesByConfig(taxConfigId: string, tx?: DbClient) {
+    const db = tx ?? prisma;
+    return db.merchantTaxRate.updateMany({
+      where: { taxConfigId, deleted: false },
+      data: { deleted: true },
     });
   }
 }

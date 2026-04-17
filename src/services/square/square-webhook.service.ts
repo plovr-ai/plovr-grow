@@ -1,6 +1,7 @@
 import { integrationRepository } from "@/repositories/integration.repository";
+import { merchantRepository } from "@/repositories/merchant.repository";
+import { orderRepository } from "@/repositories/order.repository";
 import { squareService } from "./square.service";
-import prisma from "@/lib/db";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import type { SquareWebhookPayload } from "./square.types";
 import { WEBHOOK_RETRY_POLICY, computeNextRetryAt } from "@/lib/retry";
@@ -111,10 +112,7 @@ export class SquareWebhookService {
     tenantId: string;
     merchantId: string;
   }): Promise<void> {
-    const merchant = await prisma.merchant.findFirst({
-      where: { id: connection.merchantId },
-      select: { tenantId: true },
-    });
+    const merchant = await merchantRepository.getById(connection.merchantId);
     if (!merchant) {
       log.error({ merchantId: connection.merchantId }, "Merchant not found");
       return;
@@ -195,10 +193,10 @@ export class SquareWebhookService {
     }
 
     // Load the order for payment-level status checks (cancellation guard)
-    const order = await prisma.order.findUnique({
-      where: { id: mapping.internalId },
-      select: { status: true },
-    });
+    const order = await orderRepository.getStatusById(
+      tenantId,
+      mapping.internalId
+    );
     if (!order) {
       log.info({ orderId: mapping.internalId }, "Order not found for mapping, skipping");
       return;

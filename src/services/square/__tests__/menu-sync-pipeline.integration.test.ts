@@ -664,6 +664,138 @@ describe("Menu Sync Pipeline (Integration)", () => {
     });
   });
 
+  // ==================== D.1 Incremental Soft Delete ====================
+
+  describe("Incremental Soft Delete", () => {
+    it("should soft-delete categories, items, taxes, modifier groups, and their external ID mappings when Square reports them deleted", async () => {
+      // First sync: seed a category with an item (that carries variations so a
+      // modifier group/options are also created), a tax, and a merchant tax
+      // rate — everything we want to watch get deleted.
+      const catalog = buildMockCatalog({
+        categories: [{ id: "sq-cat-1", name: "Seed Category" }],
+        items: [
+          {
+            id: "sq-item-1",
+            name: "Seed Item",
+            priceCents: 999,
+            categoryId: "sq-cat-1",
+            variations: [
+              { id: "sq-var-s", name: "Small", priceCents: 999 },
+              { id: "sq-var-l", name: "Large", priceCents: 1299 },
+            ],
+          },
+        ],
+        taxes: [{ id: "sq-tax-1", name: "Sales Tax", percentage: "8.875" }],
+      });
+      fetchSpy.mockResolvedValueOnce(catalog);
+      await squareService.syncCatalog(TENANT_ID, MERCHANT_ID);
+
+      // Sanity — everything we care about is present.
+      const before = await countSyncTables(TENANT_ID, MERCHANT_ID);
+      expect(before.categories).toBe(1);
+      expect(before.items).toBe(1);
+      expect(before.taxConfigs).toBe(1);
+      expect(before.merchantTaxRates).toBe(1);
+      expect(before.modifierGroups).toBe(1);
+      expect(before.modifierOptions).toBe(2);
+
+      // Grab ids so we can verify each row was soft-deleted individually.
+      const catId = (await prisma.menuCategory.findFirstOrThrow({
+        where: { tenantId: TENANT_ID, deleted: false },
+      })).id;
+      const itemId = (await prisma.menuItem.findFirstOrThrow({
+        where: { tenantId: TENANT_ID, deleted: false },
+      })).id;
+      const taxId = (await prisma.taxConfig.findFirstOrThrow({
+        where: { tenantId: TENANT_ID, deleted: false },
+      })).id;
+      const modGroupId = (await prisma.modifierGroup.findFirstOrThrow({
+        where: { tenantId: TENANT_ID, deleted: false },
+      })).id;
+
+      // The modifier group was auto-created from variations so it does not
+      // have its own external mapping. To exercise the ModifierGroup branch
+      // of soft-delete, write a MODIFIER_LIST mapping manually.
+      const modListExtId = "sq-modlist-del-1";
+      await prisma.externalIdMapping.create({
+        data: {
+          id: generateEntityId(),
+          tenantId: TENANT_ID,
+          internalType: "ModifierGroup",
+          internalId: modGroupId,
+          externalSource: "SQUARE",
+          externalType: "MODIFIER_LIST",
+          externalId: modListExtId,
+        },
+      });
+
+      // Second sync (incremental) reports everything deleted.
+      const fetchIncrementalSpy = vi.spyOn(
+        squareCatalogService,
+        "fetchIncrementalCatalog"
+      );
+      fetchIncrementalSpy.mockResolvedValueOnce({
+        categories: [],
+        items: [],
+        modifierLists: [],
+        taxes: [],
+        images: [],
+        deletedIds: ["sq-cat-1", "sq-item-1", "sq-tax-1", modListExtId],
+      });
+
+      await squareService.syncCatalog(TENANT_ID, MERCHANT_ID, true);
+
+      // Category + item + tax + tax rate all soft-deleted, each scoped to
+      // the correct row (not a mass-delete).
+      const deletedCat = await prisma.menuCategory.findUniqueOrThrow({
+        where: { id: catId },
+      });
+      expect(deletedCat.deleted).toBe(true);
+
+      const deletedItem = await prisma.menuItem.findUniqueOrThrow({
+        where: { id: itemId },
+      });
+      expect(deletedItem.deleted).toBe(true);
+
+      const deletedTax = await prisma.taxConfig.findUniqueOrThrow({
+        where: { id: taxId },
+      });
+      expect(deletedTax.deleted).toBe(true);
+      const deletedRate = await prisma.merchantTaxRate.findFirstOrThrow({
+        where: { taxConfigId: taxId, merchantId: MERCHANT_ID },
+      });
+      expect(deletedRate.deleted).toBe(true);
+
+      // Modifier group + its options soft-deleted.
+      const deletedGroup = await prisma.modifierGroup.findUniqueOrThrow({
+        where: { id: modGroupId },
+      });
+      expect(deletedGroup.deleted).toBe(true);
+      const deletedOpts = await prisma.modifierOption.findMany({
+        where: { groupId: modGroupId },
+      });
+      expect(deletedOpts.length).toBe(2);
+      expect(deletedOpts.every((o) => o.deleted)).toBe(true);
+
+      // The external ID mappings themselves are soft-deleted so the next
+      // sync won't try to re-delete (and the same external ID can be
+      // re-used for a brand-new internal record later).
+      const deletedMappings = await prisma.externalIdMapping.findMany({
+        where: {
+          tenantId: TENANT_ID,
+          externalSource: "SQUARE",
+          externalId: {
+            in: ["sq-cat-1", "sq-item-1", "sq-tax-1", modListExtId],
+          },
+        },
+      });
+      expect(deletedMappings).toHaveLength(4);
+      expect(deletedMappings.every((m) => m.deleted)).toBe(true);
+
+      fetchIncrementalSpy.mockRestore();
+    });
+  });
+
   // ==================== E. Soft Delete Restoration ====================
 
   describe("Soft Delete Restoration", () => {

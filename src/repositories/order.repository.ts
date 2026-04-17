@@ -349,6 +349,18 @@ export class OrderRepository {
   }
 
   /**
+   * Get only the status of an order (tenant-scoped).
+   * Used by webhook handlers that need the payment-level status for
+   * cancellation/regression guards without pulling the full order payload.
+   */
+  async getStatusById(tenantId: string, orderId: string) {
+    return prisma.order.findFirst({
+      where: { id: orderId, tenantId },
+      select: { status: true },
+    });
+  }
+
+  /**
    * Atomic CAS: cancel order only if not already canceled. Idempotent.
    * Returns the number of rows affected.
    */

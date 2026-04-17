@@ -12,7 +12,7 @@ import type {
 } from "square";
 import { squareConfig } from "./square.config";
 import { integrationRepository } from "@/repositories/integration.repository";
-import prisma from "@/lib/db";
+import { fulfillmentRepository } from "@/repositories/fulfillment.repository";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import type {
   SquareOrderPushInput,
@@ -361,21 +361,12 @@ export class SquareOrderService {
     const numericVersion = Number(version);
     if (!Number.isFinite(numericVersion)) return;
 
-    // Find the fulfillment for this order and bump its externalVersion
-    const fulfillment = await prisma.orderFulfillment.findFirst({
-      where: { orderId },
-      select: { id: true, externalVersion: true },
-    });
-    if (
-      fulfillment &&
-      (fulfillment.externalVersion === null ||
-        numericVersion > fulfillment.externalVersion)
-    ) {
-      await prisma.orderFulfillment.update({
-        where: { id: fulfillment.id },
-        data: { externalVersion: numericVersion },
-      });
-    }
+    // Atomic: only bump when the incoming version is strictly newer than
+    // whatever is currently stored (or when there is no stored version yet).
+    await fulfillmentRepository.bumpExternalVersionByOrderIdIfNewer(
+      orderId,
+      numericVersion
+    );
   }
 
   /**

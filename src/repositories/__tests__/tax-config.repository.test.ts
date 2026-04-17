@@ -712,4 +712,97 @@ describe("TaxConfigRepository", () => {
       expect(loaded?.inclusionType).toBe("additive");
     });
   });
+
+  // ==================== Square sync helpers (tx-aware) ====================
+
+  describe("upsertTaxConfig", () => {
+    it("should upsert by internal ID, clearing deleted flag on update", async () => {
+      const upsert = vi.fn().mockResolvedValue({});
+      const tx = { taxConfig: { upsert } } as never;
+
+      await repository.upsertTaxConfig(
+        "t1",
+        { id: "tax-1", name: "Sales Tax", inclusionType: "additive" },
+        tx
+      );
+
+      expect(upsert).toHaveBeenCalledWith({
+        where: { id: "tax-1" },
+        create: {
+          id: "tax-1",
+          tenantId: "t1",
+          name: "Sales Tax",
+          inclusionType: "additive",
+        },
+        update: {
+          name: "Sales Tax",
+          inclusionType: "additive",
+          deleted: false,
+        },
+      });
+    });
+
+    it("should fall back to default prisma client when no tx provided", async () => {
+      const upsert = vi.fn().mockResolvedValue({});
+      (prisma.taxConfig as unknown as { upsert: typeof upsert }).upsert =
+        upsert;
+
+      await repository.upsertTaxConfig("t1", {
+        id: "tax-1",
+        name: "Tax",
+        inclusionType: "inclusive",
+      });
+
+      expect(upsert).toHaveBeenCalled();
+    });
+  });
+
+  describe("upsertMerchantTaxRate", () => {
+    it("should upsert a merchant tax rate and clear deleted flag on update", async () => {
+      const upsert = vi.fn().mockResolvedValue({});
+      const tx = { merchantTaxRate: { upsert } } as never;
+
+      await repository.upsertMerchantTaxRate("m1", "tax-1", 0.08875, tx);
+
+      expect(upsert).toHaveBeenCalledWith({
+        where: {
+          merchantId_taxConfigId: { merchantId: "m1", taxConfigId: "tax-1" },
+        },
+        create: expect.objectContaining({
+          merchantId: "m1",
+          taxConfigId: "tax-1",
+          rate: 0.08875,
+        }),
+        update: { rate: 0.08875, deleted: false },
+      });
+    });
+  });
+
+  describe("softDeleteTaxConfig", () => {
+    it("should soft-delete a tax config scoped by tenant", async () => {
+      const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+      const tx = { taxConfig: { updateMany } } as never;
+
+      await repository.softDeleteTaxConfig("t1", "tax-1", tx);
+
+      expect(updateMany).toHaveBeenCalledWith({
+        where: { id: "tax-1", tenantId: "t1" },
+        data: { deleted: true },
+      });
+    });
+  });
+
+  describe("softDeleteRatesByConfig", () => {
+    it("should soft-delete every active rate referencing the tax config", async () => {
+      const updateMany = vi.fn().mockResolvedValue({ count: 3 });
+      const tx = { merchantTaxRate: { updateMany } } as never;
+
+      await repository.softDeleteRatesByConfig("tax-1", tx);
+
+      expect(updateMany).toHaveBeenCalledWith({
+        where: { taxConfigId: "tax-1", deleted: false },
+        data: { deleted: true },
+      });
+    });
+  });
 });

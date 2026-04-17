@@ -52,24 +52,14 @@ vi.mock("../square.config", () => ({
   },
 }));
 
-const mockOrderUpdate = vi.fn().mockResolvedValue({});
-const mockOrderFindUnique = vi
+const mockBumpExternalVersionByOrderIdIfNewer = vi
   .fn()
-  .mockResolvedValue({ squareOrderVersion: null });
-const mockOrderFulfillmentFindFirst = vi
-  .fn()
-  .mockResolvedValue({ id: "ful-1", externalVersion: null });
-const mockOrderFulfillmentUpdate = vi.fn().mockResolvedValue({});
-vi.mock("@/lib/db", () => ({
-  default: {
-    order: {
-      update: (...args: unknown[]) => mockOrderUpdate(...args),
-      findUnique: (...args: unknown[]) => mockOrderFindUnique(...args),
-    },
-    orderFulfillment: {
-      findFirst: (...args: unknown[]) => mockOrderFulfillmentFindFirst(...args),
-      update: (...args: unknown[]) => mockOrderFulfillmentUpdate(...args),
-    },
+  .mockResolvedValue({ count: 1 });
+
+vi.mock("@/repositories/fulfillment.repository", () => ({
+  fulfillmentRepository: {
+    bumpExternalVersionByOrderIdIfNewer: (...args: unknown[]) =>
+      mockBumpExternalVersionByOrderIdIfNewer(...args),
   },
 }));
 
@@ -871,8 +861,7 @@ describe("SquareOrderService", () => {
       mockUpdate.mockResolvedValue({
         order: { id: "sq-order-1", version: 6 },
       });
-      mockOrderFulfillmentFindFirst.mockResolvedValue({ id: "ful-1", externalVersion: 5 });
-      mockOrderFulfillmentUpdate.mockClear();
+      mockBumpExternalVersionByOrderIdIfNewer.mockClear();
 
       await service.updateOrderStatus(
         TENANT_ID,
@@ -881,10 +870,10 @@ describe("SquareOrderService", () => {
         "ready"
       );
 
-      expect(mockOrderFulfillmentUpdate).toHaveBeenCalledWith({
-        where: { id: "ful-1" },
-        data: { externalVersion: 6 },
-      });
+      expect(mockBumpExternalVersionByOrderIdIfNewer).toHaveBeenCalledWith(
+        "order-1",
+        6
+      );
     });
   });
 
@@ -975,15 +964,14 @@ describe("SquareOrderService", () => {
       mockUpdate.mockResolvedValue({
         order: { id: "sq-order-1", version: 8 },
       });
-      mockOrderFulfillmentFindFirst.mockResolvedValue({ id: "ful-1", externalVersion: 7 });
-      mockOrderFulfillmentUpdate.mockClear();
+      mockBumpExternalVersionByOrderIdIfNewer.mockClear();
 
       await service.cancelOrder(TENANT_ID, MERCHANT_ID, "order-1", "nope");
 
-      expect(mockOrderFulfillmentUpdate).toHaveBeenCalledWith({
-        where: { id: "ful-1" },
-        data: { externalVersion: 8 },
-      });
+      expect(mockBumpExternalVersionByOrderIdIfNewer).toHaveBeenCalledWith(
+        "order-1",
+        8
+      );
     });
 
     it("should truncate cancel reason to 100 characters", async () => {

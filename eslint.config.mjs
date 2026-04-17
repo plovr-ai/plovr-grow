@@ -79,12 +79,8 @@ const eslintConfig = defineConfig([
       "src/**/*.integration.test.tsx",
       "src/**/__tests__/**",
       // Follow-up issues tracking migration of each deferred service:
-      //   #289 — square*.service.ts (3 files)
       //   #290 — stripe-connect.service.ts
       // Remove the corresponding entry below when each migration PR lands.
-      "src/services/square/square.service.ts",
-      "src/services/square/square-order.service.ts",
-      "src/services/square/square-webhook.service.ts",
       "src/services/stripe-connect/stripe-connect.service.ts",
     ],
     rules: {

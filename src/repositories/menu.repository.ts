@@ -1,4 +1,5 @@
 import prisma from "@/lib/db";
+import type { DbClient } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
 
@@ -465,6 +466,102 @@ export class MenuRepository {
       })
     );
     return prisma.$transaction(queries);
+  }
+
+  // ==================== Square sync helpers (tx-aware) ====================
+
+  /**
+   * Upsert a MenuCategory by internal ID for the Square catalog sync.
+   * Create path stamps tenantId+menuId; update path clears the deleted flag so
+   * a previously soft-deleted category is restored when Square re-publishes it.
+   */
+  async upsertCategory(
+    tenantId: string,
+    menuId: string,
+    input: { id: string; name: string; sortOrder: number },
+    tx?: DbClient
+  ) {
+    const db = tx ?? prisma;
+    return db.menuCategory.upsert({
+      where: { id: input.id },
+      create: {
+        id: input.id,
+        tenantId,
+        menuId,
+        name: input.name,
+        sortOrder: input.sortOrder,
+      },
+      update: {
+        name: input.name,
+        sortOrder: input.sortOrder,
+        deleted: false,
+      },
+    });
+  }
+
+  /**
+   * Upsert a MenuItem by internal ID for the Square catalog sync.
+   * Update clears deleted flag so a re-synced item is restored.
+   */
+  async upsertItem(
+    tenantId: string,
+    input: {
+      id: string;
+      name: string;
+      description: string | null;
+      price: number;
+    },
+    tx?: DbClient
+  ) {
+    const db = tx ?? prisma;
+    return db.menuItem.upsert({
+      where: { id: input.id },
+      create: {
+        id: input.id,
+        tenantId,
+        name: input.name,
+        description: input.description,
+        price: input.price,
+      },
+      update: {
+        name: input.name,
+        description: input.description,
+        price: input.price,
+        deleted: false,
+      },
+    });
+  }
+
+  /**
+   * Soft-delete a MenuCategory (used when Square reports the category
+   * deleted during incremental sync). Scoped by tenant for safety.
+   */
+  async softDeleteCategoryById(
+    tenantId: string,
+    categoryId: string,
+    tx?: DbClient
+  ) {
+    const db = tx ?? prisma;
+    return db.menuCategory.updateMany({
+      where: { id: categoryId, tenantId },
+      data: { deleted: true },
+    });
+  }
+
+  /**
+   * Soft-delete a MenuItem (used when Square reports the item
+   * deleted during incremental sync). Scoped by tenant for safety.
+   */
+  async softDeleteItemById(
+    tenantId: string,
+    itemId: string,
+    tx?: DbClient
+  ) {
+    const db = tx ?? prisma;
+    return db.menuItem.updateMany({
+      where: { id: itemId, tenantId },
+      data: { deleted: true },
+    });
   }
 
   /**
