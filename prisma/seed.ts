@@ -155,8 +155,6 @@ async function main() {
     create: {
       id: "tenant-joes-pizza",
       slug: "joes-pizza",
-      subscriptionPlan: "free",
-      subscriptionStatus: "active",
       ...joesPizzaTenantData,
     },
   });
@@ -562,8 +560,6 @@ async function main() {
     create: {
       id: "tenant-bellas-bakery",
       slug: "bellas-bakery",
-      subscriptionPlan: "free",
-      subscriptionStatus: "active",
       ...bellasBakeryTenantData,
     },
   });
@@ -1565,8 +1561,6 @@ async function main() {
       currency: "USD",
       locale: "en-US",
       timezone: "America/New_York",
-      subscriptionPlan: "free",
-      subscriptionStatus: "active",
       settings: capitalGrilleSettings,
     },
   });
@@ -1680,8 +1674,6 @@ async function main() {
       currency: "USD",
       locale: "en-US",
       timezone: "America/Chicago",
-      subscriptionPlan: "free",
-      subscriptionStatus: "active",
       settings: neighborhoodSettings,
     },
   });
@@ -1806,8 +1798,6 @@ async function main() {
       currency: "USD",
       locale: "en-US",
       timezone: "America/Los_Angeles",
-      subscriptionPlan: "free",
-      subscriptionStatus: "active",
       settings: velvetLoungeSettings,
     },
   });
@@ -1987,8 +1977,6 @@ async function main() {
       currency: "USD",
       locale: "en-US",
       timezone: "America/Los_Angeles",
-      subscriptionPlan: "free",
-      subscriptionStatus: "active",
     },
   });
 

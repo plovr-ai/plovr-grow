@@ -169,7 +169,6 @@ const MERCHANT_A_DATA = {
     slug: `phone-ai-test-${timestamp}`,
     tenantId: TENANT_ID,
     name: "Phone AI Test Tenant",
-    subscriptionStatus: "active",
   },
 };
 
@@ -203,7 +202,6 @@ const MERCHANT_B_DATA = {
     slug: `phone-ai-test-${timestamp}`,
     tenantId: TENANT_ID,
     name: "Phone AI Test Tenant",
-    subscriptionStatus: "active",
   },
 };
 

@@ -17,8 +17,6 @@ export interface TenantInfo {
   locale: string;
   timezone: string;
   status: TenantStatus;
-  subscriptionPlan: string;
-  subscriptionStatus: string;
   stripeConnectStatus: string | null;
   onboardingStatus: OnboardingStatus;
   onboardingData: OnboardingData | null;

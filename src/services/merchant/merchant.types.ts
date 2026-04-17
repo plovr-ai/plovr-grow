@@ -44,7 +44,6 @@ export interface MerchantWithTenant {
     name: string;
     logoUrl?: string;
     settings?: TenantSettings;
-    subscriptionStatus: string;
   };
 }
 
@@ -59,7 +58,6 @@ export interface TenantWithMerchants {
   description?: string;
   logoUrl?: string;
   settings?: TenantSettings;
-  subscriptionStatus: string;
   merchants: MerchantWithTenant[];
 }
 

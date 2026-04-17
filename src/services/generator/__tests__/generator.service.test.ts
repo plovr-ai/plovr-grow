@@ -128,7 +128,6 @@ describe("GeneratorService", () => {
           name: "Joe's Pizza",
           source: "generator",
           websiteUrl: "https://joespizza.com",
-          subscriptionStatus: "trial",
           merchant: expect.objectContaining({
             address: "123 Main St, New York, NY 10001",
             city: "New York",

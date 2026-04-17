@@ -45,12 +45,11 @@ describe("TenantService.createTenantWithMerchant", () => {
     expect(tenant.slug).toMatch(/^acme-diner-/);
   });
 
-  it("applies generator overrides (websiteUrl, address, subscriptionStatus)", async () => {
+  it("applies generator overrides (websiteUrl, address)", async () => {
     const { tenant, merchant } = await tenantService.createTenantWithMerchant({
       name: "Acme Diner",
       source: "generator",
       websiteUrl: "https://acme.example",
-      subscriptionStatus: "trial",
       merchant: {
         address: "1 Main St",
         city: "Springfield",
@@ -61,7 +60,6 @@ describe("TenantService.createTenantWithMerchant", () => {
     });
 
     expect(tenant.websiteUrl).toBe("https://acme.example");
-    expect(tenant.subscriptionStatus).toBe("trial");
     expect(tenant.source).toBe("generator");
     expect(merchant.address).toBe("1 Main St");
     expect(merchant.city).toBe("Springfield");

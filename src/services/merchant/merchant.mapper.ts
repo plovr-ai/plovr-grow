@@ -58,7 +58,6 @@ export function toMerchantWithTenant(
       name: data.tenant.name,
       logoUrl: data.tenant.logoUrl ?? undefined,
       settings: data.tenant.settings as TenantSettings | undefined,
-      subscriptionStatus: data.tenant.subscriptionStatus,
     },
   };
 }
@@ -77,7 +76,6 @@ export function toTenantWithMerchants(
     description: data.description ?? undefined,
     logoUrl: data.logoUrl ?? undefined,
     settings: data.settings as TenantSettings | undefined,
-    subscriptionStatus: data.subscriptionStatus,
     merchants: data.merchants.map((m) => toMerchantFromTenant(m, data)),
   };
 }
@@ -118,7 +116,6 @@ function toMerchantFromTenant(
       name: tenant.name,
       logoUrl: tenant.logoUrl ?? undefined,
       settings: tenant.settings as TenantSettings | undefined,
-      subscriptionStatus: tenant.subscriptionStatus,
     },
   };
 }
