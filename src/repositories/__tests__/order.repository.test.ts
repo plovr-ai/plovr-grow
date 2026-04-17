@@ -10,6 +10,7 @@ vi.mock("@/lib/db", () => ({
       findFirst: vi.fn(),
       findMany: vi.fn(),
       count: vi.fn(),
+      updateMany: vi.fn(),
     },
     orderItem: {
       findMany: vi.fn(),
@@ -718,4 +719,153 @@ describe("OrderRepository", () => {
     });
   });
 
+  describe("atomicComplete", () => {
+    it("should update order to completed with CAS filter and return count", async () => {
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
+
+      const paidAt = new Date();
+      const count = await repository.atomicComplete("tenant-1", "order-1", { paidAt });
+
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: "order-1", tenantId: "tenant-1", status: { not: "completed" } },
+        data: { status: "completed", paidAt },
+      });
+      expect(count).toBe(1);
+    });
+
+    it("should return 0 when CAS loses race (already completed)", async () => {
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 0 } as never);
+
+      const count = await repository.atomicComplete("tenant-1", "order-1", {
+        paidAt: new Date(),
+      });
+
+      expect(count).toBe(0);
+    });
+
+    it("should include balanceDue in patch when provided", async () => {
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
+
+      const paidAt = new Date();
+      await repository.atomicComplete("tenant-1", "order-1", {
+        paidAt,
+        balanceDue: 42.5,
+      });
+
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: "order-1", tenantId: "tenant-1", status: { not: "completed" } },
+        data: { status: "completed", paidAt, balanceDue: 42.5 },
+      });
+    });
+
+    it("should use provided tx client instead of default prisma", async () => {
+      const txUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+      const tx = { order: { updateMany: txUpdateMany } } as never;
+
+      await repository.atomicComplete(
+        "tenant-1",
+        "order-1",
+        { paidAt: new Date() },
+        tx
+      );
+
+      expect(txUpdateMany).toHaveBeenCalled();
+      expect(prisma.order.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("atomicMarkPaymentFailed", () => {
+    it("should update order to payment_failed with CAS filter and return count", async () => {
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
+
+      const count = await repository.atomicMarkPaymentFailed("tenant-1", "order-1");
+
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: "order-1",
+          tenantId: "tenant-1",
+          status: { notIn: ["completed", "canceled", "payment_failed"] },
+        },
+        data: { status: "payment_failed", paymentFailedAt: expect.any(Date) },
+      });
+      expect(count).toBe(1);
+    });
+
+    it("should return 0 when CAS loses race (already terminal)", async () => {
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 0 } as never);
+
+      const count = await repository.atomicMarkPaymentFailed("tenant-1", "order-1");
+
+      expect(count).toBe(0);
+    });
+
+    it("should use provided tx client instead of default prisma", async () => {
+      const txUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+      const tx = { order: { updateMany: txUpdateMany } } as never;
+
+      await repository.atomicMarkPaymentFailed("tenant-1", "order-1", tx);
+
+      expect(txUpdateMany).toHaveBeenCalled();
+      expect(prisma.order.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("atomicCancel", () => {
+    it("should update order to canceled with CAS filter, reason, and return count", async () => {
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
+
+      const count = await repository.atomicCancel(
+        "tenant-1",
+        "order-1",
+        "Customer request"
+      );
+
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: "order-1", tenantId: "tenant-1", status: { not: "canceled" } },
+        data: {
+          status: "canceled",
+          cancelledAt: expect.any(Date),
+          cancelReason: "Customer request",
+        },
+      });
+      expect(count).toBe(1);
+    });
+
+    it("should allow undefined reason", async () => {
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 1 } as never);
+
+      await repository.atomicCancel("tenant-1", "order-1", undefined);
+
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: "order-1", tenantId: "tenant-1", status: { not: "canceled" } },
+        data: {
+          status: "canceled",
+          cancelledAt: expect.any(Date),
+          cancelReason: undefined,
+        },
+      });
+    });
+
+    it("should return 0 when CAS loses race (already canceled)", async () => {
+      vi.mocked(prisma.order.updateMany).mockResolvedValue({ count: 0 } as never);
+
+      const count = await repository.atomicCancel(
+        "tenant-1",
+        "order-1",
+        "duplicate"
+      );
+
+      expect(count).toBe(0);
+    });
+
+    it("should use provided tx client instead of default prisma", async () => {
+      const txUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+      const tx = { order: { updateMany: txUpdateMany } } as never;
+
+      await repository.atomicCancel("tenant-1", "order-1", "reason", tx);
+
+      expect(txUpdateMany).toHaveBeenCalled();
+      expect(prisma.order.updateMany).not.toHaveBeenCalled();
+    });
+  });
 });

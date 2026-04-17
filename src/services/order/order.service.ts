@@ -2,8 +2,8 @@
 // Uses OrderRepository (Prisma) for database operations.
 
 import { Prisma } from "@prisma/client";
-import prisma from "@/lib/db";
 import type { DbClient } from "@/lib/db";
+import { runInTransaction } from "@/lib/transaction";
 import { menuService } from "@/services/menu";
 import { giftCardService } from "@/services/giftcard";
 import { paymentService } from "@/services/payment";
@@ -156,7 +156,7 @@ export class OrderService {
     // If caller provided a tx, use it; otherwise wrap in a transaction
     const order = tx
       ? await createOrderAndFulfillment(tx)
-      : await prisma.$transaction(async (txClient) => createOrderAndFulfillment(txClient));
+      : await runInTransaction(async (txClient) => createOrderAndFulfillment(txClient));
 
     // Emit order created event (only when not inside a caller-provided transaction)
     if (!tx) {
@@ -232,7 +232,7 @@ export class OrderService {
       };
     }
   ) {
-    const order = await prisma.$transaction(async (tx) => {
+    const order = await runInTransaction(async (tx) => {
       // 1. Create order
       const createdOrder = await this.createMerchantOrder(tenantId, input, tx);
 
@@ -273,10 +273,12 @@ export class OrderService {
       const isImmediatelyPaid = !!options?.payment || giftCardCoversAll;
 
       if (isImmediatelyPaid) {
-        await tx.order.update({
-          where: { id: createdOrder.id },
-          data: { status: "completed", paidAt: new Date() },
-        });
+        await orderRepository.atomicComplete(
+          tenantId,
+          createdOrder.id,
+          { paidAt: new Date() },
+          tx
+        );
       }
 
       return { ...createdOrder, _isImmediatelyPaid: isImmediatelyPaid };
@@ -571,11 +573,12 @@ export class OrderService {
       // Atomic CAS: only update if status hasn't changed since our read.
       // Prevents duplicate order.paid events when concurrent webhooks
       // (e.g. Stripe + Square) both try to mark the same order completed.
-      const result = await prisma.order.updateMany({
-        where: { id: orderId, status: { not: "completed" } },
-        data: { status: "completed", paidAt: new Date() },
-      });
-      if (result.count === 0) {
+      const count = await orderRepository.atomicComplete(
+        tenantId,
+        orderId,
+        { paidAt: new Date() }
+      );
+      if (count === 0) {
         // Another request already marked it completed — safe to skip
         return;
       }
@@ -610,13 +613,7 @@ export class OrderService {
     }
 
     // Atomic CAS: only mark failed if not already in a terminal state
-    await prisma.order.updateMany({
-      where: {
-        id: orderId,
-        status: { notIn: ["completed", "canceled", "payment_failed"] },
-      },
-      data: { status: "payment_failed", paymentFailedAt: new Date() },
-    });
+    await orderRepository.atomicMarkPaymentFailed(tenantId, orderId);
   }
 
   /**
@@ -646,7 +643,7 @@ export class OrderService {
     const amount = input?.amount ?? Number(order.totalAmount);
     const now = new Date();
 
-    await prisma.$transaction(async (tx: DbClient) => {
+    await runInTransaction(async (tx) => {
       // Create a succeeded payment record in one step (no repository bypass)
       await paymentService.createPaymentRecord(
         {
@@ -663,14 +660,12 @@ export class OrderService {
       );
 
       // Update order status
-      await tx.order.update({
-        where: { id: orderId },
-        data: {
-          status: "completed",
-          paidAt: now,
-          balanceDue: amount,
-        },
-      });
+      await orderRepository.atomicComplete(
+        tenantId,
+        orderId,
+        { paidAt: now, balanceDue: amount },
+        tx
+      );
     });
 
     // Emit event outside of transaction
@@ -738,15 +733,8 @@ export class OrderService {
 
     // Atomic CAS: only cancel if status hasn't changed to "canceled"
     // since our read, preventing duplicate order.cancelled events.
-    const cancelResult = await prisma.order.updateMany({
-      where: { id: orderId, status: { not: "canceled" } },
-      data: {
-        status: "canceled",
-        cancelledAt: new Date(),
-        cancelReason: reason,
-      },
-    });
-    if (cancelResult.count === 0) {
+    const count = await orderRepository.atomicCancel(tenantId, orderId, reason);
+    if (count === 0) {
       // Another request already canceled — safe to skip
       return;
     }
