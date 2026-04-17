@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { FeaturedItem } from "@/types/website";
 
@@ -45,11 +44,10 @@ export function SpecialsSection({
               {item.image && (
                 <div className="w-full md:w-1/2 flex-shrink-0">
                   <div className="relative rounded-2xl overflow-hidden aspect-square">
-                    <Image
+                    <img
                       src={item.image}
                       alt={item.name}
-                      fill
-                      className="object-cover"
+                      className="absolute inset-0 h-full w-full object-cover"
                     />
                   </div>
                 </div>

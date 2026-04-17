@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 interface HeroSectionProps {
   name: string;
   tagline: string;
@@ -12,12 +10,11 @@ export function HeroSection({ name, tagline, heroImage }: HeroSectionProps) {
       {/* Background */}
       {heroImage ? (
         <>
-          <Image
+          <img
             src={heroImage}
             alt={name}
-            fill
-            className="object-cover"
-            priority
+            loading="eager"
+            className="absolute inset-0 h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-black/50" />
         </>

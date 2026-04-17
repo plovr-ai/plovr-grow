@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useFormatPrice } from "@/hooks";
 import { ImagePlaceholderIcon } from "@storefront/components/icons";
 import type { FeaturedItem } from "@/types/website";
@@ -36,12 +35,10 @@ export function PopularItems({ items, menuLink }: PopularItemsProps) {
               {/* Circular Image */}
               <div className="relative w-32 h-32 mx-auto rounded-full overflow-hidden mb-3">
                 {item.image ? (
-                  <Image
+                  <img
                     src={item.image}
                     alt={item.name}
-                    fill
-                    sizes="128px"
-                    className="object-cover"
+                    className="absolute inset-0 h-full w-full object-cover"
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-100 flex items-center justify-center">

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useTransition } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -185,12 +184,10 @@ export function MenuItemCard({ item, taxConfigs, categoryId, onEdit }: MenuItemC
       {/* Image */}
       <div className="relative aspect-[4/3] bg-gray-100">
         {item.imageUrl ? (
-          <Image
+          <img
             src={item.imageUrl}
             alt={item.name}
-            fill
-            sizes="(max-width: 768px) 50vw, 25vw"
-            className="object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">

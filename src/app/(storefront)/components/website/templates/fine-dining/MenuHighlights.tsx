@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { FeaturedItem } from "@/types/website";
 
@@ -38,11 +37,10 @@ export function MenuHighlights({
             <div key={item.id}>
               {item.image && (
                 <div className="relative aspect-[4/3] overflow-hidden mb-4">
-                  <Image
+                  <img
                     src={item.image}
                     alt={item.name}
-                    fill
-                    className="object-cover"
+                    className="absolute inset-0 h-full w-full object-cover"
                   />
                 </div>
               )}

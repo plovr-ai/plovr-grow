@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useFormatPhone } from "@/hooks";
 import { useMerchantConfig } from "@/contexts/MerchantContext";
@@ -125,7 +124,7 @@ export function Footer({
           <div>
             <div className="flex items-center gap-3 mb-4">
               {merchant.logo ? (
-                <Image
+                <img
                   src={merchant.logo}
                   alt={merchant.name}
                   width={48}

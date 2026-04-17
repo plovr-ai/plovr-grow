@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { MerchantInfo } from "@/types/website";
 
@@ -33,13 +32,11 @@ export function HeroSection({ merchant, menuLink }: HeroSectionProps) {
           {/* Right: Hero Image */}
           {merchant.heroImage && (
             <div className="relative w-full h-64 md:h-80 rounded-2xl overflow-hidden">
-              <Image
+              <img
                 src={merchant.heroImage}
                 alt={merchant.name}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
-                priority
+                loading="eager"
+                className="absolute inset-0 h-full w-full object-cover"
               />
             </div>
           )}

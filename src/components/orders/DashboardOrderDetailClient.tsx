@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, User, Phone, Mail, MapPin, FileText } from "lucide-react";
 import { useDashboardFormatPrice, useDashboardFormatDateTime } from "@/hooks";
@@ -343,7 +342,7 @@ function OrderItemsList({
               <div className="flex gap-3">
                 {/* Item Image */}
                 {imageUrl ? (
-                  <Image
+                  <img
                     src={imageUrl}
                     alt={item.name}
                     width={64}

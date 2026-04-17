@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useRef } from "react";
 import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -93,13 +92,10 @@ export function ImageUploader({ value, onChange, disabled }: ImageUploaderProps)
       {/* Preview or upload area */}
       {value ? (
         <div className="relative h-40 w-full">
-          <Image
+          <img
             src={value}
             alt="Preview"
-            fill
-            sizes="(max-width: 768px) 100vw, 50vw"
-            className="rounded-lg border object-cover"
-            unoptimized
+            className="absolute inset-0 h-full w-full rounded-lg border object-cover"
           />
           <Button
             type="button"

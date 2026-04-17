@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Container } from "@/components/website/ui/Container";
 
 function FeatureBadge({ icon, label }: { icon: React.ReactNode; label: string }) {
@@ -31,21 +30,19 @@ export function GrowAgentValueProp() {
           {/* Right: image with overlays */}
           <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
             {/* Base image (desaturated) */}
-            <Image
+            <img
               src="/images/grow-agent/team-office.png"
               alt="Team collaborating in a modern office"
-              fill
-              className="object-cover opacity-50"
+              className="absolute inset-0 h-full w-full object-cover opacity-50"
             />
             <div className="absolute inset-0 bg-white mix-blend-saturation" />
 
             {/* Overlay image */}
-            <Image
+            <img
               src="/images/grow-agent/team-office-overlay.png"
               alt=""
-              fill
-              className="object-cover"
               aria-hidden="true"
+              className="absolute inset-0 h-full w-full object-cover"
             />
 
             {/* Feature badges */}

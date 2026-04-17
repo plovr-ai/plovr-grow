@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useCartStore, useCartHydration } from "@/stores";
 import { useFormatPrice } from "@/hooks";
@@ -45,7 +44,7 @@ export function MenuHeader({
               </Link>
               <div className="flex items-center gap-3">
                 {merchantLogo && (
-                  <Image
+                  <img
                     src={merchantLogo}
                     alt={merchantName}
                     width={32}

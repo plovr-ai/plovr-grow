@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 
 interface LogoProps {
   className?: string;
@@ -15,7 +14,7 @@ export function Logo({ className = "", variant = "dark" }: LogoProps) {
       className={`inline-flex items-center gap-2 ${className}`}
       aria-label="LocalGrow home"
     >
-      <Image
+      <img
         src="/logo.svg"
         alt=""
         width={28}
