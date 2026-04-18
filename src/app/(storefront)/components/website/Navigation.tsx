@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, use, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { NavigationLink } from "@/types/website";
-import { useLoyalty } from "@/contexts";
+import { useLoyalty, type LoyaltyMember } from "@/contexts";
 import { SignInModal } from "./SignInModal";
 import { UserDropdown } from "./UserDropdown";
 
@@ -18,8 +18,30 @@ interface NavigationProps {
   menuLink?: string;
   /** Custom catering link (for single vs multi-store logic) */
   cateringLink?: string;
-  /** Whether loyalty is enabled for this company */
-  isLoyaltyEnabled?: boolean;
+  /**
+   * Promise resolving to whether loyalty is enabled for this company.
+   * Read inside <Suspense> so the nav shell streams first and the
+   * loyalty-gated UI (Sign In button, user dropdown, mobile auth block,
+   * SignInModal) fills in once the promise resolves. Pages should NOT
+   * await this promise — pass it directly so SSR can stream.
+   */
+  isLoyaltyEnabledPromise?: Promise<boolean>;
+}
+
+/**
+ * Renders children only when loyalty is enabled for the current company.
+ * Reads the flag via React `use()`, so the surrounding <Suspense> boundary
+ * holds until the promise resolves and then streams in the slot content.
+ */
+function LoyaltyEnabledGate({
+  promise,
+  children,
+}: {
+  promise: Promise<boolean>;
+  children: ReactNode;
+}) {
+  const isLoyaltyEnabled = use(promise);
+  return isLoyaltyEnabled ? <>{children}</> : null;
 }
 
 export function Navigation({
@@ -29,7 +51,7 @@ export function Navigation({
   companySlug,
   menuLink,
   cateringLink,
-  isLoyaltyEnabled = false,
+  isLoyaltyEnabledPromise,
 }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showSignInModal, setShowSignInModal] = useState(false);
@@ -55,126 +77,29 @@ export function Navigation({
     { label: "Our Story", href: "#story" },
   ];
 
-  // Get display name for logged-in member
-  const getDisplayName = () => {
-    if (!member) return "";
-    return member.firstName || "Member";
-  };
-
   // Render auth section for desktop
-  const renderDesktopAuth = () => {
-    if (!isLoyaltyEnabled) return null;
-
-    if (isLoading) {
-      return (
-        <div className="hidden md:block w-20 h-8 bg-gray-100 rounded animate-pulse" />
-      );
-    }
-
-    if (member) {
-      return (
-        <div className="hidden md:block relative">
-          <button
-            onClick={() => setShowUserDropdown(!showUserDropdown)}
-            className="flex items-center gap-1 text-gray-600 hover:text-gray-900 font-medium transition-colors"
-          >
-            <span>Hi, {getDisplayName()}</span>
-            <svg
-              className={`w-4 h-4 transition-transform ${showUserDropdown ? "rotate-180" : ""}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
-          {showUserDropdown && (
-            <UserDropdown
-              member={member}
-              onLogout={logout}
-              onClose={() => setShowUserDropdown(false)}
-            />
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <button
-        onClick={() => setShowSignInModal(true)}
-        className="hidden md:block text-gray-600 hover:text-gray-900 font-medium transition-colors"
-      >
-        Sign In
-      </button>
-    );
-  };
+  const desktopAuth = renderDesktopAuth({
+    isLoading,
+    member,
+    showUserDropdown,
+    setShowUserDropdown,
+    onSignInClick: () => setShowSignInModal(true),
+    onLogout: logout,
+  });
 
   // Render auth section for mobile
-  const renderMobileAuth = () => {
-    if (!isLoyaltyEnabled) return null;
-
-    if (isLoading) {
-      return (
-        <div className="w-32 h-8 bg-gray-100 rounded animate-pulse mx-2" />
-      );
-    }
-
-    if (member) {
-      return (
-        <div className="border-t border-gray-100 mt-2 pt-4">
-          <div className="px-2 py-2">
-            <div className="text-gray-900 font-medium">
-              Hi, {getDisplayName()}
-            </div>
-            <div className="flex items-center gap-1 mt-1">
-              <svg
-                className="w-4 h-4 text-theme-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
-                />
-              </svg>
-              <span className="text-sm font-semibold text-theme-primary">
-                {member.points} pts
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              logout();
-              setIsMobileMenuOpen(false);
-            }}
-            className="w-full text-left text-gray-600 hover:text-gray-900 font-medium px-2 py-2"
-          >
-            Sign Out
-          </button>
-        </div>
-      );
-    }
-
-    return (
-      <button
-        onClick={() => {
-          setShowSignInModal(true);
-          setIsMobileMenuOpen(false);
-        }}
-        className="text-gray-600 hover:text-gray-900 font-medium px-2 py-2 text-left"
-      >
-        Sign In
-      </button>
-    );
-  };
+  const mobileAuth = renderMobileAuth({
+    isLoading,
+    member,
+    onSignInClick: () => {
+      setShowSignInModal(true);
+      setIsMobileMenuOpen(false);
+    },
+    onLogout: () => {
+      logout();
+      setIsMobileMenuOpen(false);
+    },
+  });
 
   return (
     <>
@@ -217,7 +142,13 @@ export function Navigation({
 
             {/* Right Side Actions */}
             <div className="flex items-center gap-3">
-              {renderDesktopAuth()}
+              {isLoyaltyEnabledPromise && (
+                <Suspense fallback={null}>
+                  <LoyaltyEnabledGate promise={isLoyaltyEnabledPromise}>
+                    {desktopAuth}
+                  </LoyaltyEnabledGate>
+                </Suspense>
+              )}
               <Link
                 href={orderLink}
                 className="bg-theme-primary hover:bg-theme-primary-hover text-theme-primary-foreground px-4 py-2 md:px-6 md:py-2.5 rounded-full font-semibold text-sm md:text-base transition-colors"
@@ -278,20 +209,155 @@ export function Navigation({
                     {link.label}
                   </a>
                 ))}
-                {renderMobileAuth()}
+                {isLoyaltyEnabledPromise && (
+                  <Suspense fallback={null}>
+                    <LoyaltyEnabledGate promise={isLoyaltyEnabledPromise}>
+                      {mobileAuth}
+                    </LoyaltyEnabledGate>
+                  </Suspense>
+                )}
               </div>
             </div>
           )}
         </div>
       </nav>
 
-      {/* Sign In Modal */}
-      {isLoyaltyEnabled && (
-        <SignInModal
-          isOpen={showSignInModal}
-          onClose={() => setShowSignInModal(false)}
-        />
+      {/* Sign In Modal — only mounted once loyalty flag resolves as enabled */}
+      {isLoyaltyEnabledPromise && (
+        <Suspense fallback={null}>
+          <LoyaltyEnabledGate promise={isLoyaltyEnabledPromise}>
+            <SignInModal
+              isOpen={showSignInModal}
+              onClose={() => setShowSignInModal(false)}
+            />
+          </LoyaltyEnabledGate>
+        </Suspense>
       )}
     </>
+  );
+}
+
+function renderDesktopAuth({
+  isLoading,
+  member,
+  showUserDropdown,
+  setShowUserDropdown,
+  onSignInClick,
+  onLogout,
+}: {
+  isLoading: boolean;
+  member: LoyaltyMember | null;
+  showUserDropdown: boolean;
+  setShowUserDropdown: (v: boolean) => void;
+  onSignInClick: () => void;
+  onLogout: () => void;
+}) {
+  if (isLoading) {
+    return (
+      <div className="hidden md:block w-20 h-8 bg-gray-100 rounded animate-pulse" />
+    );
+  }
+
+  if (member) {
+    const displayName = member.firstName || "Member";
+    return (
+      <div className="hidden md:block relative">
+        <button
+          onClick={() => setShowUserDropdown(!showUserDropdown)}
+          className="flex items-center gap-1 text-gray-600 hover:text-gray-900 font-medium transition-colors"
+        >
+          <span>Hi, {displayName}</span>
+          <svg
+            className={`w-4 h-4 transition-transform ${showUserDropdown ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </button>
+        {showUserDropdown && (
+          <UserDropdown
+            member={member}
+            onLogout={onLogout}
+            onClose={() => setShowUserDropdown(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={onSignInClick}
+      className="hidden md:block text-gray-600 hover:text-gray-900 font-medium transition-colors"
+    >
+      Sign In
+    </button>
+  );
+}
+
+function renderMobileAuth({
+  isLoading,
+  member,
+  onSignInClick,
+  onLogout,
+}: {
+  isLoading: boolean;
+  member: LoyaltyMember | null;
+  onSignInClick: () => void;
+  onLogout: () => void;
+}) {
+  if (isLoading) {
+    return <div className="w-32 h-8 bg-gray-100 rounded animate-pulse mx-2" />;
+  }
+
+  if (member) {
+    const displayName = member.firstName || "Member";
+    return (
+      <div className="border-t border-gray-100 mt-2 pt-4">
+        <div className="px-2 py-2">
+          <div className="text-gray-900 font-medium">Hi, {displayName}</div>
+          <div className="flex items-center gap-1 mt-1">
+            <svg
+              className="w-4 h-4 text-theme-primary"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+              />
+            </svg>
+            <span className="text-sm font-semibold text-theme-primary">
+              {member.points} pts
+            </span>
+          </div>
+        </div>
+        <button
+          onClick={onLogout}
+          className="w-full text-left text-gray-600 hover:text-gray-900 font-medium px-2 py-2"
+        >
+          Sign Out
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={onSignInClick}
+      className="text-gray-600 hover:text-gray-900 font-medium px-2 py-2 text-left"
+    >
+      Sign In
+    </button>
   );
 }

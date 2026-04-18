@@ -25,8 +25,10 @@ export default async function CateringPage({ params }: CateringPageProps) {
     notFound();
   }
 
-  // Check if loyalty is enabled for this company
-  const isLoyaltyEnabled = await loyaltyConfigService.isLoyaltyEnabled(
+  // Kick off loyalty flag lookup without awaiting — it's passed as a
+  // Promise to <Navigation>, which streams the loyalty-gated UI via a
+  // <Suspense> boundary once it resolves.
+  const isLoyaltyEnabledPromise = loyaltyConfigService.isLoyaltyEnabled(
     merchant.tenant.tenantId
   );
 
@@ -42,7 +44,7 @@ export default async function CateringPage({ params }: CateringPageProps) {
         companySlug={merchant.tenant.slug ?? undefined}
         menuLink={menuLink}
         cateringLink={cateringLink}
-        isLoyaltyEnabled={isLoyaltyEnabled}
+        isLoyaltyEnabledPromise={isLoyaltyEnabledPromise}
       />
 
       {/* Page header section */}

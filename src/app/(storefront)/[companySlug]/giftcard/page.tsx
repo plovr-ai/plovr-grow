@@ -20,8 +20,10 @@ export default async function GiftcardPage({
   const websiteData = await merchantService.getTenantWebsiteBasics(companySlug);
   if (!websiteData) notFound();
 
-  // Check if loyalty is enabled
-  const isLoyaltyEnabled = await loyaltyConfigService.isLoyaltyEnabled(
+  // Kick off loyalty flag lookup without awaiting — it's passed as a
+  // Promise to <Navigation>, which streams the loyalty-gated UI via a
+  // <Suspense> boundary once it resolves.
+  const isLoyaltyEnabledPromise = loyaltyConfigService.isLoyaltyEnabled(
     company.tenantId
   );
 
@@ -71,7 +73,7 @@ export default async function GiftcardPage({
           companySlug={companySlug}
           menuLink={menuLink}
           cateringLink={cateringLink}
-          isLoyaltyEnabled={isLoyaltyEnabled}
+          isLoyaltyEnabledPromise={isLoyaltyEnabledPromise}
         />
 
         <section className="bg-white border-b pt-20">

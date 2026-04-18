@@ -70,7 +70,11 @@ describe("Navigation", () => {
     it("should not render Sign In button when loyalty is disabled", async () => {
       render(
         <TestWrapper>
-          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={false} />
+          <Navigation
+            {...defaultProps}
+            companySlug="joes-pizza"
+            isLoyaltyEnabledPromise={Promise.resolve(false)}
+          />
         </TestWrapper>
       );
 
@@ -83,7 +87,11 @@ describe("Navigation", () => {
     it("should render Sign In button when loyalty is enabled", async () => {
       render(
         <TestWrapper>
-          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+          <Navigation
+            {...defaultProps}
+            companySlug="joes-pizza"
+            isLoyaltyEnabledPromise={Promise.resolve(true)}
+          />
         </TestWrapper>
       );
 
@@ -91,6 +99,24 @@ describe("Navigation", () => {
       await waitFor(() => {
         expect(screen.getByText("Sign In")).toBeInTheDocument();
       });
+    });
+
+    it("should not render Sign In button while loyalty promise is pending", async () => {
+      // Never-resolving promise simulates the streaming state
+      const pending = new Promise<boolean>(() => {});
+      render(
+        <TestWrapper>
+          <Navigation
+            {...defaultProps}
+            companySlug="joes-pizza"
+            isLoyaltyEnabledPromise={pending}
+          />
+        </TestWrapper>
+      );
+
+      // Nav shell renders, but the Suspense fallback (null) hides the auth slot
+      expect(screen.getByText("Order Online")).toBeInTheDocument();
+      expect(screen.queryByText("Sign In")).not.toBeInTheDocument();
     });
 
     it("should render navigation links", async () => {
@@ -251,7 +277,7 @@ describe("Navigation", () => {
     it("should show Sign In in mobile menu when loyalty is enabled", async () => {
       render(
         <TestWrapper>
-          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabledPromise={Promise.resolve(true)} />
         </TestWrapper>
       );
 
@@ -275,7 +301,7 @@ describe("Navigation", () => {
     it("should close mobile menu and open Sign In modal from mobile", async () => {
       render(
         <TestWrapper>
-          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabledPromise={Promise.resolve(true)} />
         </TestWrapper>
       );
 
@@ -322,7 +348,7 @@ describe("Navigation", () => {
 
       render(
         <TestWrapper>
-          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabledPromise={Promise.resolve(true)} />
         </TestWrapper>
       );
 
@@ -367,7 +393,7 @@ describe("Navigation", () => {
 
       render(
         <TestWrapper>
-          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabledPromise={Promise.resolve(true)} />
         </TestWrapper>
       );
 
@@ -405,7 +431,7 @@ describe("Navigation", () => {
 
       render(
         <TestWrapper>
-          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabledPromise={Promise.resolve(true)} />
         </TestWrapper>
       );
 
@@ -458,7 +484,7 @@ describe("Navigation", () => {
 
       render(
         <TestWrapper>
-          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabledPromise={Promise.resolve(true)} />
         </TestWrapper>
       );
 
@@ -525,7 +551,7 @@ describe("Navigation", () => {
     it("should open Sign In modal when button is clicked", async () => {
       render(
         <TestWrapper>
-          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabledPromise={Promise.resolve(true)} />
         </TestWrapper>
       );
 
@@ -545,7 +571,7 @@ describe("Navigation", () => {
     it("should close Sign In modal when close button is clicked", async () => {
       render(
         <TestWrapper>
-          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabled={true} />
+          <Navigation {...defaultProps} companySlug="joes-pizza" isLoyaltyEnabledPromise={Promise.resolve(true)} />
         </TestWrapper>
       );
 
