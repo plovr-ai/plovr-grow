@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GbpOAuthService } from "../gbp-oauth.service";
+import { gbpOAuthService } from "../gbp-oauth.service";
 import { AppError } from "@/lib/errors";
 
 vi.mock("@/lib/proxy", () => ({
@@ -18,11 +18,10 @@ vi.mock("../gbp.config", () => ({
 }));
 
 describe("GbpOAuthService", () => {
-  let service: GbpOAuthService;
+  const service = gbpOAuthService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new GbpOAuthService();
   });
 
   describe("buildAuthorizationUrl()", () => {
