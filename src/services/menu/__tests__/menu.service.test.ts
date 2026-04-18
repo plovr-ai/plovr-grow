@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { MenuService } from "../menu.service";
+import { menuService } from "../menu.service";
 import { Prisma } from "@prisma/client";
 
 // Mock repositories
@@ -102,8 +102,6 @@ import { featuredItemRepository } from "@/repositories/featured-item.repository"
 import prisma from "@/lib/db";
 
 describe("MenuService", () => {
-  let menuService: MenuService;
-
   // Mock data
   const mockMerchant = {
     id: "merchant-1",    name: "Test Merchant",
@@ -237,7 +235,6 @@ describe("MenuService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    menuService = new MenuService();
   });
 
   describe("getMenu()", () => {
@@ -1145,7 +1142,6 @@ describe("MenuService", () => {
       } as never);
       vi.mocked(menuCategoryItemRepository.getNextSortOrder).mockResolvedValue(0);
       vi.mocked(menuCategoryItemRepository.linkItemToCategory).mockResolvedValue({} as never);
-      const syncSpy = vi.spyOn(menuService, "syncModifierGroups").mockResolvedValue();
 
       await menuService.createMenuItem("tenant-1", {
         categoryIds: ["cat-1"], name: "Test Item", price: 10,
@@ -1154,8 +1150,11 @@ describe("MenuService", () => {
 
       const createCall = vi.mocked(menuRepository.createItem).mock.calls[0];
       expect(createCall[1]).not.toHaveProperty("modifiers");
-      expect(syncSpy).toHaveBeenCalledWith("tenant-1", "new-item", expect.any(Array));
-      syncSpy.mockRestore();
+      // syncModifierGroups runs internally — verify via its downstream prisma calls
+      expect(prisma.menuItemModifierGroup.deleteMany).toHaveBeenCalledWith({
+        where: { menuItemId: "new-item" },
+      });
+      expect(prisma.modifierGroup.upsert).toHaveBeenCalled();
     });
   });
 
