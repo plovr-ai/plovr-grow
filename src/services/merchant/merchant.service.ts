@@ -124,11 +124,13 @@ async function getWebsiteData(
  * 获取 Company 网站显示数据 (公开访问)
  * 用于品牌官网首页
  * @param companySlug - Company slug
+ * @param opts.preloadedTenant - 调用方已加载好的 tenant（含 merchants），传入可省一次 lookup
  */
 async function getTenantWebsiteData(
-  companySlug: string
+  companySlug: string,
+  opts?: { preloadedTenant?: TenantWithMerchants }
 ): Promise<WebsiteMerchantData | null> {
-  const tenant = await getTenantBySlug(companySlug);
+  const tenant = opts?.preloadedTenant ?? (await getTenantBySlug(companySlug));
   if (!tenant) return null;
 
   const tenantSettings = tenant.settings as TenantSettings | undefined;

@@ -18,8 +18,10 @@ export default async function CompanyHomePage({ params }: PageProps) {
     notFound();
   }
 
-  // Get website display data from database
-  const websiteData = await merchantService.getTenantWebsiteData(companySlug);
+  // Get website display data from database (reuse loaded tenant to avoid redundant lookup)
+  const websiteData = await merchantService.getTenantWebsiteData(companySlug, {
+    preloadedTenant: company,
+  });
   if (!websiteData) {
     notFound();
   }

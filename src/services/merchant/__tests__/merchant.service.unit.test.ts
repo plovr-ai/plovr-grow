@@ -589,6 +589,27 @@ describe("MerchantService (unit tests)", () => {
       expect(result?.reviews?.[0].customerName).toBe("Alice");
     });
 
+    it("should skip tenant lookup when preloadedTenant is provided", async () => {
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
+
+      const result = await merchantService.getTenantWebsiteData("joes-pizza", {
+        preloadedTenant: mockTenantWithMerchants as never,
+      });
+
+      expect(tenantRepository.getBySlugWithMerchants).not.toHaveBeenCalled();
+      expect(result).not.toBeNull();
+      expect(result?.name).toBe("Joe's Pizza");
+      expect(menuService.getFeaturedItems).toHaveBeenCalledWith("tenant-1");
+    });
+
+    it("should still query repository when preloadedTenant is undefined", async () => {
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
+
+      await merchantService.getTenantWebsiteData("joes-pizza", {});
+
+      expect(tenantRepository.getBySlugWithMerchants).toHaveBeenCalledWith("joes-pizza");
+    });
+
     it("should return empty array when all reviews are below 4 stars", async () => {
       vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
         ...mockTenantWithMerchants,
