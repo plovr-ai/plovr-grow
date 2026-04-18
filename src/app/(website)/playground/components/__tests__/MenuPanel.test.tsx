@@ -109,4 +109,30 @@ describe("MenuPanel", () => {
     expect(screen.getByText("Mains")).toBeInTheDocument();
     expect(screen.getByText("Hearty dishes")).toBeInTheDocument();
   });
+
+  it("shows the merchant name in the menu heading when provided", () => {
+    const categories = [
+      makeCategory({ menuItems: [makeItem()] }),
+    ];
+
+    render(
+      <MenuPanel categories={categories} merchantName="Burger Shack" />
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Burger Shack's Menu" })
+    ).toBeInTheDocument();
+  });
+
+  it("falls back to a generic 'Menu' heading when no merchant name is given", () => {
+    const categories = [
+      makeCategory({ menuItems: [makeItem()] }),
+    ];
+
+    render(<MenuPanel categories={categories} />);
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Menu" })
+    ).toBeInTheDocument();
+  });
 });
