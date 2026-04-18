@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { LoyaltyService } from "../loyalty.service";
+import { loyaltyService } from "../loyalty.service";
 import { loyaltyConfigService } from "../loyalty-config.service";
 import { loyaltyMemberService } from "../loyalty-member.service";
 import { pointsService } from "../points.service";
@@ -32,7 +32,7 @@ vi.mock("../points.service", () => ({
 }));
 
 describe("LoyaltyService", () => {
-  let service: LoyaltyService;
+  const service = loyaltyService;
 
   const mockMember: LoyaltyMemberData = {
     id: "member-1",
@@ -61,7 +61,6 @@ describe("LoyaltyService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new LoyaltyService();
   });
 
   describe("processOrderCompletion", () => {

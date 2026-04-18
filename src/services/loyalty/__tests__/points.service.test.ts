@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Decimal } from "@prisma/client/runtime/library";
 import { Prisma } from "@prisma/client";
-import { PointsService } from "../points.service";
+import { pointsService } from "../points.service";
 
 // Mock prisma
 vi.mock("@/lib/db", () => {
@@ -34,7 +34,7 @@ import { pointTransactionRepository } from "@/repositories/point-transaction.rep
 import { loyaltyMemberRepository } from "@/repositories/loyalty-member.repository";
 
 describe("PointsService", () => {
-  let service: PointsService;
+  const service = pointsService;
 
   const mockMember = {
     id: "member-1",
@@ -73,7 +73,6 @@ describe("PointsService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new PointsService();
 
     // Default: prisma.$transaction executes the callback immediately
     vi.mocked(prisma.$transaction).mockImplementation(

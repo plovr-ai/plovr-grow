@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Decimal } from "@prisma/client/runtime/library";
-import { LoyaltyConfigService } from "../loyalty-config.service";
+import { loyaltyConfigService } from "../loyalty-config.service";
 
 // Mock repository
 vi.mock("@/repositories/loyalty-config.repository", () => ({
@@ -15,7 +15,7 @@ vi.mock("@/repositories/loyalty-config.repository", () => ({
 import { loyaltyConfigRepository } from "@/repositories/loyalty-config.repository";
 
 describe("LoyaltyConfigService", () => {
-  let service: LoyaltyConfigService;
+  const service = loyaltyConfigService;
 
   const mockConfig = {
     id: "config-1",
@@ -29,7 +29,6 @@ describe("LoyaltyConfigService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new LoyaltyConfigService();
   });
 
   describe("getLoyaltyConfig", () => {
