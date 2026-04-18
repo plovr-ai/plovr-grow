@@ -169,7 +169,6 @@ export interface GetMerchantsFilter {
 // ==================== Website Data Types ====================
 
 import type { SocialLink, CustomerReview } from "@/types/tenant";
-import type { FeaturedItem } from "@/types/website";
 import type { TipConfig, FeeConfig } from "@/types/index";
 import type { WebsiteTemplateName } from "@/types/website-template";
 
@@ -194,7 +193,6 @@ export interface WebsiteMerchantData {
   locale: string;
   tipConfig?: TipConfig;
   feeConfig?: FeeConfig;
-  featuredItems?: FeaturedItem[];
   reviews?: CustomerReview[];
   websiteTemplate: WebsiteTemplateName;
 }

@@ -17,7 +17,7 @@ export default async function GiftcardPage({
   if (!company) notFound();
 
   // Get website data for Navigation/Footer
-  const websiteData = await merchantService.getTenantWebsiteData(companySlug);
+  const websiteData = await merchantService.getTenantWebsiteBasics(companySlug);
   if (!websiteData) notFound();
 
   // Check if loyalty is enabled
