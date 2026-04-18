@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Decimal } from "@prisma/client/runtime/library";
-import { GiftCardService } from "../giftcard.service";
+import { giftCardService } from "../giftcard.service";
 
 // Mock giftcard utils
 vi.mock("@/lib/giftcard", () => ({
@@ -34,8 +34,6 @@ import { giftCardRepository } from "@/repositories/giftcard.repository";
 import { generateGiftCardNumber, isValidGiftCardFormat } from "@/lib/giftcard";
 
 describe("GiftCardService", () => {
-  let service: GiftCardService;
-
   const now = new Date();
 
   const mockGiftCard = {
@@ -70,17 +68,16 @@ describe("GiftCardService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new GiftCardService();
   });
 
   describe("redeemGiftCard", () => {
     it("should call getByIdForUpdate when tx is provided", async () => {
-      const mockTx = {} as Parameters<typeof service.redeemGiftCard>[4];
+      const mockTx = {} as Parameters<typeof giftCardService.redeemGiftCard>[4];
       vi.mocked(giftCardRepository.getByIdForUpdate).mockResolvedValue(mockLockedGiftCard);
       vi.mocked(giftCardRepository.updateBalance).mockResolvedValue(mockGiftCard);
       vi.mocked(giftCardRepository.createTransaction).mockResolvedValue(mockTransaction);
 
-      await service.redeemGiftCard("tenant-1", "gc-1", "order-1", 20, mockTx);
+      await giftCardService.redeemGiftCard("tenant-1", "gc-1", "order-1", 20, mockTx);
 
       expect(giftCardRepository.getByIdForUpdate).toHaveBeenCalledWith(
         "tenant-1",
@@ -95,7 +92,7 @@ describe("GiftCardService", () => {
       vi.mocked(giftCardRepository.updateBalance).mockResolvedValue(mockGiftCard);
       vi.mocked(giftCardRepository.createTransaction).mockResolvedValue(mockTransaction);
 
-      await service.redeemGiftCard("tenant-1", "gc-1", "order-1", 20);
+      await giftCardService.redeemGiftCard("tenant-1", "gc-1", "order-1", 20);
 
       expect(giftCardRepository.getById).toHaveBeenCalledWith("tenant-1", "gc-1");
       expect(giftCardRepository.getByIdForUpdate).not.toHaveBeenCalled();
@@ -105,7 +102,7 @@ describe("GiftCardService", () => {
       vi.mocked(giftCardRepository.getById).mockResolvedValue(null);
 
       await expect(
-        service.redeemGiftCard("tenant-1", "gc-1", "order-1", 20)
+        giftCardService.redeemGiftCard("tenant-1", "gc-1", "order-1", 20)
       ).rejects.toThrow("GIFTCARD_NOT_FOUND");
     });
 
@@ -116,7 +113,7 @@ describe("GiftCardService", () => {
       });
 
       await expect(
-        service.redeemGiftCard("tenant-1", "gc-1", "order-1", 20)
+        giftCardService.redeemGiftCard("tenant-1", "gc-1", "order-1", 20)
       ).rejects.toThrow("GIFTCARD_NO_BALANCE");
     });
 
@@ -128,7 +125,7 @@ describe("GiftCardService", () => {
       vi.mocked(giftCardRepository.updateBalance).mockResolvedValue(mockGiftCard);
       vi.mocked(giftCardRepository.createTransaction).mockResolvedValue(mockTransaction);
 
-      const result = await service.redeemGiftCard("tenant-1", "gc-1", "order-1", 20);
+      const result = await giftCardService.redeemGiftCard("tenant-1", "gc-1", "order-1", 20);
 
       expect(result.amountRedeemed).toBe(10);
       expect(result.remainingBalance).toBe(0);
@@ -145,7 +142,7 @@ describe("GiftCardService", () => {
       vi.mocked(giftCardRepository.updateBalance).mockResolvedValue(mockGiftCard);
       vi.mocked(giftCardRepository.createTransaction).mockResolvedValue(mockTransaction);
 
-      const result = await service.redeemGiftCard("tenant-1", "gc-1", "order-1", 20);
+      const result = await giftCardService.redeemGiftCard("tenant-1", "gc-1", "order-1", 20);
 
       expect(result).toEqual({
         success: true,
@@ -162,7 +159,7 @@ describe("GiftCardService", () => {
       vi.mocked(giftCardRepository.create).mockResolvedValue(mockGiftCard);
       vi.mocked(giftCardRepository.createTransaction).mockResolvedValue(mockTransaction);
 
-      const result = await service.createGiftCard("tenant-1", {
+      const result = await giftCardService.createGiftCard("tenant-1", {
         amount: 50,
         purchaseOrderId: "order-0",
       });
@@ -197,7 +194,7 @@ describe("GiftCardService", () => {
       vi.mocked(giftCardRepository.create).mockResolvedValue(mockGiftCard);
       vi.mocked(giftCardRepository.createTransaction).mockResolvedValue(mockTransaction);
 
-      await service.createGiftCard("tenant-1", {
+      await giftCardService.createGiftCard("tenant-1", {
         amount: 50,
         purchaseOrderId: "order-0",
       });
@@ -209,7 +206,7 @@ describe("GiftCardService", () => {
       vi.mocked(giftCardRepository.cardNumberExists).mockResolvedValue(true);
 
       await expect(
-        service.createGiftCard("tenant-1", {
+        giftCardService.createGiftCard("tenant-1", {
           amount: 50,
           purchaseOrderId: "order-0",
         })
@@ -221,7 +218,7 @@ describe("GiftCardService", () => {
     it("should return invalid_format when card number format is bad", async () => {
       vi.mocked(isValidGiftCardFormat).mockReturnValueOnce(false);
 
-      const result = await service.validateGiftCard("tenant-1", "bad");
+      const result = await giftCardService.validateGiftCard("tenant-1", "bad");
 
       expect(result).toEqual({ valid: false, error: "invalid_format" });
     });
@@ -229,7 +226,7 @@ describe("GiftCardService", () => {
     it("should return not_found when card does not exist", async () => {
       vi.mocked(giftCardRepository.getByCardNumber).mockResolvedValue(null);
 
-      const result = await service.validateGiftCard(
+      const result = await giftCardService.validateGiftCard(
         "tenant-1",
                 "1234-5678-9012-3456"
       );
@@ -243,7 +240,7 @@ describe("GiftCardService", () => {
         currentBalance: new Decimal(0),
       });
 
-      const result = await service.validateGiftCard(
+      const result = await giftCardService.validateGiftCard(
         "tenant-1",
                 "1234-5678-9012-3456"
       );
@@ -254,7 +251,7 @@ describe("GiftCardService", () => {
     it("should return valid with gift card data when card is good", async () => {
       vi.mocked(giftCardRepository.getByCardNumber).mockResolvedValue(mockGiftCard);
 
-      const result = await service.validateGiftCard(
+      const result = await giftCardService.validateGiftCard(
         "tenant-1",
                 "1234-5678-9012-3456"
       );
@@ -274,7 +271,7 @@ describe("GiftCardService", () => {
     it("should return null when gift card is not found", async () => {
       vi.mocked(giftCardRepository.getByCardNumber).mockResolvedValue(null);
 
-      const result = await service.getBalance("tenant-1", "1234567890123456");
+      const result = await giftCardService.getBalance("tenant-1", "1234567890123456");
 
       expect(result).toBeNull();
     });
@@ -282,7 +279,7 @@ describe("GiftCardService", () => {
     it("should return the current balance as a number", async () => {
       vi.mocked(giftCardRepository.getByCardNumber).mockResolvedValue(mockGiftCard);
 
-      const result = await service.getBalance("tenant-1", "1234567890123456");
+      const result = await giftCardService.getBalance("tenant-1", "1234567890123456");
 
       expect(result).toBe(50);
     });
@@ -292,7 +289,7 @@ describe("GiftCardService", () => {
     it("should return null when gift card is not found", async () => {
       vi.mocked(giftCardRepository.getById).mockResolvedValue(null);
 
-      const result = await service.getGiftCard("tenant-1", "gc-1");
+      const result = await giftCardService.getGiftCard("tenant-1", "gc-1");
 
       expect(result).toBeNull();
     });
@@ -300,7 +297,7 @@ describe("GiftCardService", () => {
     it("should return gift card data when found", async () => {
       vi.mocked(giftCardRepository.getById).mockResolvedValue(mockGiftCard);
 
-      const result = await service.getGiftCard("tenant-1", "gc-1");
+      const result = await giftCardService.getGiftCard("tenant-1", "gc-1");
 
       expect(result).toEqual({
         id: "gc-1",
@@ -316,7 +313,7 @@ describe("GiftCardService", () => {
     it("should return null when not found", async () => {
       vi.mocked(giftCardRepository.getByPurchaseOrderId).mockResolvedValue(null);
 
-      const result = await service.getGiftCardByOrderId("tenant-1", "order-0");
+      const result = await giftCardService.getGiftCardByOrderId("tenant-1", "order-0");
 
       expect(result).toBeNull();
     });
@@ -324,7 +321,7 @@ describe("GiftCardService", () => {
     it("should return gift card data when found", async () => {
       vi.mocked(giftCardRepository.getByPurchaseOrderId).mockResolvedValue(mockGiftCard);
 
-      const result = await service.getGiftCardByOrderId("tenant-1", "order-0");
+      const result = await giftCardService.getGiftCardByOrderId("tenant-1", "order-0");
 
       expect(result).toEqual({
         id: "gc-1",
@@ -346,7 +343,7 @@ describe("GiftCardService", () => {
       };
       vi.mocked(giftCardRepository.getStatsByTenant).mockResolvedValue(mockStats);
 
-      const result = await service.getTenantGiftCardStats("tenant-1");
+      const result = await giftCardService.getTenantGiftCardStats("tenant-1");
 
       expect(giftCardRepository.getStatsByTenant).toHaveBeenCalledWith(
         "tenant-1",
@@ -366,7 +363,7 @@ describe("GiftCardService", () => {
       const dateFrom = new Date("2026-01-01");
       const dateTo = new Date("2026-03-01");
 
-      await service.getTenantGiftCardStats("tenant-1", {
+      await giftCardService.getTenantGiftCardStats("tenant-1", {
         dateFrom,
         dateTo,
       });
@@ -403,7 +400,7 @@ describe("GiftCardService", () => {
         totalPages: 1,
       } as never);
 
-      const result = await service.getTenantGiftCards("tenant-1");
+      const result = await giftCardService.getTenantGiftCards("tenant-1");
 
       expect(result.items).toHaveLength(1);
       expect(result.items[0]).toEqual({
@@ -432,7 +429,7 @@ describe("GiftCardService", () => {
         totalPages: 0,
       } as never);
 
-      await service.getTenantGiftCards("tenant-1", {
+      await giftCardService.getTenantGiftCards("tenant-1", {
         page: 2,
         pageSize: 10,
         search: "1234",

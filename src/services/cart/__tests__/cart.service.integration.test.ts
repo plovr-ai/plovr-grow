@@ -114,7 +114,7 @@ vi.mock("@/lib/db", () => ({
 // Import real services AFTER mocks are set up
 // ---------------------------------------------------------------------------
 
-import { CartService } from "@/services/cart/cart.service";
+import { cartService } from "@/services/cart/cart.service";
 
 // ---------------------------------------------------------------------------
 // Test IDs (stable across tests, unique per run)
@@ -299,8 +299,6 @@ function setupOrderCreationMocks(sequenceNum = 1) {
 // ---------------------------------------------------------------------------
 
 describe("CartService Integration", () => {
-  const cartService = new CartService();
-
   beforeAll(async () => {
     await cleanupTestData();
     await seedTestData();

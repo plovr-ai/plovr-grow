@@ -30,171 +30,154 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export class CartService {
-  async createCart(tenantId: string, merchantId: string, input: CreateCartInput) {
-    return cartRepository.create(tenantId, merchantId, {
-      salesChannel: input.salesChannel,
-      notes: input.notes,
-    });
+async function createCart(tenantId: string, merchantId: string, input: CreateCartInput) {
+  return cartRepository.create(tenantId, merchantId, {
+    salesChannel: input.salesChannel,
+    notes: input.notes,
+  });
+}
+
+async function getCart(tenantId: string, cartId: string): Promise<CartWithItems> {
+  const cart = await cartRepository.findByIdWithItems(tenantId, cartId);
+  if (!cart) {
+    throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
   }
 
-  async getCart(tenantId: string, cartId: string): Promise<CartWithItems> {
-    const cart = await cartRepository.findByIdWithItems(tenantId, cartId);
-    if (!cart) {
-      throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
-    }
+  const items = cart.cartItems.map((item): CartItemData => ({
+    id: item.id,
+    menuItemId: item.menuItemId,
+    name: item.name,
+    unitPrice: Number(item.unitPrice),
+    quantity: item.quantity,
+    totalPrice: Number(item.totalPrice),
+    specialInstructions: item.specialInstructions,
+    imageUrl: item.imageUrl,
+    sortOrder: item.sortOrder,
+    modifiers: item.modifiers.map((m): CartItemModifierData => ({
+      id: m.id,
+      modifierGroupId: m.modifierGroupId,
+      modifierOptionId: m.modifierOptionId,
+      groupName: m.groupName,
+      name: m.name,
+      price: Number(m.price),
+      quantity: m.quantity,
+    })),
+  }));
 
-    const items = cart.cartItems.map((item): CartItemData => ({
-      id: item.id,
-      menuItemId: item.menuItemId,
-      name: item.name,
-      unitPrice: Number(item.unitPrice),
-      quantity: item.quantity,
-      totalPrice: Number(item.totalPrice),
-      specialInstructions: item.specialInstructions,
-      imageUrl: item.imageUrl,
-      sortOrder: item.sortOrder,
-      modifiers: item.modifiers.map((m): CartItemModifierData => ({
-        id: m.id,
-        modifierGroupId: m.modifierGroupId,
-        modifierOptionId: m.modifierOptionId,
-        groupName: m.groupName,
-        name: m.name,
-        price: Number(m.price),
-        quantity: m.quantity,
-      })),
-    }));
+  const summary = await computeCartSummary(
+    cart.tenantId,
+    cart.merchantId,
+    items
+  );
 
-    const summary = await this.computeCartSummary(
-      cart.tenantId,
-      cart.merchantId,
-      items
-    );
+  return {
+    id: cart.id,
+    tenantId: cart.tenantId,
+    merchantId: cart.merchantId,
+    status: cart.status as CartWithItems["status"],
+    salesChannel: cart.salesChannel,
+    notes: cart.notes,
+    orderId: cart.orderId ?? null,
+    createdAt: cart.createdAt,
+    updatedAt: cart.updatedAt,
+    items,
+    summary,
+  };
+}
 
-    return {
-      id: cart.id,
-      tenantId: cart.tenantId,
-      merchantId: cart.merchantId,
-      status: cart.status as CartWithItems["status"],
-      salesChannel: cart.salesChannel,
-      notes: cart.notes,
-      orderId: cart.orderId ?? null,
-      createdAt: cart.createdAt,
-      updatedAt: cart.updatedAt,
-      items,
-      summary,
-    };
+async function cancelCart(tenantId: string, cartId: string): Promise<void> {
+  const cart = await cartRepository.findById(tenantId, cartId);
+  if (!cart) {
+    throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
+  }
+  if (cart.status !== "active") {
+    throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
+  }
+  await cartRepository.updateStatus(tenantId, cartId, "cancelled");
+}
+
+async function addItem(tenantId: string, cartId: string, input: AddCartItemInput): Promise<CartWithItems> {
+  const cart = await cartRepository.findById(tenantId, cartId);
+  if (!cart) {
+    throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
+  }
+  if (cart.status !== "active") {
+    throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
   }
 
-  async cancelCart(tenantId: string, cartId: string): Promise<void> {
-    const cart = await cartRepository.findById(tenantId, cartId);
-    if (!cart) {
-      throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
-    }
-    if (cart.status !== "active") {
-      throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
-    }
-    await cartRepository.updateStatus(tenantId, cartId, "cancelled");
+  // Validate menu item exists and get price from DB
+  const menuItems = await menuRepository.getItemsByIdsByCompany(
+    tenantId,
+    [input.menuItemId]
+  );
+  if (menuItems.length === 0) {
+    throw new AppError(ErrorCodes.CART_MENU_ITEM_NOT_FOUND, undefined, 404);
   }
 
-  async addItem(tenantId: string, cartId: string, input: AddCartItemInput): Promise<CartWithItems> {
-    const cart = await cartRepository.findById(tenantId, cartId);
-    if (!cart) {
-      throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
-    }
-    if (cart.status !== "active") {
-      throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
-    }
+  const menuItem = menuItems[0];
+  const unitPrice = Number(menuItem.price);
 
-    // Validate menu item exists and get price from DB
-    const menuItems = await menuRepository.getItemsByIdsByCompany(
+  const modifiers = await resolveModifiers(
+    tenantId,
+    input.selectedModifiers ?? []
+  );
+
+  const modifierTotal = modifiers.reduce(
+    (sum, m) => sum + m.price * m.quantity,
+    0
+  );
+  const totalPrice = (unitPrice + modifierTotal) * input.quantity;
+
+  const sortOrder = await cartRepository.getNextSortOrder(cartId);
+
+  await cartRepository.addItem(cartId, {
+    menuItemId: input.menuItemId,
+    name: menuItem.name,
+    unitPrice,
+    quantity: input.quantity,
+    totalPrice: Math.round(totalPrice * 100) / 100,
+    specialInstructions: input.specialInstructions,
+    imageUrl: menuItem.imageUrl ?? null,
+    sortOrder,
+    modifiers,
+  });
+
+  return getCart(tenantId, cartId);
+}
+
+async function updateItem(
+  tenantId: string,
+  cartId: string,
+  itemId: string,
+  input: UpdateCartItemInput
+): Promise<CartWithItems> {
+  const cart = await cartRepository.findById(tenantId, cartId);
+  if (!cart) {
+    throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
+  }
+  if (cart.status !== "active") {
+    throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
+  }
+
+  const existingItem = await cartRepository.findItemById(cartId, itemId);
+  if (!existingItem) {
+    throw new AppError(ErrorCodes.CART_ITEM_NOT_FOUND, undefined, 404);
+  }
+
+  const quantity = input.quantity ?? existingItem.quantity;
+  const unitPrice = Number(existingItem.unitPrice);
+
+  // If modifiers changed, replace them
+  if (input.selectedModifiers !== undefined) {
+    const newModifiers = await resolveModifiers(
       tenantId,
-      [input.menuItemId]
-    );
-    if (menuItems.length === 0) {
-      throw new AppError(ErrorCodes.CART_MENU_ITEM_NOT_FOUND, undefined, 404);
-    }
-
-    const menuItem = menuItems[0];
-    const unitPrice = Number(menuItem.price);
-
-    const modifiers = await this.resolveModifiers(
-      tenantId,
-      input.selectedModifiers ?? []
+      input.selectedModifiers
     );
 
-    const modifierTotal = modifiers.reduce(
+    await cartRepository.replaceItemModifiers(itemId, newModifiers);
+
+    const modifierTotal = newModifiers.reduce(
       (sum, m) => sum + m.price * m.quantity,
-      0
-    );
-    const totalPrice = (unitPrice + modifierTotal) * input.quantity;
-
-    const sortOrder = await cartRepository.getNextSortOrder(cartId);
-
-    await cartRepository.addItem(cartId, {
-      menuItemId: input.menuItemId,
-      name: menuItem.name,
-      unitPrice,
-      quantity: input.quantity,
-      totalPrice: Math.round(totalPrice * 100) / 100,
-      specialInstructions: input.specialInstructions,
-      imageUrl: menuItem.imageUrl ?? null,
-      sortOrder,
-      modifiers,
-    });
-
-    return this.getCart(tenantId, cartId);
-  }
-
-  async updateItem(
-    tenantId: string,
-    cartId: string,
-    itemId: string,
-    input: UpdateCartItemInput
-  ): Promise<CartWithItems> {
-    const cart = await cartRepository.findById(tenantId, cartId);
-    if (!cart) {
-      throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
-    }
-    if (cart.status !== "active") {
-      throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
-    }
-
-    const existingItem = await cartRepository.findItemById(cartId, itemId);
-    if (!existingItem) {
-      throw new AppError(ErrorCodes.CART_ITEM_NOT_FOUND, undefined, 404);
-    }
-
-    const quantity = input.quantity ?? existingItem.quantity;
-    const unitPrice = Number(existingItem.unitPrice);
-
-    // If modifiers changed, replace them
-    if (input.selectedModifiers !== undefined) {
-      const newModifiers = await this.resolveModifiers(
-        tenantId,
-        input.selectedModifiers
-      );
-
-      await cartRepository.replaceItemModifiers(itemId, newModifiers);
-
-      const modifierTotal = newModifiers.reduce(
-        (sum, m) => sum + m.price * m.quantity,
-        0
-      );
-      const totalPrice = Math.round((unitPrice + modifierTotal) * quantity * 100) / 100;
-
-      await cartRepository.updateItem(itemId, {
-        quantity,
-        totalPrice,
-        specialInstructions: input.specialInstructions,
-      });
-
-      return this.getCart(tenantId, cartId);
-    }
-
-    // Only quantity/instructions changed
-    const modifierTotal = existingItem.modifiers.reduce(
-      (sum, m) => sum + Number(m.price) * m.quantity,
       0
     );
     const totalPrice = Math.round((unitPrice + modifierTotal) * quantity * 100) / 100;
@@ -202,259 +185,281 @@ export class CartService {
     await cartRepository.updateItem(itemId, {
       quantity,
       totalPrice,
-      specialInstructions: input.specialInstructions !== undefined
-        ? input.specialInstructions
-        : undefined,
+      specialInstructions: input.specialInstructions,
     });
 
-    return this.getCart(tenantId, cartId);
+    return getCart(tenantId, cartId);
   }
 
-  async removeItem(tenantId: string, cartId: string, itemId: string): Promise<CartWithItems> {
-    const cart = await cartRepository.findById(tenantId, cartId);
-    if (!cart) {
-      throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
-    }
-    if (cart.status !== "active") {
-      throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
-    }
+  // Only quantity/instructions changed
+  const modifierTotal = existingItem.modifiers.reduce(
+    (sum, m) => sum + Number(m.price) * m.quantity,
+    0
+  );
+  const totalPrice = Math.round((unitPrice + modifierTotal) * quantity * 100) / 100;
 
-    const existingItem = await cartRepository.findItemById(cartId, itemId);
-    if (!existingItem) {
-      throw new AppError(ErrorCodes.CART_ITEM_NOT_FOUND, undefined, 404);
-    }
+  await cartRepository.updateItem(itemId, {
+    quantity,
+    totalPrice,
+    specialInstructions: input.specialInstructions !== undefined
+      ? input.specialInstructions
+      : undefined,
+  });
 
-    await cartRepository.softDeleteItem(itemId);
-    return this.getCart(tenantId, cartId);
-  }
-
-  async checkout(
-    tenantId: string,
-    cartId: string,
-    input: CheckoutInput
-  ): Promise<CheckoutResult> {
-    return this._checkoutAttempt(tenantId, cartId, input, 0);
-  }
-
-  private async _checkoutAttempt(
-    tenantId: string,
-    cartId: string,
-    input: CheckoutInput,
-    depth: number
-  ): Promise<CheckoutResult> {
-    const cart = await this.getCart(tenantId, cartId);
-
-    // Resolve existing order for already-finalized carts
-    if (cart.status === "submitted") {
-      if (cart.orderId) {
-        const order = await orderRepository.getByIdWithMerchant(
-          tenantId,
-          cart.orderId
-        );
-        if (!order) {
-          throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId: cart.orderId }, 404);
-        }
-        return {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          alreadyExists: true,
-        };
-      }
-      // submitted + orderId=null → peer mid-checkout. Poll briefly for resolution.
-      return this.waitAndRetry(tenantId, cartId, input, depth);
-    }
-
-    if (cart.status === "cancelled") {
-      throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
-    }
-
-    if (cart.items.length === 0) {
-      throw new AppError(ErrorCodes.CART_EMPTY);
-    }
-
-    // Active cart — attempt CAS claim to serialize concurrent callers
-    const claim = await cartRepository.claimForCheckout(tenantId, cartId);
-    if (claim.count === 0) {
-      // Lost the race — peer is mid-checkout. Poll briefly for resolution.
-      return this.waitAndRetry(tenantId, cartId, input, depth);
-    }
-
-    const orderItems: OrderItemData[] = cart.items.map((item) => ({
-      menuItemId: item.menuItemId,
-      name: item.name,
-      price: item.unitPrice,
-      quantity: item.quantity,
-      totalPrice: item.totalPrice,
-      specialInstructions: item.specialInstructions ?? undefined,
-      imageUrl: item.imageUrl,
-      selectedModifiers: item.modifiers.map((m): SelectedModifier => ({
-        groupId: m.modifierGroupId,
-        groupName: m.groupName,
-        modifierId: m.modifierOptionId,
-        modifierName: m.name,
-        price: m.price,
-        quantity: m.quantity,
-      })),
-    }));
-
-    let order;
-    try {
-      order = await orderService.createMerchantOrderAtomic(tenantId, {
-        merchantId: cart.merchantId,
-        customerFirstName: input.customerFirstName,
-        customerLastName: input.customerLastName,
-        customerPhone: input.customerPhone,
-        customerEmail: input.customerEmail,
-        orderMode: input.orderMode,
-        salesChannel: cart.salesChannel as Exclude<SalesChannel, "giftcard">,
-        paymentType: "in_store",
-        items: orderItems,
-        deliveryAddress: input.deliveryAddress,
-        tipAmount: input.tipAmount,
-        notes: input.notes,
-      });
-    } catch (err) {
-      await cartRepository.rollbackCheckoutClaim(tenantId, cartId);
-      throw err;
-    }
-
-    await cartRepository.attachOrderId(tenantId, cartId, order.id);
-
-    return {
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      alreadyExists: false,
-    };
-  }
-
-  private async waitAndRetry(
-    tenantId: string,
-    cartId: string,
-    input: CheckoutInput,
-    depth: number
-  ): Promise<CheckoutResult> {
-    for (let i = 0; i < CHECKOUT_WAIT_ATTEMPTS; i++) {
-      await sleep(CHECKOUT_WAIT_INTERVAL_MS);
-      const current = await cartRepository.findById(tenantId, cartId);
-      if (!current) {
-        throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
-      }
-
-      if (current.status === "submitted" && current.orderId) {
-        const order = await orderRepository.getByIdWithMerchant(
-          tenantId,
-          current.orderId
-        );
-        if (!order) {
-          throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId: current.orderId }, 404);
-        }
-        return {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          alreadyExists: true,
-        };
-      }
-
-      if (current.status === "active") {
-        if (depth >= CHECKOUT_MAX_REENTRY_DEPTH) {
-          throw new AppError(ErrorCodes.CART_CHECKOUT_IN_PROGRESS, undefined, 409);
-        }
-        return this._checkoutAttempt(tenantId, cartId, input, depth + 1);
-      }
-
-      if (current.status === "cancelled") {
-        throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
-      }
-    }
-
-    throw new AppError(ErrorCodes.CART_CHECKOUT_IN_PROGRESS, undefined, 409);
-  }
-
-  private async resolveModifiers(
-    tenantId: string,
-    inputs: AddCartItemModifierInput[]
-  ): Promise<Array<{
-    modifierGroupId: string;
-    modifierOptionId: string;
-    groupName: string;
-    name: string;
-    price: number;
-    quantity: number;
-  }>> {
-    if (inputs.length === 0) return [];
-
-    const optionIds = Array.from(new Set(inputs.map((m) => m.modifierOptionId)));
-    const options = await menuRepository.getModifierOptionsByIds(tenantId, optionIds);
-    const optionMap = new Map(options.map((o) => [o.id, o]));
-
-    return inputs.map((m) => {
-      const option = optionMap.get(m.modifierOptionId);
-      if (!option) {
-        throw new AppError(ErrorCodes.CART_MODIFIER_OPTION_NOT_FOUND, undefined, 404);
-      }
-      return {
-        modifierGroupId: option.groupId,
-        modifierOptionId: option.id,
-        groupName: option.group.name,
-        name: option.name,
-        price: Number(option.price),
-        quantity: m.quantity ?? 1,
-      };
-    });
-  }
-
-  private async computeCartSummary(
-    tenantId: string,
-    merchantId: string,
-    items: CartItemData[]
-  ): Promise<CartSummary> {
-    if (items.length === 0) {
-      return { subtotal: 0, taxAmount: 0, totalAmount: 0 };
-    }
-
-    // Query tax data from DB (same pattern as order.service.ts)
-    const itemIds = items.map((item) => item.menuItemId);
-    const itemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(itemIds) ?? new Map<string, string[]>();
-    const allTaxConfigIds = [...new Set([...itemTaxMap.values()].flat())];
-    const [taxConfigsRaw, merchantTaxRateMapRaw] = await Promise.all([
-      taxConfigRepository.getTaxConfigsByIds(tenantId, allTaxConfigIds),
-      taxConfigRepository.getMerchantTaxRateMap(merchantId),
-    ]);
-    const taxConfigs = taxConfigsRaw ?? [];
-    const merchantTaxRateMap = merchantTaxRateMapRaw ?? new Map<string, number>();
-    const taxConfigMap = new Map(taxConfigs.map((c) => [c.id, c]));
-
-    // Convert to PricingItem using DB-sourced tax data
-    const pricingItems: PricingItem[] = items.map((item) => {
-      const taxConfigIds = itemTaxMap.get(item.menuItemId) || [];
-      const taxes = taxConfigIds
-        .map((taxId) => {
-          const config = taxConfigMap.get(taxId);
-          if (!config) return null;
-          return {
-            rate: merchantTaxRateMap.get(taxId) || 0,
-            roundingMethod: config.roundingMethod as RoundingMethod,
-            inclusionType: config.inclusionType,
-          };
-        })
-        .filter((t): t is NonNullable<typeof t> => t !== null);
-      return {
-        itemId: item.menuItemId,
-        unitPrice: item.totalPrice / item.quantity,
-        quantity: item.quantity,
-        taxes,
-      };
-    });
-
-    const pricing = calculateOrderPricing(pricingItems);
-
-    return {
-      subtotal: pricing.subtotal,
-      taxAmount: pricing.taxAmount,
-      totalAmount: pricing.totalAmount,
-    };
-  }
-
+  return getCart(tenantId, cartId);
 }
 
-export const cartService = new CartService();
+async function removeItem(tenantId: string, cartId: string, itemId: string): Promise<CartWithItems> {
+  const cart = await cartRepository.findById(tenantId, cartId);
+  if (!cart) {
+    throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
+  }
+  if (cart.status !== "active") {
+    throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
+  }
+
+  const existingItem = await cartRepository.findItemById(cartId, itemId);
+  if (!existingItem) {
+    throw new AppError(ErrorCodes.CART_ITEM_NOT_FOUND, undefined, 404);
+  }
+
+  await cartRepository.softDeleteItem(itemId);
+  return getCart(tenantId, cartId);
+}
+
+async function checkout(
+  tenantId: string,
+  cartId: string,
+  input: CheckoutInput
+): Promise<CheckoutResult> {
+  return _checkoutAttempt(tenantId, cartId, input, 0);
+}
+
+async function _checkoutAttempt(
+  tenantId: string,
+  cartId: string,
+  input: CheckoutInput,
+  depth: number
+): Promise<CheckoutResult> {
+  const cart = await getCart(tenantId, cartId);
+
+  // Resolve existing order for already-finalized carts
+  if (cart.status === "submitted") {
+    if (cart.orderId) {
+      const order = await orderRepository.getByIdWithMerchant(
+        tenantId,
+        cart.orderId
+      );
+      if (!order) {
+        throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId: cart.orderId }, 404);
+      }
+      return {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        alreadyExists: true,
+      };
+    }
+    // submitted + orderId=null → peer mid-checkout. Poll briefly for resolution.
+    return waitAndRetry(tenantId, cartId, input, depth);
+  }
+
+  if (cart.status === "cancelled") {
+    throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
+  }
+
+  if (cart.items.length === 0) {
+    throw new AppError(ErrorCodes.CART_EMPTY);
+  }
+
+  // Active cart — attempt CAS claim to serialize concurrent callers
+  const claim = await cartRepository.claimForCheckout(tenantId, cartId);
+  if (claim.count === 0) {
+    // Lost the race — peer is mid-checkout. Poll briefly for resolution.
+    return waitAndRetry(tenantId, cartId, input, depth);
+  }
+
+  const orderItems: OrderItemData[] = cart.items.map((item) => ({
+    menuItemId: item.menuItemId,
+    name: item.name,
+    price: item.unitPrice,
+    quantity: item.quantity,
+    totalPrice: item.totalPrice,
+    specialInstructions: item.specialInstructions ?? undefined,
+    imageUrl: item.imageUrl,
+    selectedModifiers: item.modifiers.map((m): SelectedModifier => ({
+      groupId: m.modifierGroupId,
+      groupName: m.groupName,
+      modifierId: m.modifierOptionId,
+      modifierName: m.name,
+      price: m.price,
+      quantity: m.quantity,
+    })),
+  }));
+
+  let order;
+  try {
+    order = await orderService.createMerchantOrderAtomic(tenantId, {
+      merchantId: cart.merchantId,
+      customerFirstName: input.customerFirstName,
+      customerLastName: input.customerLastName,
+      customerPhone: input.customerPhone,
+      customerEmail: input.customerEmail,
+      orderMode: input.orderMode,
+      salesChannel: cart.salesChannel as Exclude<SalesChannel, "giftcard">,
+      paymentType: "in_store",
+      items: orderItems,
+      deliveryAddress: input.deliveryAddress,
+      tipAmount: input.tipAmount,
+      notes: input.notes,
+    });
+  } catch (err) {
+    await cartRepository.rollbackCheckoutClaim(tenantId, cartId);
+    throw err;
+  }
+
+  await cartRepository.attachOrderId(tenantId, cartId, order.id);
+
+  return {
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    alreadyExists: false,
+  };
+}
+
+async function waitAndRetry(
+  tenantId: string,
+  cartId: string,
+  input: CheckoutInput,
+  depth: number
+): Promise<CheckoutResult> {
+  for (let i = 0; i < CHECKOUT_WAIT_ATTEMPTS; i++) {
+    await sleep(CHECKOUT_WAIT_INTERVAL_MS);
+    const current = await cartRepository.findById(tenantId, cartId);
+    if (!current) {
+      throw new AppError(ErrorCodes.CART_NOT_FOUND, undefined, 404);
+    }
+
+    if (current.status === "submitted" && current.orderId) {
+      const order = await orderRepository.getByIdWithMerchant(
+        tenantId,
+        current.orderId
+      );
+      if (!order) {
+        throw new AppError(ErrorCodes.ORDER_NOT_FOUND, { orderId: current.orderId }, 404);
+      }
+      return {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        alreadyExists: true,
+      };
+    }
+
+    if (current.status === "active") {
+      if (depth >= CHECKOUT_MAX_REENTRY_DEPTH) {
+        throw new AppError(ErrorCodes.CART_CHECKOUT_IN_PROGRESS, undefined, 409);
+      }
+      return _checkoutAttempt(tenantId, cartId, input, depth + 1);
+    }
+
+    if (current.status === "cancelled") {
+      throw new AppError(ErrorCodes.CART_NOT_ACTIVE);
+    }
+  }
+
+  throw new AppError(ErrorCodes.CART_CHECKOUT_IN_PROGRESS, undefined, 409);
+}
+
+async function resolveModifiers(
+  tenantId: string,
+  inputs: AddCartItemModifierInput[]
+): Promise<Array<{
+  modifierGroupId: string;
+  modifierOptionId: string;
+  groupName: string;
+  name: string;
+  price: number;
+  quantity: number;
+}>> {
+  if (inputs.length === 0) return [];
+
+  const optionIds = Array.from(new Set(inputs.map((m) => m.modifierOptionId)));
+  const options = await menuRepository.getModifierOptionsByIds(tenantId, optionIds);
+  const optionMap = new Map(options.map((o) => [o.id, o]));
+
+  return inputs.map((m) => {
+    const option = optionMap.get(m.modifierOptionId);
+    if (!option) {
+      throw new AppError(ErrorCodes.CART_MODIFIER_OPTION_NOT_FOUND, undefined, 404);
+    }
+    return {
+      modifierGroupId: option.groupId,
+      modifierOptionId: option.id,
+      groupName: option.group.name,
+      name: option.name,
+      price: Number(option.price),
+      quantity: m.quantity ?? 1,
+    };
+  });
+}
+
+async function computeCartSummary(
+  tenantId: string,
+  merchantId: string,
+  items: CartItemData[]
+): Promise<CartSummary> {
+  if (items.length === 0) {
+    return { subtotal: 0, taxAmount: 0, totalAmount: 0 };
+  }
+
+  // Query tax data from DB (same pattern as order.service.ts)
+  const itemIds = items.map((item) => item.menuItemId);
+  const itemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(itemIds) ?? new Map<string, string[]>();
+  const allTaxConfigIds = [...new Set([...itemTaxMap.values()].flat())];
+  const [taxConfigsRaw, merchantTaxRateMapRaw] = await Promise.all([
+    taxConfigRepository.getTaxConfigsByIds(tenantId, allTaxConfigIds),
+    taxConfigRepository.getMerchantTaxRateMap(merchantId),
+  ]);
+  const taxConfigs = taxConfigsRaw ?? [];
+  const merchantTaxRateMap = merchantTaxRateMapRaw ?? new Map<string, number>();
+  const taxConfigMap = new Map(taxConfigs.map((c) => [c.id, c]));
+
+  // Convert to PricingItem using DB-sourced tax data
+  const pricingItems: PricingItem[] = items.map((item) => {
+    const taxConfigIds = itemTaxMap.get(item.menuItemId) || [];
+    const taxes = taxConfigIds
+      .map((taxId) => {
+        const config = taxConfigMap.get(taxId);
+        if (!config) return null;
+        return {
+          rate: merchantTaxRateMap.get(taxId) || 0,
+          roundingMethod: config.roundingMethod as RoundingMethod,
+          inclusionType: config.inclusionType,
+        };
+      })
+      .filter((t): t is NonNullable<typeof t> => t !== null);
+    return {
+      itemId: item.menuItemId,
+      unitPrice: item.totalPrice / item.quantity,
+      quantity: item.quantity,
+      taxes,
+    };
+  });
+
+  const pricing = calculateOrderPricing(pricingItems);
+
+  return {
+    subtotal: pricing.subtotal,
+    taxAmount: pricing.taxAmount,
+    totalAmount: pricing.totalAmount,
+  };
+}
+
+export const cartService = {
+  createCart,
+  getCart,
+  cancelCart,
+  addItem,
+  updateItem,
+  removeItem,
+  checkout,
+};

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { CartService } from "../cart.service";
+import { cartService } from "../cart.service";
 
 // Mock dependencies at top level
 vi.mock("@/lib/db", () => ({ default: {} }));
@@ -110,11 +110,8 @@ function makeModifier(overrides: Record<string, unknown> = {}) {
 }
 
 describe("CartService", () => {
-  let cartService: CartService;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    cartService = new CartService();
   });
 
   // ------------------------------------------------------------------ //
