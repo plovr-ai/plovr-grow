@@ -1,7 +1,7 @@
 import { generatorRepository } from "@/repositories/generator.repository";
 import { tenantService } from "@/services/tenant/tenant.service";
 import { resolveTemplate } from "@/types/website-template";
-import { GooglePlacesClient } from "./google-places.client";
+import { createGooglePlacesClient, type GooglePlacesClient } from "./google-places.client";
 import type { PlaceDetails } from "./google-places.client";
 import type {
   CreateGenerationInput,
@@ -9,14 +9,55 @@ import type {
   GenerationStatusResult,
 } from "./generator.types";
 
-export class GeneratorService {
-  private placesClient: GooglePlacesClient;
+/**
+ * Module-level helper replacing the former `private buildTenant` method.
+ * Doesn't need the places client — only the fetched `PlaceDetails`.
+ */
+async function buildTenant(details: PlaceDetails) {
+  const reviews = details.reviews.slice(0, 5).map((r) => ({
+    author: r.author,
+    rating: r.rating,
+    text: r.text,
+  }));
 
-  constructor(placesClient: GooglePlacesClient) {
-    this.placesClient = placesClient;
-  }
+  const websiteTemplate = resolveTemplate(details.primaryType, details.types);
 
-  async create(input: CreateGenerationInput): Promise<CreateGenerationResult> {
+  const tenantSettings = {
+    themePreset: "blue",
+    websiteTemplate,
+    website: { tagline: "", heroImage: "", socialLinks: [], reviews },
+  };
+
+  const { tenant, merchant } = await tenantService.createTenantWithMerchant({
+    name: details.name,
+    source: "generator",
+    websiteUrl: details.websiteUrl,
+    settings: tenantSettings,
+    merchant: {
+      address: details.address,
+      city: details.city,
+      state: details.state,
+      zipCode: details.zipCode,
+      phone: details.phone,
+      businessHours: details.businessHours,
+    },
+  });
+
+  return {
+    tenantId: tenant.id,
+    merchantId: merchant.id,
+    // Slug is non-null by construction: createTenantWithMerchant always sets one.
+    tenantSlug: tenant.slug as string,
+    merchantSlug: merchant.slug,
+  };
+}
+
+/**
+ * Factory that creates a generator service bound to the given Places client.
+ * Closure captures `placesClient`, replacing the former class's `private` field.
+ */
+export function createGeneratorService(placesClient: GooglePlacesClient) {
+  async function create(input: CreateGenerationInput): Promise<CreateGenerationResult> {
     const existing = await generatorRepository.findCompletedByPlaceId(input.placeId);
     if (existing?.tenantSlug) {
       return { existingSlug: existing.tenantSlug };
@@ -25,7 +66,7 @@ export class GeneratorService {
     return { generationId: generation.id };
   }
 
-  async getStatus(generationId: string): Promise<GenerationStatusResult | null> {
+  async function getStatus(generationId: string): Promise<GenerationStatusResult | null> {
     const generation = await generatorRepository.getById(generationId);
     if (!generation) return null;
     return {
@@ -36,17 +77,17 @@ export class GeneratorService {
     };
   }
 
-  async generate(generationId: string): Promise<void> {
+  async function generate(generationId: string): Promise<void> {
     const generation = await generatorRepository.getById(generationId);
     if (!generation) return;
 
     try {
       await generatorRepository.updateStatus(generationId, "fetching_data", "Fetching restaurant information...");
-      const placeDetails = await this.placesClient.getPlaceDetails(generation.placeId);
+      const placeDetails = await placesClient.getPlaceDetails(generation.placeId);
       await generatorRepository.updateGoogleData(generationId, placeDetails);
 
       await generatorRepository.updateStatus(generationId, "building", "Building your website...");
-      const result = await this.buildTenant(placeDetails);
+      const result = await buildTenant(placeDetails);
 
       await generatorRepository.markCompleted(generationId, result.tenantId, result.tenantSlug);
     } catch (error) {
@@ -55,52 +96,17 @@ export class GeneratorService {
     }
   }
 
-  private async buildTenant(details: PlaceDetails) {
-    const reviews = details.reviews.slice(0, 5).map((r) => ({
-      author: r.author,
-      rating: r.rating,
-      text: r.text,
-    }));
-
-    const websiteTemplate = resolveTemplate(details.primaryType, details.types);
-
-    const tenantSettings = {
-      themePreset: "blue",
-      websiteTemplate,
-      website: { tagline: "", heroImage: "", socialLinks: [], reviews },
-    };
-
-    const { tenant, merchant } = await tenantService.createTenantWithMerchant({
-      name: details.name,
-      source: "generator",
-      websiteUrl: details.websiteUrl,
-      settings: tenantSettings,
-      merchant: {
-        address: details.address,
-        city: details.city,
-        state: details.state,
-        zipCode: details.zipCode,
-        phone: details.phone,
-        businessHours: details.businessHours,
-      },
-    });
-
-    return {
-      tenantId: tenant.id,
-      merchantId: merchant.id,
-      // Slug is non-null by construction: createTenantWithMerchant always sets one.
-      tenantSlug: tenant.slug as string,
-      merchantSlug: merchant.slug,
-    };
-  }
+  return { create, getStatus, generate };
 }
+
+export type GeneratorService = ReturnType<typeof createGeneratorService>;
 
 let _generatorService: GeneratorService | null = null;
 
 export function getGeneratorService(): GeneratorService {
   if (!_generatorService) {
     const apiKey = process.env.GOOGLE_PLACES_API_KEY ?? "";
-    _generatorService = new GeneratorService(new GooglePlacesClient(apiKey));
+    _generatorService = createGeneratorService(createGooglePlacesClient(apiKey));
   }
   return _generatorService;
 }

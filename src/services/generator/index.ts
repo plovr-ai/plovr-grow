@@ -1,5 +1,12 @@
-export { getGeneratorService } from "./generator.service";
-export { GooglePlacesClient } from "./google-places.client";
+export {
+  getGeneratorService,
+  createGeneratorService,
+  type GeneratorService,
+} from "./generator.service";
+export {
+  createGooglePlacesClient,
+  type GooglePlacesClient,
+} from "./google-places.client";
 export { slugify, generateUniqueSlug } from "./slug.util";
 export type {
   CreateGenerationInput,

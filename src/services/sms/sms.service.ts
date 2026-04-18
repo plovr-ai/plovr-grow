@@ -32,56 +32,50 @@ export function getSmsProvider(): SmsProvider {
 }
 
 /**
- * SMS Service - wrapper around the provider
+ * Factory that creates an SMS service bound to the given provider.
+ * Closure captures the provider, replacing the former class's `private` field.
  */
-export class SmsService {
-  private provider: SmsProvider;
+export function createSmsService(provider?: SmsProvider) {
+  const bound: SmsProvider = provider ?? getSmsProvider();
 
-  constructor(provider?: SmsProvider) {
-    this.provider = provider ?? getSmsProvider();
+  function verifyPhoneFormat(phone: string): boolean {
+    return bound.verifyPhoneFormat(phone);
   }
 
-  /**
-   * Send OTP via SMS
-   */
-  async sendOtp(phone: string, code: string): Promise<SmsResult> {
-    if (!this.verifyPhoneFormat(phone)) {
+  async function sendOtp(phone: string, code: string): Promise<SmsResult> {
+    if (!verifyPhoneFormat(phone)) {
       return {
         success: false,
         error: "Invalid phone number format. Use E.164 format (e.g., +14155551234)",
       };
     }
 
-    return this.provider.sendOtp(phone, code);
+    return bound.sendOtp(phone, code);
   }
 
-  /**
-   * Send a custom SMS message
-   */
-  async sendMessage(phone: string, message: string): Promise<SmsResult> {
-    if (!this.verifyPhoneFormat(phone)) {
+  async function sendMessage(phone: string, message: string): Promise<SmsResult> {
+    if (!verifyPhoneFormat(phone)) {
       return {
         success: false,
         error: "Invalid phone number format. Use E.164 format (e.g., +14155551234)",
       };
     }
 
-    return this.provider.sendMessage(phone, message);
+    return bound.sendMessage(phone, message);
   }
 
-  /**
-   * Verify phone number format
-   */
-  verifyPhoneFormat(phone: string): boolean {
-    return this.provider.verifyPhoneFormat(phone);
+  function getProviderName(): string {
+    return bound.getProviderName();
   }
 
-  /**
-   * Get provider name
-   */
-  getProviderName(): string {
-    return this.provider.getProviderName();
-  }
+  return {
+    sendOtp,
+    sendMessage,
+    verifyPhoneFormat,
+    getProviderName,
+  };
 }
 
-export const smsService = new SmsService();
+export type SmsService = ReturnType<typeof createSmsService>;
+
+export const smsService: SmsService = createSmsService();
