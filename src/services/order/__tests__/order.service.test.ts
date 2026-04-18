@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { OrderService } from "../order.service";
+import { orderService } from "../order.service";
 import { orderEventEmitter } from "../order-events";
 import type { OrderStatus, FulfillmentStatus } from "@/types";
 
@@ -112,11 +112,8 @@ import { paymentService } from "@/services/payment";
 import prisma from "@/lib/db";
 
 describe("OrderService", () => {
-  let orderService: OrderService;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    orderService = new OrderService();
   });
 
   describe("createMerchantOrder()", () => {
@@ -530,18 +527,19 @@ describe("OrderService", () => {
     });
 
     it("should pass non-zero feesAmount when calculateOrderTotals returns fees", async () => {
-      // Spy on calculateOrderTotals to return non-zero fees
-      const calculateSpy = vi.spyOn(orderService, "calculateOrderTotals").mockResolvedValue({
-        subtotal: 37.98,
-        taxAmount: 3.37,
-        taxBreakdown: [],
-        feesAmount: 1.99,
-        feesBreakdown: [{ id: "platform_fee", amount: 1.99 }],
-        tipAmount: 5,
-        deliveryFee: 0,
-        discount: 0,
-        totalAmount: 48.34,
-      });
+      // Spy on underlying pricing module so calculateOrderTotals returns non-zero fees
+      const pricing = await import("@/lib/pricing");
+      const calculateSpy = vi
+        .spyOn(pricing, "calculateOrderPricing")
+        .mockReturnValue({
+          subtotal: 37.98,
+          taxAmount: 3.37,
+          taxBreakdown: [],
+          feesAmount: 1.99,
+          feesBreakdown: [{ id: "platform_fee", amount: 1.99 }],
+          tipAmount: 5,
+          totalAmount: 48.34,
+        } as never);
 
       await orderService.createMerchantOrder("tenant-1", mockInput);
 
@@ -561,18 +559,7 @@ describe("OrderService", () => {
     });
 
     it("should store feesBreakdown as JsonNull when no fees", async () => {
-      const calculateSpy = vi.spyOn(orderService, "calculateOrderTotals").mockResolvedValue({
-        subtotal: 37.98,
-        taxAmount: 3.37,
-        taxBreakdown: [],
-        feesAmount: 0,
-        feesBreakdown: [],
-        tipAmount: 5,
-        deliveryFee: 0,
-        discount: 0,
-        totalAmount: 46.35,
-      });
-
+      // Real pricing returns feesAmount:0, feesBreakdown:[] for this input
       await orderService.createMerchantOrder("tenant-1", mockInput);
 
       // When feesBreakdown is empty, should pass JsonNull
@@ -581,8 +568,6 @@ describe("OrderService", () => {
       expect(orderData.feesAmount).toBe(0);
       // feesBreakdown should be Prisma.JsonNull (which is a symbol/string)
       expect(orderData.feesBreakdown).toBeDefined();
-
-      calculateSpy.mockRestore();
     });
   });
 
