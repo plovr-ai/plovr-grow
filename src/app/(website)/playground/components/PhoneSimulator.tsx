@@ -110,8 +110,8 @@ export function PhoneSimulator() {
 
   return (
     <div className="flex items-center justify-center">
-      {/* Phone frame */}
-      <div className="flex h-[680px] w-[340px] flex-col overflow-hidden rounded-[3rem] border-[6px] border-gray-800 bg-white shadow-2xl">
+      {/* Phone frame — height adapts so the Start Call button stays visible on short viewports */}
+      <div className="flex h-[min(680px,calc(100vh-3rem))] w-[340px] flex-col overflow-hidden rounded-[3rem] border-[6px] border-gray-800 bg-white shadow-2xl">
         {/* Status bar */}
         <div className="flex items-center justify-between bg-gray-900 px-6 pb-3 pt-4 text-white">
           <div className="flex items-center gap-2">

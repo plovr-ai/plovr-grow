@@ -4,9 +4,14 @@ import type { MenuCategoryWithItems } from "@/services/menu/menu.types";
 interface MenuPanelProps {
   categories: MenuCategoryWithItems[];
   currency?: string;
+  merchantName?: string | null;
 }
 
-export function MenuPanel({ categories, currency = "USD" }: MenuPanelProps) {
+export function MenuPanel({
+  categories,
+  currency = "USD",
+  merchantName,
+}: MenuPanelProps) {
   if (categories.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-gray-400">
@@ -15,9 +20,11 @@ export function MenuPanel({ categories, currency = "USD" }: MenuPanelProps) {
     );
   }
 
+  const heading = merchantName ? `${merchantName}'s Menu` : "Menu";
+
   return (
     <div className="space-y-8">
-      <h2 className="text-xl font-bold text-gray-900">Menu</h2>
+      <h2 className="text-xl font-bold text-gray-900">{heading}</h2>
       {categories.map((category) => (
         <section key={category.id}>
           <h3 className="mb-3 text-lg font-semibold text-gray-900">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { menuService } from "@/services/menu";
+import { merchantService } from "@/services/merchant";
 import { MenuPanel, PhoneSimulator, PlaygroundLayout } from "./components";
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default async function PlaygroundPage() {
   const merchantId = process.env.NEXT_PUBLIC_PLAYGROUND_MERCHANT_ID ?? "";
 
   let categories: Awaited<ReturnType<typeof menuService.getMenu>>["categories"] = [];
+  let merchantName: string | null = null;
   const currency = "USD";
 
   if (tenantId && merchantId) {
@@ -33,11 +35,25 @@ export default async function PlaygroundPage() {
     } catch {
       // Menu fetch failed — show empty menu panel
     }
+
+    try {
+      const merchant = await merchantService.getMerchantById(merchantId);
+      merchantName = merchant?.name ?? null;
+    } catch {
+      // Merchant lookup failed — fall back to generic copy
+    }
   }
 
   return (
     <PlaygroundLayout
-      menuPanel={<MenuPanel categories={categories} currency={currency} />}
+      merchantName={merchantName}
+      menuPanel={
+        <MenuPanel
+          categories={categories}
+          currency={currency}
+          merchantName={merchantName}
+        />
+      }
       phoneSimulator={<PhoneSimulator />}
     />
   );
