@@ -80,19 +80,17 @@ function convertOpeningHours(
   return hours;
 }
 
-export class GooglePlacesClient {
-  private apiKey: string;
-
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
-  }
-
-  async getPlaceDetails(placeId: string): Promise<PlaceDetails> {
+/**
+ * Factory that creates a Google Places client bound to the given API key.
+ * Closure captures `apiKey`, replacing the former class's `private` field.
+ */
+export function createGooglePlacesClient(apiKey: string) {
+  async function getPlaceDetails(placeId: string): Promise<PlaceDetails> {
     const url = `https://places.googleapis.com/v1/places/${placeId}`;
     const dispatcher = getProxyDispatcher();
     const response = await fetch(url, {
       headers: {
-        "X-Goog-Api-Key": this.apiKey,
+        "X-Goog-Api-Key": apiKey,
         "X-Goog-FieldMask": PLACE_DETAILS_FIELDS,
       },
       ...(dispatcher ? { dispatcher } : {}),
@@ -134,4 +132,8 @@ export class GooglePlacesClient {
       types: (data.types as string[] | undefined) ?? undefined,
     };
   }
+
+  return { getPlaceDetails };
 }
+
+export type GooglePlacesClient = ReturnType<typeof createGooglePlacesClient>;

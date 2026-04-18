@@ -19,21 +19,21 @@ vi.mock("@/services/tenant/tenant.service", () => ({
 }));
 
 vi.mock("../google-places.client", () => {
-  const MockGooglePlacesClient = vi.fn().mockImplementation(function () {
-    return { getPlaceDetails: vi.fn() };
-  });
-  return { GooglePlacesClient: MockGooglePlacesClient };
+  const mockCreateGooglePlacesClient = vi.fn().mockImplementation(() => ({
+    getPlaceDetails: vi.fn(),
+  }));
+  return { createGooglePlacesClient: mockCreateGooglePlacesClient };
 });
 
 import { generatorRepository } from "@/repositories/generator.repository";
 import { tenantService } from "@/services/tenant/tenant.service";
-import { GeneratorService, getGeneratorService } from "../generator.service";
+import { createGeneratorService, getGeneratorService } from "../generator.service";
 import type { PlaceDetails } from "../google-places.client";
 
 const mockGetPlaceDetails = vi.fn();
-const service = new GeneratorService({
+const service = createGeneratorService({
   getPlaceDetails: mockGetPlaceDetails,
-} as never);
+});
 
 describe("GeneratorService", () => {
   beforeEach(() => {
@@ -215,7 +215,9 @@ describe("GeneratorService", () => {
 describe("getGeneratorService", () => {
   it("returns a GeneratorService singleton", () => {
     const svc1 = getGeneratorService();
-    expect(svc1).toBeInstanceOf(GeneratorService);
+    expect(typeof svc1.create).toBe("function");
+    expect(typeof svc1.getStatus).toBe("function");
+    expect(typeof svc1.generate).toBe("function");
     const svc2 = getGeneratorService();
     expect(svc1).toBe(svc2);
   });

@@ -107,14 +107,10 @@ npm run lint             # 代码检查
 
 - `private`/`protected` 成员 → 模块级 `const`/`function` 不 export 即等效 private
 - **DI 例外**：确有构造参数依赖的，用工厂函数 `createXxxService(deps)` 返回对象字面量，不用 class
-
-**历史例外（待后续迁移）**：
-
-- `src/services/generator/generator.service.ts` — 依赖 `GooglePlacesClient`
-- `src/services/sms/sms.service.ts` — 依赖 `SmsProvider`
-- `src/services/generator/google-places.client.ts` — 依赖 API key
-
-这 3 个暂时保留为 class，后续通过独立 PR 迁移为工厂函数形式。
+  - 工厂函数闭包捕获依赖（比 class 的 `private` 更符合 JS 模块惯例）
+  - 单例通过 `export const xxxService = createXxxService(...)` 或 `getXxxService()` 懒加载导出
+  - 类型给消费方用：`export type XxxService = ReturnType<typeof createXxxService>`
+  - 示例：`sms.service.ts`、`generator.service.ts`、`google-places.client.ts`
 
 ### 数据模型规范
 - **所有业务表必须保留 `tenantId` 字段**（租户隔离）

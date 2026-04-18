@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { GooglePlacesClient } from "../google-places.client";
+import { createGooglePlacesClient, type GooglePlacesClient } from "../google-places.client";
 
 describe("GooglePlacesClient", () => {
   let client: GooglePlacesClient;
 
   beforeEach(() => {
-    client = new GooglePlacesClient("test-api-key");
+    client = createGooglePlacesClient("test-api-key");
   });
 
   it("fetches place details and maps fields correctly", async () => {
@@ -294,7 +294,7 @@ describe("GooglePlacesClient", () => {
     });
     vi.stubGlobal("fetch", fetchSpy);
 
-    const freshClient = new GooglePlacesClient("test-key");
+    const freshClient = createGooglePlacesClient("test-key");
     const result = await freshClient.getPlaceDetails("ChIJ_proxy");
     expect(result.name).toBe("Proxy Test");
     // fetch called with dispatcher option when proxy is configured

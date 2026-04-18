@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withApiHandler } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { tenantService } from "@/services/tenant/tenant.service";
-import { GooglePlacesClient } from "@/services/generator/google-places.client";
+import { createGooglePlacesClient } from "@/services/generator/google-places.client";
 import { z } from "zod";
 
 const requestSchema = z.object({
@@ -38,7 +38,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
 
   // Fetch Google Places data
   const apiKey = process.env.GOOGLE_PLACES_API_KEY ?? "";
-  const placesClient = new GooglePlacesClient(apiKey);
+  const placesClient = createGooglePlacesClient(apiKey);
   const details = await placesClient.getPlaceDetails(placeId);
 
   // Update existing Tenant + Merchant with real data
