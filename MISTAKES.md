@@ -1,5 +1,21 @@
 # Mistakes Log
 
+## [318] Object-property spies break after class→object-literal refactor when internal calls use bare function names
+
+**Date**: 2026-04-18
+**Category**: test-mistake
+
+### What went wrong
+After converting `OrderService` class to an object literal, internal calls changed from `this.calculateOrderTotals(...)` to the bare function reference `calculateOrderTotals(...)`. The existing test `vi.spyOn(orderService, "calculateOrderTotals")` silently stopped intercepting — the spy patches the `orderService` object's property but the production code no longer reaches through that object for internal calls. The test still passed because the assertion was loose, which is worse than a failure.
+
+### Correct approach
+For in-module internal calls, spy on the *underlying dependency* that the function actually delegates to (e.g., `vi.spyOn(pricing, "calculateOrderPricing")`), or move the spy target up to the module-boundary function. Do not assume object-property spies transparently intercept bare-named internal calls after this refactor pattern.
+
+### How to avoid
+When migrating `export class` → object-literal, grep the test file for `vi.spyOn(xxxService, ...)`. Any spy whose target is also called internally by another method of the same service will need to be retargeted at the underlying module or given a different verification strategy.
+
+---
+
 ## [294] Binary WS protocols in JSDOM need two compat shims: Blob.arrayBuffer polyfill + Blob-wrap on send
 
 **Date**: 2026-04-17
