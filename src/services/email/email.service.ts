@@ -11,69 +11,69 @@ import type {
  * This is a mock implementation that logs emails to console.
  * To enable real email sending, replace with a provider like Resend or SendGrid.
  */
-export class EmailService {
-  /**
-   * Send a generic email
-   */
-  async sendEmail(input: SendEmailInput): Promise<EmailResult> {
-    console.log("\n========== [Email Service - Mock Mode] ==========");
-    console.log("To:", input.to);
-    console.log("Subject:", input.subject);
-    console.log("HTML Body:", input.html);
-    console.log("=================================================\n");
 
-    return {
-      success: true,
-      messageId: `mock_${crypto.randomUUID()}`,
-    };
-  }
+/**
+ * Send a generic email
+ */
+async function sendEmail(input: SendEmailInput): Promise<EmailResult> {
+  console.log("\n========== [Email Service - Mock Mode] ==========");
+  console.log("To:", input.to);
+  console.log("Subject:", input.subject);
+  console.log("HTML Body:", input.html);
+  console.log("=================================================\n");
 
-  /**
-   * Send an invoice email to customer
-   */
-  async sendInvoiceEmail(input: SendInvoiceEmailInput): Promise<EmailResult> {
-    const formattedAmount = formatPrice(input.totalAmount, input.currency, input.locale);
-    const formattedEventDate = new Date(input.eventDate).toLocaleDateString(input.locale, {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-    const formattedDueDate = new Date(input.dueDate).toLocaleDateString(input.locale, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+  return {
+    success: true,
+    messageId: `mock_${crypto.randomUUID()}`,
+  };
+}
 
-    const html = this.generateInvoiceEmailHtml({
-      ...input,
-      formattedAmount,
-      formattedEventDate,
-      formattedDueDate,
-    });
+/**
+ * Send an invoice email to customer
+ */
+async function sendInvoiceEmail(input: SendInvoiceEmailInput): Promise<EmailResult> {
+  const formattedAmount = formatPrice(input.totalAmount, input.currency, input.locale);
+  const formattedEventDate = new Date(input.eventDate).toLocaleDateString(input.locale, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const formattedDueDate = new Date(input.dueDate).toLocaleDateString(input.locale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
-    return this.sendEmail({
-      to: input.to,
-      subject: `Invoice ${input.invoiceNumber} from ${input.merchantName}`,
-      html,
-    });
-  }
+  const html = generateInvoiceEmailHtml({
+    ...input,
+    formattedAmount,
+    formattedEventDate,
+    formattedDueDate,
+  });
 
-  /**
-   * Generate HTML for invoice email
-   */
-  private generateInvoiceEmailHtml(input: {
-    customerName: string;
-    invoiceNumber: string;
-    orderNumber: string;
-    formattedEventDate: string;
-    eventTime: string;
-    formattedAmount: string;
-    formattedDueDate: string;
-    paymentLink: string;
-    merchantName: string;
-  }): string {
-    return `
+  return sendEmail({
+    to: input.to,
+    subject: `Invoice ${input.invoiceNumber} from ${input.merchantName}`,
+    html,
+  });
+}
+
+/**
+ * Generate HTML for invoice email
+ */
+function generateInvoiceEmailHtml(input: {
+  customerName: string;
+  invoiceNumber: string;
+  orderNumber: string;
+  formattedEventDate: string;
+  eventTime: string;
+  formattedAmount: string;
+  formattedDueDate: string;
+  paymentLink: string;
+  merchantName: string;
+}): string {
+  return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -137,7 +137,9 @@ export class EmailService {
 </body>
 </html>
     `.trim();
-  }
 }
 
-export const emailService = new EmailService();
+export const emailService = {
+  sendEmail,
+  sendInvoiceEmail,
+};

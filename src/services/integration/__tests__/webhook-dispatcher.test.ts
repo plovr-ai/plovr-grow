@@ -21,7 +21,7 @@ vi.mock("@/repositories/integration.repository", () => ({
   },
 }));
 
-import { WebhookDispatcherService } from "../webhook-dispatcher.service";
+import { createWebhookDispatcher, type WebhookDispatcher } from "../webhook-dispatcher.service";
 import type { PosWebhookProvider } from "../pos-webhook-provider.interface";
 
 const TENANT_ID = "tenant-1";
@@ -46,11 +46,11 @@ function createMockProvider(
 }
 
 describe("WebhookDispatcherService", () => {
-  let dispatcher: WebhookDispatcherService;
+  let dispatcher: WebhookDispatcher;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    dispatcher = new WebhookDispatcherService();
+    dispatcher = createWebhookDispatcher();
 
     mockFindWebhookEventByEventId.mockResolvedValue(null);
     mockGetConnectionByExternalAccountId.mockResolvedValue({

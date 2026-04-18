@@ -29,23 +29,24 @@ export interface DemoLeadInput {
   lgref?: string;
 }
 
-export class LeadsService {
-  /**
-   * Create a lead captured from the revenue calculator / customer-loss widget.
-   */
-  async createCalculatorLead(input: CalculatorLeadInput) {
-    return leadRepository.create(input);
-  }
-
-  /**
-   * Create a lead captured from a landing page "Request Demo" form.
-   */
-  async createDemoLead(input: DemoLeadInput) {
-    return leadRepository.create({
-      ...input,
-      source: "landing-page",
-    });
-  }
+/**
+ * Create a lead captured from the revenue calculator / customer-loss widget.
+ */
+async function createCalculatorLead(input: CalculatorLeadInput) {
+  return leadRepository.create(input);
 }
 
-export const leadsService = new LeadsService();
+/**
+ * Create a lead captured from a landing page "Request Demo" form.
+ */
+async function createDemoLead(input: DemoLeadInput) {
+  return leadRepository.create({
+    ...input,
+    source: "landing-page",
+  });
+}
+
+export const leadsService = {
+  createCalculatorLead,
+  createDemoLead,
+};

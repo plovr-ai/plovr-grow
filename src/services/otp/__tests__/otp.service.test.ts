@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { OtpService } from "../otp.service";
+import { otpService } from "../otp.service";
 
 // Mock repository
 vi.mock("@/repositories/otp-verification.repository", () => ({
@@ -24,8 +24,6 @@ import { otpVerificationRepository } from "@/repositories/otp-verification.repos
 import { smsService } from "@/services/sms";
 
 describe("OtpService", () => {
-  let service: OtpService;
-
   const mockOtpRecord = {
     id: "otp-1",
     tenantId: "tenant-1",
@@ -42,7 +40,6 @@ describe("OtpService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new OtpService();
   });
 
   describe("sendOtp", () => {
@@ -51,7 +48,7 @@ describe("OtpService", () => {
       vi.mocked(otpVerificationRepository.upsert).mockResolvedValue(mockOtpRecord);
       vi.mocked(smsService.sendOtp).mockResolvedValue({ success: true });
 
-      const result = await service.sendOtp("tenant-1", "+12025551234", "login");
+      const result = await otpService.sendOtp("tenant-1", "+12025551234", "login");
 
       expect(result.success).toBe(true);
       expect(result.expiresInSeconds).toBe(300); // 5 minutes
@@ -62,7 +59,7 @@ describe("OtpService", () => {
     it("should return error for invalid phone format", async () => {
       vi.mocked(smsService.verifyPhoneFormat).mockReturnValue(false);
 
-      const result = await service.sendOtp("tenant-1", "invalid-phone", "login");
+      const result = await otpService.sendOtp("tenant-1", "invalid-phone", "login");
 
       expect(result.success).toBe(false);
       expect(result.errorCode).toBe("OTP_INVALID_PHONE");
@@ -78,7 +75,7 @@ describe("OtpService", () => {
         error: "SMS provider error",
       });
 
-      const result = await service.sendOtp("tenant-1", "+12025551234", "login");
+      const result = await otpService.sendOtp("tenant-1", "+12025551234", "login");
 
       expect(result.success).toBe(false);
       expect(result.errorCode).toBe("OTP_SMS_FAILED");
@@ -89,7 +86,7 @@ describe("OtpService", () => {
       vi.mocked(otpVerificationRepository.upsert).mockResolvedValue(mockOtpRecord);
       vi.mocked(smsService.sendOtp).mockResolvedValue({ success: true });
 
-      await service.sendOtp("tenant-1", "+12025551234", "register");
+      await otpService.sendOtp("tenant-1", "+12025551234", "register");
 
       expect(otpVerificationRepository.upsert).toHaveBeenCalledWith(
         "tenant-1",
@@ -108,7 +105,7 @@ describe("OtpService", () => {
       });
       vi.mocked(otpVerificationRepository.markVerified).mockResolvedValue(mockOtpRecord);
 
-      const result = await service.verifyOtp(
+      const result = await otpService.verifyOtp(
         "tenant-1",
         "+12025551234",
         "123456",
@@ -130,7 +127,7 @@ describe("OtpService", () => {
         reason: "expired",
       });
 
-      const result = await service.verifyOtp(
+      const result = await otpService.verifyOtp(
         "tenant-1",
         "+12025551234",
         "123456",
@@ -149,7 +146,7 @@ describe("OtpService", () => {
       });
       vi.mocked(otpVerificationRepository.incrementAttempts).mockResolvedValue(mockOtpRecord);
 
-      const result = await service.verifyOtp(
+      const result = await otpService.verifyOtp(
         "tenant-1",
         "+12025551234",
         "000000",
@@ -171,7 +168,7 @@ describe("OtpService", () => {
         reason: "max_attempts",
       });
 
-      const result = await service.verifyOtp(
+      const result = await otpService.verifyOtp(
         "tenant-1",
         "+12025551234",
         "123456",
@@ -189,7 +186,7 @@ describe("OtpService", () => {
         reason: "not_found",
       });
 
-      const result = await service.verifyOtp(
+      const result = await otpService.verifyOtp(
         "tenant-1",
         "+12025551234",
         "123456",
@@ -207,7 +204,7 @@ describe("OtpService", () => {
         reason: "already_verified",
       });
 
-      const result = await service.verifyOtp(
+      const result = await otpService.verifyOtp(
         "tenant-1",
         "+12025551234",
         "123456",
@@ -227,7 +224,7 @@ describe("OtpService", () => {
         reason: undefined as never,
       });
 
-      const result = await service.verifyOtp(
+      const result = await otpService.verifyOtp(
         "tenant-1",
         "+12025551234",
         "123456",
@@ -248,7 +245,7 @@ describe("OtpService", () => {
       vi.mocked(otpVerificationRepository.upsert).mockResolvedValue(mockOtpRecord);
       vi.mocked(smsService.sendOtp).mockResolvedValue({ success: true });
 
-      await service.sendOtp("tenant-1", "+12025551234", "login");
+      await otpService.sendOtp("tenant-1", "+12025551234", "login");
 
       const upsertCall = vi.mocked(otpVerificationRepository.upsert).mock.calls[0];
       const code = upsertCall[3]; // 4th arg is the code
@@ -267,7 +264,7 @@ describe("OtpService", () => {
       vi.mocked(otpVerificationRepository.upsert).mockResolvedValue(mockOtpRecord);
       vi.mocked(smsService.sendOtp).mockResolvedValue({ success: true });
 
-      await service.sendOtp("tenant-1", "+12025551234", "login");
+      await otpService.sendOtp("tenant-1", "+12025551234", "login");
 
       const upsertCall = vi.mocked(otpVerificationRepository.upsert).mock.calls[0];
       const code = upsertCall[3];
@@ -283,7 +280,7 @@ describe("OtpService", () => {
         count: 5,
       });
 
-      const result = await service.cleanupExpired();
+      const result = await otpService.cleanupExpired();
 
       expect(result).toBe(5);
       expect(otpVerificationRepository.deleteExpired).toHaveBeenCalled();

@@ -14,19 +14,11 @@ export interface WebhookDispatchResult {
  * POS provider and runs the shared pipeline (dedup, connection lookup,
  * event tracking, error handling).
  */
-export class WebhookDispatcherService {
-  private providers = new Map<string, PosWebhookProvider>();
-
+export interface WebhookDispatcher {
   /** Register a webhook provider by its name (URL slug, e.g. "square"). */
-  register(name: string, provider: PosWebhookProvider): void {
-    this.providers.set(name, provider);
-  }
-
+  register(name: string, provider: PosWebhookProvider): void;
   /** Check whether a provider is registered. */
-  hasProvider(name: string): boolean {
-    return this.providers.has(name);
-  }
-
+  hasProvider(name: string): boolean;
   /**
    * Dispatch an incoming webhook request through the unified pipeline:
    *
@@ -39,13 +31,31 @@ export class WebhookDispatcherService {
    * 7. Process via provider
    * 8. Update status (PROCESSED / schedule retry on failure)
    */
-  async dispatch(
+  dispatch(
+    providerName: string,
+    rawBody: string,
+    headers: Record<string, string>
+  ): Promise<WebhookDispatchResult>;
+}
+
+export function createWebhookDispatcher(): WebhookDispatcher {
+  const providers = new Map<string, PosWebhookProvider>();
+
+  function register(name: string, provider: PosWebhookProvider): void {
+    providers.set(name, provider);
+  }
+
+  function hasProvider(name: string): boolean {
+    return providers.has(name);
+  }
+
+  async function dispatch(
     providerName: string,
     rawBody: string,
     headers: Record<string, string>
   ): Promise<WebhookDispatchResult> {
     // 1. Provider lookup
-    const provider = this.providers.get(providerName);
+    const provider = providers.get(providerName);
     if (!provider) {
       return {
         status: 400,
@@ -141,6 +151,8 @@ export class WebhookDispatcherService {
 
     return { status: 200, body: { received: true } };
   }
+
+  return { register, hasProvider, dispatch };
 }
 
-export const webhookDispatcher = new WebhookDispatcherService();
+export const webhookDispatcher = createWebhookDispatcher();
