@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GbpLocationService } from "../gbp-location.service";
+import { gbpLocationService } from "../gbp-location.service";
 import { AppError } from "@/lib/errors";
 
 vi.mock("@/lib/proxy", () => ({
@@ -7,11 +7,10 @@ vi.mock("@/lib/proxy", () => ({
 }));
 
 describe("GbpLocationService", () => {
-  let service: GbpLocationService;
+  const service = gbpLocationService;
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    service = new GbpLocationService();
   });
 
   describe("listAccounts()", () => {

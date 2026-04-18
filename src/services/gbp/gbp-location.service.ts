@@ -24,138 +24,141 @@ const DAY_MAP: Record<string, string> = {
   SUNDAY: "sunday",
 };
 
-export class GbpLocationService {
-  async listAccounts(accessToken: string): Promise<GbpAccount[]> {
-    const dispatcher = getProxyDispatcher();
-    const response = await fetch(ACCOUNTS_API_URL, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      ...(dispatcher ? { dispatcher } : {}),
-    } as RequestInit);
+async function listAccounts(accessToken: string): Promise<GbpAccount[]> {
+  const dispatcher = getProxyDispatcher();
+  const response = await fetch(ACCOUNTS_API_URL, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    ...(dispatcher ? { dispatcher } : {}),
+  } as RequestInit);
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("[GBP] listAccounts failed:", errorBody);
-      throw new AppError(
-        ErrorCodes.GBP_ACCOUNT_FETCH_FAILED,
-        undefined,
-        500
-      );
-    }
-
-    const data = (await response.json()) as {
-      accounts?: Array<{ name: string; accountName: string; type: string }>;
-    };
-
-    return (data.accounts ?? []).map((acc) => ({
-      name: acc.name,
-      accountName: acc.accountName,
-      type: acc.type,
-    }));
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error("[GBP] listAccounts failed:", errorBody);
+    throw new AppError(
+      ErrorCodes.GBP_ACCOUNT_FETCH_FAILED,
+      undefined,
+      500
+    );
   }
 
-  async listLocations(
-    accessToken: string,
-    accountName: string
-  ): Promise<GbpLocation[]> {
-    const url = `${BUSINESS_INFO_API_URL}/${accountName}/locations?readMask=${LOCATION_READ_MASK}`;
-    const dispatcher = getProxyDispatcher();
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      ...(dispatcher ? { dispatcher } : {}),
-    } as RequestInit);
+  const data = (await response.json()) as {
+    accounts?: Array<{ name: string; accountName: string; type: string }>;
+  };
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("[GBP] listLocations failed:", errorBody);
-      throw new AppError(
-        ErrorCodes.GBP_LOCATION_FETCH_FAILED,
-        undefined,
-        500
-      );
-    }
-
-    const data = (await response.json()) as {
-      locations?: GbpLocation[];
-    };
-
-    return data.locations ?? [];
-  }
-
-  async getLocation(
-    accessToken: string,
-    locationName: string
-  ): Promise<GbpLocation> {
-    const url = `${BUSINESS_INFO_API_URL}/${locationName}?readMask=${LOCATION_READ_MASK}`;
-    const dispatcher = getProxyDispatcher();
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      ...(dispatcher ? { dispatcher } : {}),
-    } as RequestInit);
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("[GBP] getLocation failed:", errorBody);
-      throw new AppError(
-        ErrorCodes.GBP_LOCATION_FETCH_FAILED,
-        undefined,
-        500
-      );
-    }
-
-    return (await response.json()) as GbpLocation;
-  }
-
-  mapLocationToMerchantData(location: GbpLocation): GbpLocationMerchantData {
-    const address = location.storefrontAddress;
-    const result: GbpLocationMerchantData = {};
-
-    if (address) {
-      result.address = address.addressLines?.join(", ");
-      result.city = address.locality;
-      result.state = address.administrativeArea;
-      result.zipCode = address.postalCode;
-    }
-
-    if (location.phoneNumbers?.primaryPhone) {
-      result.phone = location.phoneNumbers.primaryPhone;
-    }
-
-    if (location.profile?.description) {
-      result.description = location.profile.description;
-    }
-
-    if (location.regularHours?.periods) {
-      result.businessHours = this.mapBusinessHours(
-        location.regularHours.periods
-      );
-    }
-
-    return result;
-  }
-
-  private mapBusinessHours(
-    periods: GbpTimePeriod[]
-  ): Record<string, { open: string; close: string }> {
-    const hours: Record<string, { open: string; close: string }> = {};
-
-    for (const period of periods) {
-      const day = DAY_MAP[period.openDay];
-      if (!day) continue;
-
-      const openTime = this.formatTime(period.openTime);
-      const closeTime = this.formatTime(period.closeTime);
-
-      hours[day] = { open: openTime, close: closeTime };
-    }
-
-    return hours;
-  }
-
-  private formatTime(time: { hours: number; minutes?: number }): string {
-    const h = String(time.hours).padStart(2, "0");
-    const m = String(time.minutes ?? 0).padStart(2, "0");
-    return `${h}:${m}`;
-  }
+  return (data.accounts ?? []).map((acc) => ({
+    name: acc.name,
+    accountName: acc.accountName,
+    type: acc.type,
+  }));
 }
 
-export const gbpLocationService = new GbpLocationService();
+async function listLocations(
+  accessToken: string,
+  accountName: string
+): Promise<GbpLocation[]> {
+  const url = `${BUSINESS_INFO_API_URL}/${accountName}/locations?readMask=${LOCATION_READ_MASK}`;
+  const dispatcher = getProxyDispatcher();
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    ...(dispatcher ? { dispatcher } : {}),
+  } as RequestInit);
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error("[GBP] listLocations failed:", errorBody);
+    throw new AppError(
+      ErrorCodes.GBP_LOCATION_FETCH_FAILED,
+      undefined,
+      500
+    );
+  }
+
+  const data = (await response.json()) as {
+    locations?: GbpLocation[];
+  };
+
+  return data.locations ?? [];
+}
+
+async function getLocation(
+  accessToken: string,
+  locationName: string
+): Promise<GbpLocation> {
+  const url = `${BUSINESS_INFO_API_URL}/${locationName}?readMask=${LOCATION_READ_MASK}`;
+  const dispatcher = getProxyDispatcher();
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    ...(dispatcher ? { dispatcher } : {}),
+  } as RequestInit);
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error("[GBP] getLocation failed:", errorBody);
+    throw new AppError(
+      ErrorCodes.GBP_LOCATION_FETCH_FAILED,
+      undefined,
+      500
+    );
+  }
+
+  return (await response.json()) as GbpLocation;
+}
+
+function mapLocationToMerchantData(location: GbpLocation): GbpLocationMerchantData {
+  const address = location.storefrontAddress;
+  const result: GbpLocationMerchantData = {};
+
+  if (address) {
+    result.address = address.addressLines?.join(", ");
+    result.city = address.locality;
+    result.state = address.administrativeArea;
+    result.zipCode = address.postalCode;
+  }
+
+  if (location.phoneNumbers?.primaryPhone) {
+    result.phone = location.phoneNumbers.primaryPhone;
+  }
+
+  if (location.profile?.description) {
+    result.description = location.profile.description;
+  }
+
+  if (location.regularHours?.periods) {
+    result.businessHours = mapBusinessHours(
+      location.regularHours.periods
+    );
+  }
+
+  return result;
+}
+
+function mapBusinessHours(
+  periods: GbpTimePeriod[]
+): Record<string, { open: string; close: string }> {
+  const hours: Record<string, { open: string; close: string }> = {};
+
+  for (const period of periods) {
+    const day = DAY_MAP[period.openDay];
+    if (!day) continue;
+
+    const openTime = formatTime(period.openTime);
+    const closeTime = formatTime(period.closeTime);
+
+    hours[day] = { open: openTime, close: closeTime };
+  }
+
+  return hours;
+}
+
+function formatTime(time: { hours: number; minutes?: number }): string {
+  const h = String(time.hours).padStart(2, "0");
+  const m = String(time.minutes ?? 0).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+export const gbpLocationService = {
+  listAccounts,
+  listLocations,
+  getLocation,
+  mapLocationToMerchantData,
+};

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GbpService } from "../gbp.service";
+import { gbpService } from "../gbp.service";
 import { AppError } from "@/lib/errors";
 
 vi.mock("../gbp-oauth.service", () => ({
@@ -68,14 +68,13 @@ vi.mock("@/repositories/integration.repository", () => ({
 }));
 
 describe("GbpService", () => {
-  let service: GbpService;
+  const service = gbpService;
   let mockGbpOAuth: Record<string, ReturnType<typeof vi.fn>>;
   let mockGbpLocation: Record<string, ReturnType<typeof vi.fn>>;
   let mockIntegrationRepo: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    service = new GbpService();
 
     const oauthModule = await import("../gbp-oauth.service");
     mockGbpOAuth =
