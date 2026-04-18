@@ -65,7 +65,7 @@ npm run lint             # 代码检查
 
 ### 代码风格
 - 优先使用函数组件 + Hooks
-- 服务层使用 class 便于后续拆分微服务
+- 服务层以对象字面量导出（详见下方「Service 层导出规范」）
 - Repository 封装所有数据库操作，自动处理 tenant 隔离
 
 ### Service 层参数规范
@@ -80,6 +80,41 @@ npm run lint             # 代码检查
   // ❌ 错误 - 缺少 tenantId
   async getMenu(merchantId: string): Promise<GetMenuResponse>
   ```
+
+### Service 层导出规范
+
+- **禁止** `export class XxxService` 写法
+- Service 必须导出对象字面量：`export const xxxService = { ... }`
+- 方法实现采用"模块级函数 + 对象字面量聚合"模式：
+
+  ```typescript
+  // 1. 方法先声明为模块级 async function
+  async function getMerchantBySlug(slug: string) { ... }
+  async function getMerchantById(tenantId: string, id: string) { ... }
+
+  // 2. 方法内互调用直接引用函数名，不使用 this/xxxService.xxx
+  async function getCompanyMerchantBySlug(slug: string) {
+    return getMerchantBySlug(slug);
+  }
+
+  // 3. 对外导出为对象字面量聚合所有方法
+  export const merchantService = {
+    getMerchantBySlug,
+    getMerchantById,
+    getCompanyMerchantBySlug,
+  };
+  ```
+
+- `private`/`protected` 成员 → 模块级 `const`/`function` 不 export 即等效 private
+- **DI 例外**：确有构造参数依赖的，用工厂函数 `createXxxService(deps)` 返回对象字面量，不用 class
+
+**历史例外（待后续迁移）**：
+
+- `src/services/generator/generator.service.ts` — 依赖 `GooglePlacesClient`
+- `src/services/sms/sms.service.ts` — 依赖 `SmsProvider`
+- `src/services/generator/google-places.client.ts` — 依赖 API key
+
+这 3 个暂时保留为 class，后续通过独立 PR 迁移为工厂函数形式。
 
 ### 数据模型规范
 - **所有业务表必须保留 `tenantId` 字段**（租户隔离）
