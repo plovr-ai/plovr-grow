@@ -260,3 +260,22 @@ When you can't feed per-request context to dev instrumentation without widening 
 Rule of thumb for any dev-only tool: if wiring it requires modifying a file that runs on every production request (middleware, proxy, root layout, instrumentation.ts' `register()`), and the modification isn't itself gated on the flag at runtime, reject that approach and fall back to a request-less design. Static-matcher frameworks like Next.js 16 disqualify conditional-matcher workarounds up front.
 
 ---
+
+## [320] Class-to-object-literal migration grep must catch both no-prefix names and type annotations
+
+**Date**: 2026-04-18
+**Category**: wrong-assumption
+
+### What went wrong
+Planning phase used `grep "new Square\w+Service"` to enumerate class-instantiation sites before migration, finding 8 hits. Implementation Agent discovered 3 more unlisted sites: (a) `new SquareService()` in two test files — the `\w+` (one-or-more) middle token doesn't match the bare `SquareService` name; (b) a `service: SquareWebhookService` type annotation on a helper function parameter — instantiation grep misses pure type references entirely.
+
+### Correct approach
+For class-to-object migration scope analysis, cast a wider net:
+1. Use `\w*` (zero-or-more) not `\w+` — catches `XxxService` with no middle token
+2. Run a SECOND grep for bare-type-annotation usage: `\bXxxService\b` within `:` or `<>` positions, not just after `new`
+3. Cross-check with `grep "export class Xxx"` to get the full list of class names to hunt for, then grep each name explicitly
+
+### How to avoid
+Before writing a migration plan, compile the list of class names from `grep "^export class"`, then for EACH class name run both `new ClassName\(` AND `\bClassName\b` (non-instantiation usage) to catch type annotations. `\w+` patterns miss names where the suffix immediately follows the prefix.
+
+---
