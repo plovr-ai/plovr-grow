@@ -1,6 +1,7 @@
 // ==================== Merchant Service ====================
 // 商户服务层 - 封装商户相关业务逻辑
 
+import { cache } from "react";
 import { merchantRepository } from "@/repositories/merchant.repository";
 import { tenantRepository } from "@/repositories/tenant.repository";
 import { menuService } from "@/services/menu";
@@ -28,14 +29,18 @@ const MIN_DISPLAY_RATING = 4;
 /**
  * 通过 Slug 获取 Merchant (公开访问，无需认证)
  * 用于 Storefront 页面
+ *
+ * Wrapped with React `cache()` so Next.js App Router's independent
+ * `generateMetadata` / `layout.tsx` / `page.tsx` calls in the same request
+ * are deduped (see #303).
  */
-async function getMerchantBySlug(
-  slug: string
-): Promise<MerchantWithTenant | null> {
-  const data = await merchantRepository.getBySlugWithTenant(slug);
-  if (!data) return null;
-  return toMerchantWithTenant(data);
-}
+const getMerchantBySlug = cache(
+  async (slug: string): Promise<MerchantWithTenant | null> => {
+    const data = await merchantRepository.getBySlugWithTenant(slug);
+    if (!data) return null;
+    return toMerchantWithTenant(data);
+  }
+);
 
 /**
  * 通过 Slug 获取 Merchant (别名，保持向后兼容)
@@ -61,14 +66,17 @@ async function getMerchantById(
 /**
  * 通过 Slug 获取 Company 及其所有 Merchants (公开访问)
  * 用于品牌官网门店列表
+ *
+ * Wrapped with React `cache()` for per-request dedup across
+ * `generateMetadata` / `layout.tsx` / `page.tsx` (see #303).
  */
-async function getTenantBySlug(
-  slug: string
-): Promise<TenantWithMerchants | null> {
-  const data = await tenantRepository.getBySlugWithMerchants(slug);
-  if (!data) return null;
-  return toTenantWithMerchants(data);
-}
+const getTenantBySlug = cache(
+  async (slug: string): Promise<TenantWithMerchants | null> => {
+    const data = await tenantRepository.getBySlugWithMerchants(slug);
+    if (!data) return null;
+    return toTenantWithMerchants(data);
+  }
+);
 
 /**
  * 获取网站显示数据 (公开访问)
