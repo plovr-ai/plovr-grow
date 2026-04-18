@@ -163,8 +163,269 @@ describe("MerchantService (unit tests)", () => {
     vi.clearAllMocks();
   });
 
-  describe("getTenantWebsiteData()", () => {
-    // Mock data for featured items (matching FeaturedItemData type)
+  describe("getTenantWebsiteBasics()", () => {
+    beforeEach(() => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
+        mockTenantWithMerchants as never
+      );
+    });
+
+    it("should return website data with company info", async () => {
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result).not.toBeNull();
+      expect(result?.name).toBe("Joe's Pizza");
+      expect(result?.tagline).toBe("Best pizza in NYC");
+      expect(result?.logo).toBe("https://example.com/logo.png");
+      expect(result?.heroImage).toBe("https://example.com/hero.jpg");
+    });
+
+    it("should NOT query featured items (perf: avoid over-fetch for non-featured consumers)", async () => {
+      await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(menuService.getFeaturedItems).not.toHaveBeenCalled();
+    });
+
+    it("should return reviews from company settings", async () => {
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.reviews).toHaveLength(1);
+      expect(result?.reviews?.[0].customerName).toBe("John D.");
+    });
+
+    it("should return socialLinks from company settings", async () => {
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.socialLinks).toHaveLength(1);
+      expect(result?.socialLinks[0].platform).toBe("facebook");
+    });
+
+    it("should return null for non-existent company", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
+        null as never
+      );
+
+      const result = await merchantService.getTenantWebsiteBasics("non-existent");
+
+      expect(result).toBeNull();
+    });
+
+    it("should use default currency and locale when not configured", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: null,
+      } as never);
+
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.currency).toBe("USD");
+      expect(result?.locale).toBe("en-US");
+    });
+
+    it("should use company description as tagline fallback when website tagline missing", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: { website: {} },
+      } as never);
+
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.tagline).toBe("Best pizza in town");
+    });
+
+    it("should use empty tagline when no website tagline and no description", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        description: null,
+        settings: { website: {} },
+      } as never);
+
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.tagline).toBe("");
+    });
+
+    it("should include merchant contact info for single-merchant company", async () => {
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      // Single merchant company - should have merchant contact info
+      expect(result?.address).toBe("123 Main St");
+      expect(result?.city).toBe("New York");
+      expect(result?.state).toBe("NY");
+      expect(result?.phone).toBe("(212) 555-0100");
+      expect(result?.email).toBe("downtown@joespizza.com");
+    });
+
+    it("should exclude merchant contact info for multi-merchant company", async () => {
+      const multiMerchantCompany = {
+        ...mockTenantWithMerchants,
+        merchants: [
+          mockTenantWithMerchants.merchants[0],
+          {
+            ...mockTenantWithMerchants.merchants[0],
+            id: "merchant-2",
+            slug: "joes-pizza-midtown",
+            name: "Joe's Pizza - Midtown",
+          },
+        ],
+      };
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
+        multiMerchantCompany as never
+      );
+
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.address).toBe("");
+      expect(result?.city).toBe("");
+      expect(result?.phone).toBe("");
+    });
+
+    it("should default logo to empty string when company logoUrl is null", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        logoUrl: null,
+      } as never);
+
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.logo).toBe("");
+    });
+
+    it("should return empty reviews when not configured", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: { website: {} },
+      } as never);
+
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.reviews).toEqual([]);
+    });
+
+    it("should map Google Places review fields (author/text) to CustomerReview format (customerName/content)", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: {
+          website: {
+            reviews: [
+              {
+                author: "Jane S.",
+                text: "Amazing food and great service!",
+                rating: 4,
+                source: "google",
+              },
+            ],
+          },
+        },
+      } as never);
+
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.reviews).toHaveLength(1);
+      expect(result?.reviews?.[0].customerName).toBe("Jane S.");
+      expect(result?.reviews?.[0].content).toBe("Amazing food and great service!");
+      expect(result?.reviews?.[0].rating).toBe(4);
+      expect(result?.reviews?.[0].source).toBe("google");
+    });
+
+    it("should fallback to 'Anonymous' when both customerName and author are empty strings", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: {
+          website: {
+            reviews: [
+              {
+                customerName: "",
+                author: "",
+                text: "Good food",
+                rating: 4,
+              },
+            ],
+          },
+        },
+      } as never);
+
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.reviews).toHaveLength(1);
+      expect(result?.reviews?.[0].customerName).toBe("Anonymous");
+    });
+
+    it("should return empty reviews array when no reviews in tenant settings", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: {
+          website: {
+            tagline: "Some tagline",
+          },
+        },
+      } as never);
+
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.reviews).toEqual([]);
+    });
+
+    it("should filter out reviews with rating below 4", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: {
+          website: {
+            reviews: [
+              { id: "r1", customerName: "Alice", rating: 5, content: "Amazing!", date: "2024-01-01", source: "google" },
+              { id: "r2", customerName: "Bob", rating: 3, content: "Okay", date: "2024-01-02", source: "google" },
+              { id: "r3", customerName: "Carol", rating: 4, content: "Good", date: "2024-01-03", source: "google" },
+              { id: "r4", customerName: "Dave", rating: 2, content: "Bad", date: "2024-01-04", source: "google" },
+              { id: "r5", customerName: "Eve", rating: 1, content: "Terrible", date: "2024-01-05", source: "google" },
+            ],
+          },
+        },
+      } as never);
+
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.reviews).toHaveLength(2);
+      expect(result?.reviews?.map((r) => r.customerName)).toEqual(["Alice", "Carol"]);
+    });
+
+    it("should include reviews with exactly 4 stars", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: {
+          website: {
+            reviews: [
+              { id: "r1", customerName: "Alice", rating: 4, content: "Good", date: "2024-01-01", source: "google" },
+            ],
+          },
+        },
+      } as never);
+
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.reviews).toHaveLength(1);
+      expect(result?.reviews?.[0].customerName).toBe("Alice");
+    });
+
+    it("should return empty array when all reviews are below 4 stars", async () => {
+      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
+        ...mockTenantWithMerchants,
+        settings: {
+          website: {
+            reviews: [
+              { id: "r1", customerName: "Bob", rating: 3, content: "Meh", date: "2024-01-01", source: "google" },
+              { id: "r2", customerName: "Dave", rating: 1, content: "Bad", date: "2024-01-02", source: "google" },
+            ],
+          },
+        },
+      } as never);
+
+      const result = await merchantService.getTenantWebsiteBasics("joes-pizza");
+
+      expect(result?.reviews).toEqual([]);
+    });
+  });
+
+  describe("getTenantFeaturedItems()", () => {
     const mockFeaturedItemsData = [
       {
         id: "featured-1",
@@ -196,39 +457,25 @@ describe("MerchantService (unit tests)", () => {
       },
     ];
 
-    beforeEach(() => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
-        mockTenantWithMerchants as never
-      );
+    it("should fetch featured items by tenantId", async () => {
       vi.mocked(menuService.getFeaturedItems).mockResolvedValue(
         mockFeaturedItemsData as never
       );
-    });
 
-    it("should return website data with company info", async () => {
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantFeaturedItems("tenant-1");
 
-      expect(result).not.toBeNull();
-      expect(result?.name).toBe("Joe's Pizza");
-      expect(result?.tagline).toBe("Best pizza in NYC");
-      expect(result?.logo).toBe("https://example.com/logo.png");
-      expect(result?.heroImage).toBe("https://example.com/hero.jpg");
-    });
-
-    it("should fetch featured items from menu database", async () => {
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(menuService.getFeaturedItems).toHaveBeenCalledWith(
-        "tenant-1"
-      );
-      expect(result?.featuredItems).toHaveLength(2);
+      expect(menuService.getFeaturedItems).toHaveBeenCalledWith("tenant-1");
+      expect(result).toHaveLength(2);
     });
 
     it("should map menu items to FeaturedItem format", async () => {
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue(
+        mockFeaturedItemsData as never
+      );
 
-      const featuredItems = result?.featuredItems;
-      expect(featuredItems?.[0]).toMatchObject({
+      const result = await merchantService.getTenantFeaturedItems("tenant-1");
+
+      expect(result[0]).toMatchObject({
         id: "featured-1",
         name: "Classic Cheese Pizza",
         description: "Fresh mozzarella and tomato sauce",
@@ -236,38 +483,26 @@ describe("MerchantService (unit tests)", () => {
         menuItemId: "item-cheese-pizza",
         hasModifiers: false,
       });
-      // Price is a Prisma Decimal, check separately
-      expect(Number(featuredItems?.[0]?.price)).toBe(18.99);
+      expect(Number(result[0]?.price)).toBe(18.99);
     });
 
     it("should set hasModifiers to false in current implementation", async () => {
-      // NOTE: The current implementation always sets hasModifiers to false
-      // as fetching modifier options would require additional queries
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      const pepperoniItem = result?.featuredItems?.find(
-        (item) => item.id === "featured-2"
+      vi.mocked(menuService.getFeaturedItems).mockResolvedValue(
+        mockFeaturedItemsData as never
       );
+
+      const result = await merchantService.getTenantFeaturedItems("tenant-1");
+
+      const pepperoniItem = result.find((item) => item.id === "featured-2");
       expect(pepperoniItem?.hasModifiers).toBe(false);
     });
 
-    it("should return empty featuredItems when no featured items configured", async () => {
+    it("should return empty array when no featured items configured", async () => {
       vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
 
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantFeaturedItems("tenant-1");
 
-      expect(menuService.getFeaturedItems).toHaveBeenCalledWith(
-        "tenant-1"
-      );
-      expect(result?.featuredItems).toEqual([]);
-    });
-
-    it("should return empty featuredItems when getFeaturedItems returns empty", async () => {
-      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.featuredItems).toEqual([]);
+      expect(result).toEqual([]);
     });
 
     it("should handle missing imageUrl gracefully", async () => {
@@ -280,7 +515,7 @@ describe("MerchantService (unit tests)", () => {
             id: "item-1",
             name: "Test Item",
             description: "Test description",
-            price: new Prisma.Decimal(10.00),
+            price: new Prisma.Decimal(10.0),
             imageUrl: null,
             status: "active",
             modifierGroups: null,
@@ -288,9 +523,9 @@ describe("MerchantService (unit tests)", () => {
         },
       ] as never);
 
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantFeaturedItems("tenant-1");
 
-      expect(result?.featuredItems?.[0].image).toBe("");
+      expect(result[0]?.image).toBe("");
     });
 
     it("should handle missing description gracefully", async () => {
@@ -303,7 +538,7 @@ describe("MerchantService (unit tests)", () => {
             id: "item-1",
             name: "Test Item",
             description: null,
-            price: new Prisma.Decimal(10.00),
+            price: new Prisma.Decimal(10.0),
             imageUrl: "https://example.com/image.jpg",
             status: "active",
             modifierGroups: null,
@@ -311,111 +546,9 @@ describe("MerchantService (unit tests)", () => {
         },
       ] as never);
 
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantFeaturedItems("tenant-1");
 
-      expect(result?.featuredItems?.[0].description).toBe("");
-    });
-
-    it("should return reviews from company settings", async () => {
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.reviews).toHaveLength(1);
-      expect(result?.reviews?.[0].customerName).toBe("John D.");
-    });
-
-    it("should return socialLinks from company settings", async () => {
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.socialLinks).toHaveLength(1);
-      expect(result?.socialLinks[0].platform).toBe("facebook");
-    });
-
-    it("should return null for non-existent company", async () => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
-        null as never
-      );
-
-      const result = await merchantService.getTenantWebsiteData("non-existent");
-
-      expect(result).toBeNull();
-    });
-
-    it("should use default currency and locale when not configured", async () => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockTenantWithMerchants,
-        settings: null,
-      } as never);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.currency).toBe("USD");
-      expect(result?.locale).toBe("en-US");
-    });
-
-    it("should use company description as tagline fallback when website tagline missing", async () => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockTenantWithMerchants,
-        settings: { website: {} },
-      } as never);
-      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.tagline).toBe("Best pizza in town");
-    });
-
-    it("should use empty tagline when no website tagline and no description", async () => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockTenantWithMerchants,
-        description: null,
-        settings: { website: {} },
-      } as never);
-      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.tagline).toBe("");
-    });
-
-    it("should include merchant contact info for single-merchant company", async () => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
-        mockTenantWithMerchants as never
-      );
-      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      // Single merchant company - should have merchant contact info
-      expect(result?.address).toBe("123 Main St");
-      expect(result?.city).toBe("New York");
-      expect(result?.state).toBe("NY");
-      expect(result?.phone).toBe("(212) 555-0100");
-      expect(result?.email).toBe("downtown@joespizza.com");
-    });
-
-    it("should exclude merchant contact info for multi-merchant company", async () => {
-      const multiMerchantCompany = {
-        ...mockTenantWithMerchants,
-        merchants: [
-          mockTenantWithMerchants.merchants[0],
-          {
-            ...mockTenantWithMerchants.merchants[0],
-            id: "merchant-2",
-            slug: "joes-pizza-midtown",
-            name: "Joe's Pizza - Midtown",
-          },
-        ],
-      };
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
-        multiMerchantCompany as never
-      );
-      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.address).toBe("");
-      expect(result?.city).toBe("");
-      expect(result?.phone).toBe("");
+      expect(result[0]?.description).toBe("");
     });
 
     it("should filter out inactive featured items", async () => {
@@ -450,162 +583,10 @@ describe("MerchantService (unit tests)", () => {
         },
       ] as never);
 
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
+      const result = await merchantService.getTenantFeaturedItems("tenant-1");
 
-      expect(result?.featuredItems).toHaveLength(1);
-      expect(result?.featuredItems?.[0].name).toBe("Active Item");
-    });
-
-    it("should default logo to empty string when company logoUrl is null", async () => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockTenantWithMerchants,
-        logoUrl: null,
-      } as never);
-      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.logo).toBe("");
-    });
-
-    it("should return empty reviews when not configured", async () => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockTenantWithMerchants,
-        settings: { website: {} },
-      } as never);
-      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.reviews).toEqual([]);
-    });
-
-    it("should map Google Places review fields (author/text) to CustomerReview format (customerName/content)", async () => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockTenantWithMerchants,
-        settings: {
-          website: {
-            reviews: [
-              {
-                author: "Jane S.",
-                text: "Amazing food and great service!",
-                rating: 4,
-                source: "google",
-              },
-            ],
-          },
-        },
-      } as never);
-      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.reviews).toHaveLength(1);
-      expect(result?.reviews?.[0].customerName).toBe("Jane S.");
-      expect(result?.reviews?.[0].content).toBe("Amazing food and great service!");
-      expect(result?.reviews?.[0].rating).toBe(4);
-      expect(result?.reviews?.[0].source).toBe("google");
-    });
-
-    it("should fallback to 'Anonymous' when both customerName and author are empty strings", async () => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockTenantWithMerchants,
-        settings: {
-          website: {
-            reviews: [
-              {
-                customerName: "",
-                author: "",
-                text: "Good food",
-                rating: 4,
-              },
-            ],
-          },
-        },
-      } as never);
-      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.reviews).toHaveLength(1);
-      expect(result?.reviews?.[0].customerName).toBe("Anonymous");
-    });
-
-    it("should return empty reviews array when no reviews in tenant settings", async () => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockTenantWithMerchants,
-        settings: {
-          website: {
-            tagline: "Some tagline",
-          },
-        },
-      } as never);
-      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.reviews).toEqual([]);
-    });
-
-    it("should filter out reviews with rating below 4", async () => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockTenantWithMerchants,
-        settings: {
-          website: {
-            reviews: [
-              { id: "r1", customerName: "Alice", rating: 5, content: "Amazing!", date: "2024-01-01", source: "google" },
-              { id: "r2", customerName: "Bob", rating: 3, content: "Okay", date: "2024-01-02", source: "google" },
-              { id: "r3", customerName: "Carol", rating: 4, content: "Good", date: "2024-01-03", source: "google" },
-              { id: "r4", customerName: "Dave", rating: 2, content: "Bad", date: "2024-01-04", source: "google" },
-              { id: "r5", customerName: "Eve", rating: 1, content: "Terrible", date: "2024-01-05", source: "google" },
-            ],
-          },
-        },
-      } as never);
-      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.reviews).toHaveLength(2);
-      expect(result?.reviews?.map((r) => r.customerName)).toEqual(["Alice", "Carol"]);
-    });
-
-    it("should include reviews with exactly 4 stars", async () => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockTenantWithMerchants,
-        settings: {
-          website: {
-            reviews: [
-              { id: "r1", customerName: "Alice", rating: 4, content: "Good", date: "2024-01-01", source: "google" },
-            ],
-          },
-        },
-      } as never);
-      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.reviews).toHaveLength(1);
-      expect(result?.reviews?.[0].customerName).toBe("Alice");
-    });
-
-    it("should return empty array when all reviews are below 4 stars", async () => {
-      vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue({
-        ...mockTenantWithMerchants,
-        settings: {
-          website: {
-            reviews: [
-              { id: "r1", customerName: "Bob", rating: 3, content: "Meh", date: "2024-01-01", source: "google" },
-              { id: "r2", customerName: "Dave", rating: 1, content: "Bad", date: "2024-01-02", source: "google" },
-            ],
-          },
-        },
-      } as never);
-      vi.mocked(menuService.getFeaturedItems).mockResolvedValue([]);
-
-      const result = await merchantService.getTenantWebsiteData("joes-pizza");
-
-      expect(result?.reviews).toEqual([]);
+      expect(result).toHaveLength(1);
+      expect(result[0]?.name).toBe("Active Item");
     });
   });
 

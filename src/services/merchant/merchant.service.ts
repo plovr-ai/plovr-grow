@@ -20,6 +20,7 @@ import type {
 import type { SocialLink, TenantSettings } from "@/types/tenant";
 import type { MerchantSettings } from "@/types/merchant";
 import type { WebsiteTemplateName } from "@/types/website-template";
+import type { FeaturedItem } from "@/types/website";
 
 /** Only display reviews with this rating or higher on the website */
 const MIN_DISPLAY_RATING = 4;
@@ -121,11 +122,16 @@ async function getWebsiteData(
 }
 
 /**
- * 获取 Company 网站显示数据 (公开访问)
- * 用于品牌官网首页
+ * 获取 Company 网站基础显示数据 (公开访问)
+ * 用于品牌官网首页、locations、gift card 等页面
+ *
+ * 注意：此方法不包含 featured items — 若页面需要展示 featured items，
+ * 请改用 `getTenantFeaturedItems(tenantId)` 单独获取，避免对不渲染 featured
+ * 的路由发起多余查询。
+ *
  * @param companySlug - Company slug
  */
-async function getTenantWebsiteData(
+async function getTenantWebsiteBasics(
   companySlug: string
 ): Promise<WebsiteMerchantData | null> {
   const tenant = await getTenantBySlug(companySlug);
@@ -133,28 +139,6 @@ async function getTenantWebsiteData(
 
   const tenantSettings = tenant.settings as TenantSettings | undefined;
   const tenantWebsite = tenantSettings?.website;
-
-  // Fetch featured items from the dedicated featured_items table
-  let featuredItems: WebsiteMerchantData["featuredItems"] = [];
-  const featuredItemsData = await menuService.getFeaturedItems(
-    tenant.tenantId
-  );
-
-  if (featuredItemsData.length > 0) {
-    // Filter only active items
-    featuredItems = featuredItemsData
-      .filter((fi) => fi.menuItem.status === "active")
-      .map((fi) => ({
-        id: fi.id,
-        name: fi.menuItem.name,
-        description: fi.menuItem.description || "",
-        price: fi.menuItem.price,
-        image: fi.menuItem.imageUrl || "",
-        category: undefined, // Category info not needed for display
-        menuItemId: fi.menuItemId,
-        hasModifiers: false, // Would need to fetch options separately if needed
-      }));
-  }
 
   // For single-merchant tenants, include merchant contact info and business hours
   // For multi-merchant tenants, leave these empty (Footer will hide these sections)
@@ -175,7 +159,6 @@ async function getTenantWebsiteData(
     socialLinks: tenantWebsite?.socialLinks || ([] as SocialLink[]),
     currency: tenantSettings?.defaultCurrency || "USD",
     locale: tenantSettings?.defaultLocale || "en-US",
-    featuredItems,
     reviews: ((tenantWebsite?.reviews || []) as unknown as Record<string, unknown>[])
       .filter((r) => Number(r.rating || 5) >= MIN_DISPLAY_RATING)
       .map((r, i) => ({
@@ -190,6 +173,30 @@ async function getTenantWebsiteData(
   };
 
   return websiteData;
+}
+
+/**
+ * 获取 Tenant 的 featured items (公开访问)
+ * 仅返回 status === "active" 的菜品，按 featured_items 表顺序
+ * @param tenantId - 租户 ID
+ */
+async function getTenantFeaturedItems(
+  tenantId: string
+): Promise<FeaturedItem[]> {
+  const featuredItemsData = await menuService.getFeaturedItems(tenantId);
+
+  return featuredItemsData
+    .filter((fi) => fi.menuItem.status === "active")
+    .map((fi) => ({
+      id: fi.id,
+      name: fi.menuItem.name,
+      description: fi.menuItem.description || "",
+      price: fi.menuItem.price,
+      image: fi.menuItem.imageUrl || "",
+      category: undefined,
+      menuItemId: fi.menuItemId,
+      hasModifiers: false,
+    }));
 }
 
 // ==================== 受保护查询方法 (Dashboard/Admin) ====================
@@ -417,7 +424,8 @@ export const merchantService = {
   getMerchantById,
   getTenantBySlug,
   getWebsiteData,
-  getTenantWebsiteData,
+  getTenantWebsiteBasics,
+  getTenantFeaturedItems,
   getMerchant,
   getMerchantsByTenantId,
   createMerchant,

@@ -18,7 +18,7 @@ export default async function LocationsPage({ params, searchParams }: PageProps)
   }
 
   // Get website display data from database
-  const websiteData = await merchantService.getTenantWebsiteData(companySlug);
+  const websiteData = await merchantService.getTenantWebsiteBasics(companySlug);
   if (!websiteData) {
     notFound();
   }

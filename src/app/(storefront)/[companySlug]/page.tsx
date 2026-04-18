@@ -18,16 +18,15 @@ export default async function CompanyHomePage({ params }: PageProps) {
     notFound();
   }
 
-  // Get website display data from database
-  const websiteData = await merchantService.getTenantWebsiteData(companySlug);
+  // Get website display data and featured items in parallel
+  const [websiteData, featuredItems, isLoyaltyEnabled] = await Promise.all([
+    merchantService.getTenantWebsiteBasics(companySlug),
+    merchantService.getTenantFeaturedItems(company.tenantId),
+    loyaltyConfigService.isLoyaltyEnabled(company.tenantId),
+  ]);
   if (!websiteData) {
     notFound();
   }
-
-  // Check if loyalty is enabled for this company
-  const isLoyaltyEnabled = await loyaltyConfigService.isLoyaltyEnabled(
-    company.tenantId
-  );
 
   // Determine the menu and catering links:
   // - If single merchant, link directly to that merchant's menu/catering
@@ -40,9 +39,6 @@ export default async function CompanyHomePage({ params }: PageProps) {
   const cateringLink = hasSingleMerchant
     ? `/r/${company.merchants[0].slug}/catering`
     : `/${companySlug}/locations`;
-
-  // Get featured items from database
-  const featuredItems = websiteData.featuredItems || [];
 
   return (
     <main className="min-h-screen">
