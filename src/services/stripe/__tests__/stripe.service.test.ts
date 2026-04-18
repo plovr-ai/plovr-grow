@@ -54,8 +54,7 @@ describe("StripeService", () => {
     });
 
     it("should return mock PaymentIntent in mock mode", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.createPaymentIntent({
         amount: 25.99,
@@ -69,8 +68,7 @@ describe("StripeService", () => {
     });
 
     it("should return mock successful payment for mock PaymentIntent", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.retrievePaymentIntent("mock_pi_abc12345");
 
@@ -83,8 +81,7 @@ describe("StripeService", () => {
     });
 
     it("should return null for non-mock PaymentIntent ID in mock mode", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.retrievePaymentIntent("pi_real123");
 
@@ -92,8 +89,7 @@ describe("StripeService", () => {
     });
 
     it("should return mock customer ID", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.createCustomer({
         email: "test@example.com",
@@ -105,8 +101,7 @@ describe("StripeService", () => {
     });
 
     it("should report not configured in mock mode", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       expect(service.isConfigured()).toBe(false);
     });
@@ -148,8 +143,7 @@ describe("StripeService", () => {
   describe("Webhook Verification", () => {
     it("should parse webhook payload in mock mode", async () => {
       delete process.env.STRIPE_SECRET_KEY;
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const payload = JSON.stringify({
         type: "payment_intent.succeeded",
@@ -166,8 +160,7 @@ describe("StripeService", () => {
 
     it("should return null for invalid JSON in mock mode", async () => {
       delete process.env.STRIPE_SECRET_KEY;
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = service.verifyWebhookSignature("invalid json", "fake_sig");
 
@@ -178,8 +171,7 @@ describe("StripeService", () => {
   describe("Payment Link", () => {
     it("should create mock payment link in mock mode", async () => {
       delete process.env.STRIPE_SECRET_KEY;
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.createPaymentLink({
         amount: 100.0,
@@ -216,8 +208,7 @@ describe("StripeService", () => {
     });
 
     it("should return mock subscription checkout session", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.createSubscriptionCheckoutSession({
         customerId: "cus_123",
@@ -233,8 +224,7 @@ describe("StripeService", () => {
     });
 
     it("should return mock billing portal session", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.createBillingPortalSession({
         customerId: "cus_123",
@@ -245,8 +235,7 @@ describe("StripeService", () => {
     });
 
     it("should handle cancel subscription in mock mode (cancelAtPeriodEnd=true)", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       await expect(
         service.cancelSubscription("sub_123", true)
@@ -254,8 +243,7 @@ describe("StripeService", () => {
     });
 
     it("should handle cancel subscription in mock mode (cancelAtPeriodEnd=false)", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       await expect(
         service.cancelSubscription("sub_123", false)
@@ -263,8 +251,7 @@ describe("StripeService", () => {
     });
 
     it("should handle cancel subscription with default cancelAtPeriodEnd", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       await expect(
         service.cancelSubscription("sub_123")
@@ -272,8 +259,7 @@ describe("StripeService", () => {
     });
 
     it("should handle resume subscription in mock mode", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       await expect(
         service.resumeSubscription("sub_123")
@@ -281,8 +267,7 @@ describe("StripeService", () => {
     });
 
     it("should return mock subscription info", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.getSubscription("sub_123");
 
@@ -304,8 +289,7 @@ describe("StripeService", () => {
     });
 
     it("should return mock update subscription price result", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.updateSubscriptionPrice({
         subscriptionId: "sub_123",
@@ -327,8 +311,7 @@ describe("StripeService", () => {
     });
 
     it("should return mock subscription checkout session without trial", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.createSubscriptionCheckoutSession({
         customerId: "cus_123",
@@ -343,8 +326,7 @@ describe("StripeService", () => {
     });
 
     it("should return mock subscription checkout session with 0 trialDays", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.createSubscriptionCheckoutSession({
         customerId: "cus_123",
@@ -365,8 +347,7 @@ describe("StripeService", () => {
     });
 
     it("should generate Connect OAuth URL", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const url = service.generateConnectOAuthUrl(
         "ca_test123",
@@ -382,8 +363,7 @@ describe("StripeService", () => {
     });
 
     it("should return mock OAuth token response", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.handleConnectOAuthCallback("code_123");
 
@@ -394,8 +374,7 @@ describe("StripeService", () => {
     });
 
     it("should return mock Connect account status", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.getConnectAccountStatus("acct_123");
 
@@ -408,8 +387,7 @@ describe("StripeService", () => {
     });
 
     it("should handle disconnect Connect account in mock mode", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       await expect(
         service.disconnectConnectAccount("acct_123")
@@ -418,8 +396,7 @@ describe("StripeService", () => {
 
     it("should throw when verifying Connect webhook without secret configured", async () => {
       delete process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       expect(() =>
         service.verifyConnectWebhookSignature(
@@ -431,8 +408,7 @@ describe("StripeService", () => {
 
     it("should parse Connect webhook payload in mock mode when secret is configured", async () => {
       process.env.STRIPE_CONNECT_WEBHOOK_SECRET = "whsec_mock_connect";
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const payload = JSON.stringify({ type: "account.updated", data: { object: { id: "acct_123" } } });
       const result = service.verifyConnectWebhookSignature(payload, "sig_123");
@@ -444,8 +420,7 @@ describe("StripeService", () => {
     });
 
     it("should generate Connect OAuth URL with correct query params", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const url = service.generateConnectOAuthUrl(
         "ca_special",
@@ -460,8 +435,7 @@ describe("StripeService", () => {
     });
 
     it("should return mock update subscription price with correct priceId", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.updateSubscriptionPrice({
         subscriptionId: "sub_abc",
@@ -489,8 +463,7 @@ describe("StripeService", () => {
     });
 
     it("should report configured in real mode", async () => {
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
       expect(service.isConfigured()).toBe(true);
     });
 
@@ -499,8 +472,7 @@ describe("StripeService", () => {
       mockPricesCreate.mockResolvedValueOnce({ id: "price_123" });
       mockPaymentLinksCreate.mockResolvedValueOnce({ id: "plink_123", url: "https://stripe.com/pay/plink_123" });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.createPaymentLink({
         amount: 100.0,
@@ -526,8 +498,7 @@ describe("StripeService", () => {
       const fakeEvent = { type: "payment_intent.succeeded", data: { object: { id: "pi_123" } } };
       mockWebhooksConstructEvent.mockReturnValueOnce(fakeEvent);
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = service.verifyWebhookSignature('{"type":"test"}', "sig_123");
       expect(result).toEqual(fakeEvent);
@@ -539,8 +510,7 @@ describe("StripeService", () => {
         throw new Error("Invalid signature");
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = service.verifyWebhookSignature('{"type":"test"}', "bad_sig");
       expect(result).toBeNull();
@@ -553,8 +523,7 @@ describe("StripeService", () => {
         status: "requires_payment_method",
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.createPaymentIntent({
         amount: 25.99,
@@ -584,8 +553,7 @@ describe("StripeService", () => {
         status: "requires_payment_method",
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.createPaymentIntent({
         amount: 10.0,
@@ -607,8 +575,7 @@ describe("StripeService", () => {
         status: "requires_payment_method",
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       await service.createPaymentIntent({
         amount: 10.0,
@@ -638,8 +605,7 @@ describe("StripeService", () => {
         },
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.retrievePaymentIntent("pi_real_123");
 
@@ -662,8 +628,7 @@ describe("StripeService", () => {
         latest_charge: null,
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.retrievePaymentIntent("pi_connect_123", "acct_connected");
 
@@ -680,8 +645,7 @@ describe("StripeService", () => {
     it("should return null when retrievePaymentIntent fails", async () => {
       mockPaymentIntentsRetrieve.mockRejectedValueOnce(new Error("Not found"));
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.retrievePaymentIntent("pi_nonexistent");
       expect(result).toBeNull();
@@ -690,8 +654,7 @@ describe("StripeService", () => {
     it("should create a real customer", async () => {
       mockCustomersCreate.mockResolvedValueOnce({ id: "cus_real_123" });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.createCustomer({
         email: "test@example.com",
@@ -713,8 +676,7 @@ describe("StripeService", () => {
         url: "https://checkout.stripe.com/pay/cs_real_123",
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.createSubscriptionCheckoutSession({
         customerId: "cus_123",
@@ -734,8 +696,7 @@ describe("StripeService", () => {
         url: "https://checkout.stripe.com/pay/cs_trial",
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       await service.createSubscriptionCheckoutSession({
         customerId: "cus_123",
@@ -761,8 +722,7 @@ describe("StripeService", () => {
         url: "https://checkout.stripe.com/pay/cs_no_trial",
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       await service.createSubscriptionCheckoutSession({
         customerId: "cus_123",
@@ -787,8 +747,7 @@ describe("StripeService", () => {
         url: "https://billing.stripe.com/portal/session_123",
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.createBillingPortalSession({
         customerId: "cus_123",
@@ -801,8 +760,7 @@ describe("StripeService", () => {
     it("should cancel subscription at period end", async () => {
       mockSubscriptionsUpdate.mockResolvedValueOnce({});
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       await service.cancelSubscription("sub_123", true);
 
@@ -815,8 +773,7 @@ describe("StripeService", () => {
     it("should cancel subscription immediately", async () => {
       mockSubscriptionsCancel.mockResolvedValueOnce({});
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       await service.cancelSubscription("sub_123", false);
 
@@ -827,8 +784,7 @@ describe("StripeService", () => {
     it("should resume a subscription", async () => {
       mockSubscriptionsUpdate.mockResolvedValueOnce({});
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       await service.resumeSubscription("sub_123");
 
@@ -855,8 +811,7 @@ describe("StripeService", () => {
         canceled_at: null,
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.getSubscription("sub_123");
 
@@ -889,8 +844,7 @@ describe("StripeService", () => {
         canceled_at: 1700500000,
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.getSubscription("sub_123");
 
@@ -911,8 +865,7 @@ describe("StripeService", () => {
         canceled_at: null,
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.getSubscription("sub_empty");
 
@@ -922,8 +875,7 @@ describe("StripeService", () => {
     it("should return null when getSubscription fails", async () => {
       mockSubscriptionsRetrieve.mockRejectedValueOnce(new Error("Not found"));
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.getSubscription("sub_nonexistent");
       expect(result).toBeNull();
@@ -937,8 +889,7 @@ describe("StripeService", () => {
         scope: "read_write",
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.handleConnectOAuthCallback("code_real");
 
@@ -954,8 +905,7 @@ describe("StripeService", () => {
         scope: null,
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.handleConnectOAuthCallback("code_null");
 
@@ -973,8 +923,7 @@ describe("StripeService", () => {
         details_submitted: true,
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.getConnectAccountStatus("acct_real");
 
@@ -994,8 +943,7 @@ describe("StripeService", () => {
         details_submitted: null,
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.getConnectAccountStatus("acct_null");
 
@@ -1007,8 +955,7 @@ describe("StripeService", () => {
     it("should disconnect a Connect account in real mode", async () => {
       mockOAuthDeauthorize.mockResolvedValueOnce({});
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       await service.disconnectConnectAccount("acct_real");
 
@@ -1022,8 +969,7 @@ describe("StripeService", () => {
       delete process.env.STRIPE_CONNECT_CLIENT_ID;
       mockOAuthDeauthorize.mockResolvedValueOnce({});
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       await service.disconnectConnectAccount("acct_real");
 
@@ -1037,8 +983,7 @@ describe("StripeService", () => {
       const fakeEvent = { type: "account.updated", data: { object: { id: "acct_123" } } };
       mockWebhooksConstructEvent.mockReturnValueOnce(fakeEvent);
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = service.verifyConnectWebhookSignature('{"type":"test"}', "sig_connect");
 
@@ -1070,8 +1015,7 @@ describe("StripeService", () => {
         canceled_at: null,
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.updateSubscriptionPrice({
         subscriptionId: "sub_123",
@@ -1095,8 +1039,7 @@ describe("StripeService", () => {
         },
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.updateSubscriptionPrice({
         subscriptionId: "sub_123",
@@ -1110,8 +1053,7 @@ describe("StripeService", () => {
     it("should return null when updateSubscriptionPrice fails", async () => {
       mockSubscriptionsRetrieve.mockRejectedValueOnce(new Error("API error"));
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.updateSubscriptionPrice({
         subscriptionId: "sub_fail",
@@ -1146,8 +1088,7 @@ describe("StripeService", () => {
         canceled_at: 1700500000,
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.updateSubscriptionPrice({
         subscriptionId: "sub_123",
@@ -1179,8 +1120,7 @@ describe("StripeService", () => {
         canceled_at: null,
       });
 
-      const { StripeService } = await import("../stripe.service");
-      const service = new StripeService();
+      const { stripeService: service } = await import("../stripe.service");
 
       const result = await service.updateSubscriptionPrice({
         subscriptionId: "sub_123",
