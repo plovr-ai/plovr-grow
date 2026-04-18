@@ -77,7 +77,7 @@ vi.mock("@/services/order/fulfillment.service", () => ({
   },
 }));
 
-import { SquareWebhookService } from "../square-webhook.service";
+import { squareWebhookService } from "../square-webhook.service";
 import type { SquareWebhookPayload } from "../square.types";
 
 const TENANT_ID = "tenant-1";
@@ -109,11 +109,10 @@ function buildPayload(
 }
 
 describe("SquareWebhookService", () => {
-  let service: SquareWebhookService;
+  const service = squareWebhookService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new SquareWebhookService();
 
     // Default mocks
     mockFindRetryableWebhookEvents.mockResolvedValue([]);

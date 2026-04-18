@@ -32,10 +32,10 @@ vi.mock("../square-order.service", () => ({
   },
 }));
 
-import { SquareOrderRetryService } from "../square-order-retry.service";
+import { squareOrderRetryService } from "../square-order-retry.service";
 import { WEBHOOK_RETRY_POLICY } from "../square.types";
 
-const service = new SquareOrderRetryService();
+const service = squareOrderRetryService;
 
 function makeRecord(overrides: Record<string, unknown> = {}) {
   return {

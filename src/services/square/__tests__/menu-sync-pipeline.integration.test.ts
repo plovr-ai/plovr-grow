@@ -20,7 +20,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
-import { SquareService } from "../square.service";
+import { squareService } from "../square.service";
 import { squareCatalogService } from "../square-catalog.service";
 import type { SquareCatalogResult } from "../square-catalog.service";
 
@@ -266,13 +266,11 @@ async function cleanupTestData() {
 // ==================== Test Suite ====================
 
 describe("Menu Sync Pipeline (Integration)", () => {
-  let squareService: SquareService;
   let fetchSpy: ReturnType<typeof vi.spyOn>;
 
   beforeAll(async () => {
     await cleanupTestData();
     await seedTestData();
-    squareService = new SquareService();
 
     // Mock only the external Square API boundary
     fetchSpy = vi.spyOn(squareCatalogService, "fetchFullCatalog");

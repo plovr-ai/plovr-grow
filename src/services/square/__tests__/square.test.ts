@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SquareService } from "../square.service";
+import { squareService } from "../square.service";
 import { AppError } from "@/lib/errors";
 import { createEmptyCatalogSyncStats } from "@/repositories/integration.types";
 
@@ -201,11 +201,10 @@ const { squareOrderService } = await import("../square-order.service");
 const { squareCatalogService } = await import("../square-catalog.service");
 
 describe("SquareService", () => {
-  let service: SquareService;
+  const service = squareService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new SquareService();
   });
 
   describe("getAuthorizationUrl()", () => {

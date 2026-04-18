@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { SquareCatalogService } from "../square-catalog.service";
+import { squareCatalogService } from "../square-catalog.service";
 import type { SquareCatalogResult } from "../square-catalog.service";
 
 vi.mock("../square.config", () => ({
@@ -7,7 +7,7 @@ vi.mock("../square.config", () => ({
 }));
 
 describe("SquareCatalogService - mapToMenuModels comprehensive mapping", () => {
-  const service = new SquareCatalogService();
+  const service = squareCatalogService;
 
   describe("full restaurant catalog", () => {
     it("should correctly map categories, items with variations, modifier lists, and taxes", () => {

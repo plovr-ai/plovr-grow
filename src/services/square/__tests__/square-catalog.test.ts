@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SquareCatalogService } from "../square-catalog.service";
+import { squareCatalogService } from "../square-catalog.service";
 import type { SquareCatalogResult } from "../square-catalog.service";
 import type { CatalogObject } from "square";
 
@@ -103,10 +103,9 @@ vi.mock("../square.config", () => ({
 
 
 describe("SquareCatalogService", () => {
-  let service: SquareCatalogService;
+  const service = squareCatalogService;
 
   beforeEach(() => {
-    service = new SquareCatalogService();
     vi.clearAllMocks();
     mockCatalogObjects = [];
     mockCatalogApi.list.mockImplementation(() =>
