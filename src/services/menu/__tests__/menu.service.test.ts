@@ -728,10 +728,13 @@ describe("MenuService", () => {
       vi.mocked(featuredItemRepository.getByTenantId).mockResolvedValue(
         mockFeaturedItems as never
       );
-      // For featured items tax lookup
-      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds)
-        .mockResolvedValueOnce(mockItemTaxMap)
-        .mockResolvedValueOnce(new Map([["item-featured-1", ["tax-standard"]]]));
+      // Single combined tax-config-id lookup covering category + featured items
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([
+          ...mockItemTaxMap,
+          ["item-featured-1", ["tax-standard"]],
+        ])
+      );
 
       const result = await menuService.getMenu("tenant-1", "merchant-1");
 
@@ -793,7 +796,7 @@ describe("MenuService", () => {
       expect(featuredItemRepository.getByTenantId).not.toHaveBeenCalled();
     });
 
-    it("should fetch missing tax configs for featured items", async () => {
+    it("should fetch tax configs unique to featured items in a single call", async () => {
       const mockFeaturedItems = [
         {
           id: "fi-1",
@@ -816,34 +819,118 @@ describe("MenuService", () => {
       vi.mocked(featuredItemRepository.getByTenantId).mockResolvedValue(
         mockFeaturedItems as never
       );
-      // First call for regular items, second for featured items
-      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds)
-        .mockResolvedValueOnce(mockItemTaxMap)
-        .mockResolvedValueOnce(new Map([["item-featured-1", ["tax-new"]]]));
-      // First call for regular tax configs, second for missing ones
-      vi.mocked(taxConfigRepository.getTaxConfigsByIds)
-        .mockResolvedValueOnce(mockTaxConfigs as never)
-        .mockResolvedValueOnce([
-          {
-            id: "tax-new",
-            tenantId: "tenant-1",            name: "New Tax",
-            description: null,
-            roundingMethod: "half_up",
-            isDefault: false,
-            status: "active",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        ] as never);
+      // Single combined call returns tax-config-ids for all items at once,
+      // including the featured-only "tax-new" id.
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([
+          ...mockItemTaxMap,
+          ["item-featured-1", ["tax-new"]],
+        ])
+      );
+      // Single getTaxConfigsByIds call must return both regular and featured-only configs.
+      vi.mocked(taxConfigRepository.getTaxConfigsByIds).mockResolvedValue([
+        ...mockTaxConfigs,
+        {
+          id: "tax-new",
+          tenantId: "tenant-1",
+          name: "New Tax",
+          description: null,
+          roundingMethod: "half_up",
+          isDefault: false,
+          status: "active",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ] as never);
 
       const result = await menuService.getMenu("tenant-1", "merchant-1");
 
-      // Should have called getTaxConfigsByIds twice
-      expect(taxConfigRepository.getTaxConfigsByIds).toHaveBeenCalledTimes(2);
-      // Featured item should have tax info
+      // After merging, getTaxConfigsByIds is called exactly once.
+      expect(taxConfigRepository.getTaxConfigsByIds).toHaveBeenCalledTimes(1);
+      // Featured item should have tax info from the single fetch
       const featuredCategory = result.categories.find((c: { id: string }) => c.id === "featured");
       expect(featuredCategory?.menuItems[0].taxes).toHaveLength(1);
       expect(featuredCategory?.menuItems[0].taxes![0].name).toBe("New Tax");
+    });
+
+    it("should call getMenuItemsTaxConfigIds only once even with featured items", async () => {
+      const mockFeaturedItems = [
+        {
+          id: "fi-1",
+          menuItemId: "item-featured-1",
+          sortOrder: 0,
+          menuItem: {
+            id: "item-featured-1",
+            name: "Featured Burger",
+            description: "A great burger",
+            price: new Prisma.Decimal(12.99),
+            imageUrl: null,
+            status: "active",
+            modifiers: null,
+            nutrition: null,
+            tags: null,
+          },
+        },
+      ];
+
+      vi.mocked(featuredItemRepository.getByTenantId).mockResolvedValue(
+        mockFeaturedItems as never
+      );
+      vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mockResolvedValue(
+        new Map([
+          ...mockItemTaxMap,
+          ["item-featured-1", ["tax-standard"]],
+        ])
+      );
+
+      await menuService.getMenu("tenant-1", "merchant-1");
+
+      // Single call covering both category items and featured items
+      expect(taxConfigRepository.getMenuItemsTaxConfigIds).toHaveBeenCalledTimes(1);
+      const callArgs = vi.mocked(taxConfigRepository.getMenuItemsTaxConfigIds).mock.calls[0][0];
+      expect(callArgs).toEqual(
+        expect.arrayContaining([
+          "item-cheese-pizza",
+          "item-pepperoni-pizza",
+          "item-garlic-knots",
+          "item-featured-1",
+        ])
+      );
+    });
+
+    it("should fetch featured items in parallel with categories", async () => {
+      // Track the order in which mocks are invoked to verify parallel dispatch:
+      // featured-item fetch must NOT wait for categories to resolve.
+      const callOrder: string[] = [];
+      let resolveCategories: (value: unknown) => void = () => {};
+      const categoriesPromise = new Promise((res) => {
+        resolveCategories = res;
+      });
+
+      vi.mocked(menuRepository.getCategoriesWithItemsByMenu).mockImplementation(
+        () => {
+          callOrder.push("categories");
+          return categoriesPromise as never;
+        }
+      );
+      vi.mocked(featuredItemRepository.getByTenantId).mockImplementation(() => {
+        callOrder.push("featured");
+        return Promise.resolve([] as never);
+      });
+
+      const promise = menuService.getMenu("tenant-1", "merchant-1");
+
+      // Drain pending microtasks (lazy repository loads + initial Promise.all
+      // for merchant/menus) so the second Promise.all has fired.
+      for (let i = 0; i < 20; i++) {
+        await Promise.resolve();
+      }
+
+      // Both should have been called before categories resolves
+      expect(callOrder).toEqual(["categories", "featured"]);
+
+      resolveCategories(mockCategoriesWithJunction);
+      await promise;
     });
   });
 
