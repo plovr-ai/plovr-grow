@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { MerchantService } from "../merchant.service";
+import { merchantService } from "../merchant.service";
 import { Prisma } from "@prisma/client";
 import { AppError, ErrorCodes } from "@/lib/errors";
 
@@ -40,8 +40,6 @@ import { tenantRepository } from "@/repositories/tenant.repository";
 import { menuService } from "@/services/menu";
 
 describe("MerchantService (unit tests)", () => {
-  let merchantService: MerchantService;
-
   // Mock data
   const mockTenantWithMerchants = {
     id: "tenant-1",
@@ -163,7 +161,6 @@ describe("MerchantService (unit tests)", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    merchantService = new MerchantService();
   });
 
   describe("getTenantWebsiteData()", () => {
