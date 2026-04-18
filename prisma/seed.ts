@@ -2001,7 +2001,17 @@ async function main() {
 
   const burgerMerchant = await prisma.merchant.upsert({
     where: { id: burgerMerchantId },
-    update: {},
+    update: {
+      businessHours: {
+        mon: { open: "00:00", close: "23:59" },
+        tue: { open: "00:00", close: "23:59" },
+        wed: { open: "00:00", close: "23:59" },
+        thu: { open: "00:00", close: "23:59" },
+        fri: { open: "00:00", close: "23:59" },
+        sat: { open: "00:00", close: "23:59" },
+        sun: { open: "00:00", close: "23:59" },
+      },
+    },
     create: {
       id: burgerMerchantId,
       tenantId: burgerTenant.id,
@@ -2019,13 +2029,13 @@ async function main() {
       currency: "USD",
       locale: "en-US",
       businessHours: {
-        mon: { open: "10:00", close: "22:00" },
-        tue: { open: "10:00", close: "22:00" },
-        wed: { open: "10:00", close: "22:00" },
-        thu: { open: "10:00", close: "22:00" },
-        fri: { open: "10:00", close: "23:00" },
-        sat: { open: "10:00", close: "23:00" },
-        sun: { open: "11:00", close: "21:00" },
+        mon: { open: "00:00", close: "23:59" },
+        tue: { open: "00:00", close: "23:59" },
+        wed: { open: "00:00", close: "23:59" },
+        thu: { open: "00:00", close: "23:59" },
+        fri: { open: "00:00", close: "23:59" },
+        sat: { open: "00:00", close: "23:59" },
+        sun: { open: "00:00", close: "23:59" },
       },
       settings: {
         acceptsPickup: true,
