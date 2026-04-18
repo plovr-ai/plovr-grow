@@ -13,7 +13,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { generateEntityId } from "@/lib/id";
-import { SquareWebhookService } from "../square-webhook.service";
+import { squareWebhookService } from "../square-webhook.service";
 import type { SquareWebhookPayload } from "../square.types";
 
 const TEST_DB_URL =
@@ -176,7 +176,7 @@ async function upsertOrder(
  * test focuses on the Square-specific routing logic.
  */
 async function dispatchViaRouteEvent(
-  service: SquareWebhookService,
+  service: typeof squareWebhookService,
   rawBody: string
 ) {
   const payload: SquareWebhookPayload = JSON.parse(rawBody);
@@ -189,7 +189,7 @@ async function dispatchViaRouteEvent(
 }
 
 describe("Square webhook fulfillment rank guard (integration)", () => {
-  const service = new SquareWebhookService();
+  const service = squareWebhookService;
 
   beforeAll(async () => {
     await cleanupAll();

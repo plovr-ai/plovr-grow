@@ -27,6 +27,807 @@ import {
 
 const INTEGRATION_TYPE = "POS_SQUARE";
 
+function getClient(accessToken: string): SquareClient {
+  return new SquareClient({
+    token: accessToken,
+    environment:
+      squareConfig.environment === "production"
+        ? SquareEnvironment.Production
+        : SquareEnvironment.Sandbox,
+  });
+}
+
+/**
+ * Persist the latest Square order version against the local order so
+ * the webhook stale-guard (#109) can reject any echo that predates it.
+ * Only advances forward; never writes a lower (or missing) version.
+ *
+ * Persist the Square order version on the OrderFulfillment record.
+ * Used for optimistic concurrency control — webhook handlers compare
+ * incoming versions against the stored value to detect stale events.
+ */
+async function persistSquareOrderVersion(
+  orderId: string,
+  version: number | bigint | undefined | null
+): Promise<void> {
+  if (version === undefined || version === null) return;
+  const numericVersion = Number(version);
+  if (!Number.isFinite(numericVersion)) return;
+
+  // Atomic: only bump when the incoming version is strictly newer than
+  // whatever is currently stored (or when there is no stored version yet).
+  await fulfillmentRepository.bumpExternalVersionByOrderIdIfNewer(
+    orderId,
+    numericVersion
+  );
+}
+
+/**
+ * Build Square line items from internal order items.
+ * Maps internal item IDs to Square catalog variation IDs via ExternalIdMapping.
+ */
+function buildLineItems(
+  items: SquareOrderPushItem[],
+  externalIdMap: Map<string, string>
+): OrderLineItem[] {
+  return items.map((item) => {
+    const catalogObjectId = externalIdMap.get(item.menuItemId);
+
+    const modifiers: OrderLineItemModifier[] = item.selectedModifiers.map(
+      (mod) => {
+        const modExternalId = externalIdMap.get(mod.modifierId);
+        const displayName = mod.groupName
+          ? `${mod.groupName}: ${mod.modifierName}`
+          : mod.modifierName;
+        return {
+          catalogObjectId: modExternalId ?? undefined,
+          name: displayName,
+          quantity: String(mod.quantity),
+          basePriceMoney: {
+            amount: BigInt(Math.round(mod.price * 100)),
+            currency: "USD",
+          },
+        };
+      }
+    );
+
+    // Build applied tax references for LINE_ITEM-scoped taxes
+    const appliedTaxes: OrderLineItemAppliedTax[] = (item.taxes ?? []).map(
+      (tax) => ({ taxUid: tax.taxConfigId })
+    );
+
+    const lineItem: OrderLineItem = {
+      quantity: String(item.quantity),
+      name: item.name,
+      basePriceMoney: {
+        amount: BigInt(Math.round(item.price * 100)),
+        currency: "USD",
+      },
+      note: item.specialInstructions ?? undefined,
+      modifiers: modifiers.length > 0 ? modifiers : undefined,
+      appliedTaxes: appliedTaxes.length > 0 ? appliedTaxes : undefined,
+    };
+
+    // If we have a catalog mapping, link to the Square catalog
+    if (catalogObjectId) {
+      lineItem.catalogObjectId = catalogObjectId;
+    }
+
+    return lineItem;
+  });
+}
+
+/**
+ * Build order-level taxes from item tax configurations.
+ *
+ * Collects unique tax configs across all items, resolves their Square
+ * catalog TAX IDs via ExternalIdMapping, and builds LINE_ITEM-scoped
+ * tax entries with percentage. Each line item that carries a given tax
+ * must reference it via `appliedTaxes` (see `buildLineItems`).
+ */
+async function buildTaxes(
+  tenantId: string,
+  input: SquareOrderPushInput
+): Promise<OrderLineItemTax[]> {
+  // Collect unique tax configs from all items
+  const taxConfigMap = new Map<
+    string,
+    { name: string; rate: number; inclusionType: string }
+  >();
+  for (const item of input.items) {
+    if (!item.taxes) continue;
+    for (const tax of item.taxes) {
+      if (!taxConfigMap.has(tax.taxConfigId)) {
+        taxConfigMap.set(tax.taxConfigId, {
+          name: tax.name,
+          rate: tax.rate,
+          inclusionType: tax.inclusionType,
+        });
+      }
+    }
+  }
+
+  if (taxConfigMap.size === 0) return [];
+
+  // Resolve TaxConfig IDs to Square catalog TAX IDs
+  const taxConfigIds = [...taxConfigMap.keys()];
+  const taxMappings =
+    await integrationRepository.getIdMappingsByInternalIds(
+      tenantId,
+      "SQUARE",
+      "TaxConfig",
+      taxConfigIds,
+      "TAX"
+    );
+  const catalogIdMap = new Map(
+    taxMappings.map((m) => [m.internalId, m.externalId])
+  );
+
+  return taxConfigIds.map((taxConfigId) => {
+    const config = taxConfigMap.get(taxConfigId)!;
+    const catalogObjectId = catalogIdMap.get(taxConfigId);
+    const tax: OrderLineItemTax = {
+      uid: taxConfigId,
+      name: config.name,
+      type: config.inclusionType === "inclusive" ? "INCLUSIVE" : "ADDITIVE",
+      percentage: (config.rate * 100).toFixed(4),
+      scope: "LINE_ITEM",
+    };
+    if (catalogObjectId) {
+      tax.catalogObjectId = catalogObjectId;
+    }
+    return tax;
+  });
+}
+
+/**
+ * Build service charges for tip and delivery fee.
+ *
+ * - tipAmount → CUSTOM service charge at TOTAL_PHASE
+ * - deliveryFee → CUSTOM service charge at TOTAL_PHASE
+ */
+function buildServiceCharges(
+  input: SquareOrderPushInput
+): OrderServiceCharge[] {
+  const charges: OrderServiceCharge[] = [];
+
+  if (input.tipAmount > 0) {
+    charges.push({
+      uid: "tip",
+      name: "Tip",
+      amountMoney: {
+        amount: BigInt(Math.round(input.tipAmount * 100)),
+        currency: "USD",
+      },
+      calculationPhase: "TOTAL_PHASE",
+      type: "CUSTOM",
+      taxable: false,
+    });
+  }
+
+  if (input.deliveryFee > 0) {
+    charges.push({
+      uid: "delivery-fee",
+      name: "Delivery Fee",
+      amountMoney: {
+        amount: BigInt(Math.round(input.deliveryFee * 100)),
+        currency: "USD",
+      },
+      calculationPhase: "TOTAL_PHASE",
+      type: "CUSTOM",
+      taxable: false,
+    });
+  }
+
+  return charges;
+}
+
+/**
+ * Build order-level discount from the discount amount.
+ */
+function buildDiscounts(
+  input: SquareOrderPushInput
+): OrderLineItemDiscount[] {
+  if (input.discount <= 0) return [];
+
+  return [
+    {
+      uid: "discount",
+      name: "Discount",
+      type: "FIXED_AMOUNT",
+      amountMoney: {
+        amount: BigInt(Math.round(input.discount * 100)),
+        currency: "USD",
+      },
+      scope: "ORDER",
+    },
+  ];
+}
+
+/**
+ * Build the fulfillment note combining the order's customer notes with
+ * any mode-specific context. For `dine_in` the result is prefixed with
+ * `"Dine-in"` so Square POS operators can still recognize the intent;
+ * for `delivery` any `deliveryAddress.instructions` (gate codes, drop-off
+ * directions, etc.) are appended so drivers receive them on Square.
+ */
+function buildFulfillmentNote(
+  input: SquareOrderPushInput
+): string | undefined {
+  const parts: string[] = [];
+  const base = input.notes?.trim();
+  if (base) parts.push(base);
+
+  if (input.orderMode === "delivery") {
+    const instructions = input.deliveryAddress?.instructions?.trim();
+    if (instructions) parts.push(instructions);
+    return parts.length > 0 ? parts.join(" | ") : undefined;
+  }
+
+  if (input.orderMode === "dine_in") {
+    return parts.length > 0 ? `Dine-in: ${parts.join(" | ")}` : "Dine-in";
+  }
+
+  return parts.length > 0 ? parts.join(" | ") : undefined;
+}
+
+/**
+ * Build a Square fulfillment from the order input.
+ *
+ * Maps our internal `OrderMode` to Square's fulfillment type:
+ * - `pickup` → PICKUP with pickup details
+ * - `delivery` → DELIVERY with recipient address (throws if address missing)
+ * - `dine_in` → PICKUP (Square has no dine-in type); the note is prefixed
+ *   with "Dine-in" so POS operators can still recognize the intent.
+ */
+function buildFulfillment(input: SquareOrderPushInput): Fulfillment {
+  const displayName =
+    `${input.customerFirstName} ${input.customerLastName}`.trim();
+  const squareType = SQUARE_FULFILLMENT_TYPE_BY_ORDER_MODE[input.orderMode];
+
+  const scheduleType = input.scheduledAt ? "SCHEDULED" : "ASAP";
+  const pickupAt = input.scheduledAt
+    ? input.scheduledAt.toISOString()
+    : undefined;
+
+  if (input.orderMode === "delivery") {
+    if (!input.deliveryAddress) {
+      throw new AppError(
+        ErrorCodes.SQUARE_MISSING_DELIVERY_ADDRESS,
+        undefined,
+        400
+      );
+    }
+    const addr = input.deliveryAddress;
+    return {
+      type: squareType,
+      state: "PROPOSED",
+      deliveryDetails: {
+        scheduleType,
+        deliverAt: pickupAt,
+        recipient: {
+          displayName,
+          phoneNumber: input.customerPhone,
+          emailAddress: input.customerEmail ?? undefined,
+          address: {
+            addressLine1: addr.street,
+            addressLine2: addr.apt ?? undefined,
+            locality: addr.city,
+            administrativeDistrictLevel1: addr.state,
+            postalCode: addr.zipCode,
+            country: "US",
+            firstName: input.customerFirstName || undefined,
+            lastName: input.customerLastName || undefined,
+          },
+        },
+        note: buildFulfillmentNote(input),
+      },
+    };
+  }
+
+  return {
+    type: squareType,
+    state: "PROPOSED",
+    pickupDetails: {
+      scheduleType,
+      pickupAt,
+      recipient: {
+        displayName,
+        phoneNumber: input.customerPhone,
+        emailAddress: input.customerEmail ?? undefined,
+      },
+      note: buildFulfillmentNote(input),
+    },
+  };
+}
+
+/**
+ * Stable serialization of a SquareOrderPushInput. Item ordering is
+ * preserved (Square respects the line-item sequence), but every field is
+ * explicit — no JSON.stringify over a free-shaped object — so future
+ * additions to the type must be considered here deliberately.
+ */
+function canonicalizePushInput(input: SquareOrderPushInput): string {
+  const items = input.items.map((item) => {
+    const modifiers = item.selectedModifiers.map(
+      (mod) =>
+        `${mod.modifierId}|${mod.groupName}|${mod.modifierName}|${mod.price}|${mod.quantity}`
+    );
+    return [
+      item.menuItemId,
+      item.name,
+      item.price,
+      item.quantity,
+      item.specialInstructions ?? "",
+      modifiers.join(","),
+    ].join("|");
+  });
+  return [
+    input.orderId,
+    input.orderNumber,
+    input.customerFirstName,
+    input.customerLastName,
+    input.customerPhone,
+    input.customerEmail ?? "",
+    input.orderMode,
+    input.totalAmount,
+    input.taxAmount,
+    input.tipAmount,
+    input.deliveryFee,
+    input.discount,
+    input.notes ?? "",
+    input.scheduledAt ? input.scheduledAt.toISOString() : "",
+    items.join(";"),
+  ].join("||");
+}
+
+/**
+ * Generate a deterministic idempotency key for a Square order push.
+ *
+ * The key is a sha256 hash of a stable serialization of the full push
+ * payload (tenant + merchant namespace + canonicalized input). Properties:
+ *
+ *  - Same content on retry → same key → Square's dedup kicks in (transient
+ *    network retries are safe).
+ *  - Changed content on retry (fixed bug, edited line items) → new key →
+ *    the retry is NOT silently ignored as a duplicate, preventing the
+ *    state drift the prior version had.
+ *  - Different tenant / merchant / orderId → different key.
+ */
+function generateIdempotencyKey(
+  tenantId: string,
+  merchantId: string,
+  input: SquareOrderPushInput
+): string {
+  const canonical = canonicalizePushInput(input);
+  const serialized = `${tenantId}:${merchantId}:${canonical}`;
+  const hash = crypto.createHash("sha256").update(serialized).digest("hex");
+
+  // Format as UUID v4-like string (deterministic)
+  return [
+    hash.slice(0, 8),
+    hash.slice(8, 12),
+    hash.slice(12, 16),
+    hash.slice(16, 20),
+    hash.slice(20, 32),
+  ].join("-");
+}
+
+/**
+ * Resolve internal item and modifier IDs to Square catalog external IDs.
+ * Returns a map of internalId -> externalId (Square catalog object ID).
+ */
+async function resolveExternalIds(
+  tenantId: string,
+  items: SquareOrderPushItem[]
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+
+  // Collect all internal IDs we need to resolve
+  const menuItemIds = items.map((item) => item.menuItemId);
+  const modifierIds = items.flatMap((item) =>
+    item.selectedModifiers.map((mod) => mod.modifierId)
+  );
+
+  // Batch lookup for menu items (map to ITEM_VARIATION for Square line items)
+  if (menuItemIds.length > 0) {
+    const itemMappings = await integrationRepository.getIdMappingsByInternalIds(
+      tenantId,
+      "SQUARE",
+      "MenuItem",
+      menuItemIds,
+      "ITEM_VARIATION"
+    );
+    for (const mapping of itemMappings) {
+      result.set(mapping.internalId, mapping.externalId);
+    }
+  }
+
+  // Batch lookup for modifiers — try ModifierOption first, fall back to MenuItem
+  if (modifierIds.length > 0) {
+    // New path: modifiers are stored as ModifierOption
+    const modifierOptionMappings =
+      await integrationRepository.getIdMappingsByInternalIds(
+        tenantId,
+        "SQUARE",
+        "ModifierOption",
+        modifierIds,
+        "MODIFIER"
+      );
+    for (const mapping of modifierOptionMappings) {
+      result.set(mapping.internalId, mapping.externalId);
+    }
+
+    // Also check ITEM_VARIATION type for variation-based modifiers
+    const variationModMappings =
+      await integrationRepository.getIdMappingsByInternalIds(
+        tenantId,
+        "SQUARE",
+        "ModifierOption",
+        modifierIds,
+        "ITEM_VARIATION"
+      );
+    for (const mapping of variationModMappings) {
+      if (!result.has(mapping.internalId)) {
+        result.set(mapping.internalId, mapping.externalId);
+      }
+    }
+
+    // Backward compat: fall back to old MenuItem mapping for modifiers
+    // that haven't been re-synced yet
+    const unresolvedModifierIds = modifierIds.filter(
+      (id) => !result.has(id)
+    );
+    if (unresolvedModifierIds.length > 0) {
+      const legacyMappings =
+        await integrationRepository.getIdMappingsByInternalIds(
+          tenantId,
+          "SQUARE",
+          "MenuItem",
+          unresolvedModifierIds,
+          "MODIFIER"
+        );
+      for (const mapping of legacyMappings) {
+        result.set(mapping.internalId, mapping.externalId);
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Get the Square connection and a valid access token for a merchant.
+ */
+async function getConnectionAndToken(
+  tenantId: string,
+  merchantId: string
+): Promise<{
+  connection: {
+    id: string;
+    externalLocationId: string | null;
+    accessToken: string | null;
+    refreshToken: string | null;
+    tokenExpiresAt: Date | null;
+  };
+  accessToken: string;
+}> {
+  const connection = await integrationRepository.getConnection(
+    tenantId,
+    merchantId,
+    INTEGRATION_TYPE
+  );
+
+  if (!connection) {
+    throw new AppError(ErrorCodes.INTEGRATION_NOT_CONNECTED, undefined, 404);
+  }
+
+  if (!connection.accessToken) {
+    throw new AppError(
+      ErrorCodes.INTEGRATION_TOKEN_EXPIRED,
+      undefined,
+      401
+    );
+  }
+
+  // Token refresh is handled by the parent SquareService.ensureValidToken
+  // For order push, we trust the token is valid since it was recently checked
+  return { connection, accessToken: connection.accessToken };
+}
+
+/**
+ * Push an internal order to Square.
+ * Creates a Square order with line items, modifiers, and pickup fulfillment.
+ */
+async function createOrder(
+  tenantId: string,
+  merchantId: string,
+  input: SquareOrderPushInput
+): Promise<SquareOrderPushResult> {
+  const { connection, accessToken } = await getConnectionAndToken(
+    tenantId,
+    merchantId
+  );
+
+  const locationId = connection.externalLocationId;
+  if (!locationId) {
+    throw new AppError(ErrorCodes.SQUARE_MISSING_LOCATION, undefined, 400);
+  }
+
+  // Resolve internal item IDs to Square catalog IDs
+  const externalIdMap = await resolveExternalIds(tenantId, input.items);
+
+  // Build line items
+  const lineItems = buildLineItems(input.items, externalIdMap);
+
+  // Build fulfillment
+  const fulfillment = buildFulfillment(input);
+
+  // Build order-level taxes (P0-2: map tax configs to Square catalog taxes)
+  const taxes = await buildTaxes(tenantId, input);
+
+  // Build service charges (tip + delivery fee)
+  const serviceCharges = buildServiceCharges(input);
+
+  // Build discounts
+  const discounts = buildDiscounts(input);
+
+  // Generate deterministic idempotency key derived from the full push
+  // payload so that retries with identical content reuse Square's dedup
+  // (transient failures), while intentionally modified retries produce a
+  // fresh key and do not collide with a previously created Square order.
+  const idempotencyKey = generateIdempotencyKey(
+    tenantId,
+    merchantId,
+    input
+  );
+
+  // Create sync record for tracking
+  const syncRecord = await integrationRepository.createSyncRecord(
+    tenantId,
+    connection.id,
+    SQUARE_ORDER_SYNC_TYPE
+  );
+
+  try {
+    const client = getClient(accessToken);
+    const response = await client.orders.create({
+      idempotencyKey,
+      order: {
+        locationId,
+        referenceId: input.orderId,
+        lineItems,
+        taxes: taxes.length > 0 ? taxes : undefined,
+        serviceCharges: serviceCharges.length > 0 ? serviceCharges : undefined,
+        discounts: discounts.length > 0 ? discounts : undefined,
+        fulfillments: [fulfillment],
+        ticketName: input.orderNumber,
+        metadata: {
+          plovr_order_id: input.orderId,
+          plovr_order_number: input.orderNumber,
+        },
+      },
+    });
+
+    const squareOrder = response.order;
+    if (!squareOrder?.id) {
+      throw new Error("Square API returned no order ID");
+    }
+
+    // Store the Square order ID mapping
+    await integrationRepository.upsertIdMapping(tenantId, {
+      internalType: "Order",
+      internalId: input.orderId,
+      externalSource: "SQUARE",
+      externalType: "ORDER",
+      externalId: squareOrder.id,
+    });
+
+    // Persist the initial Square order version so subsequent webhook
+    // handlers can detect out-of-order updates (#109).
+    await persistSquareOrderVersion(
+      input.orderId,
+      squareOrder.version ?? 1
+    );
+
+    // Update sync record as successful
+    await integrationRepository.updateSyncRecord(syncRecord.id, {
+      status: "success",
+      objectsSynced: 1,
+      objectsMapped: 1,
+    });
+
+    return {
+      squareOrderId: squareOrder.id,
+      squareVersion: squareOrder.version ?? 1,
+    };
+  } catch (error) {
+    await integrationRepository.updateSyncRecord(syncRecord.id, {
+      status: "failed",
+      errorMessage:
+        error instanceof Error ? error.message : "Unknown error",
+    });
+
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError(
+      ErrorCodes.SQUARE_ORDER_PUSH_FAILED,
+      { detail: error instanceof Error ? error.message : String(error) },
+      500
+    );
+  }
+}
+
+/**
+ * Update the fulfillment state of a Square order.
+ * Maps internal fulfillment status to Square FulfillmentState.
+ */
+async function updateOrderStatus(
+  tenantId: string,
+  merchantId: string,
+  orderId: string,
+  fulfillmentStatus: string
+): Promise<void> {
+  const squareFulfillmentState = FULFILLMENT_STATUS_MAP[fulfillmentStatus];
+  if (!squareFulfillmentState) {
+    // Unknown status, skip silently
+    return;
+  }
+
+  const { accessToken } = await getConnectionAndToken(
+    tenantId,
+    merchantId
+  );
+
+  // Look up the Square order ID from our mapping
+  const orderMapping = await integrationRepository.getIdMappingByInternalId(
+    tenantId,
+    "SQUARE",
+    "Order",
+    orderId,
+    "ORDER"
+  );
+
+  if (!orderMapping) {
+    // Order was never pushed to Square, skip silently
+    return;
+  }
+
+  try {
+    const client = getClient(accessToken);
+
+    // Get current order to find fulfillment UID and version
+    const getResponse = await client.orders.get({
+      orderId: orderMapping.externalId,
+    });
+
+    const squareOrder = getResponse.order;
+    if (!squareOrder) {
+      throw new AppError(ErrorCodes.SQUARE_ORDER_NOT_FOUND, undefined, 404);
+    }
+
+    const fulfillmentUid = squareOrder.fulfillments?.[0]?.uid;
+    if (!fulfillmentUid) {
+      return; // No fulfillment to update
+    }
+
+    const updateResponse = await client.orders.update({
+      orderId: orderMapping.externalId,
+      order: {
+        locationId: squareOrder.locationId,
+        version: squareOrder.version,
+        fulfillments: [
+          {
+            uid: fulfillmentUid,
+            state: squareFulfillmentState as FulfillmentState,
+          },
+        ],
+      },
+    });
+
+    // Persist the new Square version (#109) so that a subsequent
+    // webhook echo from this very change isn't treated as fresh
+    // against a stale local version.
+    await persistSquareOrderVersion(orderId, updateResponse.order?.version);
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError(
+      ErrorCodes.SQUARE_ORDER_UPDATE_FAILED,
+      undefined,
+      500
+    );
+  }
+}
+
+/**
+ * Cancel an order on Square.
+ * Updates the fulfillment state to CANCELED with an optional reason.
+ */
+async function cancelOrder(
+  tenantId: string,
+  merchantId: string,
+  orderId: string,
+  reason?: string
+): Promise<void> {
+  const { accessToken } = await getConnectionAndToken(
+    tenantId,
+    merchantId
+  );
+
+  // Look up the Square order ID from our mapping
+  const orderMapping = await integrationRepository.getIdMappingByInternalId(
+    tenantId,
+    "SQUARE",
+    "Order",
+    orderId,
+    "ORDER"
+  );
+
+  if (!orderMapping) {
+    // Order was never pushed to Square, skip silently
+    return;
+  }
+
+  try {
+    const client = getClient(accessToken);
+
+    // Get current order to find fulfillment UID and version
+    const getResponse = await client.orders.get({
+      orderId: orderMapping.externalId,
+    });
+
+    const squareOrder = getResponse.order;
+    if (!squareOrder) {
+      throw new AppError(ErrorCodes.SQUARE_ORDER_NOT_FOUND, undefined, 404);
+    }
+
+    const fulfillmentUid = squareOrder.fulfillments?.[0]?.uid;
+    if (!fulfillmentUid) {
+      return; // No fulfillment to cancel
+    }
+
+    const fulfillmentUpdate: Fulfillment = {
+      uid: fulfillmentUid,
+      state: "CANCELED",
+    };
+
+    // Attach the cancel reason to the correct details field based on
+    // the Square fulfillment type. Square caps cancelReason at 100 chars.
+    if (reason) {
+      const truncated = reason.slice(0, 100);
+      const fulfillmentType = squareOrder.fulfillments?.[0]?.type;
+      if (fulfillmentType === "PICKUP") {
+        fulfillmentUpdate.pickupDetails = { cancelReason: truncated };
+      } else if (fulfillmentType === "DELIVERY") {
+        fulfillmentUpdate.deliveryDetails = { cancelReason: truncated };
+      }
+    }
+
+    const updateResponse = await client.orders.update({
+      orderId: orderMapping.externalId,
+      order: {
+        locationId: squareOrder.locationId,
+        version: squareOrder.version,
+        fulfillments: [fulfillmentUpdate],
+      },
+    });
+
+    await persistSquareOrderVersion(orderId, updateResponse.order?.version);
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError(
+      ErrorCodes.SQUARE_ORDER_CANCEL_FAILED,
+      undefined,
+      500
+    );
+  }
+}
+
 /**
  * Service for pushing internal orders to Square POS.
  *
@@ -37,810 +838,9 @@ const INTEGRATION_TYPE = "POS_SQUARE";
  * - Idempotency key generation (deterministic UUID from tenant/merchant/orderId)
  * - ID mapping resolution (internal item IDs to Square catalog object IDs)
  */
-export class SquareOrderService {
-  private getClient(accessToken: string): SquareClient {
-    return new SquareClient({
-      token: accessToken,
-      environment:
-        squareConfig.environment === "production"
-          ? SquareEnvironment.Production
-          : SquareEnvironment.Sandbox,
-    });
-  }
-
-  /**
-   * Push an internal order to Square.
-   * Creates a Square order with line items, modifiers, and pickup fulfillment.
-   */
-  async createOrder(
-    tenantId: string,
-    merchantId: string,
-    input: SquareOrderPushInput
-  ): Promise<SquareOrderPushResult> {
-    const { connection, accessToken } = await this.getConnectionAndToken(
-      tenantId,
-      merchantId
-    );
-
-    const locationId = connection.externalLocationId;
-    if (!locationId) {
-      throw new AppError(ErrorCodes.SQUARE_MISSING_LOCATION, undefined, 400);
-    }
-
-    // Resolve internal item IDs to Square catalog IDs
-    const externalIdMap = await this.resolveExternalIds(tenantId, input.items);
-
-    // Build line items
-    const lineItems = this.buildLineItems(input.items, externalIdMap);
-
-    // Build fulfillment
-    const fulfillment = this.buildFulfillment(input);
-
-    // Build order-level taxes (P0-2: map tax configs to Square catalog taxes)
-    const taxes = await this.buildTaxes(tenantId, input);
-
-    // Build service charges (tip + delivery fee)
-    const serviceCharges = this.buildServiceCharges(input);
-
-    // Build discounts
-    const discounts = this.buildDiscounts(input);
-
-    // Generate deterministic idempotency key derived from the full push
-    // payload so that retries with identical content reuse Square's dedup
-    // (transient failures), while intentionally modified retries produce a
-    // fresh key and do not collide with a previously created Square order.
-    const idempotencyKey = this.generateIdempotencyKey(
-      tenantId,
-      merchantId,
-      input
-    );
-
-    // Create sync record for tracking
-    const syncRecord = await integrationRepository.createSyncRecord(
-      tenantId,
-      connection.id,
-      SQUARE_ORDER_SYNC_TYPE
-    );
-
-    try {
-      const client = this.getClient(accessToken);
-      const response = await client.orders.create({
-        idempotencyKey,
-        order: {
-          locationId,
-          referenceId: input.orderId,
-          lineItems,
-          taxes: taxes.length > 0 ? taxes : undefined,
-          serviceCharges: serviceCharges.length > 0 ? serviceCharges : undefined,
-          discounts: discounts.length > 0 ? discounts : undefined,
-          fulfillments: [fulfillment],
-          ticketName: input.orderNumber,
-          metadata: {
-            plovr_order_id: input.orderId,
-            plovr_order_number: input.orderNumber,
-          },
-        },
-      });
-
-      const squareOrder = response.order;
-      if (!squareOrder?.id) {
-        throw new Error("Square API returned no order ID");
-      }
-
-      // Store the Square order ID mapping
-      await integrationRepository.upsertIdMapping(tenantId, {
-        internalType: "Order",
-        internalId: input.orderId,
-        externalSource: "SQUARE",
-        externalType: "ORDER",
-        externalId: squareOrder.id,
-      });
-
-      // Persist the initial Square order version so subsequent webhook
-      // handlers can detect out-of-order updates (#109).
-      await this.persistSquareOrderVersion(
-        input.orderId,
-        squareOrder.version ?? 1
-      );
-
-      // Update sync record as successful
-      await integrationRepository.updateSyncRecord(syncRecord.id, {
-        status: "success",
-        objectsSynced: 1,
-        objectsMapped: 1,
-      });
-
-      return {
-        squareOrderId: squareOrder.id,
-        squareVersion: squareOrder.version ?? 1,
-      };
-    } catch (error) {
-      await integrationRepository.updateSyncRecord(syncRecord.id, {
-        status: "failed",
-        errorMessage:
-          error instanceof Error ? error.message : "Unknown error",
-      });
-
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(
-        ErrorCodes.SQUARE_ORDER_PUSH_FAILED,
-        { detail: error instanceof Error ? error.message : String(error) },
-        500
-      );
-    }
-  }
-
-  /**
-   * Update the fulfillment state of a Square order.
-   * Maps internal fulfillment status to Square FulfillmentState.
-   */
-  async updateOrderStatus(
-    tenantId: string,
-    merchantId: string,
-    orderId: string,
-    fulfillmentStatus: string
-  ): Promise<void> {
-    const squareFulfillmentState = FULFILLMENT_STATUS_MAP[fulfillmentStatus];
-    if (!squareFulfillmentState) {
-      // Unknown status, skip silently
-      return;
-    }
-
-    const { accessToken } = await this.getConnectionAndToken(
-      tenantId,
-      merchantId
-    );
-
-    // Look up the Square order ID from our mapping
-    const orderMapping = await integrationRepository.getIdMappingByInternalId(
-      tenantId,
-      "SQUARE",
-      "Order",
-      orderId,
-      "ORDER"
-    );
-
-    if (!orderMapping) {
-      // Order was never pushed to Square, skip silently
-      return;
-    }
-
-    try {
-      const client = this.getClient(accessToken);
-
-      // Get current order to find fulfillment UID and version
-      const getResponse = await client.orders.get({
-        orderId: orderMapping.externalId,
-      });
-
-      const squareOrder = getResponse.order;
-      if (!squareOrder) {
-        throw new AppError(ErrorCodes.SQUARE_ORDER_NOT_FOUND, undefined, 404);
-      }
-
-      const fulfillmentUid = squareOrder.fulfillments?.[0]?.uid;
-      if (!fulfillmentUid) {
-        return; // No fulfillment to update
-      }
-
-      const updateResponse = await client.orders.update({
-        orderId: orderMapping.externalId,
-        order: {
-          locationId: squareOrder.locationId,
-          version: squareOrder.version,
-          fulfillments: [
-            {
-              uid: fulfillmentUid,
-              state: squareFulfillmentState as FulfillmentState,
-            },
-          ],
-        },
-      });
-
-      // Persist the new Square version (#109) so that a subsequent
-      // webhook echo from this very change isn't treated as fresh
-      // against a stale local version.
-      await this.persistSquareOrderVersion(orderId, updateResponse.order?.version);
-    } catch (error) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(
-        ErrorCodes.SQUARE_ORDER_UPDATE_FAILED,
-        undefined,
-        500
-      );
-    }
-  }
-
-  /**
-   * Cancel an order on Square.
-   * Updates the fulfillment state to CANCELED with an optional reason.
-   */
-  async cancelOrder(
-    tenantId: string,
-    merchantId: string,
-    orderId: string,
-    reason?: string
-  ): Promise<void> {
-    const { accessToken } = await this.getConnectionAndToken(
-      tenantId,
-      merchantId
-    );
-
-    // Look up the Square order ID from our mapping
-    const orderMapping = await integrationRepository.getIdMappingByInternalId(
-      tenantId,
-      "SQUARE",
-      "Order",
-      orderId,
-      "ORDER"
-    );
-
-    if (!orderMapping) {
-      // Order was never pushed to Square, skip silently
-      return;
-    }
-
-    try {
-      const client = this.getClient(accessToken);
-
-      // Get current order to find fulfillment UID and version
-      const getResponse = await client.orders.get({
-        orderId: orderMapping.externalId,
-      });
-
-      const squareOrder = getResponse.order;
-      if (!squareOrder) {
-        throw new AppError(ErrorCodes.SQUARE_ORDER_NOT_FOUND, undefined, 404);
-      }
-
-      const fulfillmentUid = squareOrder.fulfillments?.[0]?.uid;
-      if (!fulfillmentUid) {
-        return; // No fulfillment to cancel
-      }
-
-      const fulfillmentUpdate: Fulfillment = {
-        uid: fulfillmentUid,
-        state: "CANCELED",
-      };
-
-      // Attach the cancel reason to the correct details field based on
-      // the Square fulfillment type. Square caps cancelReason at 100 chars.
-      if (reason) {
-        const truncated = reason.slice(0, 100);
-        const fulfillmentType = squareOrder.fulfillments?.[0]?.type;
-        if (fulfillmentType === "PICKUP") {
-          fulfillmentUpdate.pickupDetails = { cancelReason: truncated };
-        } else if (fulfillmentType === "DELIVERY") {
-          fulfillmentUpdate.deliveryDetails = { cancelReason: truncated };
-        }
-      }
-
-      const updateResponse = await client.orders.update({
-        orderId: orderMapping.externalId,
-        order: {
-          locationId: squareOrder.locationId,
-          version: squareOrder.version,
-          fulfillments: [fulfillmentUpdate],
-        },
-      });
-
-      await this.persistSquareOrderVersion(orderId, updateResponse.order?.version);
-    } catch (error) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(
-        ErrorCodes.SQUARE_ORDER_CANCEL_FAILED,
-        undefined,
-        500
-      );
-    }
-  }
-
-  // ==================== Private Helpers ====================
-
-  /**
-   * Persist the latest Square order version against the local order so
-   * the webhook stale-guard (#109) can reject any echo that predates it.
-   * Only advances forward; never writes a lower (or missing) version.
-   */
-  /**
-   * Persist the Square order version on the OrderFulfillment record.
-   * Used for optimistic concurrency control — webhook handlers compare
-   * incoming versions against the stored value to detect stale events.
-   */
-  private async persistSquareOrderVersion(
-    orderId: string,
-    version: number | bigint | undefined | null
-  ): Promise<void> {
-    if (version === undefined || version === null) return;
-    const numericVersion = Number(version);
-    if (!Number.isFinite(numericVersion)) return;
-
-    // Atomic: only bump when the incoming version is strictly newer than
-    // whatever is currently stored (or when there is no stored version yet).
-    await fulfillmentRepository.bumpExternalVersionByOrderIdIfNewer(
-      orderId,
-      numericVersion
-    );
-  }
-
-  /**
-   * Build Square line items from internal order items.
-   * Maps internal item IDs to Square catalog variation IDs via ExternalIdMapping.
-   */
-  private buildLineItems(
-    items: SquareOrderPushItem[],
-    externalIdMap: Map<string, string>
-  ): OrderLineItem[] {
-    return items.map((item) => {
-      const catalogObjectId = externalIdMap.get(item.menuItemId);
-
-      const modifiers: OrderLineItemModifier[] = item.selectedModifiers.map(
-        (mod) => {
-          const modExternalId = externalIdMap.get(mod.modifierId);
-          const displayName = mod.groupName
-            ? `${mod.groupName}: ${mod.modifierName}`
-            : mod.modifierName;
-          return {
-            catalogObjectId: modExternalId ?? undefined,
-            name: displayName,
-            quantity: String(mod.quantity),
-            basePriceMoney: {
-              amount: BigInt(Math.round(mod.price * 100)),
-              currency: "USD",
-            },
-          };
-        }
-      );
-
-      // Build applied tax references for LINE_ITEM-scoped taxes
-      const appliedTaxes: OrderLineItemAppliedTax[] = (item.taxes ?? []).map(
-        (tax) => ({ taxUid: tax.taxConfigId })
-      );
-
-      const lineItem: OrderLineItem = {
-        quantity: String(item.quantity),
-        name: item.name,
-        basePriceMoney: {
-          amount: BigInt(Math.round(item.price * 100)),
-          currency: "USD",
-        },
-        note: item.specialInstructions ?? undefined,
-        modifiers: modifiers.length > 0 ? modifiers : undefined,
-        appliedTaxes: appliedTaxes.length > 0 ? appliedTaxes : undefined,
-      };
-
-      // If we have a catalog mapping, link to the Square catalog
-      if (catalogObjectId) {
-        lineItem.catalogObjectId = catalogObjectId;
-      }
-
-      return lineItem;
-    });
-  }
-
-  /**
-   * Build order-level taxes from item tax configurations.
-   *
-   * Collects unique tax configs across all items, resolves their Square
-   * catalog TAX IDs via ExternalIdMapping, and builds LINE_ITEM-scoped
-   * tax entries with percentage. Each line item that carries a given tax
-   * must reference it via `appliedTaxes` (see `buildLineItems`).
-   */
-  private async buildTaxes(
-    tenantId: string,
-    input: SquareOrderPushInput
-  ): Promise<OrderLineItemTax[]> {
-    // Collect unique tax configs from all items
-    const taxConfigMap = new Map<
-      string,
-      { name: string; rate: number; inclusionType: string }
-    >();
-    for (const item of input.items) {
-      if (!item.taxes) continue;
-      for (const tax of item.taxes) {
-        if (!taxConfigMap.has(tax.taxConfigId)) {
-          taxConfigMap.set(tax.taxConfigId, {
-            name: tax.name,
-            rate: tax.rate,
-            inclusionType: tax.inclusionType,
-          });
-        }
-      }
-    }
-
-    if (taxConfigMap.size === 0) return [];
-
-    // Resolve TaxConfig IDs to Square catalog TAX IDs
-    const taxConfigIds = [...taxConfigMap.keys()];
-    const taxMappings =
-      await integrationRepository.getIdMappingsByInternalIds(
-        tenantId,
-        "SQUARE",
-        "TaxConfig",
-        taxConfigIds,
-        "TAX"
-      );
-    const catalogIdMap = new Map(
-      taxMappings.map((m) => [m.internalId, m.externalId])
-    );
-
-    return taxConfigIds.map((taxConfigId) => {
-      const config = taxConfigMap.get(taxConfigId)!;
-      const catalogObjectId = catalogIdMap.get(taxConfigId);
-      const tax: OrderLineItemTax = {
-        uid: taxConfigId,
-        name: config.name,
-        type: config.inclusionType === "inclusive" ? "INCLUSIVE" : "ADDITIVE",
-        percentage: (config.rate * 100).toFixed(4),
-        scope: "LINE_ITEM",
-      };
-      if (catalogObjectId) {
-        tax.catalogObjectId = catalogObjectId;
-      }
-      return tax;
-    });
-  }
-
-  /**
-   * Build service charges for tip and delivery fee.
-   *
-   * - tipAmount → CUSTOM service charge at TOTAL_PHASE
-   * - deliveryFee → CUSTOM service charge at TOTAL_PHASE
-   */
-  private buildServiceCharges(
-    input: SquareOrderPushInput
-  ): OrderServiceCharge[] {
-    const charges: OrderServiceCharge[] = [];
-
-    if (input.tipAmount > 0) {
-      charges.push({
-        uid: "tip",
-        name: "Tip",
-        amountMoney: {
-          amount: BigInt(Math.round(input.tipAmount * 100)),
-          currency: "USD",
-        },
-        calculationPhase: "TOTAL_PHASE",
-        type: "CUSTOM",
-        taxable: false,
-      });
-    }
-
-    if (input.deliveryFee > 0) {
-      charges.push({
-        uid: "delivery-fee",
-        name: "Delivery Fee",
-        amountMoney: {
-          amount: BigInt(Math.round(input.deliveryFee * 100)),
-          currency: "USD",
-        },
-        calculationPhase: "TOTAL_PHASE",
-        type: "CUSTOM",
-        taxable: false,
-      });
-    }
-
-    return charges;
-  }
-
-  /**
-   * Build order-level discount from the discount amount.
-   */
-  private buildDiscounts(
-    input: SquareOrderPushInput
-  ): OrderLineItemDiscount[] {
-    if (input.discount <= 0) return [];
-
-    return [
-      {
-        uid: "discount",
-        name: "Discount",
-        type: "FIXED_AMOUNT",
-        amountMoney: {
-          amount: BigInt(Math.round(input.discount * 100)),
-          currency: "USD",
-        },
-        scope: "ORDER",
-      },
-    ];
-  }
-
-  /**
-   * Build a Square fulfillment from the order input.
-   *
-   * Maps our internal `OrderMode` to Square's fulfillment type:
-   * - `pickup` → PICKUP with pickup details
-   * - `delivery` → DELIVERY with recipient address (throws if address missing)
-   * - `dine_in` → PICKUP (Square has no dine-in type); the note is prefixed
-   *   with "Dine-in" so POS operators can still recognize the intent.
-   */
-  private buildFulfillment(input: SquareOrderPushInput): Fulfillment {
-    const displayName =
-      `${input.customerFirstName} ${input.customerLastName}`.trim();
-    const squareType = SQUARE_FULFILLMENT_TYPE_BY_ORDER_MODE[input.orderMode];
-
-    const scheduleType = input.scheduledAt ? "SCHEDULED" : "ASAP";
-    const pickupAt = input.scheduledAt
-      ? input.scheduledAt.toISOString()
-      : undefined;
-
-    if (input.orderMode === "delivery") {
-      if (!input.deliveryAddress) {
-        throw new AppError(
-          ErrorCodes.SQUARE_MISSING_DELIVERY_ADDRESS,
-          undefined,
-          400
-        );
-      }
-      const addr = input.deliveryAddress;
-      return {
-        type: squareType,
-        state: "PROPOSED",
-        deliveryDetails: {
-          scheduleType,
-          deliverAt: pickupAt,
-          recipient: {
-            displayName,
-            phoneNumber: input.customerPhone,
-            emailAddress: input.customerEmail ?? undefined,
-            address: {
-              addressLine1: addr.street,
-              addressLine2: addr.apt ?? undefined,
-              locality: addr.city,
-              administrativeDistrictLevel1: addr.state,
-              postalCode: addr.zipCode,
-              country: "US",
-              firstName: input.customerFirstName || undefined,
-              lastName: input.customerLastName || undefined,
-            },
-          },
-          note: this.buildFulfillmentNote(input),
-        },
-      };
-    }
-
-    return {
-      type: squareType,
-      state: "PROPOSED",
-      pickupDetails: {
-        scheduleType,
-        pickupAt,
-        recipient: {
-          displayName,
-          phoneNumber: input.customerPhone,
-          emailAddress: input.customerEmail ?? undefined,
-        },
-        note: this.buildFulfillmentNote(input),
-      },
-    };
-  }
-
-  /**
-   * Build the fulfillment note combining the order's customer notes with
-   * any mode-specific context. For `dine_in` the result is prefixed with
-   * `"Dine-in"` so Square POS operators can still recognize the intent;
-   * for `delivery` any `deliveryAddress.instructions` (gate codes, drop-off
-   * directions, etc.) are appended so drivers receive them on Square.
-   */
-  private buildFulfillmentNote(
-    input: SquareOrderPushInput
-  ): string | undefined {
-    const parts: string[] = [];
-    const base = input.notes?.trim();
-    if (base) parts.push(base);
-
-    if (input.orderMode === "delivery") {
-      const instructions = input.deliveryAddress?.instructions?.trim();
-      if (instructions) parts.push(instructions);
-      return parts.length > 0 ? parts.join(" | ") : undefined;
-    }
-
-    if (input.orderMode === "dine_in") {
-      return parts.length > 0 ? `Dine-in: ${parts.join(" | ")}` : "Dine-in";
-    }
-
-    return parts.length > 0 ? parts.join(" | ") : undefined;
-  }
-
-  /**
-   * Generate a deterministic idempotency key for a Square order push.
-   *
-   * The key is a sha256 hash of a stable serialization of the full push
-   * payload (tenant + merchant namespace + canonicalized input). Properties:
-   *
-   *  - Same content on retry → same key → Square's dedup kicks in (transient
-   *    network retries are safe).
-   *  - Changed content on retry (fixed bug, edited line items) → new key →
-   *    the retry is NOT silently ignored as a duplicate, preventing the
-   *    state drift the prior version had.
-   *  - Different tenant / merchant / orderId → different key.
-   */
-  generateIdempotencyKey(
-    tenantId: string,
-    merchantId: string,
-    input: SquareOrderPushInput
-  ): string {
-    const canonical = this.canonicalizePushInput(input);
-    const serialized = `${tenantId}:${merchantId}:${canonical}`;
-    const hash = crypto.createHash("sha256").update(serialized).digest("hex");
-
-    // Format as UUID v4-like string (deterministic)
-    return [
-      hash.slice(0, 8),
-      hash.slice(8, 12),
-      hash.slice(12, 16),
-      hash.slice(16, 20),
-      hash.slice(20, 32),
-    ].join("-");
-  }
-
-  /**
-   * Stable serialization of a SquareOrderPushInput. Item ordering is
-   * preserved (Square respects the line-item sequence), but every field is
-   * explicit — no JSON.stringify over a free-shaped object — so future
-   * additions to the type must be considered here deliberately.
-   */
-  private canonicalizePushInput(input: SquareOrderPushInput): string {
-    const items = input.items.map((item) => {
-      const modifiers = item.selectedModifiers.map(
-        (mod) =>
-          `${mod.modifierId}|${mod.groupName}|${mod.modifierName}|${mod.price}|${mod.quantity}`
-      );
-      return [
-        item.menuItemId,
-        item.name,
-        item.price,
-        item.quantity,
-        item.specialInstructions ?? "",
-        modifiers.join(","),
-      ].join("|");
-    });
-    return [
-      input.orderId,
-      input.orderNumber,
-      input.customerFirstName,
-      input.customerLastName,
-      input.customerPhone,
-      input.customerEmail ?? "",
-      input.orderMode,
-      input.totalAmount,
-      input.taxAmount,
-      input.tipAmount,
-      input.deliveryFee,
-      input.discount,
-      input.notes ?? "",
-      input.scheduledAt ? input.scheduledAt.toISOString() : "",
-      items.join(";"),
-    ].join("||");
-  }
-
-  /**
-   * Resolve internal item and modifier IDs to Square catalog external IDs.
-   * Returns a map of internalId -> externalId (Square catalog object ID).
-   */
-  private async resolveExternalIds(
-    tenantId: string,
-    items: SquareOrderPushItem[]
-  ): Promise<Map<string, string>> {
-    const result = new Map<string, string>();
-
-    // Collect all internal IDs we need to resolve
-    const menuItemIds = items.map((item) => item.menuItemId);
-    const modifierIds = items.flatMap((item) =>
-      item.selectedModifiers.map((mod) => mod.modifierId)
-    );
-
-    // Batch lookup for menu items (map to ITEM_VARIATION for Square line items)
-    if (menuItemIds.length > 0) {
-      const itemMappings = await integrationRepository.getIdMappingsByInternalIds(
-        tenantId,
-        "SQUARE",
-        "MenuItem",
-        menuItemIds,
-        "ITEM_VARIATION"
-      );
-      for (const mapping of itemMappings) {
-        result.set(mapping.internalId, mapping.externalId);
-      }
-    }
-
-    // Batch lookup for modifiers — try ModifierOption first, fall back to MenuItem
-    if (modifierIds.length > 0) {
-      // New path: modifiers are stored as ModifierOption
-      const modifierOptionMappings =
-        await integrationRepository.getIdMappingsByInternalIds(
-          tenantId,
-          "SQUARE",
-          "ModifierOption",
-          modifierIds,
-          "MODIFIER"
-        );
-      for (const mapping of modifierOptionMappings) {
-        result.set(mapping.internalId, mapping.externalId);
-      }
-
-      // Also check ITEM_VARIATION type for variation-based modifiers
-      const variationModMappings =
-        await integrationRepository.getIdMappingsByInternalIds(
-          tenantId,
-          "SQUARE",
-          "ModifierOption",
-          modifierIds,
-          "ITEM_VARIATION"
-        );
-      for (const mapping of variationModMappings) {
-        if (!result.has(mapping.internalId)) {
-          result.set(mapping.internalId, mapping.externalId);
-        }
-      }
-
-      // Backward compat: fall back to old MenuItem mapping for modifiers
-      // that haven't been re-synced yet
-      const unresolvedModifierIds = modifierIds.filter(
-        (id) => !result.has(id)
-      );
-      if (unresolvedModifierIds.length > 0) {
-        const legacyMappings =
-          await integrationRepository.getIdMappingsByInternalIds(
-            tenantId,
-            "SQUARE",
-            "MenuItem",
-            unresolvedModifierIds,
-            "MODIFIER"
-          );
-        for (const mapping of legacyMappings) {
-          result.set(mapping.internalId, mapping.externalId);
-        }
-      }
-    }
-
-    return result;
-  }
-
-  /**
-   * Get the Square connection and a valid access token for a merchant.
-   */
-  private async getConnectionAndToken(
-    tenantId: string,
-    merchantId: string
-  ): Promise<{
-    connection: {
-      id: string;
-      externalLocationId: string | null;
-      accessToken: string | null;
-      refreshToken: string | null;
-      tokenExpiresAt: Date | null;
-    };
-    accessToken: string;
-  }> {
-    const connection = await integrationRepository.getConnection(
-      tenantId,
-      merchantId,
-      INTEGRATION_TYPE
-    );
-
-    if (!connection) {
-      throw new AppError(ErrorCodes.INTEGRATION_NOT_CONNECTED, undefined, 404);
-    }
-
-    if (!connection.accessToken) {
-      throw new AppError(
-        ErrorCodes.INTEGRATION_TOKEN_EXPIRED,
-        undefined,
-        401
-      );
-    }
-
-    // Token refresh is handled by the parent SquareService.ensureValidToken
-    // For order push, we trust the token is valid since it was recently checked
-    return { connection, accessToken: connection.accessToken };
-  }
-}
-
-export const squareOrderService = new SquareOrderService();
+export const squareOrderService = {
+  createOrder,
+  updateOrderStatus,
+  cancelOrder,
+  generateIdempotencyKey,
+};

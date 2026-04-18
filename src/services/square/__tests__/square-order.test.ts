@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SquareOrderService } from "../square-order.service";
+import { squareOrderService } from "../square-order.service";
 import { AppError, ErrorCodes } from "@/lib/errors";
 import type { SquareOrderPushInput } from "../square.types";
 
@@ -135,11 +135,10 @@ const sampleInput: SquareOrderPushInput = {
 };
 
 describe("SquareOrderService", () => {
-  let service: SquareOrderService;
+  const service = squareOrderService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new SquareOrderService();
 
     // Default mock setup
     mockGetConnection.mockResolvedValue(mockConnection);

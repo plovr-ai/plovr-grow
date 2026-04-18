@@ -122,7 +122,7 @@ vi.mock("@/lib/db", () => ({
 
 import { orderService } from "@/services/order/order.service";
 import { orderEventEmitter } from "@/services/order/order-events";
-import { SquareWebhookService } from "@/services/square/square-webhook.service";
+import { squareWebhookService } from "@/services/square/square-webhook.service";
 import {
   registerOrderEventHandlers,
   unregisterOrderEventHandlers,
@@ -409,7 +409,7 @@ function buildOrderUpdatedPayload(
  * Dispatch a raw webhook payload through SquareWebhookService.routeEvent().
  */
 async function dispatchViaRouteEvent(
-  service: SquareWebhookService,
+  service: typeof squareWebhookService,
   rawBody: string
 ) {
   const payload: SquareWebhookPayload = JSON.parse(rawBody);
@@ -443,7 +443,7 @@ async function createOrderMapping(orderId: string, squareOrderId: string) {
 // ---------------------------------------------------------------------------
 
 describe("Order Flow E2E (integration)", () => {
-  const webhookService = new SquareWebhookService();
+  const webhookService = squareWebhookService;
 
   beforeAll(async () => {
     await cleanupTestData();

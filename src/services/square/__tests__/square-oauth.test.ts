@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SquareOAuthService } from "../square-oauth.service";
+import { squareOAuthService } from "../square-oauth.service";
 import { AppError } from "@/lib/errors";
 import * as squareModule from "square";
 
@@ -33,11 +33,10 @@ vi.mock("../square.config", () => ({
 }));
 
 describe("SquareOAuthService", () => {
-  let service: SquareOAuthService;
+  const service = squareOAuthService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new SquareOAuthService();
   });
 
   describe("buildAuthorizationUrl()", () => {
