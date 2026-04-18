@@ -3,7 +3,7 @@
 **Date**: 2026-04-18
 **Status**: Draft
 **Companion Doc**: [Marketing Agent — Input Data Sources Design](./2026-04-18-marketing-agent-inputs-design.md)
-**Context**: 在输入层 spec 基础上，设计 Agent 的**策略层与执行层架构**。餐厅营销是长周期持续运营，不是一次性方案产出；本文档定义 Agent 如何在多个时间粒度上持续规划、执行、归因、学习。
+**Context**: 在输入层 spec 基础上，设计 Agent 的**策略层与执行层架构**。**本设计与餐厅类型/菜系无关**；所有规则、阈值、分群逻辑、Guardrail 均由输入的餐厅 profile 驱动。餐厅营销是长周期持续运营，不是一次性方案产出；本文档定义 Agent 如何在多个时间粒度上持续规划、执行、归因、学习。
 
 ---
 
@@ -340,6 +340,8 @@ interface GuardrailConfig {
 ---
 
 ## 10. End-to-End Example: 春节主题活动
+
+> 以下为三档 Planner 协同的**具体场景示例**。以春节为例，任何季节性/节日性主题（母亲节、感恩节、Diwali、斋月、万圣节等）均适用同样的 pattern；数字与渠道分配仅示意，实际由 profile 和 Memory 驱动。
 
 展示三档 Planner 如何协同：
 

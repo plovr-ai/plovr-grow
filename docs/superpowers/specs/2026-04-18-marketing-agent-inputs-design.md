@@ -2,11 +2,13 @@
 
 **Date**: 2026-04-18
 **Status**: Draft (input layer only — strategy & execution layers TBD)
-**Context**: 为正餐类中餐馆客户构建个性化营销 Agent，目标通过线上营销带来 10% 营收增长。本文档只覆盖 Agent 的**输入层**设计（Agent 需要哪些数据、如何最大化自动化采集），策略生成与执行层将另起文档。
+**Context**: 为餐厅客户构建通用个性化营销 Agent。Agent 的行为由餐厅 profile 驱动（菜系、定位、客单价、渠道覆盖等），**与餐厅类型无关**。本文档只覆盖 Agent 的**输入层**设计（Agent 需要哪些数据、如何最大化自动化采集），并以某一具体 profile 作为示例场景驱动采集需求推导。策略生成与执行层将另起文档。
 
 ---
 
-## 1. Client Profile (用于校准 Agent 默认行为)
+## 1. Example Client Profile (用于校准本 spec 的数据采集推导)
+
+> **说明**：本节仅作为一个具体 profile 样本，驱动后文的采集路径设计。Agent 本身与餐厅类型无关；下文提及的具体平台 / 工具 / API（如 Fantuan、Punchh、Square Loyalty 等）是针对本样本 profile 的示例，实际覆盖范围由 profile 字段决定。
 
 | 维度 | 现状 |
 |------|------|

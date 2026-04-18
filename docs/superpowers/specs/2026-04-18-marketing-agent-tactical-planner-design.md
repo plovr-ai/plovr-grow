@@ -6,7 +6,7 @@
 - [Input Data Sources Design](./2026-04-18-marketing-agent-inputs-design.md)
 - [Strategy & Execution Architecture Design](./2026-04-18-marketing-agent-architecture-design.md)
 
-**Context**: Tactical Planner 是 Agent 策略层中唯一每周"动脑"的规划器，是整个 Agent 智能的核心体现。本文档定义其 I/O 契约、Pipeline、冲突仲裁、冷启动、反馈回流等关键机制。
+**Context**: Tactical Planner 是 Agent 策略层中唯一每周"动脑"的规划器，是整个 Agent 智能的核心体现。本文档定义其 I/O 契约、Pipeline、冲突仲裁、冷启动、反馈回流等关键机制。**设计与餐厅类型无关**；餐厅特性通过 Input Contract 中的 `brand` / `channels` / `guardrails` 等 profile 字段传入。
 
 ---
 
@@ -558,9 +558,9 @@ Invariant Layer（brand + guardrails + channels）用 Anthropic **prompt caching
 
 1. **向量检索实现** — 用 pgvector / MySQL 自建 embedding 列 / 外部向量服务？取决于底层 DB 选型。
 2. **Prompt 版本管理** — prompt 升级时如何 A/B 验证（同一周跑两套 prompt 对比）？
-3. **多语言输出** — 客户菜单是中餐，审批人可能看中文；campaign 发给美国客户需要英文。Planner output 的语言策略？
+3. **多语言输出** — 商家运营团队与最终客户的语言可能不同（如运营侧看本地语言、campaign 发给其他语言客户）。Planner output 的语言策略？
 4. **Audience filter DSL** — 用声明式 JSON 还是允许 LLM 产出 SQL-like 表达式？安全性与灵活性平衡。
-5. **Seasonal 学习衰减** — 春节的 learnings 到夏天还适用吗？是否需要按季节/月份做 Memory 分桶。
+5. **Seasonal 学习衰减** — 季节性/节日性 learnings 在非匹配时段是否仍适用？是否需要按季节/月份做 Memory 分桶。
 6. **跨租户学习** — 多租户能否共享通用 learnings（如"雨天外卖加推有效"）？隐私与冷启动收益权衡。
 
 ---
