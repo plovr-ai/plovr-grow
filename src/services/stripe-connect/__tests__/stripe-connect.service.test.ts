@@ -54,8 +54,7 @@ describe("StripeConnectService", () => {
         "https://connect.stripe.com/oauth/authorize?..."
       );
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       const url = service.generateOAuthUrl(TENANT_ID, REDIRECT_URI);
 
@@ -75,8 +74,7 @@ describe("StripeConnectService", () => {
     it("should throw STRIPE_CONNECT_NOT_CONFIGURED when STRIPE_CLIENT_ID is missing", async () => {
       delete process.env.STRIPE_CLIENT_ID;
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       expect(() => service.generateOAuthUrl(TENANT_ID, REDIRECT_URI)).toThrow(AppError);
       expect(() => service.generateOAuthUrl(TENANT_ID, REDIRECT_URI)).toThrow(
@@ -87,8 +85,7 @@ describe("StripeConnectService", () => {
 
   describe("parseOAuthState", () => {
     it("should parse base64url-encoded state back to tenantId", async () => {
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       const state = Buffer.from(JSON.stringify({ tenantId: TENANT_ID })).toString("base64url");
       const result = service.parseOAuthState(state);
@@ -130,8 +127,7 @@ describe("StripeConnectService", () => {
       });
       mockTenantRepoUpdate.mockResolvedValue({} as never);
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       const result = await service.handleOAuthCallback("auth_code_123", TENANT_ID);
 
@@ -177,8 +173,7 @@ describe("StripeConnectService", () => {
         updatedAt: new Date(),
       });
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       await expect(service.handleOAuthCallback("auth_code_123", TENANT_ID)).rejects.toThrow(
         expect.objectContaining({ code: ErrorCodes.STRIPE_CONNECT_ALREADY_CONNECTED })
@@ -189,8 +184,7 @@ describe("StripeConnectService", () => {
       mockRepo.getByTenantId.mockResolvedValue(null);
       mockStripeService.handleConnectOAuthCallback.mockRejectedValue(new Error("Stripe error"));
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       await expect(service.handleOAuthCallback("bad_code", TENANT_ID)).rejects.toThrow(
         expect.objectContaining({ code: ErrorCodes.STRIPE_CONNECT_OAUTH_FAILED })
@@ -218,8 +212,7 @@ describe("StripeConnectService", () => {
       };
       mockRepo.getByTenantId.mockResolvedValue(account);
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       const result = await service.getConnectAccount(TENANT_ID);
 
@@ -230,8 +223,7 @@ describe("StripeConnectService", () => {
     it("should return null when not found", async () => {
       mockRepo.getByTenantId.mockResolvedValue(null);
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       const result = await service.getConnectAccount(TENANT_ID);
 
@@ -258,8 +250,7 @@ describe("StripeConnectService", () => {
         updatedAt: new Date(),
       });
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       const result = await service.isAccountReady(TENANT_ID);
 
@@ -284,8 +275,7 @@ describe("StripeConnectService", () => {
         updatedAt: new Date(),
       });
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       const result = await service.isAccountReady(TENANT_ID);
 
@@ -295,8 +285,7 @@ describe("StripeConnectService", () => {
     it("should return false when no account found", async () => {
       mockRepo.getByTenantId.mockResolvedValue(null);
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       const result = await service.isAccountReady(TENANT_ID);
 
@@ -327,8 +316,7 @@ describe("StripeConnectService", () => {
       mockRepo.softDelete.mockResolvedValue({ ...account, deleted: true });
       mockTenantRepoUpdate.mockResolvedValue({} as never);
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       await service.disconnectAccount(TENANT_ID);
 
@@ -342,8 +330,7 @@ describe("StripeConnectService", () => {
     it("should throw STRIPE_CONNECT_ACCOUNT_NOT_FOUND when no account exists", async () => {
       mockRepo.getByTenantId.mockResolvedValue(null);
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       await expect(service.disconnectAccount(TENANT_ID)).rejects.toThrow(
         expect.objectContaining({ code: ErrorCodes.STRIPE_CONNECT_ACCOUNT_NOT_FOUND })
@@ -369,8 +356,7 @@ describe("StripeConnectService", () => {
       });
       mockStripeService.disconnectConnectAccount.mockRejectedValue(new Error("Stripe error"));
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       await expect(service.disconnectAccount(TENANT_ID)).rejects.toThrow(
         expect.objectContaining({ code: ErrorCodes.STRIPE_CONNECT_DISCONNECT_FAILED })
@@ -399,8 +385,7 @@ describe("StripeConnectService", () => {
       mockRepo.getByStripeAccountId.mockResolvedValue(account);
       mockRepo.updateAccountStatus.mockResolvedValue({ ...account, chargesEnabled: true });
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       const status = {
         chargesEnabled: true,
@@ -417,8 +402,7 @@ describe("StripeConnectService", () => {
     it("should silently ignore unknown accounts", async () => {
       mockRepo.getByStripeAccountId.mockResolvedValue(null);
 
-      const { StripeConnectService } = await import("../stripe-connect.service");
-      const service = new StripeConnectService();
+      const { stripeConnectService: service } = await import("../stripe-connect.service");
 
       // Should not throw
       await expect(
