@@ -162,20 +162,31 @@ async function getMenu(
   // Use provided menuId or default to first menu
   const currentMenuId =
     menuId && menus.some((m) => m.id === menuId) ? menuId : menus[0].id;
+  const isFirstMenu = currentMenuId === menus[0].id;
 
-  // Fetch categories for the selected menu (with junction table)
-  const categories = await menuRepository.getCategoriesWithItemsByMenu(
-    tenantId,
-    currentMenuId
+  // Fetch categories and (only on the first menu) featured items in parallel.
+  // Previously featured items were only fetched after categories resolved.
+  const [categories, featuredItems] = await Promise.all([
+    menuRepository.getCategoriesWithItemsByMenu(tenantId, currentMenuId),
+    isFirstMenu
+      ? featuredItemRepository.getByTenantId(tenantId)
+      : Promise.resolve([] as Awaited<ReturnType<typeof featuredItemRepository.getByTenantId>>),
+  ]);
+
+  const activeFeaturedItems = featuredItems.filter(
+    (fi) => fi.menuItem.status === "active"
   );
 
   // Get all item IDs from junction table structure
-  const itemIds = categories.flatMap((c: { categoryItems: { menuItem: { id: string } }[] }) =>
-    c.categoryItems.map((ci: { menuItem: { id: string } }) => ci.menuItem.id)
+  const categoryItemIds = categories.flatMap(
+    (c: { categoryItems: { menuItem: { id: string } }[] }) =>
+      c.categoryItems.map((ci: { menuItem: { id: string } }) => ci.menuItem.id)
   );
+  const featuredItemIds = activeFeaturedItems.map((fi) => fi.menuItem.id);
+  const allItemIds = [...new Set([...categoryItemIds, ...featuredItemIds])];
 
-  // Get tax config IDs for all items
-  const itemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(itemIds);
+  // Single tax-config-id lookup covering both categories and featured items.
+  const itemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(allItemIds);
 
   // Get all unique tax config IDs
   const allTaxConfigIds = [...new Set([...itemTaxMap.values()].flat())];
@@ -189,6 +200,21 @@ async function getMenu(
   // Build tax config lookup map
   const taxConfigMap = new Map(taxConfigs.map((c) => [c.id, c]));
 
+  const buildTaxes = (itemId: string) =>
+    (itemTaxMap.get(itemId) || [])
+      .map((taxId) => {
+        const config = taxConfigMap.get(taxId);
+        if (!config) return null;
+        return {
+          taxConfigId: taxId,
+          name: config.name,
+          rate: merchantTaxRateMap.get(taxId) || 0,
+          roundingMethod: config.roundingMethod as RoundingMethod,
+          inclusionType: config.inclusionType,
+        };
+      })
+      .filter((t) => t !== null);
+
   // Enrich categories with tax info (flatten junction table structure)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const enrichedCategories = categories.map((category: any) => ({
@@ -196,25 +222,10 @@ async function getMenu(
     // Transform categoryItems to menuItems for API compatibility
     menuItems: category.categoryItems.map((ci: { menuItem: Record<string, unknown>; sortOrder: number }) => {
       const item = ci.menuItem;
-      const taxConfigIds = itemTaxMap.get(item.id as string) || [];
-      const taxes = taxConfigIds
-        .map((taxId) => {
-          const config = taxConfigMap.get(taxId);
-          if (!config) return null;
-          return {
-            taxConfigId: taxId,
-            name: config.name,
-            rate: merchantTaxRateMap.get(taxId) || 0,
-            roundingMethod: config.roundingMethod as RoundingMethod,
-            inclusionType: config.inclusionType,
-          };
-        })
-        .filter((t) => t !== null);
-
       return {
         ...item,
         sortOrder: ci.sortOrder,
-        taxes,
+        taxes: buildTaxes(item.id as string),
       };
     }),
   }));
@@ -222,87 +233,42 @@ async function getMenu(
   // Remove categoryItems from response (already flattened to menuItems)
   enrichedCategories.forEach((c: { categoryItems?: unknown }) => delete c.categoryItems);
 
-  // Add Featured category as first category (only for first menu)
-  const isFirstMenu = currentMenuId === menus[0].id;
   let finalCategories = enrichedCategories;
 
-  if (isFirstMenu) {
-    const featuredItems = await featuredItemRepository.getByTenantId(tenantId);
+  if (isFirstMenu && activeFeaturedItems.length > 0) {
+    // Build featured menu items with tax info
+    const featuredMenuItems = activeFeaturedItems.map((fi, index) => ({
+      id: fi.menuItem.id,
+      tenantId,
+      name: fi.menuItem.name,
+      description: fi.menuItem.description,
+      price: fi.menuItem.price,
+      imageUrl: fi.menuItem.imageUrl,
+      status: fi.menuItem.status,
+      nutrition: fi.menuItem.nutrition,
+      tags: fi.menuItem.tags,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      sortOrder: index,
+      taxes: buildTaxes(fi.menuItem.id),
+    }));
 
-    // Only add Featured category if there are active featured items
-    const activeFeaturedItems = featuredItems.filter(
-      (fi) => fi.menuItem.status === "active"
-    );
+    // Create Featured category
+    const featuredCategory = {
+      id: "featured",
+      tenantId,
+      menuId: currentMenuId,
+      name: "Featured",
+      description: null,
+      imageUrl: null,
+      sortOrder: -1, // Ensures it's first
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      menuItems: featuredMenuItems,
+    };
 
-    if (activeFeaturedItems.length > 0) {
-      // Get tax info for featured items
-      const featuredItemIds = activeFeaturedItems.map((fi) => fi.menuItem.id);
-      const featuredItemTaxMap = await taxConfigRepository.getMenuItemsTaxConfigIds(featuredItemIds);
-      const featuredTaxConfigIds = [...new Set([...featuredItemTaxMap.values()].flat())];
-
-      // Get any missing tax configs (not already fetched)
-      const missingTaxConfigIds = featuredTaxConfigIds.filter(
-        (id) => !taxConfigMap.has(id)
-      );
-      if (missingTaxConfigIds.length > 0) {
-        const missingTaxConfigs = await taxConfigRepository.getTaxConfigsByIds(
-          tenantId,
-          missingTaxConfigIds
-        );
-        missingTaxConfigs.forEach((c) => taxConfigMap.set(c.id, c));
-      }
-
-      // Build featured menu items with tax info
-      const featuredMenuItems = activeFeaturedItems.map((fi, index) => {
-        const itemTaxConfigIds = featuredItemTaxMap.get(fi.menuItem.id) || [];
-        const taxes = itemTaxConfigIds
-          .map((taxId) => {
-            const config = taxConfigMap.get(taxId);
-            if (!config) return null;
-            return {
-              taxConfigId: taxId,
-              name: config.name,
-              rate: merchantTaxRateMap.get(taxId) || 0,
-              roundingMethod: config.roundingMethod as RoundingMethod,
-              inclusionType: config.inclusionType,
-            };
-          })
-          .filter((t) => t !== null);
-
-        return {
-          id: fi.menuItem.id,
-          tenantId,
-          name: fi.menuItem.name,
-          description: fi.menuItem.description,
-          price: fi.menuItem.price,
-          imageUrl: fi.menuItem.imageUrl,
-          status: fi.menuItem.status,
-          nutrition: fi.menuItem.nutrition,
-          tags: fi.menuItem.tags,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          sortOrder: index,
-          taxes,
-        };
-      });
-
-      // Create Featured category
-      const featuredCategory = {
-        id: "featured",
-        tenantId,
-        menuId: currentMenuId,
-        name: "Featured",
-        description: null,
-        imageUrl: null,
-        sortOrder: -1, // Ensures it's first
-        status: "active",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        menuItems: featuredMenuItems,
-      };
-
-      finalCategories = [featuredCategory, ...enrichedCategories];
-    }
+    finalCategories = [featuredCategory, ...enrichedCategories];
   }
 
   return {
