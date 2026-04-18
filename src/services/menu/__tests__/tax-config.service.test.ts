@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { TaxConfigService } from "../tax-config.service";
+import { taxConfigService } from "../tax-config.service";
 
 // Mock repository
 vi.mock("@/repositories/tax-config.repository", () => ({
@@ -22,7 +22,7 @@ vi.mock("@/repositories/tax-config.repository", () => ({
 import { taxConfigRepository } from "@/repositories/tax-config.repository";
 
 describe("TaxConfigService", () => {
-  let service: TaxConfigService;
+  const service = taxConfigService;
 
   // Mock data
   const mockTaxConfigs = [
@@ -63,7 +63,6 @@ describe("TaxConfigService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new TaxConfigService();
   });
 
   describe("getTaxConfigs", () => {
