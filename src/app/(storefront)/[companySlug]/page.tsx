@@ -18,11 +18,16 @@ export default async function CompanyHomePage({ params }: PageProps) {
     notFound();
   }
 
-  // Get website display data and featured items in parallel
-  const [websiteData, featuredItems, isLoyaltyEnabled] = await Promise.all([
+  // Get website display data and featured items in parallel.
+  // The loyalty-enabled flag is kicked off but NOT awaited — it's passed
+  // as a Promise to <Navigation>, which streams the loyalty-gated UI in
+  // via a <Suspense> boundary once it resolves.
+  const isLoyaltyEnabledPromise = loyaltyConfigService.isLoyaltyEnabled(
+    company.tenantId
+  );
+  const [websiteData, featuredItems] = await Promise.all([
     merchantService.getTenantWebsiteBasics(companySlug),
     merchantService.getTenantFeaturedItems(company.tenantId),
-    loyaltyConfigService.isLoyaltyEnabled(company.tenantId),
   ]);
   if (!websiteData) {
     notFound();
@@ -48,7 +53,7 @@ export default async function CompanyHomePage({ params }: PageProps) {
         companySlug={companySlug}
         menuLink={menuLink}
         cateringLink={cateringLink}
-        isLoyaltyEnabled={isLoyaltyEnabled}
+        isLoyaltyEnabledPromise={isLoyaltyEnabledPromise}
       />
       <TemplateRouter
         template={websiteData.websiteTemplate}
