@@ -610,6 +610,13 @@ describe("MerchantService (unit tests)", () => {
   });
 
   // ==================== getMerchantBySlug ====================
+  // Note: getMerchantBySlug is wrapped with React `cache()` (#303) to dedupe
+  // repeated calls with the same slug within a single Next.js server request
+  // (generateMetadata / layout.tsx / page.tsx run independently but should
+  // share a cached result). React `cache()` only dedupes inside a React
+  // Server Component render context; outside that context each invocation
+  // runs fresh, which is why these tests still observe the underlying
+  // repository call every time. See React docs: https://react.dev/reference/react/cache
   describe("getMerchantBySlug()", () => {
     const mockPrismaMerchantWithTenant = {
       id: "merchant-1",
@@ -739,6 +746,8 @@ describe("MerchantService (unit tests)", () => {
   });
 
   // ==================== getTenantBySlug ====================
+  // Also wrapped with React `cache()` for per-request dedup (#303). Same
+  // testing caveat as getMerchantBySlug above.
   describe("getTenantBySlug()", () => {
     it("should return company with merchants for valid slug", async () => {
       vi.mocked(tenantRepository.getBySlugWithMerchants).mockResolvedValue(
